@@ -728,7 +728,9 @@ def push_feishu(results):
         print(f"飞书推送失败: {result}")
         return False
 
+
 # ===== 主流程 =====
+
 def _write_empty_result(reason=""):
     """写入零结果分析文件（兜底：避免扫空静默失败）"""
     now = datetime.now()
@@ -740,35 +742,128 @@ def _write_empty_result(reason=""):
         json.dump(empty, f, ensure_ascii=False)
     print(f"零结果已记录: {output_path}")
 
+
+def _score_one(stock, l2api, weights, scored_cache, cache_hit):
+    """单只股票五维评分"""
+    code = stock["code"]
+    if cache_hit:
+        cached = scored_cache[code]
+        scores = {dim: v[0] for dim, v in cached.items()}
+        reasons = {dim: v[1] for dim, v in cached.items()}
+    else:
+        scores = {}
+        reasons = {}
+
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from plays.limit_up.agents.shortterm_agent import score_shortterm
+    funcs = {"fundamental": score_fundamental, "technical": score_technical,
+             "fundflow": score_fundflow, "sentiment": score_sentiment, "shortterm": score_shortterm}
+    to_run = {dim: fn for dim, fn in funcs.items() if dim not in scores}
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {executor.submit(fn, code): dim for dim, fn in to_run.items()}
+        for future in as_completed(futures):
+            dim = futures[future]
+            try:
+                s, r = future.result()
+                scores[dim] = s
+                reasons[dim] = r
+            except Exception as e:
+                scores[dim] = 0
+                reasons[dim] = f"评分异常: {e}"
+
+    f_sc, t_sc = scores.get("fundamental", 0), scores.get("technical", 0)
+    m_sc, s_sc = scores.get("fundflow", 0), scores.get("sentiment", 0)
+    st_sc = scores.get("shortterm", 0)
+
+    dc = [(f_sc, weights.get("fundamental", 1.0)), (t_sc, weights.get("technical", 1.0)),
+          (m_sc, weights.get("fundflow", 1.0)), (s_sc, weights.get("sentiment", 1.0)),
+          (st_sc, weights.get("shortterm", 1.5))]
+    dc.sort(key=lambda x: x[0] * x[1], reverse=True)
+    top3 = dc[:3]
+    total = sum(s*w for s, w in top3) / sum(w for _, w in top3) if sum(w for _, w in top3) > 0 else 0
+    rc = sum([f_sc >= 75, t_sc >= 75, m_sc >= 75, s_sc >= 75, st_sc >= 75])
+
+    l2data = None
+    if l2api:
+        try:
+            from plays.limit_up.l2api_client import to_price, to_volume
+            mkt = l2api.get_market(code)
+            vwap = l2api.get_vwap(code)
+            kb = l2api.get_minute_kline(code, n=5)
+            if mkt:
+                l2data = {"last": to_price(mkt.get("last", "0")),
+                          "bid1_p": to_price(mkt.get("bid_price", [""])[0]) if mkt.get("bid_price") else 0,
+                          "ask1_p": to_price(mkt.get("ask_price", [""])[0]) if mkt.get("ask_price") else 0,
+                          "vwap": round(vwap, 2) if vwap else None, "kline_bars": len(kb)}
+        except Exception:
+            pass
+
+    return {"code": code, "name": stock["name"],
+            "scores": {"fundamental": f_sc, "technical": t_sc, "fundflow": m_sc,
+                       "sentiment": s_sc, "shortterm": st_sc},
+            "reasons": {"fundamental": reasons.get("fundamental", ""), "technical": reasons.get("technical", ""),
+                        "fundflow": reasons.get("fundflow", ""), "sentiment": reasons.get("sentiment", ""),
+                        "shortterm": reasons.get("shortterm", "")},
+            "weights": {k: f"{v:.1f}" for k, v in weights.items()},
+            "total": total, "resonance": {"count": rc, "threshold": 75, "is_resonance": rc >= 3},
+            "top3_score": round(total, 1), "pct_chg": round(stock.get("pct_chg", 0), 1),
+            "l2api": l2data}
+
+
+def _pre_rank(candidates, top_n=50):
+    """涨停相关性预排：涨速 + 涨幅 + 人气排名"""
+    pop_cache = _POPULARITY_RANK_CACHE
+    scored = []
+    for stock in candidates:
+        surge = stock.get("surge", 0)
+        pct = stock.get("pct_chg", 0)
+        short = stock["code"].split(".")[0]
+        score = 0
+        if surge >= 5: score += 3
+        elif surge >= 3: score += 2
+        elif surge >= 2: score += 1
+        if pct >= 7: score += 3
+        elif pct >= 5: score += 2
+        elif pct >= 3: score += 1
+        rank = pop_cache.get(short)
+        if rank is not None:
+            if rank <= 100: score += 4
+            elif rank <= 200: score += 3
+            elif rank <= 300: score += 2
+            elif rank <= 500: score += 1
+        scored.append((score, stock))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    ranked = [s for _, s in scored[:top_n]]
+    print(f"[预排] {len(candidates)}只 -> Top{len(ranked)} (涨速+涨幅+人气)")
+    for i, (sc, st) in enumerate(scored[:10]):
+        print(f"  {i+1}. {st['code']} {st['name']} 分{sc} (涨速{st.get('surge',0):.1f} 涨幅{st.get('pct_chg',0):.1f})")
+    return ranked
+
+
 def main():
     parser = argparse.ArgumentParser(description="涨停预测流程")
     parser.add_argument("--from-file", help="从已有信号文件加载", default=None)
-    parser.add_argument("--top", type=int, default=50, help="分析前N只股票（默认50，覆盖全部候选股）")
+    parser.add_argument("--top", type=int, default=50, help="分析前N只股票（默认50）")
     args = parser.parse_args()
-    
-    clear_tushare_cache()  # 每次流水线启动清空API缓存
-    
+
+    clear_tushare_cache()
+
     print("=" * 50)
     print(f"涨停预测流程启动: {datetime.now()}")
     print("=" * 50)
-    
+
     # 1. 获取候选股
     if args.from_file:
         candidates = load_from_file(args.from_file)
     else:
         print("\n[1/5] 异动扫描(东财API+代理)...")
         candidates = scan_surge()
-    
+
     if not candidates:
         print("无候选股，退出")
-        # 兜底：扫空也写零结果文件，避免静默失败
         _write_empty_result("扫描无候选股")
         return
-    
-    # 取前N只做分析
-    candidates = candidates[:args.top]
-    print(f"分析候选股: {[c['code'] for c in candidates]}")
-    
+
     # 1.5 全系统过滤
     print("\n[1.5/5] 全系统过滤...")
     candidates = filter_candidates(candidates)
@@ -777,35 +872,27 @@ def main():
         _write_empty_result("过滤后无候选股")
         return
 
-    # 1.6 l2api Level2 实时数据接入
-    l2api = None
-    if CONFIG.get("L2API_ENABLED", "").lower() == "true":
-        from plays.limit_up.l2api_client import get_client, has_client
-        l2api_account = CONFIG.get("L2API_ACCOUNT", "")
-        l2api_password = CONFIG.get("L2API_PASSWORD", "")
-        if l2api_account and l2api_password:
-            print("\n[1.6/5] l2api Level2 实时数据接入...")
-            try:
-                l2api = get_client(account=l2api_account, password=l2api_password)
-                if not has_client() or not l2api._running:
-                    l2api.start()
-                # 试用期 TopicCnt=30, 留1个给盯盘, 最多订阅29只
-                l2api_codes = [c["code"] for c in candidates[:29]]
-                l2api.sync_subscriptions(l2api_codes)
-                print(f"  l2api 订阅 {len(l2api_codes)} 只 (差量: +{len([c for c in l2api_codes if c not in l2api.cache.get_subscribed()])}/-{len(l2api.cache.get_subscribed() - set(l2api_codes))})")
-                time.sleep(3)
-                ready_count = sum(1 for c in l2api_codes if l2api.is_ready(c))
-                print(f"  l2api 数据就绪: {ready_count}/{len(l2api_codes)}")
-            except Exception as e:
-                print(f"  l2api 启动失败: {e}")
-                l2api = None
-        else:
-            print("\n[1.6/5] l2api 未配置账号密码，跳过")
-    
-    # 2-5. 四维度评分 + 短线博弈
-    # 前置过滤：加载今日已分析过的股票得分，避免重复调用Tushare API
+    # 加载权重
+    weights = {"fundamental": 1.5, "technical": 1.0, "fundflow": 1.0,
+               "sentiment": 1.2, "shortterm": 1.5}
+    if (PROJECT_DIR / ".env").exists():
+        with open(PROJECT_DIR / ".env") as _wf:
+            for _wl in _wf:
+                _wl = _wl.strip()
+                if _wl.startswith("AGENT_WEIGHT_FUNDAMENTAL="):
+                    weights["fundamental"] = float(_wl.split("=", 1)[1].strip())
+                elif _wl.startswith("AGENT_WEIGHT_TECHNICAL="):
+                    weights["technical"] = float(_wl.split("=", 1)[1].strip())
+                elif _wl.startswith("AGENT_WEIGHT_FUND_FLOW="):
+                    weights["fundflow"] = float(_wl.split("=", 1)[1].strip())
+                elif _wl.startswith("AGENT_WEIGHT_SENTIMENT="):
+                    weights["sentiment"] = float(_wl.split("=", 1)[1].strip())
+                elif _wl.startswith("AGENT_WEIGHT_SHORTTERM="):
+                    weights["shortterm"] = float(_wl.split("=", 1)[1].strip())
+
+    # 今日缓存
     today_str = datetime.now().strftime("%Y%m%d")
-    scored_cache = {}  # {code: {dim: (score, reason)}}
+    scored_cache = {}
     analysis_dir = PROJECT_DIR / "data" / "analysis"
     if analysis_dir.exists():
         for f in sorted(analysis_dir.glob(f"{today_str}*.json")):
@@ -814,186 +901,78 @@ def main():
                 if isinstance(items, list):
                     for item in items:
                         if "code" in item and "scores" in item:
-                            code = item["code"]
-                            scored_cache[code] = {
+                            scored_cache[item["code"]] = {
                                 dim: (item["scores"][dim], item.get("reasons", {}).get(dim, ""))
-                                for dim in item["scores"]
-                            }
+                                for dim in item["scores"]}
             except Exception:
                 pass
-    if scored_cache:
-        print(f"[缓存] 今日已有 {len(scored_cache)} 只股票的评分记录")
+
+    # 1.6 l2api 启动
+    l2api = None
+    if CONFIG.get("L2API_ENABLED", "").lower() == "true":
+        from plays.limit_up.l2api_client import get_client
+        account = CONFIG.get("L2API_ACCOUNT", "")
+        password = CONFIG.get("L2API_PASSWORD", "")
+        if account and password:
+            print("\n[1.6/5] l2api Level2 实时数据接入...")
+            try:
+                l2api = get_client(account=account, password=password)
+                if not l2api._running:
+                    l2api.start()
+                print("  l2api 已就绪")
+            except Exception as e:
+                print(f"  l2api 启动失败: {e}")
+                l2api = None
+
+    # 1.7 涨停相关性预排
+    print("\n[1.7/5] 涨停相关性预排...")
+    _get_popularity_rank("")  # 触发人气缓存
+    candidates = _pre_rank(candidates, top_n=args.top)
+
+    # 2. 分批 Level2 深度分析
+    BATCH_SIZE = 25
+    OBSERVE_SECONDS = 60
+    batch_count = (len(candidates) + BATCH_SIZE - 1) // BATCH_SIZE
+    print(f"\n[2/5] 分批深度分析: {len(candidates)}只 -> {batch_count}批x{BATCH_SIZE}只, {OBSERVE_SECONDS}s/轮")
 
     results = []
-    for stock in candidates:
-        code = stock["code"]
-        name = stock["name"]
-        print(f"\n[分析] {code} {name}")
-        
-        # 今日已有评分 → 复用基本面和技术面（T+1静态数据），盘面实时 agent 仍重新评分
-        if code in scored_cache:
-            cached = scored_cache[code]
-            scores = {dim: v[0] for dim, v in cached.items()}
-            reasons = {dim: v[1] for dim, v in cached.items()}
-            print(f"  [缓存命中] {list(scores.keys())} 复用 {list(cached.keys())}")
-        else:
-            scores = {}
-            reasons = {}
-        
-        print("  五维度并行评分...", flush=True)
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-        from plays.limit_up.agents.shortterm_agent import score_shortterm
-        scoring_funcs = {
-            "fundamental": score_fundamental,
-            "technical": score_technical,
-            "fundflow": score_fundflow,
-            "sentiment": score_sentiment,
-            "shortterm": score_shortterm,
-        }
-        # 缓存命中时，跳过基本面和技术面的API调用
-        funcs_to_run = {dim: fn for dim, fn in scoring_funcs.items() if dim not in scores}
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            futures = {executor.submit(fn, code): dim for dim, fn in funcs_to_run.items()}
-            for future in as_completed(futures):
-                dim = futures[future]
-                try:
-                    s, r = future.result()
-                    scores[dim] = s
-                    reasons[dim] = r
-                    print(f"    {dim}: {s}")
-                except Exception as e:
-                    scores[dim] = 0
-                    reasons[dim] = f"评分异常: {e}"
-                    print(f"    {dim}: 异常 {e}")
-        
-        f_score = scores.get("fundamental", 0)
-        t_score = scores.get("technical", 0)
-        m_score = scores.get("fundflow", 0)
-        s_score = scores.get("sentiment", 0)
-        st_score = scores.get("shortterm", 0)
-        f_reason = reasons.get("fundamental", "")
-        t_reason = reasons.get("technical", "")
-        m_reason = reasons.get("fundflow", "")
-        s_reason = reasons.get("sentiment", "")
-        st_reason = reasons.get("shortterm", "")
-        
-        # 加载权重（支持从.env覆写）
-        weights = {
-            "fundamental": 1.5,
-            "technical": 1.0,
-            "fundflow": 0.5,
-            "sentiment": 1.2,
-            "shortterm": 1.5,
-        }
-        if (PROJECT_DIR / ".env").exists():
-            with open(PROJECT_DIR / ".env") as _wf:
-                for _wl in _wf:
-                    _wl = _wl.strip()
-                    if _wl.startswith("AGENT_WEIGHT_FUNDAMENTAL="):
-                        weights["fundamental"] = float(_wl.split("=", 1)[1].strip())
-                    elif _wl.startswith("AGENT_WEIGHT_TECHNICAL="):
-                        weights["technical"] = float(_wl.split("=", 1)[1].strip())
-                    elif _wl.startswith("AGENT_WEIGHT_FUND_FLOW="):
-                        weights["fundflow"] = float(_wl.split("=", 1)[1].strip())
-                    elif _wl.startswith("AGENT_WEIGHT_SENTIMENT="):
-                        weights["sentiment"] = float(_wl.split("=", 1)[1].strip())
-                    elif _wl.startswith("AGENT_WEIGHT_SHORTTERM="):
-                        weights["shortterm"] = float(_wl.split("=", 1)[1].strip())
-        
-        # V2.6: 加权Top3择优（按加权贡献选前3维，取加权均值）
-        # 让权重真正影响哪3个维度进Top3以及贡献大小
-        dim_contribs = [
-            (f_score, weights.get("fundamental", 1.0)),
-            (t_score, weights.get("technical", 1.0)),
-            (m_score, weights.get("fundflow", 1.0)),
-            (s_score, weights.get("sentiment", 1.0)),
-            (st_score, weights.get("shortterm", 1.5)),
-        ]
-        dim_contribs.sort(key=lambda x: x[0] * x[1], reverse=True)
-        top3 = dim_contribs[:3]
-        total = sum(s * w for s, w in top3) / sum(w for _, w in top3) if sum(w for _, w in top3) > 0 else 0
-        
-        # 多维度共振判定（≥3个维度得分≥75）
-        resonance_threshold = 75
-        resonance_count = sum([
-            f_score >= resonance_threshold,
-            t_score >= resonance_threshold,
-            m_score >= resonance_threshold,
-            s_score >= resonance_threshold,
-            st_score >= resonance_threshold,
-        ])
-        resonance_flag = resonance_count >= 3
-        
-        # 记录权重信息（用于调试和复盘）
-        weight_info = {k: f"{v:.1f}" for k, v in weights.items()}
+    for bi in range(batch_count):
+        batch = candidates[bi * BATCH_SIZE : (bi + 1) * BATCH_SIZE]
+        codes = [c["code"] for c in batch]
+        print(f"\n{'='*40}")
+        print(f"批次 {bi+1}/{batch_count}: {len(codes)}只 {codes[:3]}...")
+        print(f"{'='*40}")
 
-        # 附加 l2api Level2 数据 (验证用)
-        l2data = None
         if l2api:
+            l2api.sync_subscriptions(codes)
+            print(f"  [l2api] 订阅完成, 观测{OBSERVE_SECONDS}s...")
+            t0 = time.time()
+            while time.time() - t0 < OBSERVE_SECONDS:
+                time.sleep(1)
+            ready = sum(1 for c in codes if l2api.is_ready(c))
+            print(f"  [l2api] 观测完成, 就绪{ready}/{len(codes)}")
+
+        for stock in batch:
+            code = stock["code"]
+            cache_hit = code in scored_cache
+            tag = "[缓存]" if cache_hit else "评分中"
+            print(f"  {code} {stock['name']} {tag}")
             try:
-                from plays.limit_up.l2api_client import to_price, to_volume
-                market = l2api.get_market(code)
-                kline_5m = l2api.get_minute_kline(code, n=5)
-                vwap = l2api.get_vwap(code)
-                if market:
-                    l2data = {
-                        "last": to_price(market.get("last", "0")),
-                        "open": to_price(market.get("open", "0")),
-                        "high": to_price(market.get("high", "0")),
-                        "low": to_price(market.get("low", "0")),
-                        "prev_close": to_price(market.get("prev_close", "0")),
-                        "trade_volume": to_volume(market.get("trade_volume", "0")),
-                        "trade_amount": to_price(market.get("trade_amount", "0")),
-                        "bid1_price": to_price(market.get("bid_price", [""])[0]) if market.get("bid_price") else 0,
-                        "bid1_qty": to_volume(market.get("bid_qty", [""])[0]) if market.get("bid_qty") else 0,
-                        "ask1_price": to_price(market.get("ask_price", [""])[0]) if market.get("ask_price") else 0,
-                        "ask1_qty": to_volume(market.get("ask_qty", [""])[0]) if market.get("ask_qty") else 0,
-                        "total_bid_volume": to_volume(market.get("total_bid_volume", "0")),
-                        "total_ask_volume": to_volume(market.get("total_ask_volume", "0")),
-                        "vwap": round(vwap, 2) if vwap else None,
-                        "kline_bars": len(kline_5m),
-                    }
+                r = _score_one(stock, l2api, weights, scored_cache, cache_hit)
+                results.append(r)
             except Exception as e:
-                l2data = {"error": str(e)}
+                print(f"  {code} 评分失败: {e}")
 
-        results.append({
-            "code": code,
-            "name": name,
-            "scores": {
-                "fundamental": f_score,
-                "technical": t_score,
-                "fundflow": m_score,
-                "sentiment": s_score,
-                "shortterm": st_score,
-            },
-            "reasons": {
-                "fundamental": f_reason,
-                "technical": t_reason,
-                "fundflow": m_reason,
-                "sentiment": s_reason,
-                "shortterm": st_reason,
-            },
-            "weights": weight_info,
-            "total": total,
-            "resonance": {
-                "count": resonance_count,
-                "threshold": resonance_threshold,
-                "is_resonance": resonance_flag
-            },
-            "top3_score": round(total, 1),
-            "pct_chg": round(stock.get("pct_chg", 0), 1),
-            "l2api": l2data,  # Level2 实时数据快照
-        })
-    
-    # 排序（全按总分排序，总分=Top3均值）
-    by_total = sorted(results, key=lambda x: x["total"], reverse=True)
-    results = by_total
+        if l2api and bi < batch_count - 1:
+            l2api.unsubscribe(codes)
 
+    # 排序
+    results.sort(key=lambda x: x["total"], reverse=True)
     print("\n[排序结果]")
-    for i, r in enumerate(by_total, 1):
-        resonance_tag = " [共振]" if r.get("resonance", {}).get("is_resonance") else ""
-        print(f"  {i}. {r['code']} {r['name']} - 总分:{r['total']:.1f}{resonance_tag}")
-    
+    for i, r in enumerate(results, 1):
+        tag = " [共振]" if r.get("resonance", {}).get("is_resonance") else ""
+        print(f"  {i}. {r['code']} {r['name']} - 总分:{r['total']:.1f}{tag}")
+
     # 保存结果
     output_dir = PROJECT_DIR / "data" / "analysis"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -1001,18 +980,19 @@ def main():
     with open(output_file, "w") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
     print(f"\n结果已保存: {output_file}")
-    
-    # 6. 飞书推送
-    print("\n[飞书推送]...")
+
+    # 3. 飞书推送
+    print("\n[3/5] 飞书推送...")
     push_feishu(results)
 
-    # 7. l2api 常驻,不在此次关闭 (供盯盘和后续扫描复用)
+    # l2api 常驻
     if l2api:
         print(f"\n[l2api] 保持连接 (当前订阅: {len(l2api.cache.get_subscribed())} 只)")
 
     print("\n" + "=" * 50)
     print("流程完成!")
     print("=" * 50)
+
 
 if __name__ == "__main__":
     main()
