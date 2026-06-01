@@ -15,7 +15,7 @@
 """
 
 import json
-import random
+import random  # noqa: E402
 import sys
 from collections import defaultdict
 from datetime import datetime
@@ -25,35 +25,21 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 sys.path.insert(0, str(PROJECT_DIR / "scripts"))
 
-import requests
+import requests  # noqa: E402
 
-# 直接从.env读取
-TUSHARE_TOKEN = ""
+from scripts.tu_share import CONFIG  # noqa: E402
+
+TUSHARE_TOKEN = CONFIG.get("TUSHARE_TOKEN", "")
 CURRENT_WEIGHTS = {
-    "fundamental": 0.6,
-    "technical": 1.9,
-    "fundflow": 2.0,
-    "sentiment": 1.1,
-    "shortterm": 1.0,
+    "fundamental": float(CONFIG.get("AGENT_WEIGHT_FUNDAMENTAL", "1.5")),
+    "technical": float(CONFIG.get("AGENT_WEIGHT_TECHNICAL", "1.0")),
+    "fundflow": float(CONFIG.get("AGENT_WEIGHT_FUND_FLOW", "1.0")),
+    "sentiment": float(CONFIG.get("AGENT_WEIGHT_SENTIMENT", "1.2")),
+    "shortterm": float(CONFIG.get("AGENT_WEIGHT_SHORTTERM", "1.5")),
 }
-if (PROJECT_DIR / ".env").exists():
-    with open(PROJECT_DIR / ".env") as f:
-        for line in f:
-            line = line.strip()
-            if line.startswith("TUSHARE_TOKEN="):
-                TUSHARE_TOKEN = line.split("=", 1)[1].strip().strip('"').strip("'")
-            elif line.startswith("AGENT_WEIGHT_FUNDAMENTAL="):
-                CURRENT_WEIGHTS["fundamental"] = float(line.split("=", 1)[1].strip())
-            elif line.startswith("AGENT_WEIGHT_TECHNICAL="):
-                CURRENT_WEIGHTS["technical"] = float(line.split("=", 1)[1].strip())
-            elif line.startswith("AGENT_WEIGHT_FUND_FLOW="):
-                CURRENT_WEIGHTS["fundflow"] = float(line.split("=", 1)[1].strip())
-            elif line.startswith("AGENT_WEIGHT_SENTIMENT="):
-                CURRENT_WEIGHTS["sentiment"] = float(line.split("=", 1)[1].strip())
-            elif line.startswith("AGENT_WEIGHT_SHORTTERM="):
-                CURRENT_WEIGHTS["shortterm"] = float(line.split("=", 1)[1].strip())
 
-DATA_DIR = PROJECT_DIR / "data"
+PLAY_DIR = Path(__file__).resolve().parent
+DATA_DIR = PLAY_DIR / "data"
 ANALYSIS_DIR = DATA_DIR / "analysis"
 WEIGHTS_DIR = DATA_DIR / "weights"
 WEIGHTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -484,7 +470,7 @@ def print_report(baseline: dict, top_results: list[dict], records: list[dict],
     print(f"覆盖交易日: {dates[0]} ~ {dates[-1]} ({len(dates)}天)")
 
     # 基准
-    print(f"\n基准(当前权重):")
+    print("\n基准(当前权重):")
     w_str = "  ".join(f"{DIM_CN[d]}={weights[d]:.1f}" for d in DIMS)
     print(f"  {w_str}")
     print(f"  涨停均排: {baseline['avg_rank']:.0f}\t中位排: {baseline['median_rank']}")
@@ -495,7 +481,7 @@ def print_report(baseline: dict, top_results: list[dict], records: list[dict],
     print(f"  🚀 实战推送(Top3): 推送{baseline['top3_push']}只 命中{baseline['top3_hit']}只 命中率{baseline['top3_hit_rate']}%")
 
     # Top 5
-    print(f"\n🏆 Top 5 最优权重:")
+    print("\n🏆 Top 5 最优权重:")
     for i, r in enumerate(top_results[:5]):
         if r == baseline and i > 0:
             continue
@@ -514,7 +500,7 @@ def print_report(baseline: dict, top_results: list[dict], records: list[dict],
         print(f"    🚀 实战推送(Top3): 推送{r['top3_push']}只 命中{r['top3_hit']}只 命中率{r['top3_hit_rate']}% ({push_sign}{push_delta:.1f}%)")
 
     # 维度贡献
-    print(f"\n📋 维度贡献率(当前权重):")
+    print("\n📋 维度贡献率(当前权重):")
     for d in DIMS:
         c = dim_contrib[d]
         bar = "█" * max(1, int(c["rate"] / 5))
@@ -526,13 +512,13 @@ def print_report(baseline: dict, top_results: list[dict], records: list[dict],
         print(f"  {DIM_CN[d]}: {c['rate']:.0f}% ({c['count']}次) {bar} {status}")
 
     # 阈值曲线
-    print(f"  📊 阈值校准曲线:")
+    print("  📊 阈值校准曲线:")
     print(f"  {'阈值':>4} | {'信号池':>4} | {'涨停':>4} | {'覆盖率':>6} | {'命中率':>6}")
     print(f"  {'-'*4}-+-{'-'*5}-+-{'-'*4}-+-{'-'*6}-+-{'-'*6}")
     for c in curve:
         bar = "█" * max(1, c["limit_above"])
         print(f"  ≥{c['threshold']:>2} | {c['pushed']:>4} | {c['limit_above']:>4} | {c['coverage_rate']:>5.0f}% | {c['hit_rate']:>5.0f}% {bar}")
-    print(f"\n  推荐阈值: 35~40（覆盖率30~50%，推送池10~25只）")
+    print("\n  推荐阈值: 35~40（覆盖率30~50%，推送池10~25只）")
 
     print("\n" + "=" * 70)
 
@@ -592,7 +578,7 @@ def save_results(baseline: dict, top_results: list[dict], records: list[dict],
 def main(days: int = 30):
     print("=" * 70)
     print(f"权重优化器 V2 启动 — {datetime.now()}")
-    print(f"搜索模式: 加权Top3择优")
+    print("搜索模式: 加权Top3择优")
     print("=" * 70)
 
     # 1. 加载历史评分
@@ -622,10 +608,10 @@ def main(days: int = 30):
     print(f"  基准综合分: {baseline['composite']:.4f}")
 
     # 4. 枚举搜索
-    print(f"\n  生成权重组合...")
+    print("\n  生成权重组合...")
     combos = generate_combos(n=2000)
     print(f"  共 {len(combos)} 种组合")
-    print(f"  开始搜索...")
+    print("  开始搜索...")
 
     results = []
     for i, w in enumerate(combos):
@@ -645,7 +631,7 @@ def main(days: int = 30):
     unique_results.sort(key=lambda x: (-x["composite"], -x["top20_rate"], -x["auc"]))
 
     # 局部精化
-    print(f"  局部精化...")
+    print("  局部精化...")
     refined = refine(unique_results, record_scores, limit_ups, top_n=10, neighbors=30)
     unique_results.extend(refined)
     unique_results.sort(key=lambda x: (-x["composite"], -x["top20_rate"], -x["auc"]))
@@ -653,7 +639,7 @@ def main(days: int = 30):
     top_results = unique_results[:10]
 
     # 5. 维度贡献追踪
-    print(f"\n[4/4] 计算辅助数据...")
+    print("\n[4/4] 计算辅助数据...")
     dim_contrib = compute_dim_contribution(records, limit_ups, CURRENT_WEIGHTS)
     curve = compute_threshold_curve(records, limit_ups, CURRENT_WEIGHTS)
 
@@ -661,7 +647,7 @@ def main(days: int = 30):
     print_report(baseline, top_results, records, limit_ups, CURRENT_WEIGHTS, dim_contrib, curve)
     save_results(baseline, top_results, records, limit_ups, dim_contrib, curve)
 
-    print(f"\n✅ 优化完成!")
+    print("\n✅ 优化完成!")
 
 
 if __name__ == "__main__":

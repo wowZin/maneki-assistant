@@ -4,12 +4,11 @@
 流程：异动扫描(东财API+代理) → 五维度评分 → 排序 → 飞书推送
 
 用法:
-  python scripts/zt_pipeline.py                  # 完整流程(requests+代理)
-  python scripts/zt_pipeline.py --from-file=data/signals/xxx.json  # 从已有文件读取
+  python plays/limit_up/pipeline.py                  # 完整流程(requests+代理)
+  python plays/limit_up/pipeline.py --from-file=data/signals/xxx.json  # 从已有文件读取
 """
 
 import json
-import os
 import re
 import sys
 import time
@@ -20,29 +19,19 @@ import requests
 
 # 项目根目录
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
+PLAY_DIR = Path(__file__).resolve().parent
+DATA_DIR = PLAY_DIR / "data"
 sys.path.insert(0, str(PROJECT_DIR))
 
-# 从.env加载配置
-def load_env():
-    env_file = PROJECT_DIR / ".env"
-    config = {}
-    with open(env_file) as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, value = line.split("=", 1)
-                config[key] = value
-    return config
-
-CONFIG = load_env()
+from scripts.tu_share import CONFIG, clear_tushare_cache  # noqa: E402
+from plays.limit_up.utils import is_trading_time  # noqa: E402
 
 # ===== Feishu 测试模式 =====
 FEISHU_TEST_MODE = CONFIG.get("FEISHU_TEST_MODE", "").lower() == "true"
 def feishu_title_prefix():
-    """测试模式下返回'测试-'前缀"""
     return "测试-" if FEISHU_TEST_MODE else ""
 
-# ===== Agent 权重配置（从.env读取，默认=1） =====
+# ===== Agent 权重配置 =====
 AGENT_WEIGHTS = {
     "fundamental": float(CONFIG.get("AGENT_WEIGHT_FUNDAMENTAL", "1.5")),
     "technical": float(CONFIG.get("AGENT_WEIGHT_TECHNICAL", "1.0")),
@@ -50,139 +39,6 @@ AGENT_WEIGHTS = {
     "sentiment": float(CONFIG.get("AGENT_WEIGHT_SENTIMENT", "1.2")),
     "shortterm": float(CONFIG.get("AGENT_WEIGHT_SHORTTERM", "1.5")),
 }
-
-# ===== Tushare API 缓存层 =====
-# 同一只股票在同一次流水线执行中，相同api_name+params的调用只发一次请求
-_TUSHARE_CACHE = {}
-
-def call_tushare(api_name, token, params, fields="", timeout=10):
-    """带缓存的Tushare API调用，避免同一股票重复请求同一接口"""
-    cache_key = (api_name, json.dumps(params, sort_keys=True), fields)
-    if cache_key in _TUSHARE_CACHE:
-        return _TUSHARE_CACHE[cache_key]
-    try:
-        payload = {
-            "api_name": api_name,
-            "token": token,
-            "params": params,
-        }
-        if fields:
-            payload["fields"] = fields
-        resp = requests.post("https://api.tushare.pro", json=payload, timeout=timeout)
-        result = resp.json()
-        _TUSHARE_CACHE[cache_key] = result
-        return result
-    except Exception:
-        _TUSHARE_CACHE[cache_key] = {}  # 缓存失败结果，避免重试
-        return {}
-
-def clear_tushare_cache():
-    """清空Tushare缓存（流水线开始时调用）"""
-    global _TUSHARE_CACHE
-    _TUSHARE_CACHE = {}
-
-# ===== stock_basic 行业映射缓存（静态表，一次加载全量） =====
-_INDUSTRY_MAP = {}  # ts_code → industry
-_INDUSTRY_PEERS = {}  # industry → [ts_code, ...]
-
-def _ensure_industry_map():
-    """确保行业映射已加载（惰性初始化）"""
-    global _INDUSTRY_MAP, _INDUSTRY_PEERS
-    if _INDUSTRY_MAP:
-        return
-    try:
-        token = CONFIG.get("TUSHARE_TOKEN", "")
-        resp = call_tushare("stock_basic", token, {"list_status": "L"}, "ts_code,industry")
-        items = resp.get("data", {}).get("items", [])
-        for item in items:
-            if len(item) >= 2:
-                code, ind = item[0], (item[1] or '')
-                _INDUSTRY_MAP[code] = ind
-                if ind:
-                    _INDUSTRY_PEERS.setdefault(ind, []).append(code)
-        print(f"  行业映射缓存: {len(_INDUSTRY_MAP)}只股票, {len(_INDUSTRY_PEERS)}个行业")
-    except Exception as e:
-        print(f"  行业映射加载失败: {e}")
-
-def get_industry(code):
-    """获取个股所属行业"""
-    _ensure_industry_map()
-    return _INDUSTRY_MAP.get(code, '')
-
-def get_industry_peers(industry, limit=20):
-    """获取同行业股票列表"""
-    _ensure_industry_map()
-    peers = _INDUSTRY_PEERS.get(industry, [])
-    return peers[:limit]
-
-def clear_industry_cache():
-    """清空行业缓存（测试用）"""
-    global _INDUSTRY_MAP, _INDUSTRY_PEERS
-    _INDUSTRY_MAP = {}
-    _INDUSTRY_PEERS = {}
-
-# ===== 全局工具函数 =====
-def safe_float(val):
-    """安全转换为float，失败返回0.0"""
-    if val is None:
-        return 0.0
-    try:
-        return float(val)
-    except:
-        return 0.0
-
-def safe_float_none(val):
-    """安全转换为float，失败返回None（用于需要区分None和0的场景）"""
-    if val is None:
-        return None
-    try:
-        return float(val)
-    except:
-        return None
-
-def safe_int_none(val):
-    """安全转换为int，失败返回None"""
-    if val is None:
-        return None
-    try:
-        return int(val)
-    except:
-        return None
-
-def is_trading_time():
-    """判断当前是否在A股交易时间(9:30~11:30, 13:00~15:00，工作日)"""
-    from datetime import datetime
-    now = datetime.now()
-    # 周末不算交易日
-    if now.weekday() >= 5:
-        return False
-    # 9:30~11:30, 13:00~15:00
-    if now.hour < 9 or (now.hour == 9 and now.minute < 30):
-        return False
-    if now.hour >= 15:
-        return False
-    # 午间休市 11:30-13:00
-    if now.hour == 11 and now.minute >= 30:
-        return False
-    if now.hour == 12:
-        return False
-    return True
-
-def list_to_dict(items, fields):
-    """将Tushare返回的list格式转为dict格式"""
-    if not items or not fields:
-        return []
-    result = []
-    for item in items:
-        if isinstance(item, dict):
-            result.append(item)
-        elif isinstance(item, (list, tuple)):
-            d = {}
-            for i, f in enumerate(fields):
-                if i < len(item):
-                    d[f] = item[i]
-            result.append(d)
-    return result
 
 # ===== 1. 扫描异动股 =====
 def scan_surge():
@@ -192,7 +48,6 @@ def scan_surge():
     双路: ①涨速降序(f11) ②涨幅降序(f3) → 合并去重
     Returns: list[dict] - [{code, name}] 候选股列表，或None
     """
-    import re
     from scripts.proxy_utils import get_proxies_dict
     
     if not is_trading_time():
@@ -223,7 +78,7 @@ def scan_surge():
             pct = s.get("f3")
             try:
                 pct = float(pct) if pct and pct != "-" else 0
-            except:
+            except Exception:
                 pct = 0
             # 过滤: ST/新股/创业板/科创板，涨幅2%-9.5%
             if re.search(r"ST|\*ST|退|N", name or ""):
@@ -302,157 +157,17 @@ def load_from_file(filepath):
     print(f"从文件加载: {len(candidates)} 只候选股")
     return candidates
 
-# ===== 1.5 全系统过滤规则 (所有Agent共用) =====
-def filter_candidates(candidates):
-    """
-    全系统7条过滤规则：满足任一条件直接排除，不进入分析
-    1. ST/*ST/退市整理期
-    2. 上市不满60日新股
-    3. 创业板(30xxxx.SZ) / 科创板(688xxx.SH) / 北交所(8xxxxx.BJ)
-    4. 当日停牌
-    5. 自由流通市值 < 20亿
-    6. 5日均换手率 < 2%
-    7. 连续一字板（无法买入）
-    """
-    from datetime import datetime, timedelta
-    
-    token = CONFIG["TUSHARE_TOKEN"]
-    today_str = datetime.now().strftime("%Y%m%d")
-    filtered_in = []
-    filter_log = []
-    
-    for stock in candidates:
-        code = stock["code"]
-        name = stock.get("name", "")
-        vetoed = False
-        veto_reason = ""
-        
-        # 规则3: 创业板/科创板/北交所 (纯代码判断，无需API)
-        pure_code = code.split(".")[0]
-        if pure_code.startswith("30") or pure_code.startswith("688") or pure_code.startswith("8") or pure_code.startswith("4"):
-            # 30开头=创业板, 688开头=科创板, 8/4开头=北交所
-            suffix = code.split(".")[-1] if "." in code else ""
-            if pure_code.startswith("30"):
-                vetoed = True
-                veto_reason = f"规则3: 创业板({code})"
-            elif pure_code.startswith("688"):
-                vetoed = True
-                veto_reason = f"规则3: 科创板({code})"
-            elif pure_code.startswith("8") or pure_code.startswith("4"):
-                # 8开头或4开头且后缀BJ(或无后缀)为北交所
-                if suffix == "BJ" or suffix == "":
-                    vetoed = True
-                    veto_reason = f"规则3: 北交所({code})"
-        
-        if vetoed:
-            filter_log.append(f"  [排除] {code} {name}: {veto_reason}")
-            continue
-        
-        # 规则1/2/5/6/7/4 需要Tushare API数据，批量获取daily_basic
-        try:
-            resp_data = call_tushare(
-                "daily_basic", token,
-                {"ts_code": code, "trade_date": today_str},
-                "ts_code,close,turnover_rate,turnover_rate_f,circ_mv,total_mv,pct_chg"
-            )
-            items = resp_data.get("data", {}).get("items", [])
-            if not items:
-                # 当日无数据(可能停牌或非交易日)，取最近一日
-                resp_data = call_tushare(
-                    "daily_basic", token,
-                    {"ts_code": code},
-                    "trade_date,ts_code,close,turnover_rate,turnover_rate_f,circ_mv,total_mv,pct_chg"
-                )
-                items = resp_data.get("data", {}).get("items", [])
-            
-            if not items:
-                filter_log.append(f"  [排除] {code} {name}: 无行情数据")
-                continue
-            
-            latest = items[0]
-            field_map = resp_data.get("data", {}).get("fields", [])
-            basic = dict(zip(field_map, latest))
-            
-            # 规则5: 自由流通市值 < 20亿 (circ_mv单位: 万元)
-            circ_mv = safe_float(basic.get("circ_mv"))
-            if circ_mv and circ_mv < 200000:  # 20亿=200000万
-                vetoed = True
-                veto_reason = f"规则5: 流通市值{circ_mv/10000:.1f}亿<20亿"
-            
-            # 规则6: 换手率 < 2% (取turnover_rate_f自由流通换手)
-            turnover = safe_float(basic.get("turnover_rate_f")) or safe_float(basic.get("turnover_rate"))
-            if not vetoed and turnover and turnover < 2:
-                vetoed = True
-                veto_reason = f"规则6: 换手率{turnover:.1f}%<2%"
-            
-            # 规则7: 连续一字板 (pct_chg接近10%或20%且换手极低)
-            if not vetoed:
-                pct_chg = safe_float(basic.get("pct_chg"))
-                if pct_chg and turnover:
-                    # 一字涨停: 涨幅>=9.9% 且 换手<0.5%
-                    if pct_chg >= 9.9 and turnover < 0.5:
-                        vetoed = True
-                        veto_reason = f"规则7: 一字板(涨幅{pct_chg:.1f}%换手{turnover:.2f}%)"
-                    # 一字跌停
-                    elif pct_chg <= -9.9 and turnover < 0.5:
-                        vetoed = True
-                        veto_reason = f"规则7: 一字跌停(涨幅{pct_chg:.1f}%换手{turnover:.2f}%)"
-            
-        except Exception as e:
-            filter_log.append(f"  [警告] {code} {name}: 数据获取失败({e}), 保留")
-        
-        if vetoed:
-            filter_log.append(f"  [排除] {code} {name}: {veto_reason}")
-            continue
-        
-        # 规则1: ST/*ST — 通过stock_basic查询
-        try:
-            resp = call_tushare("stock_basic", token, {"ts_code": code}, "ts_code,name,list_date")
-            items = resp.get("data", {}).get("items", [])
-            if items:
-                stock_name = items[0][1] if len(items[0]) > 1 else name
-                list_date = items[0][2] if len(items[0]) > 2 else None
-                
-                # 规则1: ST
-                if stock_name and ("ST" in stock_name or "st" in stock_name.lower()):
-                    vetoed = True
-                    veto_reason = f"规则1: ST股({stock_name})"
-                
-                # 规则2: 上市不满60日
-                if not vetoed and list_date:
-                    try:
-                        list_dt = datetime.strptime(str(list_date), "%Y%m%d")
-                        days_since_list = (datetime.now() - list_dt).days
-                        if days_since_list < 60:
-                            vetoed = True
-                            veto_reason = f"规则2: 上市{days_since_list}日<60日"
-                    except:
-                        pass
-        except:
-            pass
-        
-        if vetoed:
-            filter_log.append(f"  [排除] {code} {name}: {veto_reason}")
-            continue
-        
-        filtered_in.append(stock)
-    
-    print(f"\n[过滤] 输入{len(candidates)}只 → 保留{len(filtered_in)}只 → 排除{len(candidates)-len(filtered_in)}只")
-    if filter_log:
-        for log in filter_log:
-            print(log)
-    
-    return filtered_in
+from plays.limit_up.filter import filter_candidates  # noqa: E402
 
 # ===== 2. 基本面评分 (V1.0 五维度量化) =====
 # Lazy import to avoid circular dependency
 def score_fundamental(code):
-    from plays.limit_up.agents.fundamental_agent import score_fundamental as _score_fundamental
+    from plays.limit_up.strategies.fundamental import score_fundamental as _score_fundamental
     return _score_fundamental(code)
 
 # ===== 3. 技术面评分 V1.0 (五维度量化) =====
 def score_technical(code):
-    from plays.limit_up.agents.technical_agent import score_technical as _score_technical
+    from plays.limit_up.strategies.technical import score_technical as _score_technical
     return _score_technical(code)
 
 
@@ -462,7 +177,7 @@ _FUND_FLOW_CACHE = None
 _FUND_FLOW_DATE = None
 
 def score_fundflow(code):
-    from plays.limit_up.agents.fundflow_agent import score_fundflow as _score_fundflow
+    from plays.limit_up.strategies.fundflow import score_fundflow as _score_fundflow
     return _score_fundflow(code)
 
 # V2.4: 实时涨幅缓存（CDP/requests+代理获取，避免盘中Tushare无数据）
@@ -482,7 +197,7 @@ def _batch_fetch_realtime_pct():
     
     try:
         from scripts import proxy_utils as _pu
-        proxies = _pu.get_proxies_dict() if _pu.is_proxy_enabled() else None
+        proxies = _pu.get_proxies_dict()
         cache = {}
         # 逐页获取（每页最多100只，翻页至获取5000+）
         for page in range(1, 6):  # 最多5页，覆盖500只活跃股
@@ -528,7 +243,7 @@ def _get_popularity_rank(code: str) -> int | None:
         try:
             import requests as _req
             from scripts import proxy_utils as _pu
-            proxies = _pu.get_proxies_dict() if _pu.is_proxy_enabled() else None
+            proxies = _pu.get_proxies_dict()
             cache = {}
             for pg in range(1, 3):
                 url = (
@@ -595,19 +310,19 @@ def _get_realtime_fund_cache():
                 f62 = s.get("f62")
                 try:
                     net_flow = float(f62) if f62 and f62 != "-" else 0
-                except:
+                except Exception:
                     net_flow = 0
                 try:
                     vol_ratio = float(s.get("f10", 0)) if s.get("f10") and s.get("f10") != "-" else 0
-                except:
+                except Exception:
                     vol_ratio = 0
                 try:
                     turnover = float(s.get("f7", 0)) if s.get("f7") and s.get("f7") != "-" else 0
-                except:
+                except Exception:
                     turnover = 0
                 try:
                     amount = float(s.get("f6", 0)) if s.get("f6") and s.get("f6") != "-" else 0
-                except:
+                except Exception:
                     amount = 0
                 cache[code] = {
                     "net_flow": net_flow,      # 主力净流入(元)
@@ -629,7 +344,7 @@ def _get_realtime_fund_cache():
 
 
 def score_sentiment(code):
-    from plays.limit_up.agents.sentiment_agent import score_sentiment as _score_sentiment
+    from plays.limit_up.strategies.sentiment import score_sentiment as _score_sentiment
     return _score_sentiment(code)
 
 
@@ -646,9 +361,9 @@ def push_feishu(results):
 
     def _stars(total):
         """综合评级: >=55 ⭐⭐⭐⭐⭐  >=45 ⭐⭐⭐⭐  >=35 ⭐⭐⭐"""
-        if total >= 55: return "⭐ ⭐ ⭐ ⭐ ⭐"
-        if total >= 45: return "⭐ ⭐ ⭐ ⭐"
-        if total >= 35: return "⭐ ⭐ ⭐"
+        if total >= 55: return "⭐ ⭐ ⭐ ⭐ ⭐"  # noqa: E701
+        if total >= 45: return "⭐ ⭐ ⭐ ⭐"  # noqa: E701
+        if total >= 35: return "⭐ ⭐ ⭐"  # noqa: E701
         return ""
 
     # 推送筛选 (V2.6: 加权Top3择优，阈值35)
@@ -669,7 +384,7 @@ def push_feishu(results):
         return False
 
     # 保存推送记录（供复盘使用）
-    pushed_dir = PROJECT_DIR / "data" / "pushed"
+    pushed_dir = DATA_DIR / "pushed"
     pushed_dir.mkdir(parents=True, exist_ok=True)
     pushed_file = pushed_dir / f"{datetime.now().strftime('%Y%m%d_%H%M')}.json"
     with open(pushed_file, "w") as f:
@@ -740,7 +455,7 @@ def _write_empty_result(reason=""):
     """写入零结果分析文件（兜底：避免扫空静默失败）"""
     now = datetime.now()
     ts = now.strftime("%Y%m%d_%H%M")
-    output_path = PROJECT_DIR / "data" / "analysis" / f"{ts}.json"
+    output_path = DATA_DIR / "analysis" / f"{ts}.json"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     empty = [{"_empty": True, "reason": reason, "time": now.isoformat()}]
     with open(output_path, "w") as f:
@@ -760,7 +475,7 @@ def _score_one(stock, l2api, weights, scored_cache, cache_hit):
         reasons = {}
 
     from concurrent.futures import ThreadPoolExecutor, as_completed
-    from plays.limit_up.agents.shortterm_agent import score_shortterm
+    from plays.limit_up.strategies.shortterm import score_shortterm
     funcs = {"fundamental": score_fundamental, "technical": score_technical,
              "fundflow": score_fundflow, "sentiment": score_sentiment, "shortterm": score_shortterm}
     to_run = {dim: fn for dim, fn in funcs.items() if dim not in scores}
@@ -791,7 +506,7 @@ def _score_one(stock, l2api, weights, scored_cache, cache_hit):
     l2data = None
     if l2api:
         try:
-            from plays.limit_up.l2api_client import to_price, to_volume
+            from scripts.l2_client import to_price
             mkt = l2api.get_market(code)
             vwap = l2api.get_vwap(code)
             kb = l2api.get_minute_kline(code, n=5)
@@ -824,18 +539,18 @@ def _pre_rank(candidates, top_n=50):
         pct = stock.get("pct_chg", 0)
         short = stock["code"].split(".")[0]
         score = 0
-        if surge >= 5: score += 3
-        elif surge >= 3: score += 2
-        elif surge >= 2: score += 1
-        if pct >= 7: score += 3
-        elif pct >= 5: score += 2
-        elif pct >= 3: score += 1
+        if surge >= 5: score += 3  # noqa: E701
+        elif surge >= 3: score += 2  # noqa: E701
+        elif surge >= 2: score += 1  # noqa: E701
+        if pct >= 7: score += 3  # noqa: E701
+        elif pct >= 5: score += 2  # noqa: E701
+        elif pct >= 3: score += 1  # noqa: E701
         rank = pop_cache.get(short)
         if rank is not None:
-            if rank <= 100: score += 4
-            elif rank <= 200: score += 3
-            elif rank <= 300: score += 2
-            elif rank <= 500: score += 1
+            if rank <= 100: score += 4  # noqa: E701
+            elif rank <= 200: score += 3  # noqa: E701
+            elif rank <= 300: score += 2  # noqa: E701
+            elif rank <= 500: score += 1  # noqa: E701
         scored.append((score, stock))
     scored.sort(key=lambda x: x[0], reverse=True)
     ranked = [s for _, s in scored[:top_n]]
@@ -877,28 +592,13 @@ def main():
         _write_empty_result("过滤后无候选股")
         return
 
-    # 加载权重
-    weights = {"fundamental": 1.5, "technical": 1.0, "fundflow": 1.0,
-               "sentiment": 1.2, "shortterm": 1.5}
-    if (PROJECT_DIR / ".env").exists():
-        with open(PROJECT_DIR / ".env") as _wf:
-            for _wl in _wf:
-                _wl = _wl.strip()
-                if _wl.startswith("AGENT_WEIGHT_FUNDAMENTAL="):
-                    weights["fundamental"] = float(_wl.split("=", 1)[1].strip())
-                elif _wl.startswith("AGENT_WEIGHT_TECHNICAL="):
-                    weights["technical"] = float(_wl.split("=", 1)[1].strip())
-                elif _wl.startswith("AGENT_WEIGHT_FUND_FLOW="):
-                    weights["fundflow"] = float(_wl.split("=", 1)[1].strip())
-                elif _wl.startswith("AGENT_WEIGHT_SENTIMENT="):
-                    weights["sentiment"] = float(_wl.split("=", 1)[1].strip())
-                elif _wl.startswith("AGENT_WEIGHT_SHORTTERM="):
-                    weights["shortterm"] = float(_wl.split("=", 1)[1].strip())
+    # 加载权重（从 .env 通过 tu_share.CONFIG 统一读取）
+    weights = dict(AGENT_WEIGHTS)
 
     # 今日缓存
     today_str = datetime.now().strftime("%Y%m%d")
     scored_cache = {}
-    analysis_dir = PROJECT_DIR / "data" / "analysis"
+    analysis_dir = DATA_DIR / "analysis"
     if analysis_dir.exists():
         for f in sorted(analysis_dir.glob(f"{today_str}*.json")):
             try:
@@ -915,7 +615,7 @@ def main():
     # 1.6 l2api 启动
     l2api = None
     if CONFIG.get("L2API_ENABLED", "").lower() == "true":
-        from plays.limit_up.l2api_client import get_client
+        from scripts.l2_client import get_client
         account = CONFIG.get("L2API_ACCOUNT", "")
         password = CONFIG.get("L2API_PASSWORD", "")
         if account and password:
@@ -979,7 +679,7 @@ def main():
         print(f"  {i}. {r['code']} {r['name']} - 总分:{r['total']:.1f}{tag}")
 
     # 保存结果
-    output_dir = PROJECT_DIR / "data" / "analysis"
+    output_dir = DATA_DIR / "analysis"
     output_dir.mkdir(parents=True, exist_ok=True)
     output_file = output_dir / f"{datetime.now().strftime('%Y%m%d_%H%M')}.json"
     with open(output_file, "w") as f:

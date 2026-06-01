@@ -29,13 +29,14 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
 from plays.watchdog.indicators import calc_all, check_trend, check_pullback, check_entry_score, check_exit_signal
-from plays.limit_up.l2api_client import get_client, has_client, to_price, to_volume, normalize_code
+from scripts.l2_client import get_client, has_client, to_price, to_volume, normalize_code  # noqa: E402
+from scripts.tu_share import call_tushare  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
 STATE_FILE = PROJECT_DIR / "plays" / "watchdog" / "data" / "state.json"
 SCAN_INTERVAL = 30  # 每30秒检查一次信号
-MAX_WATCH = 1       # 试用期仅预留1个盯盘位，其余给pipeline扫描
+MAX_WATCH = 5       # 同时盯盘上限5只
 
 # ---- 飞书推送 ----
 
@@ -80,8 +81,9 @@ def _push_feishu(text: str):
 class WatchState:
     """单只股票的盯盘状态"""
 
-    def __init__(self, code: str):
+    def __init__(self, code: str, name: str = ""):
         self.code = code
+        self.name = name
         self.added_at = datetime.now().isoformat()
         self.status = "watching"  # watching | signal_pending | entered
         # 日线指标缓存
@@ -94,13 +96,14 @@ class WatchState:
         self.bars_held: int = 0
         self.signal_low: float = 0.0   # Step2触发时的最低价(做多参考)
         self.signal_high: float = 0.0  # Step2触发时的最高价(做空参考)
+        self.signal_at: str = ""        # 信号触发时间
         self.avg_vol_20: float = 0.0
         # 上次推送时间(防抖)
         self.last_alert_at: str = ""
 
     def to_dict(self) -> dict:
         return {
-            "code": self.code, "added_at": self.added_at, "status": self.status,
+            "code": self.code, "name": self.name, "added_at": self.added_at, "status": self.status,
             "entry_price": self.entry_price, "entry_at": self.entry_at,
             "highest_since_entry": self.highest_since_entry, "bars_held": self.bars_held,
             "signal_low": self.signal_low, "signal_high": self.signal_high,
@@ -110,7 +113,7 @@ class WatchState:
 
     @classmethod
     def from_dict(cls, d: dict) -> "WatchState":
-        s = cls(d["code"])
+        s = cls(d["code"], d.get("name", ""))
         s.added_at = d.get("added_at", "")
         s.status = d.get("status", "watching")
         s.entry_price = d.get("entry_price", 0.0)
@@ -158,9 +161,21 @@ class WatchdogEngine:
 
     # ---- 指令处理 ----
 
+    def _resolve_name(self, code: str) -> str:
+        """查询股票名称"""
+        try:
+            resp = call_tushare("stock_basic", {"ts_code": code}, "ts_code,name")
+            items = resp.get("data", {}).get("items", [])
+            if items and len(items[0]) > 1:
+                return items[0][1]
+        except Exception:
+            pass
+        return code
+
     def add(self, codes: list[str]) -> str:
         codes = [normalize_code(c) for c in codes]
         msgs = []
+        init_reasons: dict[str, str] = {}
         with self._lock:
             current = len(self._states)
             for code in codes:
@@ -170,12 +185,14 @@ class WatchdogEngine:
                 if current >= MAX_WATCH:
                     msgs.append(f"盯盘已达上限({MAX_WATCH}只)，无法添加 {code}")
                     continue
-                st = WatchState(code)
+                name = self._resolve_name(code)
+                st = WatchState(code, name)
                 # 立即获取日线数据
-                self._update_daily(st)
+                ok, reason = self._update_daily(st)
+                init_reasons[code] = reason
                 self._states[code] = st
                 current += 1
-                msgs.append(f"开始盯盘 {code}")
+                msgs.append(f"开始盯盘 {name}({code})")
             self._save_state()
             # 同步l2api订阅
             client = get_client()
@@ -185,8 +202,9 @@ class WatchdogEngine:
         for code in codes:
             if code in self._states:
                 st = self._states[code]
-                trend_ok, trend_reason = check_trend(st.indicators) if st.indicators else (False, "数据加载中")
-                _push_feishu(f"👁 盯盘 {code}\n趋势: {trend_reason}")
+                default_reason = init_reasons.get(code, "数据加载中")
+                trend_ok, trend_reason = check_trend(st.indicators) if st.indicators else (False, default_reason)
+                _push_feishu(f"👁 盯盘 {st.name}({code})\n趋势: {trend_reason}")
 
         return "\n".join(msgs)
 
@@ -200,9 +218,9 @@ class WatchdogEngine:
                     # 如果入场了，生成盯盘小结
                     if st.status == "entered":
                         pnl = "持仓中" if st.entry_price > 0 else ""
-                        msgs.append(f"停止盯盘 {code} ({pnl})")
+                        msgs.append(f"停止盯盘 {st.name}({code}) ({pnl})")
                     else:
-                        msgs.append(f"停止盯盘 {code}")
+                        msgs.append(f"停止盯盘 {st.name}({code})")
                 else:
                     msgs.append(f"{code} 未在盯盘中")
             self._save_state()
@@ -228,7 +246,7 @@ class WatchdogEngine:
             lines = ["📋 盯盘列表:"]
             for code, st in self._states.items():
                 status_icon = {"watching": "👁", "signal_pending": "⏳", "entered": "📈"}.get(st.status, "❓")
-                lines.append(f"  {status_icon} {code} [{st.status}]")
+                lines.append(f"  {status_icon} {st.name}({st.code}) [{st.status}]")
             return "\n".join(lines)
 
     # ---- 内部循环 ----
@@ -309,7 +327,7 @@ class WatchdogEngine:
         st.last_alert_at = now.strftime("%H:%M")
         self._save_state()
         _push_feishu(
-            f"⏳ {st.code} 回调待机信号\n"
+            f"⏳ {st.name}({st.code}) 回调待机信号\n"
             f"趋势: {trend_reason}\n"
             f"触发: {pb_reason}\n"
             f"参考低点: {last:.2f} | VWAP: {vwap:.2f}"
@@ -334,7 +352,7 @@ class WatchdogEngine:
             st.bars_held = 0
             self._save_state()
             _push_feishu(
-                f"📈 {st.code} 入场信号!\n"
+                f"📈 {st.name}({st.code}) 入场信号!\n"
                 f"入场价: {last:.2f} | {score_reason}\n"
                 f"ATR: {atr_val:.2f} | VWAP: {vwap:.2f}\n"
                 f"止损位: {last - 2*atr_val:.2f} (2×ATR)"
@@ -362,7 +380,7 @@ class WatchdogEngine:
         if last <= stop_price:
             pnl_pct = (last / st.entry_price - 1) * 100
             _push_feishu(
-                f"🛑 {st.code} 移动止损触发\n"
+                f"🛑 {st.name}({st.code}) 移动止损触发\n"
                 f"入场: {st.entry_price:.2f} → 现价: {last:.2f}\n"
                 f"最高: {st.highest_since_entry:.2f} | 止损: {stop_price:.2f}\n"
                 f"盈亏: {pnl_pct:+.2f}%"
@@ -375,7 +393,7 @@ class WatchdogEngine:
         if last >= profit_target and st.bars_held > 0:
             pnl_pct = (last / st.entry_price - 1) * 100
             _push_feishu(
-                f"💰 {st.code} 止盈目标到达\n"
+                f"💰 {st.name}({st.code}) 止盈目标到达\n"
                 f"入场: {st.entry_price:.2f} → 现价: {last:.2f}\n"
                 f"盈亏: {pnl_pct:+.2f}% | 建议平50%"
             )
@@ -387,7 +405,7 @@ class WatchdogEngine:
         if exit_signal:
             pnl_pct = (last / st.entry_price - 1) * 100
             _push_feishu(
-                f"🔻 {st.code} {exit_reason}\n"
+                f"🔻 {st.name}({st.code}) {exit_reason}\n"
                 f"入场: {st.entry_price:.2f} → 现价: {last:.2f}\n"
                 f"盈亏: {pnl_pct:+.2f}% | 持仓{st.bars_held}根K线"
             )
@@ -395,36 +413,17 @@ class WatchdogEngine:
 
     # ---- 日线数据更新 ----
 
-    def _update_daily(self, st: WatchState):
+    def _update_daily(self, st: WatchState) -> tuple[bool, str]:
         """从Tushare获取日线数据并计算指标"""
         try:
-            env_file = PROJECT_DIR / ".env"
-            config = {}
-            if env_file.exists():
-                with open(env_file) as f:
-                    for line in f:
-                        line = line.strip()
-                        if line and not line.startswith("#") and "=" in line:
-                            k, v = line.split("=", 1)
-                            config[k] = v
-
-            token = config.get("TUSHARE_TOKEN", "")
-            if not token:
-                return
-
-            resp = requests.post("https://api.tushare.pro", json={
-                "api_name": "daily",
-                "token": token,
-                "params": {"ts_code": st.code, "limit": 120},
-                "fields": "trade_date,open,high,low,close,pre_close,vol,amount",
-            }, timeout=15)
-            data = resp.json()
-            items = data.get("data", {}).get("items", [])
+            resp = call_tushare("daily", {"ts_code": st.code, "limit": 120},
+                               "trade_date,open,high,low,close,pre_close,vol,amount")
+            items = resp.get("data", {}).get("items", [])
             if not items or len(items) < 30:
                 logger.warning(f"{st.code} 日线数据不足({len(items)}条)")
-                return
+                return False, f"日线数据不足({len(items)}条)"
 
-            fields = data["data"]["fields"]
+            fields = resp["data"]["fields"]
             # 按日期升序
             rows = sorted(items, key=lambda x: x[0])
             df = {f: np.array([row[i] for row in rows], dtype=float) for i, f in enumerate(fields)}
@@ -438,9 +437,11 @@ class WatchdogEngine:
             st.last_daily_update = datetime.now().strftime("%Y%m%d")
             self._save_state()
             logger.info(f"{st.code} 日线指标更新完成({len(rows)}条)")
+            return True, "趋势指标已加载"
 
         except Exception as e:
             logger.error(f"{st.code} 日线更新失败: {e}")
+            return False, f"日线更新失败: {e}"
 
     # ---- 状态持久化 ----
 

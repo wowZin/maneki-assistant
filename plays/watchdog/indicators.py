@@ -20,7 +20,7 @@ from numpy.lib.stride_tricks import sliding_window_view
 
 # 可选 numba JIT 加速
 try:
-    from numba import njit
+    from numba import njit  # pyright: ignore[reportMissingImports]
     _HAS_NUMBA = True
 except ImportError:
     def njit(f=None, **kwargs):
@@ -40,7 +40,7 @@ def _kama_core(close, n, fast, slow):
         for j in range(i - n + 1, i + 1):
             s += abs(close[j] - close[j-1])
         vols[i - n] = s
-    dirs = np.abs(np.diff(close, n))
+    dirs = np.abs(close[n:] - close[:-n])
     fast_sc = 2.0 / (fast + 1)
     slow_sc = 2.0 / (slow + 1)
     er = np.zeros(len(dirs))
@@ -67,9 +67,15 @@ def kama(close: np.ndarray, n: int = 10, fast: int = 2, slow: int = 30) -> np.nd
 @njit
 def _ema_core(series, period):
     result = np.full(len(series), np.nan)
-    result[period-1] = np.mean(series[:period])
+    # 跳过前导NaN，找到第一个有效值
+    start = 0
+    while start < len(series) and np.isnan(series[start]):
+        start += 1
+    if start + period > len(series):
+        return result
+    result[start + period - 1] = np.mean(series[start:start + period])
     alpha = 2 / (period + 1)
-    for i in range(period, len(series)):
+    for i in range(start + period, len(series)):
         result[i] = alpha * series[i] + (1 - alpha) * result[i-1]
     return result
 
@@ -253,8 +259,8 @@ def calc_all(df, asset_group: str = "A"):
 
     c = np.ascontiguousarray(df["close"], dtype=np.float64)
     h = np.ascontiguousarray(df["high"], dtype=np.float64)
-    l = np.ascontiguousarray(df["low"], dtype=np.float64)
-    v = np.ascontiguousarray(df.get("volume", df.get("vol", np.zeros_like(c))), dtype=np.float64)
+    l = np.ascontiguousarray(df["low"], dtype=np.float64)  # noqa: E741
+    v = np.ascontiguousarray(df.get("volume", df.get("vol", np.zeros_like(c))), dtype=np.float64)  # noqa: F841
 
     k = kama(c, group["kama_n"], group["kama_fast"], group["kama_slow"])
     k_ema = ema(k, 20)
