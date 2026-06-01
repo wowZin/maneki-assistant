@@ -243,7 +243,7 @@ def _compile_weight_analysis(trade_date: str) -> str:
         with open(weight_file) as f:
             data = json.load(f)
         base = data.get("baseline", {})
-        rec = data.get("recommended", {})
+        data.get("recommended", {})
 
         base_w = "  ".join(f"{DIM_CN[d]}={base['weights'][d]:.1f}" for d in DIMS) if base.get("weights") else "无"
         base_push = f"信号池{base.get('pushed_count',0)}只(含涨停{base.get('push_limit_count',0)}只) 实战命中率{base.get('top3_hit_rate',0)}%"
@@ -264,8 +264,7 @@ def _compile_weight_analysis(trade_date: str) -> str:
 
 def _compile_push_analysis(trade_date: str) -> str:
     """编译推送记录与实际涨停命中分析"""
-    import requests, os
-    from pathlib import Path
+    import requests
 
     PUSHED_DIR = PROJECT_DIR / "plays" / "limit_up" / "data" / "pushed"
 
@@ -407,6 +406,74 @@ def update_log(trade_date: str, page_name: str, count: int, avg_score: float):
         f.write(entry)
 
 
+def compile_watchdog(trade_date: str):
+    """编译盯盘状态到 wiki"""
+    STATE_FILE = PROJECT_DIR / "plays" / "watchdog" / "data" / "state.json"
+    if not STATE_FILE.exists():
+        return
+
+    with open(STATE_FILE) as f:
+        state = json.load(f)
+    if not state:
+        return
+
+    # 获取股票名称
+    names = {}
+    try:
+        import os
+        import tushare as ts
+        from dotenv import load_dotenv
+        load_dotenv(PROJECT_DIR / ".env")
+        ts.set_token(os.getenv("TUSHARE_TOKEN", ""))
+        pro = ts.pro_api()
+        for code in state.keys():
+            df = pro.stock_basic(ts_code=code, fields="name")
+            if not df.empty:
+                names[code] = df.iloc[0]["name"]
+    except Exception:
+        pass
+
+    date_display = f"{trade_date[:4]}-{trade_date[4:6]}-{trade_date[6:]}"
+    status_icons = {"watching": "👁 监控中", "signal_pending": "⏳ 信号待确认", "entered": "📈 已入场"}
+
+    rows = []
+    for code, st in state.items():
+        name = names.get(code, code.split(".")[0])
+        status_text = status_icons.get(st.get("status", ""), st.get("status", "?"))
+        added = st.get("added_at", "")[:10]
+        entry = f"入场价{st['entry_price']:.2f}" if st.get("entry_price") else "—"
+        rows.append(f"| {code} | {name} | {added} | {status_text} | {entry} |")
+
+    content = f"""---
+title: {date_display} 盯盘状态
+created: {datetime.now().strftime("%Y-%m-%d")}
+updated: {datetime.now().strftime("%Y-%m-%d")}
+type: watchdog
+tags: [daily, watchdog]
+---
+
+# {date_display} 盯盘状态
+
+## 当前盯盘 ({len(state)}/5)
+
+| 代码 | 名称 | 开始日期 | 状态 | 入场价 |
+|------|------|:---:|------|:---:|
+{chr(10).join(rows)}
+
+## 盯盘限制
+
+- 上限: 5只
+- 新盯盘前需确认是否有空位，满员时让用户选择释放哪只
+"""
+
+    # 写入
+    watchdog_dir = WIKI_DIR / "plays" / "watchdog" / "entities"
+    watchdog_dir.mkdir(parents=True, exist_ok=True)
+    page_name = f"{trade_date}-盯盘状态.md"
+    (watchdog_dir / page_name).write_text(content, encoding="utf-8")
+    print(f"  ✅ {page_name} — {len(state)}只盯盘")
+
+
 def main():
     # 默认取最近交易日
     target_date = ""
@@ -415,17 +482,19 @@ def main():
             target_date = arg.split("=")[1]
 
     if not target_date:
-        # 从分析文件找最近日期
-        files = sorted(ANALYSIS_DIR.glob("*.json"))
-        if files:
-            target_date = files[-1].stem.split("_")[0]
-
-    if not target_date:
-        print("❌ 无数据")
-        return
+        target_date = datetime.now().strftime("%Y%m%d")
 
     print(f"📊 wiki compile — {target_date}")
-    compile_day(target_date)
+
+    # limit_up 扫描汇总
+    if ANALYSIS_DIR.exists():
+        compile_day(target_date)
+    else:
+        print("  limit_up 分析数据目录不存在，跳过")
+
+    # watchdog 盯盘状态
+    compile_watchdog(target_date)
+
     print("✅ 编译完成")
 
 
