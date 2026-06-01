@@ -777,21 +777,22 @@ def main():
         _write_empty_result("过滤后无候选股")
         return
 
-    # 1.6 l2api Level2 实时数据接入 (试用)
+    # 1.6 l2api Level2 实时数据接入
     l2api = None
     if CONFIG.get("L2API_ENABLED", "").lower() == "true":
-        from plays.limit_up.l2api_client import get_client
+        from plays.limit_up.l2api_client import get_client, has_client
         l2api_account = CONFIG.get("L2API_ACCOUNT", "")
         l2api_password = CONFIG.get("L2API_PASSWORD", "")
         if l2api_account and l2api_password:
             print("\n[1.6/5] l2api Level2 实时数据接入...")
             try:
                 l2api = get_client(account=l2api_account, password=l2api_password)
-                l2api.start()
+                if not has_client() or not l2api._running:
+                    l2api.start()
                 # 试用期 TopicCnt=30, 留1个给盯盘, 最多订阅29只
                 l2api_codes = [c["code"] for c in candidates[:29]]
                 l2api.sync_subscriptions(l2api_codes)
-                print(f"  l2api 已订阅 {len(l2api_codes)} 只候选股 (上限30)，等待首笔数据...")
+                print(f"  l2api 订阅 {len(l2api_codes)} 只 (差量: +{len([c for c in l2api_codes if c not in l2api.cache.get_subscribed()])}/-{len(l2api.cache.get_subscribed() - set(l2api_codes))})")
                 time.sleep(3)
                 ready_count = sum(1 for c in l2api_codes if l2api.is_ready(c))
                 print(f"  l2api 数据就绪: {ready_count}/{len(l2api_codes)}")
@@ -1005,10 +1006,9 @@ def main():
     print("\n[飞书推送]...")
     push_feishu(results)
 
-    # 7. 清理 l2api
+    # 7. l2api 常驻,不在此次关闭 (供盯盘和后续扫描复用)
     if l2api:
-        l2api.stop()
-        print("\n[l2api] 已断开连接")
+        print(f"\n[l2api] 保持连接 (当前订阅: {len(l2api.cache.get_subscribed())} 只)")
 
     print("\n" + "=" * 50)
     print("流程完成!")
