@@ -10,9 +10,9 @@
 plays/新玩法名/
 ├── __init__.py
 ├── docs              ← 评分维度策略说明集合（必要，与 strategies 必须一一对应）
-│   ├── score.md      ← 评分规则说明（必要，与 strategies/xxx_dim.py 必须一一对应）
-│   └── xxx_dim.md    ← 策略说明（必要，与 strategies/xxx_dim.py 必须一一对应）
-├── strategies/       ← 评分策略实现集合（必要，至少1个，需要与 docs 保持一一对应）
+│   ├── score.md      ← 总评分规则
+│   └── xxx_dim.md    ← 维度策略说明（必要，与 strategies/xxx_dim.py 必须一一对应）
+├── strategies/       ← 维度策略实现集合（必要，至少1个，需要与 docs 保持一一对应）
 │   ├── __init__.py
 │   └── xxx_dim.py    ← 维度策略实现（必要，与 docs/xxx_dim.md 必须一一对应）
 ├── datasources/      ← 数据源目录（必要）
@@ -21,7 +21,7 @@ plays/新玩法名/
 │   └── tests         ← 数据源单测（与数据源一一对应）
 ├── output/              ← 分析数据目录（必要）
 │   └── (analysis/ signals/ pushed/ 等子目录按需创建)
-├── score.py          ← 评分规则（必要，与 docs/score.md 必须逻辑严格一致）
+├── score.py          ← 总评分规则实现（必要，与 docs/score.md 必须逻辑严格一致）
 ├── pipeline.py       ← 主流程（必要）
 ├── review.py         ← 复盘（可选）
 ├── health_patrol.py  ← 健康巡检（可选）
