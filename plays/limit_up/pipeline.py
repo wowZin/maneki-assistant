@@ -150,16 +150,21 @@ def safe_int_none(val):
         return None
 
 def is_trading_time():
-    """判断当前是否在A股交易时间(9:30~15:00，工作日)"""
+    """判断当前是否在A股交易时间(9:30~11:30, 13:00~15:00，工作日)"""
     from datetime import datetime
     now = datetime.now()
     # 周末不算交易日
     if now.weekday() >= 5:
         return False
-    # 9:30~15:00
+    # 9:30~11:30, 13:00~15:00
     if now.hour < 9 or (now.hour == 9 and now.minute < 30):
         return False
     if now.hour >= 15:
+        return False
+    # 午间休市 11:30-13:00
+    if now.hour == 11 and now.minute >= 30:
+        return False
+    if now.hour == 12:
         return False
     return True
 
