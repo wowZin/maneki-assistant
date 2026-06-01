@@ -963,7 +963,7 @@ def main():
             except Exception as e:
                 print(f"  {code} 评分失败: {e}")
 
-        if l2api and bi < batch_count - 1:
+        if l2api:
             l2api.unsubscribe(codes)
 
     # 排序
