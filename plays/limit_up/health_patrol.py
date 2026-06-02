@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """开盘日健康巡检：检查pipeline/飞书Bot/代理状态，异常时自动重启"""
-import json, sys, os, subprocess, time
+import json
+import sys
+import subprocess
+import time
 from pathlib import Path
 from datetime import datetime
 
-PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
-ANALYSIS_DIR = PROJECT_DIR / "data" / "analysis"
+PLAY_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = PLAY_DIR.parent.parent
+ANALYSIS_DIR = PLAY_DIR / "data" / "analysis"
 SCRIPTS_DIR = PROJECT_DIR / "scripts"
 
 now = datetime.now()
@@ -56,14 +60,14 @@ result = subprocess.run(
 )
 stuck_pids = []
 for line in result.stdout.split("\n"):
-    if "zt_pipeline.py" in line and "--from-file" not in line:
+    if "pipeline.py" in line and "--from-file" not in line:
         parts = line.strip().split()
         if len(parts) >= 2:
             try:
                 runtime = int(parts[1])  # 运行秒数
                 if runtime > 600:  # 超过10分钟
                     stuck_pids.append(parts[0])
-            except:
+            except Exception:
                 pass
 
 if stuck_pids:

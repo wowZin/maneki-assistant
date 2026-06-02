@@ -4,35 +4,22 @@
 流程：检查交易日 → 汇总当日信号/分析 → 对比涨停结果 → 生成报告 → 飞书推送
 
 用法:
-  python scripts/zt_daily_review.py
+  python plays/limit_up/review.py
 """
 
 import json
-import os
 import sys
 import requests
-from datetime import datetime, date
+from datetime import datetime
 from pathlib import Path
 from collections import defaultdict
-from typing import Optional
 
 # 项目根目录
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
+PLAY_DIR = Path(__file__).resolve().parent
 
-# 从.env加载配置
-def load_env():
-    env_file = PROJECT_DIR / ".env"
-    config = {}
-    with open(env_file) as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, value = line.split("=", 1)
-                config[key] = value
-    return config
-
-CONFIG = load_env()
+from scripts.tu_share import CONFIG  # noqa: E402
 
 TUSHARE_TOKEN = CONFIG.get("TUSHARE_TOKEN", "")
 FEISHU_APP_ID = CONFIG.get("FEISHU_APP_ID", "")
@@ -41,7 +28,7 @@ FEISHU_CHAT_ID_REPORT = CONFIG.get("FEISHU_CHAT_ID_REPORT", "")
 FEISHU_TEST_MODE = CONFIG.get("FEISHU_TEST_MODE", "").lower() == "true"
 
 # ===== 权重AB对比配置 =====
-# 当前权重（从.env读取，和zt_pipeline.py一致）
+# 当前权重（从.env读取，和pipeline.py一致）
 CURRENT_WEIGHTS = {
     "fundamental": float(CONFIG.get("AGENT_WEIGHT_FUNDAMENTAL", "1.5")),
     "technical": float(CONFIG.get("AGENT_WEIGHT_TECHNICAL", "1.0")),
@@ -102,7 +89,7 @@ def is_trade_day(check_date: str) -> bool:
 # ===== 2. 汇总当日信号 =====
 def load_today_signals(today: str) -> list:
     """读取data/signals下今天的所有信号文件"""
-    signals_dir = PROJECT_DIR / "data" / "signals"
+    signals_dir = PLAY_DIR / "data" / "signals"
     all_signals = []
     
     for f in signals_dir.glob(f"{today}*.json"):
@@ -128,7 +115,7 @@ def load_today_analysis(today: str) -> tuple:
     推送定义：综合分>=35取前3只（按总分降序），无>=35时不推送。
     推送池构建方式：每个时段独立应用推送规则，然后跨时段累加去重。
     """
-    analysis_dir = PROJECT_DIR / "data" / "analysis"
+    analysis_dir = PLAY_DIR / "data" / "analysis"
     stock_best = {}  # 每只股票取最佳分数版本（用于全量统计）
 
     # 按时段读取分析文件，每个文件独立应用推送规则
@@ -161,7 +148,7 @@ def load_today_analysis(today: str) -> tuple:
     all_items = list(stock_best.values())
 
     # 优先从data/pushed/目录读取实际推送记录（最权威）
-    pushed_dir = PROJECT_DIR / "data" / "pushed"
+    pushed_dir = PLAY_DIR / "data" / "pushed"
     pushed_items = []
     if pushed_dir.exists():
         for pf in pushed_dir.glob(f"{today}*.json"):
@@ -401,7 +388,7 @@ def analyze_dimension_performance(analysis_results: list) -> dict:
     dim_stats = defaultdict(lambda: {"total": 0, "hit_scores": [], "miss_scores": []})
     
     for r in analysis_results:
-        code = r.get("ts_code", "")
+        r.get("ts_code", "")
         scores = r.get("scores", {})
         hit = r.get("hit", False)
         
@@ -626,8 +613,8 @@ def generate_markdown_report(report: dict) -> str:
     lines.append("")
     lines.append("## 核心指标")
     lines.append("")
-    lines.append(f"| 指标 | 数值 |")
-    lines.append(f"|------|------|")
+    lines.append("| 指标 | 数值 |")
+    lines.append("|------|------|")
     lines.append(f"| 今日推送股票 | **{pushed}** 只 |")
     lines.append(f"| 大盘涨停 | **{cumulative}** 只 |")
     lines.append(f"| 命中涨停 | **{hit}** 只 |")
@@ -825,11 +812,11 @@ def main():
         "hit_details": hits.get("hit_details", []),
         "dim_performance": dim_perf,
         "confidence_dist": conf_dist,
-        "ab_comparison": ab_result,  # V2.4 权重AB
+        "ab_comparison": ab_result,  # 权重AB
     }
     
     # 保存JSON报告（保留用于程序读取）
-    report_file_json = PROJECT_DIR / "data" / "reports" / f"{today}.json"
+    report_file_json = PLAY_DIR / "data" / "reports" / f"{today}.json"
     report_file_json.parent.mkdir(parents=True, exist_ok=True)
     with open(report_file_json, "w") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
@@ -837,7 +824,7 @@ def main():
     
     # 保存Markdown报告（人类可读）
     md_content = generate_markdown_report(report)
-    report_file_md = PROJECT_DIR / "data" / "reports" / f"{today}.md"
+    report_file_md = PLAY_DIR / "data" / "reports" / f"{today}.md"
     with open(report_file_md, "w") as f:
         f.write(md_content)
     print(f"Markdown报告已保存: {report_file_md}")

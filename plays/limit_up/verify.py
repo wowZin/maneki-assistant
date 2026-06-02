@@ -3,13 +3,19 @@
 
 用法:
   # 1. 保存 baseline（改代码前跑）
-  python3 scripts/verify_scores.py --save baseline.json
+  python plays/limit_up/verify.py --save baseline.json
 
   # 2. 改完代码后跑对比
-  python3 scripts/verify_scores.py --check baseline.json
+  python plays/limit_up/verify.py --check baseline.json
 
   # 3. 只看当前结果（不保存不对比）
-  python3 scripts/verify_scores.py
+  python plays/limit_up/verify.py
+
+  # 4. 指定股票
+  python plays/limit_up/verify.py --codes 000518.SZ,603893.SH,000001.SZ
+
+  # 5. 从推送/分析文件读取股票列表
+  python plays/limit_up/verify.py --from-file data/pushed/20260528_1130.json
 """
 
 import json
@@ -21,22 +27,72 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 sys.path.insert(0, str(PROJECT_DIR / "scripts"))
 
-# ── 测试股票：覆盖各种场景 ──
-TEST_STOCKS = [
-    ("000518.SZ", "四环生物", "涨停股"),
-    ("603893.SH", "瑞芯微", "科技股"),
-    ("000001.SZ", "平安银行", "银行股"),
-]
-
 DIMS = ["fundamental", "technical", "fundflow", "sentiment", "shortterm"]
 
 
-def run_all_scores():
+def _discover_today_stocks() -> list[tuple[str, str, str]]:
+    """自动发现当天推送的股票列表"""
+    from datetime import datetime
+    today = datetime.now().strftime("%Y%m%d")
+    data_dir = Path(__file__).resolve().parent / "data"
+
+    # 优先从 pushed/ 目录读取当天推送记录
+    pushed_dir = data_dir / "pushed"
+    pushed_files = sorted(pushed_dir.glob(f"{today}*.json")) if pushed_dir.exists() else []
+    if pushed_files:
+        latest = pushed_files[-1]
+        items = json.loads(latest.read_text())
+        if isinstance(items, list):
+            codes = [(it.get("code", ""), it.get("name", ""), "推送")
+                     for it in items if it.get("code")]
+            if codes:
+                return codes
+
+    # 兜底：从 analysis/ 目录读取当天最新分析结果
+    analysis_dir = data_dir / "analysis"
+    analysis_files = sorted(analysis_dir.glob(f"{today}*.json")) if analysis_dir.exists() else []
+    if analysis_files:
+        latest = analysis_files[-1]
+        items = json.loads(latest.read_text())
+        if isinstance(items, list):
+            codes = [(it.get("code", ""), it.get("name", ""), "分析")
+                     for it in items if it.get("code")]
+            if codes:
+                return codes
+
+    return []
+
+
+def parse_stocks_from_args(args: list[str]) -> list[tuple[str, str, str]]:
+    """从命令行参数或文件解析股票列表"""
+    codes = []
+    for i, arg in enumerate(args):
+        if arg == "--codes" and i + 1 < len(args):
+            for c in args[i + 1].split(","):
+                c = c.strip()
+                codes.append((c, c, ""))
+            return codes
+        if arg == "--from-file" and i + 1 < len(args):
+            path = Path(args[i + 1])
+            if not path.is_absolute():
+                path = PROJECT_DIR / "plays" / "limit_up" / path
+            if path.exists():
+                items = json.loads(path.read_text())
+                if isinstance(items, list):
+                    for item in items:
+                        code = item.get("code", "")
+                        name = item.get("name", "")
+                        codes.append((code, name, ""))
+            return codes
+    return _discover_today_stocks()
+
+
+def run_all_scores(stocks: list):
     """跑所有股票的5维度评分"""
     # 动态导入（确保用的是当前代码）
-    sys.path.insert(0, str(PROJECT_DIR / "plays" / "limit-up"))
+    sys.path.insert(0, str(PROJECT_DIR / "plays" / "limit_up"))
     from plays.limit_up.pipeline import score_fundamental, score_technical, score_fundflow, score_sentiment
-    from plays.limit_up.agents.shortterm_agent import score_shortterm
+    from plays.limit_up.strategies.shortterm import score_shortterm
 
     funcs = {
         "fundamental": score_fundamental,
@@ -47,7 +103,7 @@ def run_all_scores():
     }
 
     results = {}
-    for code, name, tag in TEST_STOCKS:
+    for code, name, tag in stocks:
         stock_result = {"name": name, "tag": tag, "scores": {}, "reasons": {}, "time": ""}
         for dim in DIMS:
             fn = funcs[dim]
@@ -119,19 +175,33 @@ def compare(baseline: dict, current: dict) -> bool:
 
 
 def main():
+    # 跳过脚本名，取剩余参数
+    raw_args = sys.argv[1:]
+
     mode = "run"
     baseline_path = None
-    for arg in sys.argv[1:]:
+    for arg in raw_args:
         if arg == "--save":
             mode = "save"
         elif arg == "--check":
             mode = "check"
-        elif not arg.startswith("--"):
-            baseline_path = arg
+        elif not arg.startswith("--") and not arg.startswith("-"):
+            # 不是 flag 也不是 --codes/--from-file 的值（那些由 parse 内部消费）
+            pass
+
+    # 解析股票列表
+    test_stocks = parse_stocks_from_args(raw_args)
+
+    # 查找 --save/--check 后的文件路径
+    for i, arg in enumerate(raw_args):
+        if arg in ("--save", "--check") and i + 1 < len(raw_args):
+            candidate = raw_args[i + 1]
+            if not candidate.startswith("--"):
+                baseline_path = candidate
 
     if mode == "save":
-        print("📝 保存 baseline...")
-        results = run_all_scores()
+        print(f"📝 保存 baseline ({len(test_stocks)}只股票)...")
+        results = run_all_scores(test_stocks)
         path = baseline_path or "baseline.json"
         with open(path, "w") as f:
             json.dump(results, f, ensure_ascii=False, indent=2)
@@ -149,8 +219,8 @@ def main():
             baseline = json.load(f)
         print(f"📖 读取 baseline: {path} ({len(baseline)} 只股票)")
 
-        print("\n🔄 运行当前代码...")
-        current = run_all_scores()
+        print(f"\n🔄 运行当前代码 ({len(test_stocks)}只股票)...")
+        current = run_all_scores(test_stocks)
 
         print("\n📊 当前结果:")
         print_results(current)
@@ -161,7 +231,8 @@ def main():
             sys.exit(1)
 
     else:
-        results = run_all_scores()
+        print(f"📊 评分验证 ({len(test_stocks)}只股票)...")
+        results = run_all_scores(test_stocks)
         print_results(results)
 
 

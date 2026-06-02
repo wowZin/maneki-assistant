@@ -1,0 +1,122 @@
+[
+  {
+    "code": "000601.SZ",
+    "name": "韶能股份",
+    "scores": {
+      "fundamental": 63.3,
+      "technical": 41,
+      "fundflow": 0,
+      "sentiment": 66,
+      "shortterm": 36.0
+    },
+    "reasons": {
+      "fundamental": "[中] ROE=2.5%偏低; 扣非净利+40%; 10个概念; 近期11条公告; 股东户数+20.3%",
+      "technical": "[低] 换手16.4%健康+5; 多头排列+15; 回踩MA10企稳+5; 下影支撑+4; 波动收敛(带宽28.8%)+5; 价>中轨+2",
+      "fundflow": "评分异常: cannot access local variable '_has_rt' where it is not associated with a value",
+      "sentiment": "[中] 涨停溢价11.1%+10; 炸板率25.5%+7; 最高6板+5; 光伏概念涨停21只(持平)+5; 资金共识+7; 发酵+5; 板块涨停21只+10; 梯队完整+4",
+      "shortterm": "[封板] 今日未涨停(参考历史) | [连板] 断板(历史1连板); 近月3次涨停+10; 近5日温和(均涨1.7%)+5 | [开盘] 今日无数据(最近20260601); 换手过高(817.0%)-5; 放量(量比279.0)+15 | [板块] 板块涨停潮(概念涨停22只)+60 | [攻击] 涨停高开率2/3>50%+40; 近10日最大涨幅10.0%+35 | [竞价] 竞价正常(量比279.0开-99.9%)+5; 竞价换手817.00%+5"
+    },
+    "weights": {
+      "fundamental": "0.6",
+      "technical": "1.9",
+      "fundflow": "2.0",
+      "sentiment": "1.1",
+      "shortterm": "1.0"
+    },
+    "total": 52.355555555555554,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 52.4,
+    "pct_chg": 4.5,
+    "l2api": {
+      "last": 8.39,
+      "bid1_p": 8.39,
+      "ask1_p": 8.4,
+      "vwap": 8.52,
+      "kline_bars": 3
+    }
+  },
+  {
+    "code": "002851.SZ",
+    "name": "麦格米特",
+    "scores": {
+      "fundamental": 0,
+      "technical": 61,
+      "fundflow": 0,
+      "sentiment": 62,
+      "shortterm": 23.8
+    },
+    "reasons": {
+      "fundamental": "财务避雷否决: 扣非净利润连续亏损(无困境反转)",
+      "technical": "[中] 放量启动(量比5.29>Top20%)+20; 换手9.8%健康+5; 多头排列+15; 回踩MA10企稳+5; 下影支撑+4; 波动收敛(带宽20.1%)+5",
+      "fundflow": "评分异常: cannot access local variable '_has_rt' where it is not associated with a value",
+      "sentiment": "[中] 涨停溢价11.1%+10; 炸板率25.5%+7; 最高6板+5; 光伏概念涨停21只(持平)+5; 资金共识+7; 发酵+5; 板块涨停21只+10; 梯队完整+4",
+      "shortterm": "[封板] 今日未涨停(参考历史) | [连板] 断板(历史1连板); 近月3次涨停+10 | [开盘] 今日无数据(最近20260601); 换手偏低(9.8%)+10 | [板块] 板块涨停潮(概念涨停21只)+60 | [攻击] 近10日最大涨幅10.0%+35"
+    },
+    "weights": {
+      "fundamental": "0.6",
+      "technical": "1.9",
+      "fundflow": "2.0",
+      "sentiment": "1.1",
+      "shortterm": "1.0"
+    },
+    "total": 51.975,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 52.0,
+    "pct_chg": 7.6,
+    "l2api": {
+      "last": 145.79,
+      "bid1_p": 145.74,
+      "ask1_p": 145.79,
+      "vwap": 145.79,
+      "kline_bars": 2
+    }
+  },
+  {
+    "code": "600869.SH",
+    "name": "远东股份",
+    "scores": {
+      "fundamental": 65.3,
+      "technical": 34,
+      "fundflow": 0,
+      "sentiment": 65,
+      "shortterm": 31.2
+    },
+    "reasons": {
+      "fundamental": "[中] ROE=1.4%偏低; 扣非净利+177%; 23个概念; 近期2条公告; 连板基因2连板",
+      "technical": "[无] 换手5.5%健康+5; 多头排列+15; 回踩MA10企稳+5; 波动收敛(带宽31.2%)+5; 价>中轨+2; 板块中性(25%>MA20)+2",
+      "fundflow": "评分异常: cannot access local variable '_has_rt' where it is not associated with a value",
+      "sentiment": "[中] 涨停溢价11.1%+10; 炸板率25.5%+7; 最高6板+5; 光伏概念涨停21只(持平)+5; 资金共识+7; 发酵+5; 板块涨停21只+10; 梯队完整+4",
+      "shortterm": "[封板] 今日未涨停(参考历史) | [连板] 断板(历史1连板); 近月6次涨停+20; 断板反包+15; 近5日温和(均涨1.9%)+5 | [开盘] 今日无数据(最近20260601); 换手偏低(5.5%)+10 | [板块] 板块涨停潮(概念涨停21只)+60 | [攻击] 近10日最大涨幅10.0%+35"
+    },
+    "weights": {
+      "fundamental": "0.6",
+      "technical": "1.9",
+      "fundflow": "2.0",
+      "sentiment": "1.1",
+      "shortterm": "1.0"
+    },
+    "total": 48.68888888888889,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 48.7,
+    "pct_chg": 6.7,
+    "l2api": {
+      "last": 24.76,
+      "bid1_p": 24.74,
+      "ask1_p": 24.76,
+      "vwap": 24.69,
+      "kline_bars": 3
+    }
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "circuit_breaker": {
+    "active": false,
+    "consecutive_failures": 0
+  },
+  "last_ok_at": "2026-06-02T14:02:34.611483",
+  "alert_history": []
+}

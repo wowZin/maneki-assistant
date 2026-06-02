@@ -18,6 +18,8 @@ wiki/
 ├── plays/                 # 玩法专属数据
 │   ├── limit-up/
 │   │   └── entities/      # 每日编译汇总
+│   ├── watchdog/
+│   │   └── entities/      # 每日盯盘状态编译
 │   └── xxx/               # 其他玩法
 ├── queries/               # FAQ
 └── raw/                   # 原始数据（不可变）
@@ -43,7 +45,7 @@ wiki/
 title: Page Title
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
-type: entity | concept | comparison | query | summary
+type: entity | concept | comparison | query | summary | watchdog
 tags: [dimension, methodology, data-source, weight, scan, review]
 sources: [raw/articles/source.md]
 ---
@@ -57,6 +59,7 @@ sources: [raw/articles/source.md]
 - **weight**: optimization, ab-comparison
 - **scan**: intraday, closing-review
 - **pipeline**: push, feishu, review
+- **watchdog**: daily, monitoring, signal
 - **metric**: auc, hit-rate, coverage, rank
 
 ## Page Thresholds

@@ -1,7 +1,7 @@
 """飞书 API 客户端 — token管理 + 消息发送"""
 
 import json
-import re
+import os
 import time
 from pathlib import Path
 
@@ -10,8 +10,6 @@ from dotenv import load_dotenv
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(PROJECT_DIR / ".env")
-
-import os
 
 # 机器人回调专用凭证（与推送信号的应用分离）
 BOT_APP_ID = os.getenv("FEISHU_BOT_APP_ID", "")
@@ -41,9 +39,12 @@ class FeishuClient:
                 json={"app_id": self._app_id, "app_secret": self._app_secret},
             )
             data = resp.json()
-            self._token = data["tenant_access_token"]
+            token = data.get("tenant_access_token")
+            if not isinstance(token, str) or not token:
+                raise ValueError("failed to get tenant_access_token from feishu response")
+            self._token = token
             self._expires_at = time.time() + data.get("expire", 7200) - 60
-            return self._token
+            return token
 
     async def send_message(self, chat_id: str, msg_type: str, content: str) -> dict:
         token = await self.get_token()
