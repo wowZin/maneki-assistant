@@ -10,26 +10,9 @@ from plays.limit_up.pipeline import _get_popularity_rank, _batch_fetch_realtime_
 
 def score_sentiment(code):
     """
-    情绪面涨停潜力预判 V2.3
+    情绪面涨停潜力预判
     五维度量化评分：大盘情绪30分 + 主线题材30分 + 板块梯队20分 + 个股人气10分 + 集合竞价15分
     含一票否决规则
-
-    V2.3变更（基于V1.2）：
-    - 否决4核按钮定义修正（诱多A+一字闷杀B分开，闷杀无需换手率）
-    - 否决4豁免增加"盘中最高价触及涨停价"
-    - 否决5人气排名动态阈值+Null处理(未上榜=5000)
-    - 否决2盘中代理明确(14:30后执行)
-    - 维2周期标签改为三态(退潮-10/分歧0/发酵+5)
-    - 维2题材地位梯度(1名+10,2-3名+5,4-5名+2)
-    - 维2发酵强度增加持平条件(≥前日涨停数)
-    - 维4换手率梯度计分(5-15%+1/15-25%+2/25-30%+1/>30%-2/<5%:0)
-    - 维4资金记忆增加溢价校验+连板基因因子+3分
-    - 维5高开≥8%秒板修正(5min内封板→+5分)
-    - 维1空间高度扣分明确定义
-    - 新增高位情绪折扣(≥5板总分系数)
-    - 新增评估时间策略(早盘预览暂停否决2-5)
-
-    V1.2变更：CallVolRatio量纲修正(vol/yesterday_vol替代vol/float_share) + OpenGap市场状态乘数
     """
     from datetime import datetime, timedelta
 
@@ -117,7 +100,16 @@ def score_sentiment(code):
             if concept_name in k or k in concept_name:
                 return v
         return 0
-    # 1.7 获取个股昨日成交量（CallVolRatio量纲修正，V1.2）
+
+    def _has_concept_data(concept_name):
+        """检查概念是否在limit_cpt_list中（有数据），避免误杀未收录的概念"""
+        if concept_name in concept_ul_cnt:
+            return True
+        for k in concept_ul_cnt:
+            if concept_name in k or k in concept_name:
+                return True
+        return False
+    # 1.7 获取个股昨日成交量（CallVolRatio量纲修正）
     yesterday_vol = 0
     try:
         end_dt = datetime.now() - timedelta(days=5)  # 往前多取几天确保覆盖周末
@@ -144,7 +136,7 @@ def score_sentiment(code):
     except Exception:
         pass
 
-    # 1.8 市场状态判定（V1.2新增，用于OpenGap乘数）
+    # 1.8 市场状态判定（新增，用于OpenGap乘数）
     # 基于全市场涨跌家数+成交额判定牛市/震荡/熊市态
     market_state = "震荡"  # 默认震荡态
     market_state_multiplier = 1.0  # 默认乘数
@@ -230,7 +222,7 @@ def score_sentiment(code):
             if limit_up_cnt < 15:
                 return 0, f"市场退潮:涨停仅{limit_up_cnt}家"
 
-    # V2.4: veto6 — emotion circuit breaker
+    # veto6 — emotion circuit breaker
     if limit_data:
         up_cnt = len([x for x in limit_data if str(x.get('limit', '')).upper() == 'U'])
         down_cnt = len([x for x in limit_data if str(x.get('limit', '')).upper() == 'D'])
@@ -239,7 +231,7 @@ def score_sentiment(code):
         break_rate = z_cnt / total_b * 100 if total_b > 0 else 0
 
         if break_rate > 40 and down_cnt > 15:
-            # V2.4: 检查是否可进入冰点拐点试探
+            # 检查是否可进入冰点拐点试探
             max_height = 0
             if step_data:
                 max_height = max([safe_int(x.get('nums', 0)) or 0 for x in step_data], default=0)
@@ -252,10 +244,14 @@ def score_sentiment(code):
 
     # 否决2(主线崩塌)：核心龙头断板 或 所属题材无涨停
     # T+1场景简化：概念涨停数=0视为主线崩塌（=1留给否决5纯跟风）
+    # 注意：limit_cpt_list只返回当天前20概念，未收录的概念不能视为"无涨停"
     if concept_names and cpt_data:
-        max_ul = max([_get_ul_cnt(n) for n in concept_names], default=0)
-        if max_ul == 0 and len(concept_names) > 0:
-            return 0, "主线崩塌:所属概念无涨停"
+        # 只检查在limit_cpt_list中有数据的概念
+        tracked_concepts = [n for n in concept_names if _has_concept_data(n)]
+        if tracked_concepts:
+            max_ul = max([_get_ul_cnt(n) for n in tracked_concepts], default=0)
+            if max_ul == 0:
+                return 0, "主线崩塌:所属概念无涨停"
 
     # 2.3 高位杀跌：最高连板高度连续2日下降（需多日数据，T+1简化为高度<2）
     if step_data:
@@ -263,7 +259,7 @@ def score_sentiment(code):
         if max_height < 2 and len(step_data) > 0:
             return 0, f"高位杀跌:最高仅{max_height}板"
 
-    # V2.3: 否决4 — 个股情绪溃散（诱多A+一字闷杀B）
+    # 否决4 — 个股情绪溃散（诱多A+一字闷杀B）
     # A. 诱多核按钮：
     #   ① 当日最高涨幅曾>3%但收盘跌停
     #   ② 该日换手率 > 近10日均换手率的1.5倍
@@ -332,10 +328,11 @@ def score_sentiment(code):
                 d_close = safe_float(d.get('close', 0)) or 0
                 d_open = safe_float(d.get('open', 0)) or 0
                 d_low = safe_float(d.get('low', 0)) or 0
+                d_pre_close = safe_float(d.get('pre_close', 0)) or 0
                 safe_float(d.get('vol', 0)) or 0
 
                 # A. 诱多核按钮：最高曾>3%但收盘跌停
-                is_a = (d_high > d_close * 1.03) and (d_pct <= -9.9)
+                is_a = (d_high > d_pre_close * 1.03) and (d_pct <= -9.9)
                 # B. 一字闷杀：开盘即跌停且全天未开板
                 is_b = (d_open == d_close) and (d_open == d_low) and (d_pct <= -9.9) and (d_high >= d_close * 0.99)
 
@@ -368,37 +365,28 @@ def score_sentiment(code):
             if net_amount and net_amount < -3000:
                 return 0, f"游资出逃:净卖{abs(net_amount):.0f}万"
 
-    # V2.3: 否决5 — 纯跟风弱势
+    # 否决5 — 纯跟风弱势
     # 数据源：东方财富个股人气榜（无法获取时，降级为仅检查涨幅）
     # Null处理：跳过人气排名检查
-    popularity_rank = _get_popularity_rank(code)  # V2.4: 真实人气排名
+    popularity_rank = _get_popularity_rank(code)  # 真实人气排名
 
-    # 获取个股当日涨幅（V2.4: 优先实时缓存 > 个股实时接口 > Tushare日线 > limit_data）
+    # 获取个股当日涨幅（优先实时缓存 > 个股实时接口 > Tushare日线 > limit_data）
     stock_pct = 0
-    # V2.4: 盘中优先使用实时数据缓存
+    # 盘中优先使用实时数据缓存
     code_short = code.split('.')[0]
     realtime_cache = _batch_fetch_realtime_pct()
     if code_short in realtime_cache:
         stock_pct = realtime_cache[code_short] or 0
-        # V2.4: 异常值防护(东财API偶发错误值如-192%)
+        # 异常值防护(东财API偶发错误值如-192%)
         if abs(stock_pct) > 30:
             stock_pct = 0
 
-    # V2.4: 缓存未命中时，用个股行情接口单独查
+    # 缓存未命中时，用个股行情接口单独查
     if stock_pct == 0:
-        try:
-            import requests as _req2
-            from scripts import proxy_utils as _pu2
-            proxies2 = _pu2.get_proxies_dict()
-            market = '0' if code_short.startswith(('00', '30', '8', '4')) else '1'
-            url2 = f"https://push2.eastmoney.com/api/qt/stock/get?secid={market}.{code_short}&fields=f43,f44,f45,f46,f47,f48,f49,f50,f51,f52,f53,f54,f55,f57,f58,f168,f170,f171,f292"
-            resp2 = _req2.get(url2, proxies=proxies2, timeout=5)
-            d2 = resp2.json().get("data", {})
-            pct = d2.get("f170")
-            if pct is not None:
-                stock_pct = float(pct)
-        except Exception:
-            pass
+        from plays.limit_up.utils import get_stock_pct
+        ts_pct = get_stock_pct(code)
+        if ts_pct is not None:
+            stock_pct = ts_pct
 
     if stock_pct == 0:
         try:
@@ -481,7 +469,7 @@ def score_sentiment(code):
                 market_score -= 7
                 market_reasons.append(f"炸板率{break_rate:.1f}%-7")
 
-    # 连板高度 V2.3: ≥4板+5; <3板且较前两日下降→-5; ELSE:0
+    # 连板高度 ≥4板+5; <3板且较前两日下降→-5; ELSE:0
     if step_data:
         max_height = max([safe_int(x.get('nums', 0)) or 0 for x in step_data], default=0)
         if max_height >= 4:
@@ -495,7 +483,7 @@ def score_sentiment(code):
     score += max(0, min(30, market_score))
     reasons.extend(market_reasons)
 
-    # --- 3.2 主线题材情绪维度 (30分) V2.3三态+梯度 ---
+    # --- 3.2 主线题材情绪维度 (30分) 三态+梯度 ---
     theme_score = 0
     theme_reasons = []
 
@@ -510,7 +498,7 @@ def score_sentiment(code):
                 best_ul_cnt = cnt
                 best_concept = name
 
-        # [题材地位] 梯度加分：1名+10, 2-3名+5, 4-5名+2 (V2.3)
+        # [题材地位] 梯度加分：1名+10, 2-3名+5, 4-5名+2 
         if cpt_data:
             # 从cpt_data找题材排名
             theme_rank = 99
@@ -529,7 +517,7 @@ def score_sentiment(code):
                 theme_score += 2
                 theme_reasons.append(f"题材第{theme_rank}+2")
 
-        # [发酵强度] V2.3 增加持平条件（≥前日涨停数）
+        # [发酵强度] 增加持平条件（≥前日涨停数）
         # 修复: 移除 prev_ul_cnt = best_ul_cnt 自等恒真 Bug
         if best_ul_cnt >= 3:
             prev_ul_cnt = 0
@@ -569,7 +557,7 @@ def score_sentiment(code):
             theme_score += 3
             theme_reasons.append("资金共识+3")
 
-        # [周期标签] V2.3三态（退潮-10/分歧0/发酵+5）
+        # [周期标签] 三态（退潮-10/分歧0/发酵+5）
         # 退潮：龙头断板跌停 AND 板块涨停<3 AND 资金流出
         # 分歧：炸板率>40% OR 涨停数未递增
         # 发酵/高潮：其他
@@ -626,11 +614,11 @@ def score_sentiment(code):
     score += max(0, min(20, sector_score))
     reasons.extend(sector_reasons)
 
-    # --- 3.4 个股人气资金情绪维度 (10分) V2.3修订 ---
+    # --- 3.4 个股人气资金情绪维度 (10分) 修订 ---
     popular_score = 0
     popular_reasons = []
 
-    # [换手活跃度 V2.3梯度计分]
+    # [换手活跃度 梯度计分]
     try:
         resp = call_tushare("daily_basic", {"ts_code": code}, "turnover_rate,volume_ratio")
         daily_basic = resp.get("data", {}).get("items", [])
@@ -652,7 +640,7 @@ def score_sentiment(code):
     except Exception:
         pass
 
-    # [资金记忆 V2.3溢价校验：近20日涨停+次日溢价]
+    # [资金记忆 溢价校验：近20日涨停+次日溢价]
     try:
         end_dt = datetime.now()
         start_dt = end_dt - timedelta(days=25)
@@ -682,7 +670,7 @@ def score_sentiment(code):
                 popular_reasons.append(f"龙虎榜净买{net_rate:.1f}%+2")
                 break
 
-    # [连板基因 V2.3新增] 近60日曾≥2连板
+    # [连板基因 新增] 近60日曾≥2连板
     try:
         end_dt = datetime.now()
         start_dt = end_dt - timedelta(days=65)
@@ -725,10 +713,10 @@ def score_sentiment(code):
             volume_ratio = safe_float(a_dict.get('volume_ratio')) or 0
 
             open_gap = (price - pre_close) / pre_close * 100 if pre_close > 0 else 0
-            # CallVolRatio量纲修正(V1.2)：竞价量/昨日成交量（旧版vol/float_share*100已废弃）
+            # CallVolRatio量纲修正：竞价量/昨日成交量（旧版vol/float_share*100已废弃）
             call_vol_ratio = vol / yesterday_vol if yesterday_vol > 0 else 0
 
-            # 1. OpenGap 评分 (5分) × 市场状态乘数(V1.2)
+            # 1. OpenGap 评分 (5分) × 市场状态乘数
             # 基础跳空评分（震荡态参考值）
             open_gap_base = 0
             if 5 <= open_gap < 8:
@@ -745,7 +733,7 @@ def score_sentiment(code):
                 open_gap_base = -4
             elif open_gap >= 8:
                 open_gap_base = 2  # 大幅高开有冲高回落风险
-                # V2.3秒板修正：IF 开盘后5分钟内封涨停 → 改为+5分（直接给满，不乘乘数）
+                # 秒板修正：IF 开盘后5分钟内封涨停 → 改为+5分（直接给满，不乘乘数）
                 # 在stk_auction数据中无法精确获取5分钟内是否封板，用开盘价接近涨停+竞价量比>5代理
                 if volume_ratio > 5 and call_vol_ratio > 2.0:
                     open_gap_base = 5  # 秒板信号：竞价量比高+高开=大概率秒板
@@ -768,7 +756,7 @@ def score_sentiment(code):
                 auction_reasons.append(f"竞价跳空{open_gap:.1f}%{gap_state_tag}→{open_gap_score}分")
             auction_score += open_gap_score
 
-            # 2. CallVolRatio 评分 (5分) - 竞价关注度(V1.2量纲修正)
+            # 2. CallVolRatio 评分 (5分) - 竞价关注度(量纲修正)
             # 新量纲：竞价量/昨日成交量，实际值范围0.3~5.0
             if call_vol_ratio >= 3.0:  # 竞价量达昨日全天3倍以上
                 auction_score += 5
@@ -801,7 +789,7 @@ def score_sentiment(code):
     score += max(0, min(15, auction_score))
     reasons.extend(auction_reasons[:3])
 
-    # V2.3: 高位情绪折扣 — 个股连板高度≥5板时对总分施加折扣系数
+    # 高位情绪折扣 — 个股连板高度≥5板时对总分施加折扣系数
     stock_continuity = 0
     try:
         # 复用已获取的 step_data(line 67), 避免重复调 limit_step
@@ -830,7 +818,7 @@ def score_sentiment(code):
     else:
         level = "无"
 
-    # V1.2：截断从[:5]改为[:8]，确保5个维度都能展示关键reason
+    # 截断从[:5]改为[:8]，确保5个维度都能展示关键reason
     # 市场状态标签（牛市态/熊市态）在竞价维度reason中，[:5]截断会隐藏竞价维度
     reason_str = f"[{level}] " + "; ".join(reasons[:8]) if reasons else f"[{level}] 无明显信号"
 

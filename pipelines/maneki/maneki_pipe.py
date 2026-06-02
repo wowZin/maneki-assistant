@@ -4,7 +4,7 @@
 feishu webhook → 写入 inbox → Claude SDK 轮询 → 自主决策 → 回复
 
 用法:
-  python3 pipes/maneki/maneki_pipe.py
+  python3 pipelines/maneki/maneki_pipe.py
 """
 
 import asyncio
@@ -36,6 +36,9 @@ CONFIG_FILE = PIPE_DIR / "config.yaml"
 
 log = logging.getLogger("maneki_pipe")
 
+# 防重复发送：每个 message_id 只发一次飞书消息
+_REPLIED_MSGS: set[str] = set()
+
 # ═══════════════════════════════════════════════════════════
 # 配置
 # ═══════════════════════════════════════════════════════════
@@ -63,8 +66,8 @@ def load_config():
     # Load feishu credentials from .env
     from dotenv import load_dotenv
     load_dotenv(REPO_ROOT / ".env")
-    config["feishu"]["app_id"] = os.getenv("FEISHU_APP_ID", "")
-    config["feishu"]["app_secret"] = os.getenv("FEISHU_APP_SECRET", "")
+    config["feishu"]["app_id"] = os.getenv("FEISHU_BOT_APP_ID", "")
+    config["feishu"]["app_secret"] = os.getenv("FEISHU_BOT_APP_SECRET", "")
     return config
 
 
@@ -113,7 +116,11 @@ def read_inbox(chat_id: str, position: int) -> tuple[list[dict], int]:
     new_pos = position
     with open(file) as f:
         f.seek(position)
-        for line in f:
+        while True:
+            line = f.readline()
+            if not line:
+                new_pos = f.tell()
+                break
             line = line.strip()
             if not line:
                 new_pos = f.tell()
@@ -183,57 +190,109 @@ class FeishuAPI:
             )
             return resp.json()
 
+    async def reply_text(self, message_id: str, content: str):
+        """回复指定消息（产生已读状态 + 线程回复）"""
+        token = await self.get_token()
+        import httpx
+        async with httpx.AsyncClient(timeout=15) as c:
+            resp = await c.post(
+                f"https://open.feishu.cn/open-apis/im/v1/messages/{message_id}/reply",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"msg_type": "text", "content": json.dumps({"text": content})},
+            )
+            return resp.json()
+
+    async def reply_card(self, message_id: str, card: dict):
+        """回复卡片消息"""
+        token = await self.get_token()
+        import httpx
+        async with httpx.AsyncClient(timeout=15) as c:
+            resp = await c.post(
+                f"https://open.feishu.cn/open-apis/im/v1/messages/{message_id}/reply",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"msg_type": "interactive", "content": json.dumps(card)},
+            )
+            return resp.json()
+
 
 def build_feishu_mcp(feishu: FeishuAPI):
-    @tool("send_feishu_text", "发送文本消息到飞书群聊", {
+    @tool("send_feishu_text", "回复文本消息到飞书群聊（带message_id则作为回复，否则发送到群聊）", {
         "type": "object",
         "properties": {
             "chat_id": {"type": "string", "description": "群聊ID"},
             "content": {"type": "string", "description": "消息内容"},
+            "message_id": {"type": "string", "description": "回复的消息ID（可选，提供则回复到该消息下方）"},
         },
         "required": ["chat_id", "content"],
     })
     async def send_feishu_text(args):
-        result = await feishu.send_text(args["chat_id"], args["content"])
+        if args.get("message_id"):
+            result = await feishu.reply_text(args["message_id"], args["content"])
+        else:
+            result = await feishu.send_text(args["chat_id"], args["content"])
         ok = result.get("code") == 0
         return {"content": [{"type": "text", "text": "已发送" if ok else f"发送失败: {result}"}]}
 
-    @tool("send_feishu_markdown", "发送Markdown消息到飞书群聊", {
+    @tool("send_feishu_markdown", "回复Markdown消息到飞书群聊（带message_id则作为回复，否则发送到群聊）", {
         "type": "object",
         "properties": {
             "chat_id": {"type": "string", "description": "群聊ID"},
             "content": {"type": "string", "description": "Markdown内容"},
+            "message_id": {"type": "string", "description": "回复的消息ID（可选，提供则回复到该消息下方）"},
         },
         "required": ["chat_id", "content"],
     })
     async def send_feishu_markdown(args):
+        msg_id = args.get("message_id", "")[:20]
+        chat_id = args.get("chat_id", "")[:20]
+        log.info("MCP send_feishu_markdown called: chat=%s msg=%s len=%d",
+                 chat_id, msg_id, len(args.get("content", "")))
+        # 防重复：同一 message_id 只发一次
+        mid = args.get("message_id", "")
+        if mid and mid in _REPLIED_MSGS:
+            log.info("dedup: already replied to %s, skip", mid[:20])
+            return {"content": [{"type": "text", "text": "已发送"}]}
+        _REPLIED_MSGS.add(mid)
         token = await feishu.get_token()
         import httpx
         import json
-        async with httpx.AsyncClient(timeout=15) as c:
-            resp = await c.post(
-                "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id",
-                headers={"Authorization": f"Bearer {token}"},
-                json={"receive_id": args["chat_id"], "msg_type": "interactive",
-                      "content": json.dumps({
-                          "config": {"wide_screen_mode": True},
-                          "elements": [{"tag": "markdown", "content": args["content"]}],
-                      })},
-            )
+        payload = {
+            "config": {"wide_screen_mode": True},
+            "elements": [{"tag": "markdown", "content": args["content"]}],
+        }
+        if args.get("message_id"):
+            async with httpx.AsyncClient(timeout=15) as c:
+                resp = await c.post(
+                    f"https://open.feishu.cn/open-apis/im/v1/messages/{args['message_id']}/reply",
+                    headers={"Authorization": f"Bearer {token}"},
+                    json={"msg_type": "interactive", "content": json.dumps(payload)},
+                )
+        else:
+            async with httpx.AsyncClient(timeout=15) as c:
+                resp = await c.post(
+                    "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id",
+                    headers={"Authorization": f"Bearer {token}"},
+                    json={"receive_id": args["chat_id"], "msg_type": "interactive",
+                          "content": json.dumps(payload)},
+                )
             result = resp.json()
             ok = result.get("code") == 0
             return {"content": [{"type": "text", "text": "已发送" if ok else f"发送失败: {result}"}]}
 
-    @tool("send_feishu_card", "发送卡片消息到飞书群聊", {
+    @tool("send_feishu_card", "回复卡片消息到飞书群聊（带message_id则作为回复，否则发送到群聊）", {
         "type": "object",
         "properties": {
             "chat_id": {"type": "string", "description": "群聊ID"},
             "card": {"type": "object", "description": "飞书卡片 JSON"},
+            "message_id": {"type": "string", "description": "回复的消息ID（可选，提供则回复到该消息下方）"},
         },
         "required": ["chat_id", "card"],
     })
     async def send_feishu_card(args):
-        result = await feishu.send_card(args["chat_id"], args["card"])
+        if args.get("message_id"):
+            result = await feishu.reply_card(args["message_id"], args["card"])
+        else:
+            result = await feishu.send_card(args["chat_id"], args["card"])
         ok = result.get("code") == 0
         return {"content": [{"type": "text", "text": "已发送" if ok else f"发送失败: {result}"}]}
 
@@ -258,13 +317,13 @@ def build_system_prompt(inbox_dir: str) -> str:
 
 ## 回应方式
 
-- 用 `send_feishu_text` 发送简短回复
-- 用 `send_feishu_markdown` 发送格式化内容
-- 用 `send_feishu_card` 发送评分结果卡片
+- 回复时**必须**带上 `message_id` 参数，否则回复会变成群聊独立消息而不是在原消息下方
+- 只能用 `send_feishu_markdown` 发送格式化内容（包括分析结果、评分报告等所有回复）
+- 每次消息只发送一次回复，不要多次发送
 
 ## 群聊消息格式
 
-每条消息格式: [chat_id:xxx] [用户] 消息内容
+每条消息格式: [chat_id:xxx] [message_id:xxx] [用户] 消息内容
 
 ## 消息历史
 
@@ -295,7 +354,7 @@ async def main():
     feishu_cfg = config["feishu"]
 
     if not feishu_cfg["app_id"]:
-        log.error("未配置 FEISHU_APP_ID，请在 .env 中设置")
+        log.error("未配置 FEISHU_BOT_APP_ID，请在 .env 中设置")
         sys.exit(1)
 
     progress = Progress()
@@ -348,41 +407,76 @@ async def main():
         log.info("maneki pipe started, polling inbox every %.1fs", poll)
 
         while True:
+            # 每次循环刷新已知群聊（支持运行时新增）
+            for f in INBOX_DIR.glob("*.jsonl"):
+                known_chats.add(f.stem)
             for chat_id in list(known_chats):
                 pos = progress.positions.get(chat_id, 0)
+                # 如果存档位置超过文件大小，说明 progress 已过期，重置位置
+                fpath = INBOX_DIR / f"{chat_id}.jsonl"
+                if pos > 0 and fpath.exists() and fpath.stat().st_size < pos:
+                    pos = 0
+                    log.info("position stale for %s, reset to 0", chat_id)
                 messages, new_pos = read_inbox(chat_id, pos)
+
+                # 🐛 FIX: 保存 position 必须在处理消息之前，
+                # 否则 Claude 处理期间下一轮 poll 会重复读取同一条消息，造成无限回复
+                if new_pos > pos:
+                    progress.save(
+                        session_id=progress.session_id,
+                        positions={chat_id: new_pos, **progress.positions},
+                    )
 
                 for msg in messages:
                     text = msg.get("text", "")
                     sender = msg.get("sender", "unknown")
+                    message_id = msg.get("message_id", "")
                     if not text:
                         continue
 
-                    prompt = f"[chat_id:{chat_id}] [{sender}] {text}"
+                    prompt = f"[chat_id:{chat_id}] [message_id:{message_id}] [{sender}] {text}"
                     log.info("msg: %s", prompt[:120])
+                    log.info("query start: chat=%s turn=%s", chat_id, progress.session_id[:12] if progress.session_id else "new")
 
                     await client.query(prompt)
+                    turn_count = 0
                     async for message in client.receive_response():
+                        turn_count += 1
+                        msg_type = type(message).__name__
                         if isinstance(message, AssistantMessage):
-                            for block in message.content:
-                                if isinstance(block, TextBlock):
-                                    log.info("claude: %s", block.text[:120])
+                            has_tool = any(
+                                getattr(b, 'type', None) == "tool_use"
+                                for b in (message.content or [])
+                            )
+                            texts = [
+                                getattr(b, 'text', '')[:60]
+                                for b in (message.content or [])
+                                if hasattr(b, 'text')
+                            ]
+                            log.info("turn%d: AssistantMessage tools=%s text=%s",
+                                     turn_count, has_tool, texts[0] if texts else "")
                         elif isinstance(message, ResultMessage):
                             if not message.is_error:
                                 progress.save(
                                     session_id=message.session_id,
                                     positions={chat_id: new_pos, **progress.positions},
                                 )
-                                log.info("done: turns=%d", message.num_turns)
+                                log.info("turn%d: ResultMessage OK turns=%d", turn_count, message.num_turns)
                             else:
-                                log.error("claude error: %s", message.subtype)
-
-                if new_pos > pos:
-                    progress.save(
-                        positions={chat_id: new_pos, **progress.positions},
-                    )
+                                log.error("turn%d: ResultMessage ERROR %s", turn_count, message.subtype)
+                        else:
+                            log.info("turn%d: %s", turn_count, msg_type)
 
             await asyncio.sleep(poll)
+
+            # 清理已读完的 inbox 文件
+            for chat_id in list(known_chats):
+                pos = progress.positions.get(chat_id, 0)
+                if pos > 0:
+                    fpath = INBOX_DIR / f"{chat_id}.jsonl"
+                    if fpath.exists() and fpath.stat().st_size == pos:
+                        fpath.unlink()
+                        log.info("cleaned inbox for %s", chat_id)
 
 
 if __name__ == "__main__":

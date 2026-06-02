@@ -1,18 +1,8 @@
 """
-策略指标计算 V1.1
-===============
+策略指标计算
+============
 双引擎动量-均值回归混合策略：KAMA + ADX + 布林带 + RSI + VWAP
 从Tushare日线数据计算，供watchdog使用。
-
-V1.1 修复:
-- check_trend Close>SMA20 比较逻辑补全
-- check_exit_signal 增加 current_price 参数，移动止损实际返回信号
-- bollinger带宽百分位严格排名(不含自身) + 向量化std
-- RSI除零保护改用 np.finfo(float).eps
-- calc_all 入口统一类型转换, 支持 asset_group 参数
-- check_entry_score 增加 direction 参数(多/空) + signal_high(做空对称)
-- check_exit_signal 时间止损补全浮盈条件
-- KAMA/EMA/ATR/ADX 可选 numba JIT 加速
 """
 
 import numpy as np
@@ -183,7 +173,7 @@ def atr(high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 20) 
 
 def bollinger(close: np.ndarray, period: int = 20, std_dev: float = 2.0):
     """返回 (mid, upper, lower, bandwidth_percentile)
-    V1.1: 向量化std + 百分位不含自身(无前视偏差)
+    向量化std + 百分位不含自身(无前视偏差)
     """
     close = np.ascontiguousarray(close, dtype=np.float64)
     mid = sma(close, period)

@@ -15,48 +15,15 @@ safe_int = safe_int_none
 
 def score_fundflow(code):
     """
-    资金面涨停潜力预判 V2.5
-    五维度量化评分：超大单主力45分 + 龙虎榜机构游资25分 + 分时盘口20分 + 融资聪明资金7分 + 筹码抛压13分
-    含一票否决规则（含V2.0市场状态调节器+一字板豁免）
-
-    V2.5变更（l2api Level2接入）:
-    - 分时盘口上限 10→20 恢复(分钟K线+VWAP+十档盘口就绪)
-    - 新增 盘口买卖比因子: total_bid_vol/total_ask_vol>1.5→+8分, >1.2→+5分
-    - 新增 VWAP乖离率因子: 价格在VWAP上方<1%→+6分
-    - 否决5尾盘检测升级: l2api分钟K线→精确尾盘量价分析; 降级保留原日频代理
-    - l2api不可用时自动回退原V2.4逻辑
-    
-    V2.3变更（基于V2.1）：
-    - 否决4增加3日累计豁免：<5%+3日累计净流入≤0才否决，>0转入维度1扣-5分
-    - 否决3增加尾盘抢筹豁免：收盘/最高>0.92+换手<15%或3日净流入>0豁免
-    - 否决5改为组合A/B阈值（日频代理）
-    - 维2首板豁免：T-1非涨停但T日涨幅>7%时按0分处理（不扣-15）
-    - 维1散户接盘V2.3量化：中/小单>成交额8%+主力<0+涨幅>3%；增加涨停换手豁免
-    - 维3全部因子改为日频代理：持续净流入条件改为最低价≥昨收×0.99
-    - 维3负向过滤增加拉升无量/放量出逃/对倒嫌疑三项判定
-    - 潜力分级增加53-56分边缘区间+二次确认
-    - 维5换手递减因子增加至少2日收阳+20日新高附近条件
-    
-    V2.1变更（基于V2.0）：
-    - 否决4阈值放宽：主力净占比<10%→<5%才否决，5%-10%转维度1扣分
-    - 维1规模偏弱扣分修正：<0.1%从-5→-15(与文档对齐)
-    - 维1占比阈值细化：5%-15%偏弱区间扣5分
-    
-    V2.0变更：
-    - 维4权重12→7(降共线性)，维5权重8→13(强锁仓)
-    - 维2盘中从大单代理→封板质量因子(limit_list)
-    - 维4盘中从大单代理→融资余额增速(margin_detail)
-    - 否决3加市场状态调节器(低迷市放宽至-0.75)
-    - 否决4加一字板豁免
-    
-    注意：分时盘口为实时数据，T+1场景下用资金流向结构替代评估
-    V2.5: 接入l2api Level2数据(十档盘口+逐笔成交+分钟VWAP)，分时盘口恢复20分上限
+    资金面涨停潜力预判
+    五维度量化评分：超大单主力35分 + 龙虎榜机构游资25分 + 分时盘口20分 + 融资聪明资金7分 + 筹码抛压13分
+    含一票否决规则（含市场状态调节器+一字板豁免）
     """
     from datetime import datetime
 
     today = datetime.now().strftime("%Y%m%d")
 
-    # V2.5: 尝试获取l2api实时数据
+    # 尝试获取l2api实时数据
     l2_market = None
     l2_vwap = None
     l2_kline = []
@@ -146,7 +113,7 @@ def score_fundflow(code):
         pass
 
     # ===== 2. 一票否决检查 =====
-    yiziban_exempt = False  # V2.0一字板豁免标志
+    yiziban_exempt = False  # 一字板豁免标志
     # 2.1 主力持续流出：近3日累计净流出 > 0.5%流通市值
     if moneyflow_data:
         recent_3d = moneyflow_data[:3] if len(moneyflow_data) >= 3 else moneyflow_data
@@ -157,7 +124,7 @@ def score_fundflow(code):
                 veto_flags.append(f"主力3日净流出{net_3d/10000:.2f}万")
     
     # 2.2 纯散户博弈：主力净占比 < 10%（无大资金控盘）
-    # V2.0一字板豁免：一字板(pct_chg≈10%且开板次数=0)无大单成交属正常，主力已高度控盘
+    # 一字板豁免：一字板(pct_chg≈10%且开板次数=0)无大单成交属正常，主力已高度控盘
     is_yiziban = False  # 一字板标志
     if daily_basic_data:
         pct_chg = safe_float(daily_basic_data[0].get("pct_chg", 0))
@@ -179,13 +146,13 @@ def score_fundflow(code):
         if not is_yiziban and pct_chg >= 9.9:
             is_yiziban = True
     
-    # V2.3: 否决4 — 纯散户博弈（3日累计豁免）
+    # 否决4 — 纯散户博弈（3日累计豁免）
     # <5% + 3日累计净流入≤0 → 否决
     # <5% + 3日累计净流入>0 → 不否决，维度1占比因子扣-5分
     main_ratio_for_dim1 = None  # 保存主力占比供维度1使用
-    dim1_veto4_deduction = 0  # V2.3: 否决4豁免后的维度1扣分标记
+    dim1_veto4_deduction = 0  # 否决4豁免后的维度1扣分标记
     
-    # V2.3: 计算3日累计净流入（用于否决4豁免判定）
+    # 计算3日累计净流入（用于否决4豁免判定）
     net_3d_for_veto4 = 0
     if moneyflow_data:
         recent_3d = moneyflow_data[:3] if len(moneyflow_data) >= 3 else moneyflow_data
@@ -212,7 +179,7 @@ def score_fundflow(code):
                     if net_3d_for_veto4 <= 0:
                         veto_flags.append(f"纯散户博弈[T-1]:主力净占比{main_ratio:.1f}%<5%+3日累计净流入{net_3d_for_veto4:.0f}万≤0")
                     else:
-                        dim1_veto4_deduction = -5  # V2.3: 豁免否决，转入维度1扣分
+                        dim1_veto4_deduction = -5  # 豁免否决，转入维度1扣分
     elif is_yiziban:
         # 一字板豁免：不触发否决，但记录豁免信息到reason
         yiziban_exempt = True
@@ -230,7 +197,7 @@ def score_fundflow(code):
         if total_net_sell > total_net_buy * 2 and total_net_sell > 1000:  # 万元
             veto_flags.append(f"龙虎榜净卖出{total_net_sell:.0f}万")
     
-    # V2.3: 否决3 — 分时资金背离（增加尾盘抢筹豁免+换手率/累计流入双重验证）
+    # 否决3 — 分时资金背离（增加尾盘抢筹豁免+换手率/累计流入双重验证）
     corr_threshold = -0.6  # 默认相关系数阈值
     if daily_basic_data:
         try:
@@ -257,7 +224,7 @@ def score_fundflow(code):
         except Exception:
             pass
     
-    # V2.3: 查找 T-1日换手率和当日收盘位置（用于否决3豁免判定）
+    # 查找 T-1日换手率和当日收盘位置（用于否决3豁免判定）
     t_turnover_rate = 0
     if daily_basic_data:
         t_turnover_rate = safe_float(daily_basic_data[0].get("turnover_rate", 0))
@@ -273,7 +240,7 @@ def score_fundflow(code):
                 if corr_threshold < -0.6:
                     pass  # 低迷市放宽
                 else:
-                    # V2.3: 尾盘抢筹豁免（同上，用Tushare数据）
+                    # 尾盘抢筹豁免（同上，用Tushare数据）
                     if "high" in latest_basic:
                         close = safe_float(latest_basic.get("close", 0))
                         high = safe_float(latest_basic.get("high", 0))
@@ -281,11 +248,11 @@ def score_fundflow(code):
                         close = high = 0
                     close_high_ratio = close / high if high > 0 else 0
                     if close_high_ratio > 0.92 and (t_turnover_rate < 15 or net_3d_for_veto4 > 0):
-                        pass  # V2.3: 豁免
+                        pass  # 豁免
                     else:
                         veto_flags.append(f"资金背离[T+1]:涨{pct_change:.1f}%但净流出{abs(net_mf)/10000:.0f}万")
     
-    # V2.5: 否决5 — 尾盘集中兑现（优先l2api分钟K线，降级日频代理）
+    # 否决5 — 尾盘集中兑现（优先l2api分钟K线，降级日频代理）
     dim3_tail_penalty = 0
     if l2_kline and len(l2_kline) >= 5:
         # 有分钟K线: 精确检测尾盘走弱
@@ -364,7 +331,7 @@ def score_fundflow(code):
                 dim1_score += 15
                 dim1_reason.append(f"主力净流入[T-1]{main_net_ratio:.2f}%+15")
             elif main_net_ratio < 0.1:
-                dim1_score -= 15  # V2.1: 从-5修正为-15(与文档对齐)
+                dim1_score -= 15  # 从-5修正为-15(与文档对齐)
                 dim1_reason.append(f"主力净流入[T-1]{main_net_ratio:.2f}%-15")
     
     # --- 占比健康因子(10分)：主力净占比梯度评分 ---
@@ -379,11 +346,11 @@ def score_fundflow(code):
         if main_ratio > 30:
             dim1_score += 10
             dim1_reason.append(f"主力占比{src_tag}{main_ratio:.1f}%+10")
-        elif main_ratio >= 5 and main_ratio < 15:  # V2.1: 5%-15%偏弱扣分
+        elif main_ratio >= 5 and main_ratio < 15:  # 5%-15%偏弱扣分
             dim1_score -= 5
             dim1_reason.append(f"主力占比偏弱{src_tag}{main_ratio:.1f}%-5")
     
-    # V2.3: 否决4豁免 — 主力净占比<5%但3日累计净流入>0，转入维度1扣-5分
+    # 否决4豁免 — 主力净占比<5%但3日累计净流入>0，转入维度1扣-5分
     if dim1_veto4_deduction != 0:
         dim1_score += dim1_veto4_deduction
         dim1_reason.append("否决4豁免(3日累计>0)-5")
@@ -412,7 +379,7 @@ def score_fundflow(code):
             dim1_score += 10
             dim1_reason.append("连续3日净流入+10")
     
-    # --- 散户接盘因子 V2.3量化+豁免(-20分)：主力流出但散户接盘 ---
+    # --- 散户接盘因子 量化+豁免(-20分)：主力流出但散户接盘 ---
     # 触发条件（三者同时满足）：
     # ① 主力净额 < 0
     # ② (中单净额 + 小单净额) > 成交额的8%
@@ -421,7 +388,7 @@ def score_fundflow(code):
     # ① 当日涨停且换手率在5%-25%区间（换手板属健康博弈）
     # ② 近3日主力累计净流入 > 0（主力前期已进场）
     retail_retail_exempt = False
-    # 取换手率（V2.3散户接盘豁免判定用）
+    # 取换手率（散户接盘豁免判定用）
     retail_turnover_rate = t_turnover_rate if 't_turnover_rate' in dir() else 0
     pct_change_for_retail = safe_float(daily_basic_data[0].get("pct_chg", 0)) if daily_basic_data else 0
     
@@ -433,7 +400,7 @@ def score_fundflow(code):
         sell_lg = safe_float(latest.get("sell_lg_amount", 0))
         net_mf = safe_float(latest.get("net_mf_amount", 0))
         main_net = (buy_elg - sell_elg) + (buy_lg - sell_lg)
-        # V2.3: Tushare降级分支也需要做豁免判定
+        # Tushare降级分支也需要做豁免判定
         if main_net < 0 and net_mf > 0:
             # 豁免①：涨停+换手5%-25%
             if pct_change_for_retail >= 9.5 and 5 <= retail_turnover_rate <= 25:
@@ -455,7 +422,7 @@ def score_fundflow(code):
     dim2_reason = []
     
     if is_trading_time():
-        # V2.0盘中方案：从大单代理改为封板质量因子(T-1日limit_list)
+        # 盘中方案：从大单代理改为封板质量因子(T-1日limit_list)
         # 消除与维度1(大单流入)的共线性，封板质量反映游资/机构合力
         limit_list_data = []
         try:
@@ -511,14 +478,14 @@ def score_fundflow(code):
                     dim2_score -= 7
                     dim2_reason.append(f"[盘中]开板{int(open_times)}次-7")
             
-            # V2.3首板豁免：T-1日非涨停股但T日涨幅>7% → 不适用"未涨停扣15分"，按0分处理
+            # 首板豁免：T-1日非涨停股但T日涨幅>7% → 不适用"未涨停扣15分"，按0分处理
             if limit_type != "U":
                 # 检查T日是否正在拉升（涨幅>7%），若是则豁免
                 t_day_pct = 0
                 if daily_basic_data:
                     t_day_pct = safe_float(daily_basic_data[0].get("pct_chg", 0))
                 if t_day_pct > 7:
-                    pass  # V2.3首板豁免：不扣分
+                    pass  # 首板豁免：不扣分
                 else:
                     dim2_score -= 15
                     dim2_reason.append("[盘中]T-1未涨停-15")
@@ -566,11 +533,11 @@ def score_fundflow(code):
     if dim2_reason:
         reason.append(f"[龙虎{dim2_score}分] {' '.join(dim2_reason)}")
     
-    # ===== 5. 维度3：分时盘口资金抢筹（20分）V2.5: l2api升级 =====
+    # ===== 5. 维度3：分时盘口资金抢筹（20分）=====
     dim3_score = 0
     dim3_reason = []
 
-    # --- V2.5: l2api实时因子 (优先) ---
+    # --- l2api实时因子 (优先) ---
     if l2_market:
         last = to_price(l2_market.get("last", "0"))
         total_bid_vol = to_volume(l2_market.get("total_bid_volume", "0"))
@@ -609,7 +576,7 @@ def score_fundflow(code):
         net_mf = safe_float(latest.get("net_mf_amount", 0))
         turnover_rate = safe_float(daily_basic_data[0].get("turnover_rate", 0)) if daily_basic_data else 0
 
-        # V2.3: 持续净流入（日频代理）——最低价≥昨收×0.99 包容换手板宽幅震荡
+        # 持续净流入（日频代理）——最低价≥昨收×0.99 包容换手板宽幅震荡
         if net_mf > 0:
             close = safe_float(latest_daily.get("close", 0))
             low = safe_float(latest_daily.get("low", 0))
@@ -640,7 +607,7 @@ def score_fundflow(code):
                 dim3_score = 0
                 dim3_reason.append(f"净流出{abs(net_mf)/10000:.2f}亿")
 
-        # V2.3 负向过滤
+        # 负向过滤
         pct_chg = safe_float(daily_basic_data[0].get("pct_chg", 0))
         is_zt = (pct_chg >= 9.5)
         is_negative_triggered = False
@@ -656,20 +623,20 @@ def score_fundflow(code):
             dim3_score -= 12
             dim3_reason.append(f"对倒嫌疑换手{turnover_rate:.1f}%-12")
 
-    # 尾盘走弱扣分（V2.5: l2api精确或日频代理）
+    # 尾盘走弱扣分（l2api精确或日频代理）
     dim3_score -= dim3_tail_penalty
 
-    dim3_score = max(0, min(20, dim3_score))  # V2.5: l2api上线,上限恢复20
+    dim3_score = max(0, min(20, dim3_score))  # l2api上线,上限恢复20
     score += dim3_score
     if dim3_reason:
         reason.append(f"[盘口{dim3_score}分] {' '.join(dim3_reason)}")
     
-    # ===== 6. 维度4：融资与聪明资金（7分）V2.0: 权重12→7 =====
+    # ===== 6. 维度4：融资与聪明资金（7分）=====
     dim4_score = 0
     dim4_reason = []
     
     if is_trading_time():
-        # V2.0盘中方案：从大单代理改为融资余额增速(T-1日margin_detail)
+        # 盘中方案：从大单代理改为融资余额增速(T-1日margin_detail)
         # 消除与维度1(大单流入)的共线性，融资增速反映杠杆聪明钱
         margin_data = []
         try:
@@ -759,7 +726,7 @@ def score_fundflow(code):
     if dim4_reason:
         reason.append(f"[融资{dim4_score}分] {' '.join(dim4_reason)}")
     
-    # ===== 7. 维度5：筹码抛压与锁仓（13分）V2.0: 权重8→13 =====
+    # ===== 7. 维度5：筹码抛压与锁仓（13分）=====
     dim5_score = 0
     dim5_reason = []
     
@@ -776,7 +743,7 @@ def score_fundflow(code):
             dim5_score += 3
             dim5_reason.append("无抛压+3")
         
-        # V2.0新增：净流入加速（今日>前2日均值1.5倍）
+        # 净流入加速（今日>前2日均值1.5倍）
         if net_flows[0] > 0 and len(net_flows) >= 3:
             avg_2d = (abs(net_flows[1]) + abs(net_flows[2])) / 2
             if avg_2d > 0 and net_flows[0] > avg_2d * 1.5:
@@ -796,7 +763,7 @@ def score_fundflow(code):
     
     final_score = min(100, score)
     
-    # V2.3: 53-56分边缘区间二次确认
+    # 53-56分边缘区间二次确认
     if 53 <= final_score <= 56:
         # 二次确认：维度1≥21(60%) AND 维度5≥8(60%) → 升级为高潜力
         if dim1_score >= 21 and dim5_score >= 8:

@@ -13,19 +13,9 @@ from plays.limit_up.utils import safe_float, safe_int_none  # noqa: E402
 safe_int = safe_int_none
 def score_fundamental(code):
     """
-    基本面涨停潜力量化评分 V1.5（最终实盘定稿版）
+    基本面涨停潜力量化评分
     五维度：业绩40% + 事件30% + 筹码15% + 财务10% + 估值5%
     含财务避雷一票否决（含行业豁免）+ 见光死惩罚 + 非线性共振加分
-
-    V1.5变更（基于V1.0）：
-    - 否决规则增加行业豁免（医药/电子商誉豁免、地产/建筑/非银/公用负债率豁免）
-    - 否决规则增加困境反转豁免（单季扣非>0且去年同期<0免于连续亏损否决）
-    - 股东筹码维度重构：大宗溢价+解禁冲击+连板基因
-    - 估值维度重构：废除低PE加分，改为分析师上调+困境反转+远期PEG
-    - 新增非线性共振加分（条件A/B取最高）
-    - 新增见光死惩罚（Price-in_Ratio衰减）
-    - 新增困境反转加分（独立+5分）
-    - 新增主力营收占比<50%否决
     """
     from datetime import datetime, timedelta
 
@@ -106,7 +96,7 @@ def score_fundamental(code):
     except Exception:
         recent_ann_count = 0
     
-    # 获取行业分类（用于行业豁免判断 V1.5）
+    # 获取行业分类（用于行业豁免判断）
     industry_name = ""
     try:
         resp = call_tushare("stock_basic", {"ts_code": code}, "ts_code,industry")
@@ -118,7 +108,7 @@ def score_fundamental(code):
     except Exception:
         pass
     
-    # ===== 2. 一票否决检查（V1.5 含行业豁免） =====
+    # ===== 2. 一票否决检查（含行业豁免） =====
     risk_flags = []
     is_vetoed = False
     
@@ -126,7 +116,7 @@ def score_fundamental(code):
     _roe_source = fina_annual if fina_annual.get('end_date', '').endswith('1231') else fina_latest
     roe_source_val = safe_float(_roe_source.get('roe')) or 0
     
-    # V1.5: 商誉/净资产 > 30% 且 ROE < 10%（医药/电子行业ROE>10%暂免）
+    # 商誉/净资产 > 30% 且 ROE < 10%（医药/电子行业ROE>10%暂免）
     if bs_latest.get('goodwill') and bs_latest.get('total_hldr_eqy_exc_min_int'):
         goodwill_ratio = safe_float(bs_latest['goodwill']) / safe_float(bs_latest['total_hldr_eqy_exc_min_int']) * 100
         if goodwill_ratio > 30:
@@ -138,7 +128,7 @@ def score_fundamental(code):
                 is_vetoed = True
                 risk_flags.append(f"商誉占比{goodwill_ratio:.0f}%>30%")
     
-    # V1.5: 资产负债率 > 70% 且 经营现金流连续2季度为负
+    # 资产负债率 > 70% 且 经营现金流连续2季度为负
     # 行业豁免：房地产/建筑/非银金融/公用事业仅看现金流
     debt_exempt_industries = ["房地产", "建筑", "非银金融", "公用事业", "银行", "综合"]
     is_debt_exempt = any(kw in industry_name for kw in debt_exempt_industries)
@@ -161,7 +151,7 @@ def score_fundamental(code):
                         is_vetoed = True
                         risk_flags.append(f"负债率{debt_ratio:.0f}%>70%且经营现金流为负")
     
-    # V1.5: 扣非净利润连续3年亏损 + 困境反转豁免（用扣非净利润判断）
+    # 扣非净利润连续3年亏损 + 困境反转豁免（用扣非净利润判断）
     is_consecutive_loss = False
     if fina_latest.get('dt_netprofit_yoy'):
         profit_yoy = safe_float(fina_latest.get('dt_netprofit_yoy'))
@@ -219,7 +209,7 @@ def score_fundamental(code):
     except Exception:
         pass
     
-    # 获取近20日涨幅（见光死惩罚用 V1.5）
+    # 获取近20日涨幅（见光死惩罚用）
     pre_return_20d = 0
     try:
         end_dt = datetime.now()
@@ -240,7 +230,7 @@ def score_fundamental(code):
     except Exception:
         pass
     
-    # 获取分析师一致预期（用于见光死惩罚 V1.5）
+    # 获取分析师一致预期（用于见光死惩罚）
     eps_revision_1m = 0
     try:
         resp_fc = call_tushare("fina_forecast", {"ts_code": code}, "ts_code,ann_date,end_date,type,report_date,eps_change_ratio")
@@ -264,7 +254,7 @@ def score_fundamental(code):
     factors = {}  # 各维度标准化得分 [0,1]
     reasons = []
     
-    # --- 3.1 盈利业绩维度 (40%) V1.5 ---
+    # --- 3.1 盈利业绩维度 (40%) ---
     profit_score = 0.5  # 基准
     profit_reasons = []
     
@@ -305,7 +295,7 @@ def score_fundamental(code):
     factors['profit'] = max(0, min(1, profit_score))
     reasons.extend(profit_reasons)
     
-    # --- 3.2 题材事件维度 (30%) V1.5 ---
+    # --- 3.2 题材事件维度 (30%) ---
     event_score = 0.5
     event_reasons = []
     
@@ -327,7 +317,7 @@ def score_fundamental(code):
         event_score += 0.10
         event_reasons.append(f"近期{recent_ann_count}条公告")
     
-    # V1.5: 见光死惩罚 — 公告前涨幅过大导致事件因子衰减
+    # 见光死惩罚 — 公告前涨幅过大导致事件因子衰减
     if pre_return_20d > 0 and eps_revision_1m != 0:
         price_in_ratio = pre_return_20d / (abs(eps_revision_1m) + 5)
         if price_in_ratio > 2.5 and (factors.get('profit', 0) > 0.6 or event_score > 0.7):
@@ -340,7 +330,7 @@ def score_fundamental(code):
     factors['event'] = max(0, min(1, event_score))
     reasons.extend(event_reasons)
     
-    # --- 3.3 股东筹码维度 (15%) V1.5 ---
+    # --- 3.3 股东筹码维度 (15%) ---
     chip_score = 0.5
     chip_reasons = []
     
@@ -379,8 +369,8 @@ def score_fundamental(code):
     
     # 解禁冲击（未来30日解禁市值/流通市值 <2% → +2分）
     try:
-        end_dt = datetime.now()
-        start_dt = end_dt - timedelta(days=30)
+        start_dt = datetime.now()
+        end_dt = datetime.now() + timedelta(days=30)
         resp_unlock = call_tushare("share_float", {
             "ts_code": code,
             "start_date": start_dt.strftime('%Y%m%d'),
@@ -403,7 +393,7 @@ def score_fundamental(code):
     factors['chip'] = max(0, min(1, chip_score))
     reasons.extend(chip_reasons)
     
-    # --- 3.4 财务健康维度 (10%) V1.5 ---
+    # --- 3.4 财务健康维度 (10%) ---
     finance_score = 1.0
     finance_reasons = []
     
@@ -427,7 +417,7 @@ def score_fundamental(code):
     if finance_reasons:
         reasons.extend(finance_reasons)
     
-    # --- 3.5 估值性价比维度 (5%) V1.5 ---
+    # --- 3.5 估值性价比维度 (5%) ---
     value_score = 0.0  # 废除基准分，仅作为加分项
     value_reasons = []
     
@@ -456,7 +446,7 @@ def score_fundamental(code):
     
     base_score = sum(factors[k] * weights[k] for k in factors) * 100
     
-    # ===== 5. 非线性共振加分（V1.5 取最高，不叠加） =====
+    # ===== 5. 非线性共振加分（取最高，不叠加） =====
     bonus = 0
     # 条件A: 业绩≥0.8 且 事件≥0.7 且 事件窗口t≤10
     if factors.get('profit', 0) >= 0.8 and factors.get('event', 0) >= 0.7 and recent_ann_count > 0:
@@ -467,7 +457,7 @@ def score_fundamental(code):
         bonus = 10
         reasons.append("共振B:筹码+估值+10")
     
-    # V1.5: 困境反转独立加分（最新单季扣非>0且去年同期<0 → +5分）
+    # 困境反转独立加分（最新单季扣非>0且去年同期<0 → +5分）
     turnaround_bonus = 0
     if is_turnaround:
         turnaround_bonus = 5

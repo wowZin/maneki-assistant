@@ -159,19 +159,19 @@ def load_from_file(filepath):
 
 from plays.limit_up.filter import filter_candidates  # noqa: E402
 
-# ===== 2. 基本面评分 (V1.0 五维度量化) =====
+# ===== 2. 基本面评分 =====
 # Lazy import to avoid circular dependency
 def score_fundamental(code):
     from plays.limit_up.strategies.fundamental import score_fundamental as _score_fundamental
     return _score_fundamental(code)
 
-# ===== 3. 技术面评分 V1.0 (五维度量化) =====
+# ===== 3. 技术面评分 =====
 def score_technical(code):
     from plays.limit_up.strategies.technical import score_technical as _score_technical
     return _score_technical(code)
 
 
-# ===== 4. 资金面评分 (五维度量化评分 V1.0) =====
+# ===== 4. 资金面评分 =====
 # 缓存当日资金流向数据（避免每次调用都重复请求）
 _FUND_FLOW_CACHE = None
 _FUND_FLOW_DATE = None
@@ -180,7 +180,7 @@ def score_fundflow(code):
     from plays.limit_up.strategies.fundflow import score_fundflow as _score_fundflow
     return _score_fundflow(code)
 
-# V2.4: 实时涨幅缓存（CDP/requests+代理获取，避免盘中Tushare无数据）
+# 实时涨幅缓存（CDP/requests+代理获取，避免盘中Tushare无数据）
 _REALTIME_PCT_CACHE = {}
 _REALTIME_PCT_TS = ""
 _POPULARITY_RANK_CACHE = {}  # {code: rank} 东方财富人气排名，取前300
@@ -194,7 +194,18 @@ def _batch_fetch_realtime_pct():
     today = _dt.now().strftime("%Y%m%d")
     if _REALTIME_PCT_TS == today and _REALTIME_PCT_CACHE:
         return _REALTIME_PCT_CACHE
-    
+
+    # 盘后降级：从 Tushare daily 获取
+    from plays.limit_up.utils import is_market_closed, batch_get_pct_tushare
+    if is_market_closed():
+        cache = batch_get_pct_tushare(today)
+        if cache:
+            _REALTIME_PCT_CACHE = cache
+            _REALTIME_PCT_TS = today
+            print(f"  [盘后] 实时涨幅降级Tushare: {len(cache)} 只股票")
+            return cache
+        return {}
+
     try:
         from scripts import proxy_utils as _pu
         proxies = _pu.get_proxies_dict()
@@ -240,6 +251,18 @@ def _get_popularity_rank(code: str) -> int | None:
     from datetime import datetime as _dt
     today = _dt.now().strftime("%Y%m%d")
     if _REALTIME_PCT_TS != today or not _POPULARITY_RANK_CACHE:
+        # 盘后降级：Tushare moneyflow 按主力净流入排序
+        from plays.limit_up.utils import is_market_closed, get_popularity_rank_tushare
+        if is_market_closed():
+            cache = get_popularity_rank_tushare(today)
+            if cache:
+                _POPULARITY_RANK_CACHE = cache
+                _REALTIME_PCT_TS = today
+                print(f"  [盘后] 人气排名降级Tushare: {len(cache)} 只")
+                code_short = code.split('.')[0]
+                return _POPULARITY_RANK_CACHE.get(code_short)
+            return None
+
         try:
             import requests as _req
             from scripts import proxy_utils as _pu
@@ -274,7 +297,7 @@ def _get_popularity_rank(code: str) -> int | None:
     code_short = code.split('.')[0]
     return _POPULARITY_RANK_CACHE.get(code_short)
 
-# V2.4: 实时资金流缓存（东财API+代理，替代T+1 Tushare moneyflow）
+# 实时资金流缓存（东财API+代理，替代T+1 Tushare moneyflow）
 _REALTIME_FUND_CACHE = {}  # code_short → {net_flow, vol_ratio, turnover, amount}
 _REALTIME_FUND_TS = ""
 
@@ -286,7 +309,18 @@ def _get_realtime_fund_cache():
     today = datetime.now().strftime("%Y%m%d")
     if _REALTIME_FUND_CACHE and _REALTIME_FUND_TS == today:
         return _REALTIME_FUND_CACHE
-    
+
+    # 盘后降级：Tushare moneyflow + daily_basic
+    from plays.limit_up.utils import is_market_closed, batch_get_fundflow_tushare
+    if is_market_closed():
+        cache = batch_get_fundflow_tushare(today)
+        if cache:
+            _REALTIME_FUND_CACHE = cache
+            _REALTIME_FUND_TS = today
+            print(f"  [盘后] 资金流降级Tushare: {len(cache)} 只股票")
+            return cache
+        return {}
+
     from scripts.proxy_utils import get_proxies_dict
     cache = {}
     for page in range(1, 6):  # 翻5页×100=500只
@@ -366,7 +400,7 @@ def push_feishu(results):
         if total >= 35: return "⭐ ⭐ ⭐"  # noqa: E701
         return ""
 
-    # 推送筛选 (V2.6: 加权Top3择优，阈值35)
+    # 推送筛选 (加权Top3择优，阈值35)
     THRESHOLD = 35
     above_threshold = sorted(
         [r for r in results if r.get('total', 0) >= THRESHOLD],

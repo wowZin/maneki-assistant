@@ -1,9 +1,9 @@
 """飞书 Bot 回调服务 — FastAPI 入口
 
-只做一件事：接收飞书 webhook → 写入 inbox → 返回 200。
-决策和回复由 pipes/maneki/maneki_pipe.py (Claude SDK) 接管。
+接收飞书 webhook → 即时回复"请稍候"（已读确认）→ 写入 inbox → Claude 接管回复。
 """
 
+import asyncio
 import json
 import logging
 import sys
@@ -17,7 +17,8 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent
 if str(PROJECT_DIR) not in sys.path:
     sys.path.insert(0, str(PROJECT_DIR))
 
-from pipes.maneki.maneki_pipe import write_inbox  # noqa: E402
+from pipelines.maneki.maneki_pipe import write_inbox  # noqa: E402
+from feishu_bot.feishu_client import FEISHU_CLIENT  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -60,6 +61,7 @@ async def feishu_callback(request: Request):
 
     message = event.get("event", {}).get("message", {})
     chat_id = message.get("chat_id", "")
+    message_id = message.get("message_id", "")
     content_raw = message.get("content", "{}")
 
     try:
@@ -71,12 +73,37 @@ async def feishu_callback(request: Request):
     if not text.strip() or not chat_id:
         return JSONResponse({"code": 0})
 
-    # 写入 inbox
+    # 去重：跳过已存在的 message_id（异步任务中也会检查，但这里先查一次）
+    inbox_file = Path(PROJECT_DIR) / "pipelines" / "maneki" / "inbox" / f"{chat_id}.jsonl"
+    if inbox_file.exists():
+        for line in inbox_file.read_text().split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                existing = json.loads(line)
+                if existing.get("message_id") == message_id:
+                    logger.info("dedup: skip duplicate msg %s", message_id[:12])
+                    return JSONResponse({"code": 0})
+            except json.JSONDecodeError:
+                pass
+
+    # 异步发送"请稍候"（不阻塞 webhook 响应，防止 Feishu 超时重试）
+    async def _send_ack():
+        try:
+            await FEISHU_CLIENT.reply_text(message_id, "分析中，请稍候...")
+        except Exception as e:
+            logger.warning("reply_text failed: %s", e)
+    asyncio.create_task(_send_ack())
+
+    # 写入 inbox（同步，直接写文件不涉及网络）
     write_inbox(chat_id, {
         "text": text,
+        "message_id": message_id,
+        "chat_id": chat_id,
         "sender": event.get("event", {}).get("sender", {}).get("sender_id", {}).get("user_id", "unknown"),
         "timestamp": header.get("create_time", ""),
     })
-    logger.info("inbox: chat=%s text=%s", chat_id, text[:80])
+    logger.info("inbox: chat=%s msg=%s text=%s", chat_id, message_id[:12], text[:80])
 
     return JSONResponse({"code": 0})

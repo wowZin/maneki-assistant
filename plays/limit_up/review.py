@@ -812,7 +812,7 @@ def main():
         "hit_details": hits.get("hit_details", []),
         "dim_performance": dim_perf,
         "confidence_dist": conf_dist,
-        "ab_comparison": ab_result,  # V2.4 权重AB
+        "ab_comparison": ab_result,  # 权重AB
     }
     
     # 保存JSON报告（保留用于程序读取）

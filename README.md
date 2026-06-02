@@ -22,7 +22,7 @@ maneki-agent/
 ├── feishu_bot/             ← 飞书桥梁（只写 inbox，不决策）
 │   ├── main.py             ← FastAPI → 写入 inbox
 │   └── feishu_client.py    ← 飞书 API 封装
-├── pipes/                  ← Claude SDK 管道（LLM 决策中枢）
+├── pipelines/              ← Claude SDK 管道（LLM 决策中枢）
 │   └── maneki/             ← 股票助手管道
 │       ├── maneki_pipe.py  ← 主循环：轮询 inbox → Claude 决策 → 回复
 │       ├── config.yaml     ← Claude 配置
@@ -131,7 +131,7 @@ cp .env.example .env
 python -m uvicorn feishu_bot.main:app --host 0.0.0.0 --port 8080 &
 
 # 2. 启动 Claude SDK 管道（轮询inbox → Claude决策 → 回复）
-python pipes/maneki/maneki_pipe.py &
+python pipelines/maneki/maneki_pipe.py &
 
 # 手动运行一次扫描
 python plays/limit_up/pipeline.py

@@ -30,9 +30,75 @@ TUSHARE_TOKEN = CONFIG.get("TUSHARE_TOKEN", "")
 # ===== Tushare API 缓存层 =====
 _TUSHARE_CACHE = {}
 
+# ===== 交易日自动修正：盘前/非交易日自动使用上一个有数据的交易日 =====
+_LAST_TRADE_DATE_CACHE = None
+
+def get_last_trade_date_with_data() -> str:
+    """获取最近一个有日线数据的交易日
+    盘前(9:30前)、盘后数据未就绪时自动回退到上一个交易日
+    """
+    global _LAST_TRADE_DATE_CACHE
+    if _LAST_TRADE_DATE_CACHE:
+        return _LAST_TRADE_DATE_CACHE
+    
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    today = now.strftime("%Y%m%d")
+    
+    # 找最近交易日（从今天往前，最多10天）
+    candidates = []
+    for offset in range(10):
+        d = now - timedelta(days=offset) if offset > 0 else now
+        ds = d.strftime("%Y%m%d")
+        payload = {"api_name": "trade_cal", "token": TUSHARE_TOKEN,
+                   "params": {"exchange": "SSE", "start_date": ds, "end_date": ds},
+                   "fields": "cal_date,is_open"}
+        try:
+            resp = requests.post("https://api.tushare.pro", json=payload, timeout=5).json()
+            items = resp.get("data", {}).get("items", [])
+            for item in items:
+                if item and len(item) >= 2 and item[1] == 1:
+                    candidates.append(ds)
+                    break
+        except Exception:
+            pass
+    
+    # 从最近的交易日开始，验证 daily 数据是否存在
+    for ds in candidates:
+        payload = {"api_name": "daily", "token": TUSHARE_TOKEN,
+                   "params": {"trade_date": ds, "ts_code": "000001.SZ"},
+                   "fields": "trade_date,pct_chg"}
+        try:
+            resp = requests.post("https://api.tushare.pro", json=payload, timeout=5).json()
+            if resp.get("data", {}).get("items"):
+                _LAST_TRADE_DATE_CACHE = ds
+                return ds
+        except Exception:
+            pass
+    
+    result = candidates[0] if candidates else today
+    _LAST_TRADE_DATE_CACHE = result
+    return result
+
 
 def call_tushare(api_name, params, fields="", timeout=10):
-    """带缓存的Tushare API调用，避免同一股票重复请求同一接口"""
+    """带缓存的Tushare API调用，自动修正交易日参数"""
+    # 自动修正 trade_date/start_date/end_date 参数
+    # 如果查询的是今天但数据未就绪，自动降级到上一个可用交易日
+    from datetime import datetime
+    today = datetime.now().strftime("%Y%m%d")
+    auto_resolved = False
+    
+    for key in ("trade_date", "start_date", "end_date"):
+        if key in params and params[key] == today:
+            if not auto_resolved:
+                resolved = get_last_trade_date_with_data()
+                if resolved != today:
+                    params = dict(params)
+                    params[key] = resolved
+                    auto_resolved = True
+                else:
+                    break  # 今天的 data 可用，不用改
     cache_key = (api_name, json.dumps(params, sort_keys=True), fields)
     if cache_key in _TUSHARE_CACHE:
         return _TUSHARE_CACHE[cache_key]

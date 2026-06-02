@@ -18,19 +18,9 @@ _INDUSTRY_MA20_CACHE = {}
 
 def score_technical(code):
     """
-    技术面涨停潜力预判 V2.0（最终实盘定稿版）
+    技术面涨停潜力预判
     六维度量化评分：量能35分 + 趋势均线25分 + 筹码结构15分 + 关键位置12分 + 资金动能8分 + 板块协同5分
     含一票否决规则（动态阈值）+ 板块弱势天花板 + 时间因子
-
-    V2.0变更（基于V1.0）：
-    - 量能维度权重40→35，新增板块协同维度5分
-    - 否决规则全面重构（5条动态阈值）：放量破位/高位滞涨/高位筹码发散/缩量阴跌/资金出逃
-    - 所有阈值改为"滚动80日分位数+绝对值下限"双重判定
-    - 筹码维度废除CYQ估算，改用换手衰减+布林带收敛替代
-    - 删除MACD/KDJ/RSI因子（因子纯化）
-    - 新增板块协同过滤维度（弱势板块硬性天花板总分≤74）
-    - 新增时间因子（早盘冲动抑制/尾盘确认加分/信号衰减）
-    - 新增洗盘-起爆节奏因子（前N日缩量+当日放量）
     """
 
 
@@ -56,7 +46,7 @@ def score_technical(code):
     factors.sort(key=lambda x: x.get('trade_date', ''), reverse=True)
 
     # 盘中场景：Tushare数据为T-1日，无当日实时数据
-    # 量比/换手等实时指标应从CDP获取，当前V1.0暂用T-1日数据
+    # 量比/换手等实时指标暂用T-1日数据
     if is_trading_time() and factors:
         latest_date = factors[0].get('trade_date', '')
         from datetime import datetime as _dt
@@ -77,7 +67,7 @@ def score_technical(code):
     except Exception:
         mf_data = []
 
-    # ===== 动态分位数计算（V2.0） =====
+    # ===== 动态分位数计算 =====
     # 近80日数据（从factors中取），用于动态阈值判定
     vol_ratios_80d = []
     turnovers_80d = []
@@ -109,7 +99,7 @@ def score_technical(code):
     close = safe_float(today.get('close'))
     ma20 = safe_float(today.get('ma_bfq_20'))
     vol_ratio = safe_float(today.get('vol_ratio'))
-    # V2.4: 盘中优先使用东财实时量比(替代T-1)
+    # 盘中优先使用东财实时量比(替代T-1)
     if is_trading_time():
         fund_cache = _get_realtime_fund_cache()
         code_short = code.split('.')[0]
@@ -118,7 +108,7 @@ def score_technical(code):
             vol_ratio = rt['vol_ratio']
     boll_mid = safe_float(today.get('boll_mid_bfq'))
 
-    # ===== 2. V2.0 一票否决检查 =====
+    # ===== 2. 一票否决检查 =====
 
     # 2.1 放量破位：收盘<MA20 且 量比>近80日Top20%（且绝对值>1.5）
     if close and ma20 and close < ma20:
@@ -170,7 +160,7 @@ def score_technical(code):
             if close and boll_mid and close / boll_mid < 0.99:
                 return 0, f"资金持续出逃:近2日净流出+收盘/中轨{close/boll_mid:.3f}<0.99"
 
-    # ===== 3. 六维度评分（V2.0） =====
+    # ===== 3. 六维度评分 =====
     score = 0
     reasons = []
 
@@ -181,7 +171,7 @@ def score_technical(code):
     low = safe_float(today.get('low'))
     open_price = safe_float(today.get('open'))
 
-    # --- 3.1 量能结构维度 (35分) V2.0 ---
+    # --- 3.1 量能结构维度 (35分) ---
     vol_score = 0
     vol_reasons = []
 
@@ -234,7 +224,7 @@ def score_technical(code):
     score += max(0, min(35, vol_score))
     reasons.extend(vol_reasons)
 
-    # --- 3.2 趋势与均线维度 (25分) V2.0 ---
+    # --- 3.2 趋势与均线维度 (25分) ---
     trend_score = 0
     trend_reasons = []
     ma60 = safe_float(today.get('ma_bfq_60'))
@@ -290,7 +280,7 @@ def score_technical(code):
     score += max(0, min(25, trend_score))
     reasons.extend(trend_reasons)
 
-    # --- 3.3 关键位置形态 (12分) V2.0 ---
+    # --- 3.3 关键位置形态 (12分) ---
     pos_score = 0
     pos_reasons = []
 
@@ -346,7 +336,7 @@ def score_technical(code):
     score += max(0, min(12, pos_score))
     reasons.extend(pos_reasons)
 
-    # --- 3.4 筹码结构 (15分) V2.0 换手衰减替代CYQ ---
+    # --- 3.4 筹码结构 (15分) 换手衰减替代CYQ ---
     chip_score = 0
     chip_reasons = []
 
@@ -397,12 +387,12 @@ def score_technical(code):
     score += max(0, min(15, chip_score))
     reasons.extend(chip_reasons)
 
-    # --- 3.5 日内资金动能 (8分) V2.0 ---
+    # --- 3.5 日内资金动能 (8分) ---
     capital_score = 0
     capital_reasons = []
 
     # 资金动能：外盘-内盘差用Level1代理（close/MA关系）
-    # V2.0: 收盘>BOLL中轨+量比>中位数 → 资金正向
+    # 收盘>BOLL中轨+量比>中位数 → 资金正向
     if close and boll_mid:
         vw_ratio = close / boll_mid
         if vw_ratio > 1.01 and vol_ratio and vol_ratio > vr_median:
@@ -431,7 +421,7 @@ def score_technical(code):
     score += max(0, min(8, capital_score))
     reasons.extend(capital_reasons)
 
-    # --- 3.6 板块协同过滤 (5分) V2.0新增 ---
+    # --- 3.6 板块协同过滤 (5分) ---
     sector_score = 0
     sector_reasons = []
     sector_above_ma20_ratio = 0.5  # 中性的默认值
@@ -489,12 +479,12 @@ def score_technical(code):
     score += min(5, sector_score)
     reasons.extend(sector_reasons)
 
-    # ===== 4. V2.0 板块弱势硬性天花板 =====
+    # ===== 4. 板块弱势硬性天花板 =====
     if sector_above_ma20_ratio < 0.2 and score > 74:
         score = 74
         reasons.append("板块天花板→74")
 
-    # ===== 5. V2.0 时间因子与信号衰减 =====
+    # ===== 5. 时间因子与信号衰减 =====
     try:
         from datetime import datetime as _dt
         now = _dt.now()

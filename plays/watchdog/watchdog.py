@@ -1,6 +1,6 @@
 """
-盯盘助手 V1.0
-============
+盯盘助手
+========
 基于l2api Level2实时数据 + 双引擎动量-均值回归策略，持续监控标的。
 通过飞书推送买卖信号，状态持久化到本地JSON。
 
@@ -253,15 +253,43 @@ class WatchdogEngine:
 
     def _loop(self):
         logger.info("盯盘循环启动")
+        trading_day_logged = False
         while self._running:
             try:
-                with self._lock:
-                    codes = list(self._states.keys())
-                if codes:
-                    self._scan_round(codes)
+                if _is_trading_time():
+                    if not trading_day_logged:
+                        logger.info("进入交易时段，开始盯盘扫描")
+                        trading_day_logged = True
+                    with self._lock:
+                        codes = list(self._states.keys())
+                    if codes:
+                        self._scan_round(codes)
+                    time.sleep(SCAN_INTERVAL)
+                else:
+                    if trading_day_logged:
+                        logger.info("交易时段结束，暂停盯盘扫描")
+                        trading_day_logged = False
+                    # 非交易时间：计算距离下一交易时段开始还有多久
+                    wait = _next_trading_start()
+                    if wait > 0:
+                        next_ts = datetime.fromtimestamp(
+                            time.time() + wait
+                        ).strftime("%Y-%m-%d %H:%M")
+                        logger.debug(
+                            "非交易时间，%s后恢复 (%.0fs)",
+                            next_ts, wait
+                        )
+                        # 最长等5分钟，以便响应引擎stop信号
+                        sleep_for = min(wait, 300.0)
+                        for _ in range(int(sleep_for)):
+                            if not self._running:
+                                break
+                            time.sleep(1)
+                    else:
+                        time.sleep(30)
             except Exception as e:
                 logger.error(f"盯盘循环异常: {e}")
-            time.sleep(SCAN_INTERVAL)
+                time.sleep(SCAN_INTERVAL)
         logger.info("盯盘循环退出")
 
     def _scan_round(self, codes: list[str]):
@@ -476,3 +504,124 @@ def get_engine() -> WatchdogEngine:
     if _engine is None:
         _engine = WatchdogEngine()
     return _engine
+
+
+# ═══════════════════════════════════════════════════════════
+# 交易时段工具
+# ═══════════════════════════════════════════════════════════
+
+def _is_trading_time() -> bool:
+    """A股交易时段: 周一至五 9:30-11:30, 13:00-15:00"""
+    now = datetime.now()
+    if now.weekday() >= 5:
+        return False
+    h, m = now.hour, now.minute
+    if h < 9 or (h == 9 and m < 30):
+        return False
+    if h >= 15:
+        return False
+    if h == 11 and m >= 30:
+        return False
+    if h == 12:
+        return False
+    return True
+
+
+def _next_trading_start() -> float:
+    """计算距离下一个交易时段开始的秒数"""
+    from datetime import timedelta
+    now = datetime.now()
+    wd = now.weekday()
+
+    # 周五收盘后 → 下周一 9:30
+    if wd == 4 and now.hour >= 15:
+        next_day = now + timedelta(days=3)
+    elif wd >= 5:
+        # 周末 → 下周一 9:30
+        next_day = now + timedelta(days=(7 - wd))
+    elif now.hour < 9 or (now.hour == 9 and now.minute < 30):
+        # 早盘前 → 今天 9:30
+        next_day = now.replace(hour=9, minute=30, second=0, microsecond=0)
+    elif (now.hour == 11 and now.minute >= 30) or now.hour == 12:
+        # 午休 → 今天 13:00
+        next_day = now.replace(hour=13, minute=0, second=0, microsecond=0)
+    elif now.hour >= 15:
+        # 收盘 → 次日 9:30
+        next_day = now + timedelta(days=1)
+        next_day = next_day.replace(hour=9, minute=30, second=0, microsecond=0)
+    else:
+        return 0.0  # 已经在交易时段
+
+    delta = (next_day - now).total_seconds()
+    return max(delta, 0.0)
+
+
+# ═══════════════════════════════════════════════════════════
+# 独立入口：常驻 daemon 进程
+# ═══════════════════════════════════════════════════════════
+
+def main():
+    """盯盘引擎常驻入口
+
+    启动 l2api → 启动盯盘引擎 → 保活主线程。
+    类似 pipes/maneki/maneki_pipe.py 的常驻模式。
+    """
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    # 从 .env 加载凭证
+    env_file = PROJECT_DIR / ".env"
+    if env_file.exists():
+        load_dotenv(env_file)
+
+    account = os.getenv("L2API_ACCOUNT", "")
+    password = os.getenv("L2API_PASSWORD", "")
+
+    if not account or not password:
+        logger.error("未配置 L2API_ACCOUNT / L2API_PASSWORD，无法启动盯盘")
+        sys.exit(1)
+
+    # 启动 l2api 长连接
+    from scripts.l2_client import get_client as _get_l2, has_client as _has_l2
+    logger.info("正在启动 l2api Level2 连接...")
+    try:
+        l2 = _get_l2(account=account, password=password)
+        if not l2._running:
+            l2.start()
+        logger.info("l2api 已就绪")
+    except Exception as e:
+        logger.error(f"l2api 启动失败: {e}")
+        sys.exit(1)
+
+    # 获取并启动盯盘引擎
+    engine = get_engine()
+    engine.start()
+
+    logger.info("=" * 50)
+    logger.info("盯盘引擎已启动！")
+    logger.info("状态文件: %s", STATE_FILE)
+    logger.info("扫描间隔: %ds", SCAN_INTERVAL)
+    logger.info("盯盘上限: %d 只", MAX_WATCH)
+    logger.info("=" * 50)
+    logger.info("通过飞书发送指令: 盯/停/盯盘列表/清盯盘")
+
+    try:
+        while True:
+            time.sleep(60)
+            # 日志心跳，显示引擎状态
+            with engine._lock:
+                count = len(engine._states)
+            status = "运行中" if engine._running else "已停止"
+            logger.debug("心跳: 引擎%s, 盯盘%d只", status, count)
+    except KeyboardInterrupt:
+        logger.info("收到停止信号，正在关闭...")
+        engine.stop()
+        l2.stop()
+        logger.info("盯盘引擎已关闭")
+
+
+if __name__ == "__main__":
+    main()

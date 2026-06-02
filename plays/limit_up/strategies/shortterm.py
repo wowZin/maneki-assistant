@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""短线博弈面评分 — 打板专用 (V2.7)
+"""短线博弈面评分 — 打板专用
 
 因子权重:
   1. 封板质量 25% — 封板时间、封单流通比、撤单强度
@@ -7,16 +7,6 @@
   3. 开盘博弈 15% — 换手率、开盘形态、量比
   4. 板块助攻 15% — 概念精确匹配+别名映射、板块热度
   5. 攻击独特性 20% — 涨停高开率(>2%)、近10日涨幅、弱转强
-
-V2.7 改动:
-  - 修复时间序列方向（封板次日检查: pos-1 而非 pos+1）
-  - 合并重复 pro.daily() / limit_list_d 调用, 统一在 score_shortterm 获取
-  - 启用模块级缓存 _LIMIT_UP_CACHE / _CONCEPT_CACHE
-  - 封单金额 → 封单流通比 (first_limit_amount / 流通市值)
-  - 成交额活跃 → 换手率/量比 (turnover_rate, volume_ratio)
-  - 板块模糊匹配(cname in k or k in cname) → 精确匹配 + 别名映射
-  - 高开阈值 0% → 2% (短线打板语境)
-  - 新增集合竞价因子 (竞价换手/竞价涨幅, 通过 Eastmoney 实时API)
 """
 
 import sys
@@ -67,7 +57,10 @@ _CONCEPT_ALIAS_MAP = {        # 概念别名映射（Tushare → 同花顺/东�
 # ── 工具函数 ─────────────────────────────────────────────
 
 def _today_str() -> str:
-    return datetime.now().strftime("%Y%m%d")
+    """获取当前日期，但 Tushare 数据未就绪时返回上一个交易日"""
+    from scripts.tu_share import get_last_trade_date_with_data
+    resolved = get_last_trade_date_with_data()
+    return resolved
 
 
 def _safe_float(val, default=0.0):
@@ -199,11 +192,15 @@ def _get_jj_data_eastmoney(code: str) -> dict:
 
     返回: {jj_amount, jj_volume, turnover_rate_real, change_pct_real, 流通市值}
     若无实时数据返回空dict
-
-    TODO: 如果有 Tushare 竞价接口, 可以替换为 Tushare 版本, 减少对东财 API 的依赖。
-    Tushare 相关接口参考: stk_mins (分钟线) 或 stk_factor (每日因子中的竞价字段),
-    具体接口名以实际可用为准。
     """
+    # 盘后降级：使用 Tushare 数据
+    from plays.limit_up.utils import is_market_closed, get_stock_quote
+    if is_market_closed():
+        q = get_stock_quote(code)
+        if q.get("change_pct") is not None:
+            return q
+        return {}
+
     result = {}
 
     # ── 代理模块初始化（优雅降级：import失败则直连） ──
@@ -779,7 +776,7 @@ def _score_jj(code: str, cache: dict) -> tuple:
 # ── 综合评分 ──────────────────────────────────────────
 
 def score_shortterm(code: str) -> tuple:
-    """短线博弈面综合评分（0-100）V2.7
+    """短线博弈面综合评分（0-100）
 
     在入口函数统一获取所有数据，消除重复API调用。
     """

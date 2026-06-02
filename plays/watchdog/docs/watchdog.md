@@ -1,4 +1,4 @@
-# 盯盘助手 V1.0
+# 盯盘助手
 
 ## 概述
 
@@ -29,7 +29,7 @@
 
 ## 监控循环
 
-每 30 秒：
+每 30 秒扫描一轮。引擎有交易时段感知，非交易时间（周末、节假日、午休）自动暂停扫描，等待下一交易时段开始后恢复。
 
 ```
 for 每个 watching 标的:
@@ -65,9 +65,17 @@ for 每个 entered 标的:
 - 止盈提醒：名称 + 入场价/现价 + 盈亏% + 建议平50%
 - 趋势反转出场：名称 + 出场原因 + 入场价/现价 + 盈亏%/持仓K线数
 
+## 启动
+
+```bash
+python plays/watchdog/watchdog.py
+```
+
+引擎会读取 `.env` 中的 `L2API_ACCOUNT` / `L2API_PASSWORD` 登录 l2api，之后启动常驻盯盘循环。
+
 ## 依赖
 
-- `.env` 中配置 `L2API_ENABLED=true`、`L2API_ACCOUNT`、`L2API_PASSWORD`
+- `.env` 中配置 `L2API_ACCOUNT`、`L2API_PASSWORD`
 - `.env` 中配置 `TUSHARE_TOKEN`
 - `scripts/l2_client.py` — Level2 SDK
 - `scripts/tu_share.py` — Tushare 统一调用
