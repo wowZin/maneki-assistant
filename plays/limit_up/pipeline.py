@@ -207,8 +207,7 @@ def _batch_fetch_realtime_pct():
         return {}
 
     try:
-        from scripts import proxy_utils as _pu
-        proxies = _pu.get_proxies_dict()
+        from scripts.proxy_utils import request_with_proxy_retry
         cache = {}
         # 逐页获取（每页最多100只，翻页至获取5000+）
         for page in range(1, 6):  # 最多5页，覆盖500只活跃股
@@ -219,9 +218,15 @@ def _batch_fetch_realtime_pct():
                 f"fields=f12,f3&fid=f3&pn={page}&pz=100&po=1&dect=1&"
                 "ut=fa5fd1943c7b386f172d6893dbfba10b"
             )
-            resp = _req.get(url, proxies=proxies, timeout=10)
-            data = resp.json()
-            items = data.get("data", {}).get("diff", [])
+            resp = request_with_proxy_retry(url, max_retries=2, timeout=10)
+            if resp is None:
+                if page == 1:
+                    break
+                continue
+            try:
+                items = resp.json().get("data", {}).get("diff", [])
+            except Exception:
+                continue
             if not items:
                 break
             for item in items:
@@ -231,7 +236,7 @@ def _batch_fetch_realtime_pct():
                     cache[code] = pct
             if len(items) < 100:
                 break  # 最后一页
-        
+
         if cache:
             _REALTIME_PCT_CACHE = cache
             _REALTIME_PCT_TS = today
@@ -264,9 +269,7 @@ def _get_popularity_rank(code: str) -> int | None:
             return None
 
         try:
-            import requests as _req
-            from scripts import proxy_utils as _pu
-            proxies = _pu.get_proxies_dict()
+            from scripts.proxy_utils import request_with_proxy_retry
             cache = {}
             for pg in range(1, 3):
                 url = (
@@ -276,8 +279,15 @@ def _get_popularity_rank(code: str) -> int | None:
                     f"fields=f12,f62&fid=f62&pn={pg}&pz=100&po=1&"
                     "ut=fa5fd1943c7b386f172d6893dbfba10b"
                 )
-                r2 = _req.get(url, proxies=proxies, timeout=8)
-                items2 = r2.json().get("data", {}).get("diff", [])
+                r2 = request_with_proxy_retry(url, max_retries=2, timeout=8)
+                if r2 is None:
+                    if pg == 1:
+                        break
+                    continue
+                try:
+                    items2 = r2.json().get("data", {}).get("diff", [])
+                except Exception:
+                    continue
                 if not items2:
                     break
                 for rank, item in enumerate(items2, 1 + (pg - 1) * 100):
@@ -321,53 +331,56 @@ def _get_realtime_fund_cache():
             return cache
         return {}
 
-    from scripts.proxy_utils import get_proxies_dict
+    from scripts.proxy_utils import request_with_proxy_retry
     cache = {}
     for page in range(1, 6):  # 翻5页×100=500只
+        url = (
+            "https://push2.eastmoney.com/api/qt/clist/get?"
+            "np=1&fltt=2&invt=2&"
+            "fs=m:0+t:6+f:!2,m:0+t:80+f:!2,m:1+t:2+f:!2,m:1+t:23+f:!2&"
+            f"fields=f12,f62,f10,f7,f6&fid=f62&pn={page}&pz=100&po=1&dect=1&"
+            "ut=fa5fd1943c7b386f172d6893dbfba10b"
+        )
+        resp = request_with_proxy_retry(url, max_retries=2, timeout=10)
+        if resp is None:
+            print(f"  实时资金流缓存第{page}页失败(已重试)")
+            if page == 1:
+                break  # 第1页失败则放弃
+            continue
         try:
-            proxies = get_proxies_dict()
-            url = (
-                "https://push2.eastmoney.com/api/qt/clist/get?"
-                "np=1&fltt=2&invt=2&"
-                "fs=m:0+t:6+f:!2,m:0+t:80+f:!2,m:1+t:2+f:!2,m:1+t:23+f:!2&"
-                f"fields=f12,f62,f10,f7,f6&fid=f62&pn={page}&pz=100&po=1&dect=1&"
-                "ut=fa5fd1943c7b386f172d6893dbfba10b"
-            )
-            resp = requests.get(url, proxies=proxies, timeout=10)
             items = resp.json().get("data", {}).get("diff", [])
-            if not items:
-                break
-            for s in items:
-                code = s.get("f12", "")
-                if not code:
-                    continue
-                f62 = s.get("f62")
-                try:
-                    net_flow = float(f62) if f62 and f62 != "-" else 0
-                except Exception:
-                    net_flow = 0
-                try:
-                    vol_ratio = float(s.get("f10", 0)) if s.get("f10") and s.get("f10") != "-" else 0
-                except Exception:
-                    vol_ratio = 0
-                try:
-                    turnover = float(s.get("f7", 0)) if s.get("f7") and s.get("f7") != "-" else 0
-                except Exception:
-                    turnover = 0
-                try:
-                    amount = float(s.get("f6", 0)) if s.get("f6") and s.get("f6") != "-" else 0
-                except Exception:
-                    amount = 0
-                cache[code] = {
-                    "net_flow": net_flow,      # 主力净流入(元)
-                    "vol_ratio": vol_ratio,     # 量比
-                    "turnover": turnover,       # 换手率(%)
-                    "amount": amount,           # 成交额(元)
-                }
-            if len(items) < 100:
-                break
-        except Exception as e:
-            print(f"  实时资金流缓存第{page}页失败: {e}")
+        except Exception:
+            continue
+        if not items:
+            break
+        for s in items:
+            code = s.get("f12", "")
+            if not code:
+                continue
+            f62 = s.get("f62")
+            try:
+                net_flow = float(f62) if f62 and f62 != "-" else 0
+            except Exception:
+                net_flow = 0
+            try:
+                vol_ratio = float(s.get("f10", 0)) if s.get("f10") and s.get("f10") != "-" else 0
+            except Exception:
+                vol_ratio = 0
+            try:
+                turnover = float(s.get("f7", 0)) if s.get("f7") and s.get("f7") != "-" else 0
+            except Exception:
+                turnover = 0
+            try:
+                amount = float(s.get("f6", 0)) if s.get("f6") and s.get("f6") != "-" else 0
+            except Exception:
+                amount = 0
+            cache[code] = {
+                "net_flow": net_flow,      # 主力净流入(元)
+                "vol_ratio": vol_ratio,     # 量比
+                "turnover": turnover,       # 换手率(%)
+                "amount": amount,           # 成交额(元)
+            }
+        if len(items) < 100:
             break
     
     if cache:
@@ -601,6 +614,13 @@ def main():
     args = parser.parse_args()
 
     clear_tushare_cache()
+
+    # 数据源预检：关键源异常时阻塞执行，避免基于错误数据决策
+    from scripts.health_check import preflight_check  # noqa: E402
+    if not preflight_check():
+        print("[预检] 关键数据源异常，阻塞执行。详情见 data/health_state.json")
+        _write_empty_result("预检阻断: 关键数据源不可用")
+        return
 
     print("=" * 50)
     print(f"涨停预测流程启动: {datetime.now()}")

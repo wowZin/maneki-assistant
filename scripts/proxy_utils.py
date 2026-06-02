@@ -174,3 +174,60 @@ def get_urllib_opener_with_proxy(proxy_addr=None):
         ("Accept", "*/*"),
     ]
     return opener
+
+
+# ═══════════════════════════════════════════════════════════
+# 代理重试机制：失败时自动换IP重试
+# ═══════════════════════════════════════════════════════════
+
+def clear_proxy_cache():
+    """清除缓存的代理IP（请求失败时调用，强制下次换新IP）"""
+    global _cached_proxy
+    _cached_proxy = None
+
+
+def request_with_proxy_retry(url, max_retries=3, timeout=10, **kwargs):
+    """通过代理请求URL，失败时自动清除缓存IP + 换新IP重试。
+
+    Args:
+        url: 请求URL
+        max_retries: 最大重试次数（不含首次，共 1+max_retries 次尝试）
+        timeout: 每次请求超时秒数
+        **kwargs: 传给 requests.get 的其他参数(如 headers)
+
+    Returns:
+        requests.Response 对象，或 None（全部重试失败）
+
+    每次重试前会 clear_proxy_cache() 强制获取新代理IP。
+    每日800次提取额度下，max_retries=3 每次调用最多消耗4个IP。
+    """
+    import requests as _requests
+
+    last_error = None
+    for attempt in range(1 + max_retries):
+        if attempt > 0:
+            # 重试前：清除缓存IP，强制换新
+            clear_proxy_cache()
+            print(f"  [代理重试] 第{attempt}次重试 (已换新IP)...")
+
+        proxy_addr = get_proxy_ip()
+        if proxy_addr is None:
+            last_error = "无法获取代理IP"
+            continue
+
+        proxies = {"http": f"http://{proxy_addr}", "https": f"http://{proxy_addr}"}
+        try:
+            resp = _requests.get(url, proxies=proxies, timeout=timeout, **kwargs)
+            # 检查是否被东财拦截（返回空或异常状态码）
+            if resp.status_code == 200:
+                return resp
+            if resp.status_code in (403, 429, 502, 503):
+                print(f"  [代理重试] 状态码{resp.status_code}, 换IP重试")
+                continue
+            return resp  # 其他状态码直接返回
+        except Exception as e:
+            last_error = str(e)[:100]
+            print(f"  [代理重试] 请求失败: {last_error}")
+
+    print(f"  [代理重试] {1+max_retries}次尝试全部失败: {last_error}")
+    return None
