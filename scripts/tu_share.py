@@ -2,10 +2,13 @@
 """Tushare API 封装：配置加载、缓存查询、行业映射"""
 
 import json
+import logging
 import sys
 from pathlib import Path
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
@@ -87,18 +90,16 @@ def call_tushare(api_name, params, fields="", timeout=10):
     # 如果查询的是今天但数据未就绪，自动降级到上一个可用交易日
     from datetime import datetime
     today = datetime.now().strftime("%Y%m%d")
-    auto_resolved = False
-    
-    for key in ("trade_date", "start_date", "end_date"):
-        if key in params and params[key] == today:
-            if not auto_resolved:
-                resolved = get_last_trade_date_with_data()
-                if resolved != today:
-                    params = dict(params)
-                    params[key] = resolved
-                    auto_resolved = True
-                else:
-                    break  # 今天的 data 可用，不用改
+    # 将 params 中所有 =today 的日期参数统一修正为最近可用交易日
+    resolved = get_last_trade_date_with_data()
+    if resolved != today:
+        needs_copy = any(key in params and params[key] == today
+                         for key in ("trade_date", "start_date", "end_date"))
+        if needs_copy:
+            params = dict(params)  # 仅在有需要时 copy，避免无谓开销
+        for key in ("trade_date", "start_date", "end_date"):
+            if key in params and params[key] == today:
+                params[key] = resolved
     cache_key = (api_name, json.dumps(params, sort_keys=True), fields)
     if cache_key in _TUSHARE_CACHE:
         return _TUSHARE_CACHE[cache_key]
@@ -108,16 +109,19 @@ def call_tushare(api_name, params, fields="", timeout=10):
             payload["fields"] = fields
         resp = requests.post("https://api.tushare.pro", json=payload, timeout=timeout)
         result = resp.json()
+        if result is None:
+            result = {}  # API 返回 null (如 top_list 无数据)
         _TUSHARE_CACHE[cache_key] = result
         return result
-    except Exception:
-        _TUSHARE_CACHE[cache_key] = {}
+    except Exception as e:
+        logger.warning("Tushare %s 失败 (不缓存): %s", api_name, e)
         return {}
 
 
 def clear_tushare_cache():
-    global _TUSHARE_CACHE
+    global _TUSHARE_CACHE, _LAST_TRADE_DATE_CACHE
     _TUSHARE_CACHE = {}
+    _LAST_TRADE_DATE_CACHE = None
 
 
 # ===== stock_basic 行业映射缓存 =====
