@@ -303,8 +303,8 @@ class WatchdogEngine:
                 if not st:
                     continue
 
-            # 更新日线数据(每天一次)
-            if st.last_daily_update != today:
+            # 更新日线数据(每天一次，或重启后指标丢失时强制重载)
+            if st.last_daily_update != today or not st.indicators:
                 self._update_daily(st)
 
             if not st.indicators:
@@ -570,6 +570,7 @@ def main():
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
+        stream=sys.stdout,
     )
 
     # 从 .env 加载凭证

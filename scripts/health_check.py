@@ -594,7 +594,7 @@ def check_proxy() -> list[HealthStatus]:
             "https://push2.eastmoney.com/api/qt/stock/get"
             "?secid=1.000001&fields=f43,f57,f170"
         )
-        resp = request_with_proxy_retry(url, max_retries=1, timeout=8)
+        resp = request_with_proxy_retry(url, max_retries=1, timeout=15)
         if resp is None:
             results.append(HealthStatus(
                 source="proxy:eastmoney",

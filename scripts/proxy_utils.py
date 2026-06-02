@@ -186,7 +186,7 @@ def clear_proxy_cache():
     _cached_proxy = None
 
 
-def request_with_proxy_retry(url, max_retries=3, timeout=10, **kwargs):
+def request_with_proxy_retry(url, max_retries=3, timeout=15, **kwargs):
     """通过代理请求URL，失败时自动清除缓存IP + 换新IP重试。
 
     Args:
