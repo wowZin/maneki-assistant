@@ -222,7 +222,7 @@ def _batch_fetch_realtime_pct():
                 f"fields=f12,f3&fid=f3&pn={page}&pz=100&po=1&dect=1&"
                 "ut=fa5fd1943c7b386f172d6893dbfba10b"
             )
-            resp = request_with_proxy_retry(url, max_retries=2, timeout=10)
+            resp = request_with_proxy_retry(url, timeout=10)
             if resp is None:
                 if page == 1:
                     break
@@ -283,7 +283,7 @@ def _get_popularity_rank(code: str) -> int | None:
                     f"fields=f12,f62&fid=f62&pn={pg}&pz=100&po=1&"
                     "ut=fa5fd1943c7b386f172d6893dbfba10b"
                 )
-                r2 = request_with_proxy_retry(url, max_retries=2, timeout=8)
+                r2 = request_with_proxy_retry(url, timeout=8)
                 if r2 is None:
                     if pg == 1:
                         break
@@ -345,7 +345,7 @@ def _get_realtime_fund_cache():
             f"fields=f12,f62,f10,f7,f6&fid=f62&pn={page}&pz=100&po=1&dect=1&"
             "ut=fa5fd1943c7b386f172d6893dbfba10b"
         )
-        resp = request_with_proxy_retry(url, max_retries=2, timeout=10)
+        resp = request_with_proxy_retry(url, timeout=10)
         if resp is None:
             print(f"  实时资金流缓存第{page}页失败(已重试)")
             if page == 1:

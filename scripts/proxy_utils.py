@@ -203,6 +203,17 @@ def request_with_proxy_retry(url, max_retries=3, timeout=10, **kwargs):
     """
     import requests as _requests
 
+    # ═══ 频率控制：同IP每秒最多1次 ═══
+    # zdtps 要求: 同IP请求同网站不超过1次/秒，否则触发反爬封IP
+    _rate_last = {}  # {proxy_addr: last_request_timestamp}
+
+    def _throttle(proxy_addr):
+        last_ts = _rate_last.get(proxy_addr, 0)
+        elapsed = time.time() - last_ts
+        if elapsed < 1.0:
+            time.sleep(1.0 - elapsed)
+        _rate_last[proxy_addr] = time.time()
+
     last_error = None
     for attempt in range(1 + max_retries):
         if attempt > 0:
@@ -214,6 +225,9 @@ def request_with_proxy_retry(url, max_retries=3, timeout=10, **kwargs):
         if proxy_addr is None:
             last_error = "无法获取代理IP"
             continue
+
+        # 频率控制：确保同IP间隔≥1秒
+        _throttle(proxy_addr)
 
         proxies = {"http": f"http://{proxy_addr}", "https": f"http://{proxy_addr}"}
         try:

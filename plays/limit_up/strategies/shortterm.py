@@ -270,7 +270,7 @@ def _get_jj_data_eastmoney(code: str) -> dict:
                 "User-Agent": "Mozilla/5.0",
                 "Referer": "https://quote.eastmoney.com/",
             }
-            resp = request_with_proxy_retry(url, max_retries=1, timeout=5, headers=headers)
+            resp = request_with_proxy_retry(url, timeout=5, headers=headers)
             if resp is None:
                 return result
             data = resp.json()
