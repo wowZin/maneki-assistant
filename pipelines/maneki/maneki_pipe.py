@@ -267,6 +267,9 @@ def build_feishu_mcp(feishu: FeishuAPI):
                     headers={"Authorization": f"Bearer {token}"},
                     json={"msg_type": "interactive", "content": json.dumps(payload)},
                 )
+            result = resp.json()
+            ok = result.get("code") == 0
+            return {"content": [{"type": "text", "text": "已发送" if ok else f"发送失败: {result}"}]}
         else:
             async with httpx.AsyncClient(timeout=15) as c:
                 resp = await c.post(
