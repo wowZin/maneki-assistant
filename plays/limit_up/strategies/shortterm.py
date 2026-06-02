@@ -16,14 +16,7 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
-import tushare as ts  # noqa: E402
-import requests  # noqa: E402
-from dotenv import load_dotenv  # noqa: E402
-import os  # noqa: E402
-
-load_dotenv(PROJECT_DIR / ".env")
-ts.set_token(os.getenv("TUSHARE_TOKEN", ""))
-pro = ts.pro_api()
+import requests  # noqa: E402 (used in _get_jj_data_eastmoney)
 
 # ── 全局跨股票缓存（减少 Tushare 调用） ──────────────────────
 _LIMIT_UP_CACHE = None        # 今日全市场涨停列表
@@ -83,6 +76,18 @@ def _safe_int(val, default=0):
 
 # ── 统一数据获取（带缓存） ──────────────────────────────
 
+def _to_df(api_name: str, params: dict, fields: str = ""):
+    """调 call_tushare 返回 DataFrame（保持下游兼容）"""
+    from scripts.tu_share import call_tushare
+    result = call_tushare(api_name, params, fields)
+    items = result.get("data", {}).get("items", [])
+    cols = result.get("data", {}).get("fields", [])
+    if not items or not cols:
+        return None
+    import pandas as pd
+    return pd.DataFrame(items, columns=cols)
+
+
 def _get_today_limit_ups():
     """今日全市场涨停列表（全局缓存，只调一次）"""
     global _LIMIT_UP_CACHE, _LIMIT_UP_CACHE_DATE
@@ -90,7 +95,8 @@ def _get_today_limit_ups():
     if _LIMIT_UP_CACHE is not None and _LIMIT_UP_CACHE_DATE == today:
         return _LIMIT_UP_CACHE
     try:
-        _LIMIT_UP_CACHE = pro.limit_list_d(trade_date=today, limit_type="U")
+        df = _to_df("limit_list_d", {"trade_date": today, "limit_type": "U"})
+        _LIMIT_UP_CACHE = df
         _LIMIT_UP_CACHE_DATE = today
     except Exception:
         _LIMIT_UP_CACHE = None
@@ -112,24 +118,19 @@ def _get_concept_limit_stats():
     if _CONCEPT_CACHE is not None and _CONCEPT_CACHE_DATE == today:
         return _CONCEPT_CACHE
     try:
-        payload = {
-            "api_name": "limit_cpt_list",
-            "token": os.getenv("TUSHARE_TOKEN", ""),
-            "params": {"trade_date": today},
-            "fields": "ts_code,name,trade_date,up_nums",
-        }
-        resp = requests.post("https://api.tushare.pro", json=payload, timeout=10)
-        items = resp.json().get("data", {}).get("items", [])
-        fields = resp.json().get("data", {}).get("fields", [])
-        result = {}
+        from scripts.tu_share import call_tushare
+        result = call_tushare("limit_cpt_list", {"trade_date": today}, "ts_code,name,trade_date,up_nums")
+        items = result.get("data", {}).get("items", [])
+        fields = result.get("data", {}).get("fields", [])
+        result_map = {}
         if items and fields:
             for item in items:
                 d = dict(zip(fields, item))
                 name = d.get("name", "")
                 nums = _safe_int(d.get("up_nums", 0))
                 if name and nums > 0:
-                    result[name] = nums
-        _CONCEPT_CACHE = result
+                    result_map[name] = nums
+        _CONCEPT_CACHE = result_map
         _CONCEPT_CACHE_DATE = today
     except Exception:
         _CONCEPT_CACHE = {}
@@ -139,14 +140,9 @@ def _get_concept_limit_stats():
 def _get_concept_names(code: str) -> list:
     """获取个股所属概念名称列表"""
     try:
-        payload = {
-            "api_name": "concept_detail",
-            "token": os.getenv("TUSHARE_TOKEN", ""),
-            "params": {"ts_code": code},
-            "fields": "id,concept_name",
-        }
-        resp = requests.post("https://api.tushare.pro", json=payload, timeout=10)
-        items = resp.json().get("data", {}).get("items", [])
+        from scripts.tu_share import call_tushare
+        result = call_tushare("concept_detail", {"ts_code": code}, "id,concept_name")
+        items = result.get("data", {}).get("items", [])
         return [c[1] for c in items if len(c) > 1] if items else []
     except Exception:
         return []
@@ -154,10 +150,10 @@ def _get_concept_names(code: str) -> list:
 
 def _get_limit_history(code: str, days=30) -> object:
     """获取个股历史涨停记录（最近 N 天）"""
-    start = (datetime.now() - timedelta(days=days * 2)).strftime("%Y%m%d")  # 乘2防非交易日
+    start = (datetime.now() - timedelta(days=days * 2)).strftime("%Y%m%d")
     end = _today_str()
     try:
-        return pro.limit_list_d(ts_code=code, start_date=start, end_date=end, limit_type="U")
+        return _to_df("limit_list_d", {"ts_code": code, "start_date": start, "end_date": end, "limit_type": "U"})
     except Exception:
         return None
 
@@ -167,9 +163,9 @@ def _get_daily_data(code: str, days=30) -> object:
     start = (datetime.now() - timedelta(days=days * 2)).strftime("%Y%m%d")
     end = _today_str()
     try:
-        df = pro.daily(ts_code=code, start_date=start, end_date=end)
+        df = _to_df("daily", {"ts_code": code, "start_date": start, "end_date": end})
         if df is not None and not df.empty:
-            return df.sort_values("trade_date", ascending=False)  # 确保降序(最新在前)
+            return df.sort_values("trade_date", ascending=False)
         return None
     except Exception:
         return None
@@ -179,9 +175,13 @@ def _get_daily_basic(code: str) -> dict:
     """获取个股基础面数据（流通股本、换手率、量比等）"""
     today = _today_str()
     try:
-        df = pro.daily_basic(ts_code=code, trade_date=today, fields="ts_code,close,turnover_rate,volume_ratio,free_share,pe,pb")
-        if df is not None and not df.empty:
-            return df.iloc[0].to_dict()
+        from scripts.tu_share import call_tushare
+        result = call_tushare("daily_basic", {"ts_code": code, "trade_date": today},
+                              "ts_code,close,turnover_rate,volume_ratio,free_share,pe,pb")
+        items = result.get("data", {}).get("items", [])
+        fields = result.get("data", {}).get("fields", [])
+        if items and fields:
+            return dict(zip(fields, items[0]))
     except Exception:
         pass
     return {}
