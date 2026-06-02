@@ -5,7 +5,7 @@ sys.path.insert(0, str(PROJECT_DIR))
 sys.path.insert(0, str(PROJECT_DIR / "scripts"))
 from scripts.tu_share import call_tushare  # noqa: E402  # noqa: E402
 from plays.limit_up.utils import safe_float_none, safe_int_none, list_to_dict  # noqa: E402
-from plays.limit_up.pipeline import _get_popularity_rank, _batch_fetch_realtime_pct  # noqa: E402
+from plays.limit_up.pipeline import _get_popularity_rank, _batch_fetch_realtime_pct, _get_realtime_fund_cache  # noqa: E402
 
 
 def score_sentiment(code):
@@ -618,25 +618,29 @@ def score_sentiment(code):
     popular_score = 0
     popular_reasons = []
 
-    # [换手活跃度 梯度计分]
+    # [换手活跃度 梯度计分] 优先东财实时，降级 T+1 daily_basic
     try:
-        resp = call_tushare("daily_basic", {"ts_code": code}, "turnover_rate,volume_ratio")
-        daily_basic = resp.get("data", {}).get("items", [])
-        if daily_basic:
-            turnover = safe_float(daily_basic[0][0]) if daily_basic[0] else None
-            if turnover:
-                if 5 <= turnover < 15:
-                    popular_score += 1
-                    popular_reasons.append(f"换手{turnover:.1f}%+1")
-                elif 15 <= turnover < 25:
-                    popular_score += 2
-                    popular_reasons.append(f"换手{turnover:.1f}%活跃+2")
-                elif 25 <= turnover < 30:
-                    popular_score += 1
-                    popular_reasons.append(f"换手{turnover:.1f}%高+1")
-                elif turnover >= 30:
-                    popular_score -= 2
-                    popular_reasons.append(f"换手{turnover:.1f}%过热-2")
+        rt_fund = _get_realtime_fund_cache()
+        rt_turnover = rt_fund.get(code.split('.')[0], {}).get("turnover", 0)
+        if rt_turnover > 0:
+            turnover = rt_turnover  # 东财实时换手率(百分比)
+        else:
+            resp = call_tushare("daily_basic", {"ts_code": code}, "turnover_rate,volume_ratio")
+            daily_basic = resp.get("data", {}).get("items", [])
+            turnover = safe_float(daily_basic[0][0]) if daily_basic and daily_basic[0] else None
+        if turnover:
+            if 5 <= turnover < 15:
+                popular_score += 1
+                popular_reasons.append(f"换手{turnover:.1f}%+1")
+            elif 15 <= turnover < 25:
+                popular_score += 2
+                popular_reasons.append(f"换手{turnover:.1f}%活跃+2")
+            elif 25 <= turnover < 30:
+                popular_score += 1
+                popular_reasons.append(f"换手{turnover:.1f}%高+1")
+            elif turnover >= 30:
+                popular_score -= 2
+                popular_reasons.append(f"换手{turnover:.1f}%过热-2")
     except Exception:
         pass
 

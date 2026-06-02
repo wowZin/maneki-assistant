@@ -159,8 +159,20 @@ def score_fundflow(code):
         net_3d_for_veto4 = sum([safe_float(x.get("net_mf_amount", 0)) for x in recent_3d])
     
     if not is_yiziban:
-        if moneyflow_data:
-            # 降级：Tushare T+1数据
+        # 优先实时东财数据，降级 Tushare T+1
+        fund_cache = _get_realtime_fund_cache()
+        code_short = code.split('.')[0]
+        rt = fund_cache.get(code_short, {})
+        rt_net = rt.get("net_flow", 0)
+        rt_amt = rt.get("amount", 0)
+
+        if rt_amt > 0:
+            # 实时数据可用：主力净流入 / 成交额
+            main_ratio = rt_net / rt_amt * 100
+            main_ratio_for_dim1 = main_ratio
+            src_tag = ""
+        elif moneyflow_data:
+            # 降级：Tushare T+1
             latest = moneyflow_data[0]
             buy_elg = safe_float(latest.get("buy_elg_amount", 0))
             sell_elg = safe_float(latest.get("sell_elg_amount", 0))
@@ -168,18 +180,19 @@ def score_fundflow(code):
             sell_lg = safe_float(latest.get("sell_lg_amount", 0))
             net_elg = buy_elg - sell_elg
             net_lg = buy_lg - sell_lg
-            buy_elg + buy_lg
-            sell_elg + sell_lg
             # 分母用全市场成交额(daily_basic.amount, 千元转元), 非仅超大单+大单
             total_amount = safe_float(daily_basic_data[0].get("amount", 0)) * 1000 if daily_basic_data else 0
             if total_amount > 0:
                 main_ratio = (net_elg + net_lg) / total_amount * 100
                 main_ratio_for_dim1 = main_ratio
-                if main_ratio < 5:
-                    if net_3d_for_veto4 <= 0:
-                        veto_flags.append(f"纯散户博弈[T-1]:主力净占比{main_ratio:.1f}%<5%+3日累计净流入{net_3d_for_veto4:.0f}万≤0")
-                    else:
-                        dim1_veto4_deduction = -5  # 豁免否决，转入维度1扣分
+                src_tag = "[T-1]"
+
+        if main_ratio_for_dim1 is not None:
+            if main_ratio_for_dim1 < 5:
+                if net_3d_for_veto4 <= 0:
+                    veto_flags.append(f"纯散户博弈{src_tag}:主力净占比{main_ratio_for_dim1:.1f}%<5%+3日累计净流入{net_3d_for_veto4:.0f}万≤0")
+                else:
+                    dim1_veto4_deduction = -5  # 豁免否决，转入维度1扣分
     elif is_yiziban:
         # 一字板豁免：不触发否决，但记录豁免信息到reason
         yiziban_exempt = True
@@ -336,26 +349,26 @@ def score_fundflow(code):
     
     # --- 占比健康因子(10分)：主力净占比梯度评分 ---
     # >30%: +10分，15%-30%: 0分(中性)，5%-15%: -5分(偏弱)，<5%: 已在否决区拦截
-    # main_ratio_for_dim1 已在否决2.2阶段计算
+    # main_ratio_for_dim1 已在否决2.2阶段计算（优先实时，降级T+1）
+    _has_rt = False  # 初始化：后续代码块外引用需要
     if main_ratio_for_dim1 is not None:
         main_ratio = main_ratio_for_dim1
-        if moneyflow_data:
-            src_tag = "[T-1]"
-        else:
-            src_tag = ""
+        _rt_fund = _get_realtime_fund_cache()
+        _has_rt = bool(_rt_fund.get(code_short, {}).get("amount", 0))
+        src_tag = "" if _has_rt else "[T-1]"
         if main_ratio > 30:
             dim1_score += 10
             dim1_reason.append(f"主力占比{src_tag}{main_ratio:.1f}%+10")
         elif main_ratio >= 5 and main_ratio < 15:  # 5%-15%偏弱扣分
             dim1_score -= 5
             dim1_reason.append(f"主力占比偏弱{src_tag}{main_ratio:.1f}%-5")
-    
+
     # 否决4豁免 — 主力净占比<5%但3日累计净流入>0，转入维度1扣-5分
     if dim1_veto4_deduction != 0:
         dim1_score += dim1_veto4_deduction
         dim1_reason.append("否决4豁免(3日累计>0)-5")
-    elif moneyflow_data:
-        # 降级：Tushare计算
+    elif not _has_rt and moneyflow_data:
+        # 降级：Tushare T+1（实时数据不可用时）
         latest = moneyflow_data[0]
         buy_elg = safe_float(latest.get("buy_elg_amount", 0))
         sell_elg = safe_float(latest.get("sell_elg_amount", 0))
@@ -569,46 +582,85 @@ def score_fundflow(code):
                 dim3_score -= 5
                 dim3_reason.append(f"VWAP下方{vwap_dev:.2%}-5")
 
-    # --- 日频代理因子 (l2api不可用时保留) ---
-    if moneyflow_data and daily_data:
-        latest = moneyflow_data[0]
-        latest_daily = daily_data[0]
-        net_mf = safe_float(latest.get("net_mf_amount", 0))
-        turnover_rate = safe_float(daily_basic_data[0].get("turnover_rate", 0)) if daily_basic_data else 0
+    # --- 日频代理因子 (优先实时东财，降级 T+1) ---
+    # 无 L2 时，用东财实时缓存替代 T+1 moneyflow 的 net_mf / turnover_rate
+    _rt_fund3 = _get_realtime_fund_cache()
+    _rt3 = _rt_fund3.get(code.split('.')[0], {})
+    _rt_has_data = bool(_rt3.get("amount", 0))
 
-        # 持续净流入（日频代理）——最低价≥昨收×0.99 包容换手板宽幅震荡
+    if _rt_has_data:
+        _net_mf = _rt3.get("net_flow", 0)       # 实时主力净流入(元)
+        _turnover = _rt3.get("turnover", 0)      # 实时换手率(%)
+        _use_rt = True
+    elif moneyflow_data:
+        _net_mf = safe_float(moneyflow_data[0].get("net_mf_amount", 0)) * 10000 if moneyflow_data else 0  # 万→元
+        _turnover = safe_float(daily_basic_data[0].get("turnover_rate", 0)) if daily_basic_data else 0
+        _use_rt = False
+    else:
+        _net_mf = 0
+        _turnover = 0
+        _use_rt = False
+
+    if (_use_rt and _rt3) or (moneyflow_data and daily_data):
+        net_mf = _net_mf
+        turnover_rate = _turnover
+        src_tag = "" if _use_rt else "[T-1]"
+
         if net_mf > 0:
-            close = safe_float(latest_daily.get("close", 0))
-            low = safe_float(latest_daily.get("low", 0))
-            high = safe_float(latest_daily.get("high", 0))
-            pre_close = safe_float(latest_daily.get("pre_close", 0))
+            if not _use_rt and daily_data:
+                # T+1: 有完整 OHLC 做形态判断
+                latest_daily = daily_data[0]
+                close = safe_float(latest_daily.get("close", 0))
+                low = safe_float(latest_daily.get("low", 0))
+                high = safe_float(latest_daily.get("high", 0))
+                pre_close = safe_float(latest_daily.get("pre_close", 0))
+            else:
+                # 实时: 跳过日频形态判断(需要OHLC)，仅凭净流入加分
+                close = low = high = pre_close = 0
 
-            low_ok = low >= pre_close * 0.99 if pre_close > 0 else True
-            close_high_ok = close / high > 0.95 if high > 0 else True
-            if low_ok and close_high_ok:
-                dim3_score += 10
-                dim3_reason.append(f"持续净流入{net_mf/10000:.2f}亿+10")
+            if close > 0 and pre_close > 0:
+                low_ok = low >= pre_close * 0.99 if pre_close > 0 else True
+                close_high_ok = close / high > 0.95 if high > 0 else True
+                if low_ok and close_high_ok:
+                    dim3_score += 10
+                    dim3_reason.append(f"持续净流入{net_mf/100000000:.2f}亿+10")
 
-            amplitude = (high - low) / pre_close * 100 if pre_close > 0 else 0
-            if turnover_rate > 3 and amplitude > 0 and (turnover_rate / amplitude) > 2.0:
-                dim3_score += 6
-                dim3_reason.append(f"强承接换手/振幅{max(0,turnover_rate/amplitude if amplitude>0 else 0):.1f}+6")
+                amplitude = (high - low) / pre_close * 100 if pre_close > 0 else 0
+                if turnover_rate > 3 and amplitude > 0 and (turnover_rate / amplitude) > 2.0:
+                    dim3_score += 6
+                    dim3_reason.append(f"强承接换手/振幅{max(0,turnover_rate/amplitude if amplitude>0 else 0):.1f}+6")
+            elif net_mf > 0:
+                # 无 OHLC 数据，简化加分
+                dim3_score += 8
+                dim3_reason.append(f"实时净流入{net_mf/100000000:.2f}亿+8")
 
-            buy_elg = safe_float(latest.get("buy_elg_amount", 0))
-            sell_elg = safe_float(latest.get("sell_elg_amount", 0))
-            buy_lg = safe_float(latest.get("buy_lg_amount", 0))
-            sell_lg = safe_float(latest.get("sell_lg_amount", 0))
-            elg_net = buy_elg - sell_elg
-            if elg_net > 0 and net_mf > 0:
-                dim3_score += 4
-                dim3_reason.append("超大单主导+4")
+            if not _use_rt and moneyflow_data:
+                # 超大单主导判定(仅 T+1 有此数据粒度)
+                latest = moneyflow_data[0]
+                buy_elg = safe_float(latest.get("buy_elg_amount", 0))
+                sell_elg = safe_float(latest.get("sell_elg_amount", 0))
+                buy_lg = safe_float(latest.get("buy_lg_amount", 0))
+                sell_lg = safe_float(latest.get("sell_lg_amount", 0))
+                elg_net = buy_elg - sell_elg
+                if elg_net > 0 and net_mf > 0:
+                    dim3_score += 4
+                    dim3_reason.append("超大单主导+4")
         else:
             if not l2_market:  # 仅当无l2api时清空
                 dim3_score = 0
-                dim3_reason.append(f"净流出{abs(net_mf)/10000:.2f}亿")
+                dim3_reason.append(f"净流出{abs(net_mf)/100000000:.2f}亿")
 
-        # 负向过滤
-        pct_chg = safe_float(daily_basic_data[0].get("pct_chg", 0))
+        # 负向过滤（优先实时涨跌幅，降级 T+1）
+        if _use_rt:
+            from plays.limit_up.pipeline import _batch_fetch_realtime_pct as _rt_pct
+            _pct_cache = _rt_pct()
+            _pct_val = _pct_cache.get(code.split('.')[0])
+            try:
+                pct_chg = float(_pct_val) if _pct_val is not None else 0
+            except (ValueError, TypeError):
+                pct_chg = 0
+        else:
+            pct_chg = safe_float(daily_basic_data[0].get("pct_chg", 0))
         is_zt = (pct_chg >= 9.5)
         is_negative_triggered = False
 

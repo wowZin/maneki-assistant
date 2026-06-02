@@ -49,11 +49,17 @@ _CONCEPT_ALIAS_MAP = {        # 概念别名映射（Tushare → 同花顺/东�
 
 # ── 工具函数 ─────────────────────────────────────────────
 
-def _today_str() -> str:
-    """获取当前日期，但 Tushare 数据未就绪时返回上一个交易日"""
+def _today() -> str:
+    """今日日历日期（始终返回真实今天），用于日期比较判断"""
+    return datetime.now().strftime("%Y%m%d")
+
+
+def _query_date() -> str:
+    """Tushare 查询用日期：返回最近一个有数据的交易日，
+    盘前/盘中自动退到 T-1，盘后退到今天（若数据已就绪）。
+    仅用于构造 Tushare API 的 trade_date/start_date/end_date 参数。"""
     from scripts.tu_share import get_last_trade_date_with_data
-    resolved = get_last_trade_date_with_data()
-    return resolved
+    return get_last_trade_date_with_data()
 
 
 def _safe_float(val, default=0.0):
@@ -89,9 +95,11 @@ def _to_df(api_name: str, params: dict, fields: str = ""):
 
 
 def _get_today_limit_ups():
-    """今日全市场涨停列表（全局缓存，只调一次）"""
+    """全市场涨停列表（全局缓存，只调一次）
+    注：盘中 limit_list_d 仅有 T-1 数据，当日涨停需结合东财实时行情判断。
+    """
     global _LIMIT_UP_CACHE, _LIMIT_UP_CACHE_DATE
-    today = _today_str()
+    today = _query_date()
     if _LIMIT_UP_CACHE is not None and _LIMIT_UP_CACHE_DATE == today:
         return _LIMIT_UP_CACHE
     try:
@@ -112,9 +120,11 @@ def _get_today_limit_ups_set():
 
 
 def _get_concept_limit_stats():
-    """今日概念涨停统计（全局缓存，只调一次）"""
+    """概念涨停统计（全局缓存，只调一次）
+    注：盘中 limit_cpt_list 仅有 T-1 数据。
+    """
     global _CONCEPT_CACHE, _CONCEPT_CACHE_DATE
-    today = _today_str()
+    today = _query_date()
     if _CONCEPT_CACHE is not None and _CONCEPT_CACHE_DATE == today:
         return _CONCEPT_CACHE
     try:
@@ -151,7 +161,7 @@ def _get_concept_names(code: str) -> list:
 def _get_limit_history(code: str, days=30) -> object:
     """获取个股历史涨停记录（最近 N 天）"""
     start = (datetime.now() - timedelta(days=days * 2)).strftime("%Y%m%d")
-    end = _today_str()
+    end = _query_date()
     try:
         return _to_df("limit_list_d", {"ts_code": code, "start_date": start, "end_date": end, "limit_type": "U"})
     except Exception:
@@ -161,7 +171,7 @@ def _get_limit_history(code: str, days=30) -> object:
 def _get_daily_data(code: str, days=30) -> object:
     """获取个股日线数据（最近 N 个自然日, 按 trade_date 降序）"""
     start = (datetime.now() - timedelta(days=days * 2)).strftime("%Y%m%d")
-    end = _today_str()
+    end = _query_date()
     try:
         df = _to_df("daily", {"ts_code": code, "start_date": start, "end_date": end})
         if df is not None and not df.empty:
@@ -172,8 +182,10 @@ def _get_daily_data(code: str, days=30) -> object:
 
 
 def _get_daily_basic(code: str) -> dict:
-    """获取个股基础面数据（流通股本、换手率、量比等）"""
-    today = _today_str()
+    """获取个股基础面数据（流通股本、换手率、量比等）
+    注：盘中 daily_basic 仅有 T-1 数据，实时换手/量比请用 _get_jj_data_eastmoney()。
+    """
+    today = _query_date()
     try:
         from scripts.tu_share import call_tushare
         result = call_tushare("daily_basic", {"ts_code": code, "trade_date": today},
@@ -190,86 +202,131 @@ def _get_daily_basic(code: str) -> dict:
 def _get_jj_data_eastmoney(code: str) -> dict:
     """通过东方财富实时行情获取集合竞价/盘口数据
 
-    返回: {jj_amount, jj_volume, turnover_rate_real, change_pct_real, 流通市值}
-    若无实时数据返回空dict
+    返回: {change_pct, open_pct, amount, vol_ratio, turnover_rate,
+           circ_mv, now_price, jj_active}
+    盘中优先用 clist 缓存(字段映射已验证正确)，降级 stock/get API。
     """
-    # 盘后降级：使用 Tushare 数据（竞价数据只能从 Tushare 获取）
     from plays.limit_up.utils import is_market_closed, get_stock_quote
+
+    # 盘后降级：使用 Tushare 数据
     if is_market_closed():
         q = get_stock_quote(code)
         if q.get("change_pct") is not None:
+            t = q.get("turnover_rate", 0)
+            if t > 1:
+                q["turnover_rate"] = t / 100
             return q
         return {}
 
     result = {}
+    short = code.split('.')[0]
 
-    # ── 代理模块初始化（优雅降级：import失败则直连） ──
-    _use_proxy = False
-    _get_proxies = None
+    # ═══ 第一优先：clist 缓存（字段映射已验证正确） ═══
     try:
-        from scripts.proxy_utils import get_proxies, USE_PROXY
-        _use_proxy = USE_PROXY
-        _get_proxies = get_proxies
-    except Exception:
-        pass  # 代理模块不可用 → 直连
+        from plays.limit_up.pipeline import _get_realtime_fund_cache, _batch_fetch_realtime_pct
+        pct = _batch_fetch_realtime_pct().get(short)
+        fund = _get_realtime_fund_cache().get(short, {})
 
-    try:
-        sess = requests.Session()
-        if _use_proxy and _get_proxies is not None:
-            sess.proxies = _get_proxies()
-        sess.headers.update({
-            "User-Agent": "Mozilla/5.0",
-            "Referer": "https://quote.eastmoney.com/",
-        })
+        if pct is not None:
+            try:
+                pct_f = float(pct)
+                if abs(pct_f) < 30:  # 异常值防护(东财偶发-192%)
+                    result["change_pct"] = pct_f
+            except (ValueError, TypeError):
+                pass
 
-        # 转东方财富代码格式
-        if code.endswith(".SH"):
-            em_code = f"1.{code}"
-        elif code.endswith(".SZ"):
-            em_code = f"0.{code}"
-        else:
-            em_code = code
-        em_code = em_code.replace(".SH", "").replace(".SZ", "")
-
-        url = (
-            f"https://push2.eastmoney.com/api/qt/stock/get"
-            f"?secid={em_code}&fields=f43,f44,f45,f46,f47,f48,f49,f50,f51,f52,f57,f58,f60,f116,f117,f162,f167,f168,f169,f170,f171"
-        )
-        resp = sess.get(url, timeout=5)
-        data = resp.json()
-        d = data.get("data", {})
-        if not d:
-            return result
-
-        # f43=现价, f44=最高, f45=最低, f46=今开, f47=昨收, f48=总量(手)
-        # f49=成交额, f50=量比, f51=涨停, f52=跌停
-        # f60=换手率, f116=流通市值, f117=总市值, f162=竞买金额, f167=竞卖金额
-
-        now_p = _safe_float(d.get("f43"))
-        pre_close = _safe_float(d.get("f47"))
-        open_p = _safe_float(d.get("f46"))
-        amount = _safe_float(d.get("f49"))  # 成交额(元)
-        vol_ratio = _safe_float(d.get("f50"))  # 量比
-        turnover_rate = _safe_float(d.get("f60", 0)) / 100  # 东财返回的如 5.32 表示5.32%
-        circ_mv = _safe_float(d.get("f116", 0))  # 流通市值(元)
-
-        if pre_close > 0:
-            result["change_pct"] = (now_p - pre_close) / pre_close * 100 if now_p else 0
-            result["open_pct"] = (open_p - pre_close) / pre_close * 100 if open_p else 0
-
-        result["amount"] = amount
-        result["vol_ratio"] = vol_ratio
-        result["turnover_rate"] = turnover_rate  # 小数(0.05=5%)
-        result["circ_mv"] = circ_mv  # 流通市值(元)
-        result["now_price"] = now_p
-
-        # 竞价数据: 无专用字段, 通过换手率估算竞价活跃度
-        # 9:25-9:30 的竞价阶段产生的成交≈开盘瞬间的量
-        # 用量比 > 1.5 + 开盘涨幅 来间接衡量竞价强度
-        result["jj_active"] = vol_ratio > 1.5 and abs(result.get("open_pct", 0)) > 2
-
+        if fund:
+            result["amount"] = fund.get("amount", 0)
+            result["vol_ratio"] = fund.get("vol_ratio", 0)
+            rt = fund.get("turnover", 0)  # 百分比(5.32=5.32%)
+            if rt:
+                result["turnover_rate"] = rt / 100  # → 小数(0.0532)
     except Exception:
         pass
+
+    # ═══ 第二优先：stock/get API 补充缓存缺失字段 ═══
+    need_stock = (
+        "change_pct" not in result
+        or "now_price" not in result
+        or "circ_mv" not in result
+    )
+
+    if need_stock:
+        _use_proxy = False
+        _get_proxies = None
+        try:
+            from scripts.proxy_utils import get_proxies, USE_PROXY
+            _use_proxy = USE_PROXY
+            _get_proxies = get_proxies
+        except Exception:
+            pass
+
+        try:
+            sess = requests.Session()
+            if _use_proxy and _get_proxies is not None:
+                sess.proxies = _get_proxies()
+            sess.headers.update({
+                "User-Agent": "Mozilla/5.0",
+                "Referer": "https://quote.eastmoney.com/",
+            })
+
+            if code.endswith(".SH"):
+                em_code = f"1.{code.replace('.SH','')}"
+            elif code.endswith(".SZ"):
+                em_code = f"0.{code.replace('.SZ','')}"
+            else:
+                em_code = code
+            em_code = em_code.replace(".SH", "").replace(".SZ", "")
+
+            url = (
+                f"https://push2.eastmoney.com/api/qt/stock/get"
+                f"?secid={em_code}&fields=f43,f44,f45,f46,f47,f48,f49,f50,f51,f52,f57,f58,f60,f116,f117,f162,f166,f167,f168,f169,f170,f171"
+            )
+            resp = sess.get(url, timeout=5)
+            data = resp.json()
+            d = data.get("data", {})
+            if not d:
+                return result
+
+            # 已验证: f60=昨收×100, f170=涨跌幅×100, f166=换手率×100
+            # 未验证: f43/f46/f47 (映射已过时)
+
+            stock_now = _safe_float(d.get("f60", 0)) / 100
+            if "now_price" not in result:
+                result["now_price"] = stock_now
+
+            if "change_pct" not in result:
+                f170_raw = d.get("f170")
+                if f170_raw is not None and f170_raw != "-":
+                    try:
+                        result["change_pct"] = float(f170_raw) / 100
+                    except (ValueError, TypeError):
+                        pass
+
+            if "turnover_rate" not in result:
+                f166_raw = d.get("f166")
+                if f166_raw is not None and f166_raw != "-":
+                    try:
+                        result["turnover_rate"] = float(f166_raw) / 10000
+                    except (ValueError, TypeError):
+                        pass
+
+            if "circ_mv" not in result:
+                result["circ_mv"] = _safe_float(d.get("f116", 0))
+
+            # open_pct / jj_active 仅 stock/get 可提供(字段不可靠, 作参考)
+            if "open_pct" not in result:
+                stock_open = _safe_float(d.get("f46"))
+                if stock_now > 0 and stock_open > 0 and stock_open < stock_now * 1500:
+                    result["open_pct"] = (stock_open / 100 - stock_now) / stock_now * 100
+
+            result["jj_active"] = (
+                result.get("vol_ratio", 0) > 1.5
+                and abs(result.get("open_pct", 0)) > 2
+            )
+        except Exception:
+            pass
+
     return result
 
 
@@ -378,7 +435,7 @@ def _score_momentum(code: str, cache: dict) -> tuple:
     if hist_ul is not None and not hist_ul.empty:
         # 检查最近一次涨停是否是今天（判断当前是否在连板中）
         latest_ul_date = str(hist_ul.iloc[0].get("trade_date", ""))
-        is_current_limit_up = (latest_ul_date == _today_str())
+        is_current_limit_up = (latest_ul_date == _today())
 
         # 连板数 — 只有今天还在涨停中才计当前连板
         limit_times = _safe_float(hist_ul.iloc[0].get("limit_times", 0))
@@ -461,7 +518,7 @@ def _score_open_battle(code: str, cache: dict) -> tuple:
     if daily_data is not None and not daily_data.empty:
         # daily_data 按 trade_date 降序排列, iloc[0] 是最近交易日
         first_date = str(daily_data.iloc[0].get("trade_date", ""))
-        if first_date == _today_str():
+        if first_date == _today():
             today_row = daily_data.iloc[0]
         else:
             reasons.append(f"今日无数据(最近{first_date})")
@@ -494,9 +551,19 @@ def _score_open_battle(code: str, cache: dict) -> tuple:
                 score += 20
                 reasons.append("分歧转一致+20")
 
-    # 换手率评分 (从 daily_basic 获取)
-    turnover_rate = _safe_float(daily_basic.get("turnover_rate", 0))  # tushare返回的如 5.32=5.32%
-    vol_ratio = _safe_float(daily_basic.get("volume_ratio", 0))
+    # 换手率/量比评分（优先 em_data 实时数据，降级 daily_basic T+1）
+    # 注意：em_data 换手率为小数(0.0532=5.32%)，daily_basic 为百分数(5.32=5.32%)
+    em_turnover = _safe_float(em_data.get("turnover_rate", 0))
+    em_vol_ratio = _safe_float(em_data.get("vol_ratio", 0))
+
+    if em_data and (em_turnover > 0 or em_vol_ratio > 0):
+        # 有实时数据：em_data 换手率小数→百分数统一
+        turnover_rate = em_turnover * 100
+        vol_ratio = em_vol_ratio
+    else:
+        # 降级 T+1 daily_basic（已为百分数格式）
+        turnover_rate = _safe_float(daily_basic.get("turnover_rate", 0))
+        vol_ratio = _safe_float(daily_basic.get("volume_ratio", 0))
 
     # 换手率: 打板接力通常 10%-30% 为佳
     if 10 <= turnover_rate <= 30:
@@ -525,22 +592,6 @@ def _score_open_battle(code: str, cache: dict) -> tuple:
     elif vol_ratio > 1.5:
         score += 5
         reasons.append(f"温和放量(量比{vol_ratio:.1f})+5")
-
-    # 兜底: 试试东财实时换手率
-    em_turnover = _safe_float(em_data.get("turnover_rate", 0))
-    em_vol_ratio = _safe_float(em_data.get("vol_ratio", 0))
-
-    if turnover_rate == 0 and em_turnover > 0:
-        if 0.1 <= em_turnover <= 0.3:
-            score += 25
-            reasons.append(f"实时换手适中({em_turnover:.1%})+25")
-        elif em_turnover > 0.3:
-            score += 15
-            reasons.append(f"实时换手偏大({em_turnover:.1%})+15")
-
-    if vol_ratio == 0 and em_vol_ratio > 1.5:
-        score += 10
-        reasons.append(f"实时量比{em_vol_ratio:.1f}+10")
 
     if today_row is None and not reasons:
         reasons.append("暂无今日数据")
@@ -630,9 +681,18 @@ def _score_sector(code: str, cache: dict) -> tuple:
         reasons.append("所属概念无涨停")
         score += 5  # 有概念数据的基础分
 
-    # 自身地位: 是否在今日涨停池中
-    today_limit_set = cache.get("today_limit_set", set())
-    if code in today_limit_set and max_ul > 0:
+    # 自身地位: 是否正在涨停（优先东财实时涨跌幅，降级 T+1 涨停列表）
+    em_data = cache.get("em_data", {})
+    if em_data:
+        # 有行情数据：以涨跌幅为准（东财实时 or 盘后 Tushare）
+        em_pct = _safe_float(em_data.get("change_pct", 0))
+        is_limit_up_now = em_pct >= 9.9
+    else:
+        # 无行情数据：降级 T+1 涨停列表（API 全部异常时）
+        today_limit_set = cache.get("today_limit_set", set())
+        is_limit_up_now = code in today_limit_set
+
+    if is_limit_up_now and max_ul > 0:
         score += 15
         reasons.append("自身涨停+15")
         # 板块龙头身位: 自身涨停 + 概念≥5只涨停 → 板块前排股
@@ -706,7 +766,7 @@ def _score_aggression(code: str, cache: dict) -> tuple:
         today_date = str(today_row.get("trade_date", ""))
         yest_date = str(yesterday_row.get("trade_date", ""))
         # 必须确认 today_row 是今天的数据，防止周末/盘前把昨天当今天
-        if today_date != _today_str():
+        if today_date != _today():
             pass  # 无今日数据，跳过弱转强判断
         elif not yest_date or today_date <= yest_date:
             pass  # 日期顺序异常，跳过
