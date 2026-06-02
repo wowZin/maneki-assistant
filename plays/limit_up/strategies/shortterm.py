@@ -193,9 +193,12 @@ def _get_jj_data_eastmoney(code: str) -> dict:
     返回: {jj_amount, jj_volume, turnover_rate_real, change_pct_real, 流通市值}
     若无实时数据返回空dict
     """
-    # 盘后降级：使用 Tushare 数据
-    from plays.limit_up.utils import is_market_closed, get_stock_quote
-    if is_market_closed():
+    from datetime import datetime as _dt
+    now = _dt.now()
+    # 盘后降级：只在收盘后（>=15:00）才用 Tushare
+    # 盘前时段（<9:30）竞價数据仍有实时价值，不走降级
+    if now.weekday() < 5 and now.hour >= 15:
+        from plays.limit_up.utils import get_stock_quote
         q = get_stock_quote(code)
         if q.get("change_pct") is not None:
             return q
