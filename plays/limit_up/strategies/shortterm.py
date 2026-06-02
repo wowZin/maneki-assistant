@@ -252,23 +252,8 @@ def _get_jj_data_eastmoney(code: str) -> dict:
     )
 
     if need_stock:
-        _use_proxy = False
-        _get_proxies = None
         try:
-            from scripts.proxy_utils import get_proxies, USE_PROXY
-            _use_proxy = USE_PROXY
-            _get_proxies = get_proxies
-        except Exception:
-            pass
-
-        try:
-            sess = requests.Session()
-            if _use_proxy and _get_proxies is not None:
-                sess.proxies = _get_proxies()
-            sess.headers.update({
-                "User-Agent": "Mozilla/5.0",
-                "Referer": "https://quote.eastmoney.com/",
-            })
+            from scripts.proxy_utils import request_with_proxy_retry
 
             if code.endswith(".SH"):
                 em_code = f"1.{code.replace('.SH','')}"
@@ -276,13 +261,18 @@ def _get_jj_data_eastmoney(code: str) -> dict:
                 em_code = f"0.{code.replace('.SZ','')}"
             else:
                 em_code = code
-            em_code = em_code.replace(".SH", "").replace(".SZ", "")
 
             url = (
                 f"https://push2.eastmoney.com/api/qt/stock/get"
                 f"?secid={em_code}&fields=f43,f44,f45,f46,f47,f48,f49,f50,f51,f52,f57,f58,f60,f116,f117,f162,f166,f167,f168,f169,f170,f171"
             )
-            resp = sess.get(url, timeout=5)
+            headers = {
+                "User-Agent": "Mozilla/5.0",
+                "Referer": "https://quote.eastmoney.com/",
+            }
+            resp = request_with_proxy_retry(url, max_retries=1, timeout=5, headers=headers)
+            if resp is None:
+                return result
             data = resp.json()
             d = data.get("data", {})
             if not d:

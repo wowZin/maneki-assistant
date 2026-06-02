@@ -48,12 +48,12 @@ def scan_surge():
     双路: ①涨速降序(f11) ②涨幅降序(f3) → 合并去重
     Returns: list[dict] - [{code, name}] 候选股列表，或None
     """
-    from scripts.proxy_utils import get_proxies_dict
-    
+    from scripts.proxy_utils import request_with_proxy_retry
+
     if not is_trading_time():
         print(f"跳过扫描: 非交易时段 ({datetime.now().strftime('%H:%M')})")
         return None
-    
+
     base_url = (
         "https://push2.eastmoney.com/api/qt/clist/get?"
         "np=1&fltt=2&invt=2&"
@@ -61,13 +61,17 @@ def scan_surge():
         "fields=f12,f14,f2,f3,f11&pn=1&pz=200&po=1&dect=1&"
         "ut=fa5fd1943c7b386f172d6893dbfba10b"
     )
-    
+
     def _fetch(fid):
         """单次API请求，返回过滤后的候选股列表"""
         url = f"{base_url}&fid={fid}"
-        proxies = get_proxies_dict()
-        resp = requests.get(url, proxies=proxies, timeout=15)
-        data = resp.json()
+        resp = request_with_proxy_retry(url, max_retries=1, timeout=15)
+        if resp is None:
+            return []
+        try:
+            data = resp.json()
+        except Exception:
+            return []
         items = data.get("data", {}).get("diff", [])
         if not items:
             return []
