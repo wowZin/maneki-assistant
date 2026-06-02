@@ -1,0 +1,166 @@
+{
+  "date": "20260529",
+  "pushed_count": 31,
+  "cumulative_limit_count": 58,
+  "hit_count": 6,
+  "hit_rate": 19.35483870967742,
+  "win_rate": 23.076923076923077,
+  "win_count": 6,
+  "win_total": 26,
+  "hit_codes": [
+    "600693.SH",
+    "603618.SH",
+    "603439.SH",
+    "600869.SH",
+    "600011.SH",
+    "603303.SH"
+  ],
+  "miss_codes": [
+    "000690.SZ",
+    "600183.SH",
+    "002475.SZ",
+    "603629.SH",
+    "002975.SZ",
+    "002484.SZ",
+    "001289.SZ",
+    "601066.SH",
+    "600172.SH",
+    "002039.SZ",
+    "001259.SZ",
+    "603083.SH",
+    "002015.SZ",
+    "600593.SH",
+    "002348.SZ",
+    "000506.SZ",
+    "002436.SZ",
+    "601016.SH",
+    "601588.SH",
+    "603124.SH",
+    "002406.SZ",
+    "000657.SZ",
+    "000531.SZ",
+    "601918.SH",
+    "603186.SH"
+  ],
+  "hit_details": [
+    {
+      "code": "600693.SH",
+      "name": "东百集团"
+    },
+    {
+      "code": "603618.SH",
+      "name": "杭电股份"
+    },
+    {
+      "code": "603439.SH",
+      "name": "三力制药"
+    },
+    {
+      "code": "600869.SH",
+      "name": "远东股份"
+    },
+    {
+      "code": "600011.SH",
+      "name": "华能国际"
+    },
+    {
+      "code": "603303.SH",
+      "name": "得邦照明"
+    }
+  ],
+  "dim_performance": {
+    "fundamental": {
+      "total": 31,
+      "hit_avg": 56.8,
+      "miss_avg": 69.7
+    },
+    "technical": {
+      "total": 31,
+      "hit_avg": 33.0,
+      "miss_avg": 43.0
+    },
+    "fundflow": {
+      "total": 31,
+      "hit_avg": 40.2,
+      "miss_avg": 35.8
+    },
+    "sentiment": {
+      "total": 31,
+      "hit_avg": 6.5,
+      "miss_avg": 5.1
+    },
+    "shortterm": {
+      "total": 31,
+      "hit_avg": 17.2,
+      "miss_avg": 18.1
+    }
+  },
+  "confidence_dist": {
+    "high": 25,
+    "medium": 6,
+    "low": 0
+  },
+  "ab_comparison": {
+    "enabled": true,
+    "prev": {
+      "weights": {
+        "fundamental": 1.5,
+        "technical": 1.0,
+        "fundflow": 1.0,
+        "sentiment": 1.2,
+        "shortterm": 1.5
+      },
+      "pushed": 3,
+      "codes": [
+        "000657.SZ",
+        "002606.SZ",
+        "603083.SH"
+      ],
+      "hits": 0
+    },
+    "curr": {
+      "weights": {
+        "fundamental": 0.6,
+        "technical": 1.9,
+        "fundflow": 2.0,
+        "sentiment": 1.1,
+        "shortterm": 1.0
+      },
+      "pushed": 31,
+      "codes": [
+        "000690.SZ",
+        "600183.SH",
+        "600693.SH",
+        "002475.SZ",
+        "603618.SH",
+        "603439.SH",
+        "600011.SH",
+        "603629.SH",
+        "002975.SZ",
+        "002484.SZ",
+        "001289.SZ",
+        "601066.SH",
+        "600172.SH",
+        "002039.SZ",
+        "001259.SZ",
+        "603083.SH",
+        "002015.SZ",
+        "600593.SH",
+        "002348.SZ",
+        "000506.SZ",
+        "600869.SH",
+        "002436.SZ",
+        "601016.SH",
+        "601588.SH",
+        "603124.SH",
+        "002406.SZ",
+        "000657.SZ",
+        "000531.SZ",
+        "601918.SH",
+        "603186.SH",
+        "603303.SH"
+      ],
+      "hits": 6
+    }
+  }
+}
