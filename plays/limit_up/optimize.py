@@ -365,12 +365,7 @@ def evaluate_fast(scores_list, limit_ups_set, w):
 
     push_count = sum(1 for t, _ in scored if t >= 35)
     push_limit = sum(1 for t, is_limit in scored if t >= 35 and is_limit)
-
-    # 实战推送：阈值≥35的Top3
-    top3_candidates = [(t, is_limit) for t, is_limit in scored if t >= 35][:3]
-    top3_push = len(top3_candidates)
-    top3_hit = sum(1 for _, is_limit in top3_candidates if is_limit)
-    top3_hit_rate = round(top3_hit / top3_push * 100, 1) if top3_push > 0 else 0
+    push_hit_rate = round(push_limit / push_count * 100, 1) if push_count > 0 else 0
 
     return {
         "weights": w.copy(),
@@ -386,9 +381,7 @@ def evaluate_fast(scores_list, limit_ups_set, w):
         "sep": round(sep, 2), "auc": round(auc, 4),
         "pushed_count": push_count,
         "push_limit_count": push_limit,
-        "top3_push": top3_push,
-        "top3_hit": top3_hit,
-        "top3_hit_rate": top3_hit_rate,
+        "push_hit_rate": push_hit_rate,
         "total_limit": limit_count,
         "total_stocks": n,
     }
@@ -477,8 +470,7 @@ def print_report(baseline: dict, top_results: list[dict], records: list[dict],
     print(f"  Top10/20/30覆盖率: {baseline['top10_rate']*100:.0f}%/{baseline['top20_rate']*100:.0f}%/{baseline['top30_rate']*100:.0f}%")
     print(f"  AUC: {baseline['auc']:.2f}\t分差: {baseline['sep']:.1f}")
     pool_rate = round(baseline['push_limit_count'] / baseline['total_limit'] * 100, 1) if baseline['total_limit'] > 0 else 0
-    print(f"  📦 信号池(≥35): {baseline['pushed_count']}只(含涨停{baseline['push_limit_count']}只, 覆盖率{pool_rate}%)")
-    print(f"  🚀 实战推送(Top3): 推送{baseline['top3_push']}只 命中{baseline['top3_hit']}只 命中率{baseline['top3_hit_rate']}%")
+    print(f"  📦 信号池(≥35): {baseline['pushed_count']}只(含涨停{baseline['push_limit_count']}只, 覆盖率{pool_rate}%, 命中率{baseline['push_hit_rate']}%)")
 
     # Top 5
     print("\n🏆 Top 5 最优权重:")
@@ -494,10 +486,7 @@ def print_report(baseline: dict, top_results: list[dict], records: list[dict],
         print(f"    {w_str}")
         print(f"    涨停均排 {r['avg_rank']:.0f}  Top20覆盖率 {r['top20_rate']*100:.0f}%  Top50覆盖率 {r['top50_rate']*100:.0f}%")
         print(f"    AUC {r['auc']:.2f}  分差 {r['sep']:.1f}")
-        print(f"    📦 信号池(≥35): {r['pushed_count']}只(含涨停{r['push_limit_count']}只, 覆盖率{pool_rate_r}%)")
-        push_delta = r['top3_hit_rate'] - baseline['top3_hit_rate']
-        push_sign = "+" if push_delta >= 0 else ""
-        print(f"    🚀 实战推送(Top3): 推送{r['top3_push']}只 命中{r['top3_hit']}只 命中率{r['top3_hit_rate']}% ({push_sign}{push_delta:.1f}%)")
+        print(f"    📦 信号池(≥35): {r['pushed_count']}只(含涨停{r['push_limit_count']}只, 覆盖率{pool_rate_r}%, 命中率{r['push_hit_rate']}%)")
 
     # 维度贡献
     print("\n📋 维度贡献率(当前权重):")
@@ -540,10 +529,8 @@ def save_results(baseline: dict, top_results: list[dict], records: list[dict],
             "sep": baseline["sep"],
             "pushed_count": baseline["pushed_count"],
             "push_limit_count": baseline["push_limit_count"],
+            "push_hit_rate": baseline["push_hit_rate"],
             "total_limit": baseline["total_limit"],
-            "top3_push": baseline["top3_push"],
-            "top3_hit": baseline["top3_hit"],
-            "top3_hit_rate": baseline["top3_hit_rate"],
         },
         "recommended": top_results[0] if top_results else {},
         "top_10": [{
@@ -556,10 +543,8 @@ def save_results(baseline: dict, top_results: list[dict], records: list[dict],
             "sep": r["sep"],
             "pushed_count": r["pushed_count"],
             "push_limit_count": r["push_limit_count"],
+            "push_hit_rate": r["push_hit_rate"],
             "total_limit": r["total_limit"],
-            "top3_push": r["top3_push"],
-            "top3_hit": r["top3_hit"],
-            "top3_hit_rate": r["top3_hit_rate"],
         } for i, r in enumerate(top_results[:10])],
         "dim_contribution": dim_contrib,
         "threshold_curve": curve,

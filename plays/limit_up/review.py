@@ -417,9 +417,9 @@ def confidence_distribution(analysis_results: list) -> dict:
     """
     统计置信度分布。
     当confidence字段不存在/None时，用total综合分代替：
-      - high: total >= 40（高分区间）
-      - medium: total >= 25（中等）
-      - low: total < 25（低分）
+      - high: total >= 50（高分区间）
+      - medium: total >= 40（中等）
+      - low: total < 40（低分）
     """
     dist = {"high": 0, "medium": 0, "low": 0}
     for r in analysis_results:
@@ -427,11 +427,11 @@ def confidence_distribution(analysis_results: list) -> dict:
         if conf is None or conf == '':
             # 用total综合分替代
             conf = r.get("total", 0) or 0
-        
+
         conf = safe_float(conf)
-        if conf >= 40:
+        if conf >= 50:
             dist["high"] += 1
-        elif conf >= 25:
+        elif conf >= 40:
             dist["medium"] += 1
         else:
             dist["low"] += 1
@@ -470,7 +470,7 @@ def compute_ab_comparison(pushed_analysis: list, all_analysis: list, limit_ups: 
             item["_prev_total"] = weighted_top3_total(s, PREV_WEIGHTS)
     prev_candidates = [item for item in all_analysis if item.get("_prev_total", 0) >= THRESHOLD]
     prev_candidates.sort(key=lambda x: x.get("_prev_total", 0), reverse=True)
-    prev_codes = set(p.get("code", "") for p in prev_candidates[:3])
+    prev_codes = set(p.get("code", "") for p in prev_candidates)
     prev_hits = prev_codes & actual_set
 
     return {
@@ -560,7 +560,7 @@ def send_feishu_report(report: dict):
             },
             {"tag": "hr"},
             {"tag": "div",
-                "text": {"tag": "lark_md", "content": f"**置信度分布**: 高(>=40): {report['confidence_dist']['high']} | 中(25-40): {report['confidence_dist']['medium']} | 低(<25): {report['confidence_dist']['low']}"}
+                "text": {"tag": "lark_md", "content": f"**置信度分布**: 高(>=50): {report['confidence_dist']['high']} | 中(40-50): {report['confidence_dist']['medium']} | 低(<40): {report['confidence_dist']['low']}"}
             }
         ]
     }
@@ -687,9 +687,9 @@ def generate_markdown_report(report: dict) -> str:
     lines.append("")
     lines.append("| 等级 | 阈值 | 数量 |")
     lines.append("|------|------|------|")
-    lines.append(f"| 高置信度 | ≥40 | {conf_dist.get('high', 0)} |")
-    lines.append(f"| 中置信度 | 25~40 | {conf_dist.get('medium', 0)} |")
-    lines.append(f"| 低置信度 | <25 | {conf_dist.get('low', 0)} |")
+    lines.append(f"| 高置信度 | ≥50 | {conf_dist.get('high', 0)} |")
+    lines.append(f"| 中置信度 | 40~50 | {conf_dist.get('medium', 0)} |")
+    lines.append(f"| 低置信度 | <40 | {conf_dist.get('low', 0)} |")
     lines.append("")
     
     # 总结
