@@ -79,10 +79,30 @@ def top3_dims(scores: dict, weights: dict) -> list[str]:
 # 1. 读取历史数据
 # ═══════════════════════════════════════════
 
-def load_analysis(days: int = 30) -> list[dict]:
-    """读取历史评分数据，按日期+代码去重"""
+def load_analysis(days: int = 14) -> list[dict]:
+    """读取历史评分数据，按日期+代码去重，滑动窗口只读最近 N 个交易日"""
+    # 1. 先扫描文件名，确定最近 N 个交易日，避免加载全量文件
+    all_files = sorted(ANALYSIS_DIR.glob("*.json"))
+    if not all_files:
+        return []
+
+    # 提取所有文件中的唯一交易日，取最近 days 个
+    date_to_files = {}
+    for f in all_files:
+        trade_date = f.stem.split("_")[0]
+        if trade_date not in date_to_files:
+            date_to_files[trade_date] = []
+        date_to_files[trade_date].append(f)
+
+    all_dates = sorted(date_to_files.keys())
+    recent_dates = all_dates[-days:] if days > 0 and len(all_dates) > days else all_dates
+    recent_files = [f for d in recent_dates for f in date_to_files[d]]
+    print(f"  交易日范围: {recent_dates[0]} ~ {recent_dates[-1]} ({len(recent_dates)}天), "
+          f"文件数: {len(recent_files)}/{len(all_files)}")
+
+    # 2. 只读取最近 N 个交易日的文件
     records = []
-    for f in sorted(ANALYSIS_DIR.glob("*.json")):
+    for f in recent_files:
         trade_date = f.stem.split("_")[0]
         with open(f) as fh:
             d = json.load(fh)
@@ -103,7 +123,7 @@ def load_analysis(days: int = 30) -> list[dict]:
                 "total": item.get("total", 0),
             })
 
-    # 去重（同一日期代码只保留最后一次）
+    # 3. 去重（同一日期代码只保留最后一次）
     seen = set()
     unique = []
     for r in reversed(records):
@@ -113,13 +133,8 @@ def load_analysis(days: int = 30) -> list[dict]:
             unique.append(r)
     unique.reverse()
 
-    # 按日期过滤
-    if days > 0 and unique:
-        dates = sorted(set(r["trade_date"] for r in unique))
-        cutoff = dates[-min(days, len(dates))] if days <= len(dates) else dates[0]
-        unique = [r for r in unique if r["trade_date"] >= cutoff]
-
     return unique
+
 
 
 # ═══════════════════════════════════════════
@@ -560,7 +575,7 @@ def save_results(baseline: dict, top_results: list[dict], records: list[dict],
 # Main
 # ═══════════════════════════════════════════
 
-def main(days: int = 30):
+def main(days: int = 14):
     print("=" * 70)
     print(f"权重优化器 V2 启动 — {datetime.now()}")
     print("搜索模式: 加权Top3择优")
@@ -636,7 +651,7 @@ def main(days: int = 30):
 
 
 if __name__ == "__main__":
-    days = 30
+    days = 14
     if len(sys.argv) > 1 and sys.argv[1].startswith("--days="):
         days = int(sys.argv[1].split("=")[1])
     main(days)
