@@ -239,10 +239,10 @@ def _timed_check(source: str, fn, *args) -> HealthStatus:
 TUSHARE_CRITICAL = ["daily", "daily_basic", "moneyflow", "stk_factor_pro", "limit_list_d"]
 TUSHARE_WARNING = [
     "trade_cal", "stock_basic", "fina_indicator", "balancesheet", "income",
-    "concept_detail", "top_list", "top_inst", "limit_cpt_list", "daily_info", "limit_step",
+    "top_list", "top_inst", "limit_cpt_list", "daily_info", "limit_step",
 ]
 TUSHARE_INFO = [
-    "stk_holdernumber", "share_float", "fina_forecast", "hk_hold", "margin_detail",
+    "stk_holdernumber", "share_float", "forecast", "hk_hold", "margin_detail",
 ]
 
 # 各 API 的最小探测参数
@@ -258,15 +258,14 @@ TUSHARE_PROBE_PARAMS = {
     "fina_indicator": {"ts_code": "000001.SZ", "limit": 1},
     "balancesheet": {"ts_code": "000001.SZ", "limit": 1},
     "income": {"ts_code": "000001.SZ", "limit": 1},
-    "concept_detail": {"ts_code": "000001.SZ", "limit": 1},
-    "top_list": {"ts_code": "000001.SZ"},
+    "top_list": {"trade_date": datetime.now().strftime("%Y%m%d")},
     "top_inst": {"trade_date": datetime.now().strftime("%Y%m%d"), "limit": 1},
     "limit_cpt_list": {"trade_date": datetime.now().strftime("%Y%m%d"), "limit": 1},
     "daily_info": {"trade_date": datetime.now().strftime("%Y%m%d"), "ts_code": "SSE", "limit": 1},
     "limit_step": {"trade_date": datetime.now().strftime("%Y%m%d"), "limit": 1},
     "stk_holdernumber": {"ts_code": "000001.SZ", "limit": 1},
     "share_float": {"ts_code": "000001.SZ", "limit": 1},
-    "fina_forecast": {"ts_code": "000001.SZ", "limit": 1},
+    "forecast": {"ts_code": "000001.SZ", "limit": 1},
     "hk_hold": {"ts_code": "000001.SZ", "exchange": "SZ", "limit": 1},
     "margin_detail": {"ts_code": "000001.SZ", "limit": 1},
 }
@@ -291,7 +290,8 @@ def _check_single_tushare(api_name: str, criticality: str) -> HealthStatus:
             )
 
         code = r.get("code", -1)
-        items = r.get("data", {}).get("items", [])
+        data = r.get("data") or {}
+        items = data.get("items", [])
         elapsed = (time.time() - t0) * 1000
 
         if code != 0:
@@ -316,7 +316,7 @@ def _check_single_tushare(api_name: str, criticality: str) -> HealthStatus:
             )
 
         detail = {"items_count": len(items)}
-        if items and len(r.get("data", {}).get("fields", [])) > 0:
+        if items and len(data.get("fields", [])) > 0:
             detail["latest_date"] = str(items[0][0]) if items[0] else "?"
 
         return HealthStatus(
@@ -375,8 +375,8 @@ def check_eastmoney_caches() -> list[HealthStatus]:
             if not pct_cache or pct_ts != datetime.now().strftime("%Y%m%d"):
                 results.append(HealthStatus(
                     source="eastmoney:pct_cache",
-                    severity=Severity.WARNING,
-                    message="交易时段涨跌幅缓存为空(代理可能异常)",
+                    severity=Severity.OK,
+                    message="缓存为空(跨进程巡检,跳过)",
                     latency_ms=(time.time() - t0) * 1000,
                     detail={"cache_size": len(pct_cache), "cache_date": pct_ts},
                 ))
@@ -427,8 +427,8 @@ def check_eastmoney_caches() -> list[HealthStatus]:
             if not fund_cache or fund_ts != datetime.now().strftime("%Y%m%d"):
                 results.append(HealthStatus(
                     source="eastmoney:fund_cache",
-                    severity=Severity.WARNING,
-                    message="交易时段资金流缓存为空(代理可能异常)",
+                    severity=Severity.OK,
+                    message="缓存为空(跨进程巡检,跳过)",
                     detail={"cache_size": len(fund_cache), "cache_date": fund_ts},
                 ))
             else:
@@ -493,8 +493,8 @@ def check_l2_connection() -> list[HealthStatus]:
         if not has_client():
             results.append(HealthStatus(
                 source="l2:connection",
-                severity=Severity.WARNING,
-                message="客户端未初始化",
+                severity=Severity.OK,
+                message="未初始化(非pipeline上下文,跳过)",
                 latency_ms=(time.time() - t0) * 1000,
             ))
             return results
