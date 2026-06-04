@@ -44,7 +44,6 @@ def _push_feishu(text: str):
     """推送盯盘信号到飞书"""
     try:
         env_file = PROJECT_DIR / ".env"
-        config = {}
         if env_file.exists():
             load_dotenv(env_file)
         app_id = os.getenv("FEISHU_APP_ID", "")
@@ -52,7 +51,10 @@ def _push_feishu(text: str):
         chat_id = os.getenv("FEISHU_CHAT_ID_SIGNAL", os.getenv("FEISHU_BOT_CHAT_ID", ""))
 
         if not app_id or not app_secret:
-            logger.warning("飞书未配置，跳过推送")
+            logger.warning("飞书未配置 app_id/app_secret，跳过推送")
+            return
+        if not chat_id:
+            logger.warning("飞书未配置 chat_id (FEISHU_CHAT_ID_SIGNAL/FEISHU_BOT_CHAT_ID)，跳过推送")
             return
 
         # 获取tenant token
@@ -60,20 +62,28 @@ def _push_feishu(text: str):
             "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal",
             json={"app_id": app_id, "app_secret": app_secret}, timeout=10
         )
-        token = resp.json().get("tenant_access_token", "")
+        token_data = resp.json()
+        token = token_data.get("tenant_access_token", "")
+        if not token:
+            logger.error(f"飞书token获取失败: {token_data}")
+            return
 
-        if token and chat_id:
-            requests.post(
-                f"https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id",
-                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-                json={
-                    "receive_id": chat_id,
-                    "msg_type": "text",
-                    "content": json.dumps({"text": text}),
-                }, timeout=10
-            )
+        send_resp = requests.post(
+            f"https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json={
+                "receive_id": chat_id,
+                "msg_type": "text",
+                "content": json.dumps({"text": text}),
+            }, timeout=10
+        )
+        result = send_resp.json()
+        if result.get("code") == 0:
+            logger.info(f"飞书推送成功: {text[:60]}...")
+        else:
+            logger.error(f"飞书推送失败: code={result.get('code')} msg={result.get('msg')} text={text[:60]}...")
     except Exception as e:
-        logger.error(f"飞书推送失败: {e}")
+        logger.error(f"飞书推送异常: {e}")
 
 
 # ---- 盯盘状态管理 ----
@@ -137,6 +147,7 @@ class WatchdogEngine:
         self._states: dict[str, WatchState] = {}
         self._running = False
         self._thread: Optional[threading.Thread] = None
+        self._scan_count = 0  # 扫描轮次计数
         self._load_state()
 
     # ---- 生命周期 ----
@@ -194,9 +205,14 @@ class WatchdogEngine:
                 current += 1
                 msgs.append(f"开始盯盘 {name}({code})")
             self._save_state()
-            # 同步l2api订阅
-            client = get_client()
-            client.subscribe(list(self._states.keys()))
+
+            # 同步l2api订阅（仅在daemon进程内有效，外部进程无client时跳过）
+            if has_client():
+                try:
+                    client = get_client()
+                    client.subscribe(list(self._states.keys()))
+                except Exception as e:
+                    logger.warning(f"l2api订阅同步失败: {e}")
 
         # 为新增股票推送初始状态
         for code in codes:
@@ -224,9 +240,13 @@ class WatchdogEngine:
                 else:
                     msgs.append(f"{code} 未在盯盘中")
             self._save_state()
-            # 同步l2api取消订阅
-            client = get_client()
-            client.unsubscribe(list(codes))
+            # 同步l2api取消订阅（仅在daemon进程内有效）
+            if has_client():
+                try:
+                    client = get_client()
+                    client.unsubscribe(list(codes))
+                except Exception as e:
+                    logger.warning(f"l2api取消订阅失败: {e}")
         return "\n".join(msgs)
 
     def clear_all(self) -> str:
@@ -235,8 +255,12 @@ class WatchdogEngine:
             codes = list(self._states.keys())
             self._states.clear()
             self._save_state()
-            client = get_client()
-            client.unsubscribe(codes)
+            if has_client():
+                try:
+                    client = get_client()
+                    client.unsubscribe(codes)
+                except Exception as e:
+                    logger.warning(f"l2api取消订阅失败: {e}")
         return f"已清空{count}只盯盘标的"
 
     def list_all(self) -> str:
@@ -297,6 +321,15 @@ class WatchdogEngine:
         today = datetime.now().strftime("%Y%m%d")
         now = datetime.now()
 
+        # 周期性心跳日志（每20轮≈10分钟一次）
+        self._scan_count += 1
+        if self._scan_count % 20 == 1:
+            status_summary = ", ".join(
+                f"{st.name}({st.code})[{st.status}]"
+                for st in self._states.values()
+            )
+            logger.info(f"盯盘心跳 #{self._scan_count}: {len(codes)}只 [{status_summary}]")
+
         for code in codes:
             with self._lock:
                 st = self._states.get(code)
@@ -305,14 +338,20 @@ class WatchdogEngine:
 
             # 更新日线数据(每天一次，或重启后指标丢失时强制重载)
             if st.last_daily_update != today or not st.indicators:
-                self._update_daily(st)
+                ok, reason = self._update_daily(st)
+                if self._scan_count % 20 == 1:
+                    logger.info(f"  {code} 日线: {'OK' if ok else reason}")
 
             if not st.indicators:
+                logger.debug(f"  {code} 无指标数据，跳过")
                 continue
 
             # 获取实时数据
             market = client.get_market(code, max_age=30)
             if not market:
+                # 每20轮才log一次，避免刷屏
+                if self._scan_count % 20 == 1:
+                    logger.info(f"  {code} 无实时行情(l2api未就绪或数据过期)")
                 continue
 
             last = to_price(market.get("last", "0"))
@@ -339,11 +378,16 @@ class WatchdogEngine:
         # Step 1: 趋势过滤
         trend_ok, trend_reason = check_trend(inds)
         if not trend_ok:
+            # 每20轮输出一次，避免刷屏
+            if self._scan_count % 20 == 1:
+                logger.info(f"  {st.code} 趋势未通过: {trend_reason}")
             return
 
         # Step 2: 回调待机
         pullback_ok, pb_reason = check_pullback(inds, last, -1)
         if not pullback_ok:
+            if self._scan_count % 20 == 1:
+                logger.info(f"  {st.code} 趋势OK但回调未触发: {pb_reason} (last={last:.2f})")
             return
 
         # Step 2 触发 → 标记观察信号

@@ -73,7 +73,15 @@ async def feishu_callback(request: Request):
     if not text.strip() or not chat_id:
         return JSONResponse({"code": 0})
 
-    # 去重：跳过已存在的 message_id（异步任务中也会检查，但这里先查一次）
+    # 去重：检查持久化去重文件 + inbox
+    dedup_file = Path(PROJECT_DIR) / "pipelines" / "maneki" / "inbox" / "dedup.json"
+    seen_ids: set = set()
+    if dedup_file.exists():
+        try:
+            seen_ids = set(json.loads(dedup_file.read_text()))
+        except Exception:
+            pass
+    # 也检查 inbox 文件（兼容旧数据）
     inbox_file = Path(PROJECT_DIR) / "pipelines" / "maneki" / "inbox" / f"{chat_id}.jsonl"
     if inbox_file.exists():
         for line in inbox_file.read_text().split("\n"):
@@ -82,11 +90,18 @@ async def feishu_callback(request: Request):
                 continue
             try:
                 existing = json.loads(line)
-                if existing.get("message_id") == message_id:
-                    logger.info("dedup: skip duplicate msg %s", message_id[:12])
-                    return JSONResponse({"code": 0})
+                mid = existing.get("message_id", "")
+                if mid:
+                    seen_ids.add(mid)
             except json.JSONDecodeError:
                 pass
+    if message_id in seen_ids:
+        logger.info("dedup: skip duplicate msg %s", message_id[:12])
+        return JSONResponse({"code": 0})
+    # 记录到持久化去重文件
+    seen_ids.add(message_id)
+    dedup_file.parent.mkdir(parents=True, exist_ok=True)
+    dedup_file.write_text(json.dumps(list(seen_ids), ensure_ascii=False))
 
     # 异步发送"请稍候"（不阻塞 webhook 响应，防止 Feishu 超时重试）
     async def _send_ack():

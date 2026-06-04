@@ -415,11 +415,15 @@ async def main():
                 known_chats.add(f.stem)
             for chat_id in list(known_chats):
                 pos = progress.positions.get(chat_id, 0)
-                # 如果存档位置超过文件大小，说明 progress 已过期，重置位置
+                # 如果存档位置超过文件大小，说明 progress 已过期
+                # 将 position 重置到当前文件末尾（跳过已有内容），而不是回退到 0
+                # 避免因外部清空 inbox 导致的无限重放循环
                 fpath = INBOX_DIR / f"{chat_id}.jsonl"
                 if pos > 0 and fpath.exists() and fpath.stat().st_size < pos:
-                    pos = 0
-                    log.info("position stale for %s, reset to 0", chat_id)
+                    old_pos = pos
+                    pos = fpath.stat().st_size
+                    log.info("position stale for %s, reset from %d to %d (end of file)",
+                             chat_id, old_pos, pos)
                 messages, new_pos = read_inbox(chat_id, pos)
 
                 # 🐛 FIX: 保存 position 必须在处理消息之前，

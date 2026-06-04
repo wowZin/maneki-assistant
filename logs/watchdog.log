@@ -1,0 +1,561 @@
+2026-06-03 20:26:13 [INFO] __main__: 正在启动 l2api Level2 连接...
+2026-06-03 20:26:13 [INFO] scripts.l2_client: l2api 启动 3 通道: [18100, 18103, 18105]
+2026-06-03 20:26:13 [INFO] scripts.l2_client: l2api 所有通道已启动
+2026-06-03 20:26:13 [INFO] __main__: l2api 已就绪
+2026-06-03 20:26:13 [INFO] __main__: 加载盯盘状态: 2 只
+2026-06-03 20:26:13 [INFO] __main__: 盯盘循环启动
+2026-06-03 20:26:13 [INFO] __main__: 盯盘引擎已启动
+2026-06-03 20:26:13 [INFO] __main__: ==================================================
+2026-06-03 20:26:13 [INFO] __main__: 盯盘引擎已启动！
+2026-06-03 20:26:13 [INFO] __main__: 状态文件: /root/maneki-agent/plays/watchdog/data/state.json
+2026-06-03 20:26:13 [INFO] __main__: 扫描间隔: 30s
+2026-06-03 20:26:13 [INFO] __main__: 盯盘上限: 5 只
+2026-06-03 20:26:13 [INFO] __main__: ==================================================
+2026-06-03 20:26:13 [INFO] __main__: 通过飞书发送指令: 盯/停/盯盘列表/清盯盘
+2026-06-03 20:26:14 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out
+2026-06-03 20:26:14 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out
+2026-06-03 20:26:14 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out
+2026-06-03 20:26:14 [INFO] scripts.l2_client: l2api [Order] 5s 后重连...
+2026-06-03 20:26:14 [INFO] scripts.l2_client: l2api [Market] 5s 后重连...
+2026-06-03 20:26:14 [INFO] scripts.l2_client: l2api [Tran] 5s 后重连...
+2026-06-03 20:26:20 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out
+2026-06-03 20:26:20 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out
+2026-06-03 20:26:20 [INFO] scripts.l2_client: l2api [Tran] 5s 后重连...
+2026-06-03 20:26:20 [INFO] scripts.l2_client: l2api [Order] 5s 后重连...
+2026-06-03 20:26:20 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out
+2026-06-03 20:26:20 [INFO] scripts.l2_client: l2api [Market] 5s 后重连...
+2026-06-03 20:26:26 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out
+2026-06-03 20:26:26 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out
+2026-06-03 20:26:26 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out
+2026-06-03 20:26:26 [INFO] scripts.l2_client: l2api [Market] 5s 后重连...
+2026-06-03 20:26:26 [INFO] scripts.l2_client: l2api [Order] 5s 后重连...
+2026-06-03 20:26:26 [INFO] scripts.l2_client: l2api [Tran] 5s 后重连...
+2026-06-03 20:26:32 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out
+2026-06-03 20:26:32 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out
+2026-06-03 20:26:32 [INFO] scripts.l2_client: l2api [Tran] 5s 后重连...
+2026-06-03 20:26:32 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out
+2026-06-03 20:26:32 [INFO] scripts.l2_client: l2api [Market] 5s 后重连...
+2026-06-03 20:26:32 [INFO] scripts.l2_client: l2api [Order] 5s 后重连...
+2026-06-03 20:26:38 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out
+2026-06-03 20:26:38 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out
+2026-06-03 20:26:38 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out
+2026-06-03 20:26:38 [INFO] scripts.l2_client: l2api [Tran] 5s 后重连...
+2026-06-03 20:26:38 [INFO] scripts.l2_client: l2api [Order] 5s 后重连...
+2026-06-03 20:26:38 [INFO] scripts.l2_client: l2api [Market] 5s 后重连...
+2026-06-03 20:26:44 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out
+2026-06-03 20:26:44 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out
+2026-06-03 20:26:44 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out
+2026-06-03 20:26:44 [INFO] scripts.l2_client: l2api [Tran] 5s 后重连...
+2026-06-03 20:26:44 [INFO] scripts.l2_client: l2api [Order] 5s 后重连...
+2026-06-03 20:26:44 [INFO] scripts.l2_client: l2api [Market] 5s 后重连...
+2026-06-03 20:26:50 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out
+2026-06-03 20:26:50 [INFO] scripts.l2_client: l2api [Tran] 5s 后重连...
+2026-06-03 20:26:50 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out
+2026-06-03 20:26:50 [INFO] scripts.l2_client: l2api [Market] 5s 后重连...
+2026-06-03 20:26:50 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out
+2026-06-03 20:26:50 [INFO] scripts.l2_client: l2api [Order] 5s 后重连...
+2026-06-03 20:26:56 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out
+2026-06-03 20:26:56 [INFO] scripts.l2_client: l2api [Tran] 5s 后重连...
+2026-06-03 20:26:56 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out
+2026-06-03 20:26:56 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out
+2026-06-03 20:26:56 [INFO] scripts.l2_client: l2api [Market] 5s 后重连...
+2026-06-03 20:26:56 [INFO] scripts.l2_client: l2api [Order] 5s 后重连...
+2026-06-03 20:27:02 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out
+2026-06-03 20:27:02 [INFO] scripts.l2_client: l2api [Tran] 5s 后重连...
+2026-06-03 20:27:02 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out
+2026-06-03 20:27:02 [INFO] scripts.l2_client: l2api [Market] 5s 后重连...
+2026-06-03 20:27:02 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out
+2026-06-03 20:27:02 [INFO] scripts.l2_client: l2api [Order] 5s 后重连...
+2026-06-03 20:27:08 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out
+2026-06-03 20:27:08 [INFO] scripts.l2_client: l2api [Tran] 5s 后重连...
+2026-06-03 20:27:08 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out
+2026-06-03 20:27:08 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out
+2026-06-03 20:27:08 [INFO] scripts.l2_client: l2api [Market] 5s 后重连...
+2026-06-03 20:27:08 [INFO] scripts.l2_client: l2api [Order] 5s 后重连...
+2026-06-03 20:27:14 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out
+2026-06-03 20:27:14 [INFO] scripts.l2_client: l2api [Tran] 5s 后重连...
+2026-06-03 20:27:14 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out
+2026-06-03 20:27:14 [INFO] scripts.l2_client: l2api [Order] 5s 后重连...
+2026-06-03 20:27:14 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out
+2026-06-03 20:27:14 [INFO] scripts.l2_client: l2api [Market] 5s 后重连...
+2026-06-03 20:27:20 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out
+2026-06-03 20:27:20 [INFO] scripts.l2_client: l2api [Tran] 5s 后重连...
+2026-06-03 20:27:20 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out
+2026-06-03 20:27:20 [INFO] scripts.l2_client: l2api [Order] 5s 后重连...
+2026-06-03 20:27:20 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out
+2026-06-03 20:27:20 [INFO] scripts.l2_client: l2api [Market] 5s 后重连...
+2026-06-03 20:27:26 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out
+2026-06-03 20:27:26 [INFO] scripts.l2_client: l2api [Tran] 5s 后重连...
+2026-06-03 20:27:26 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out
+2026-06-03 20:27:26 [INFO] scripts.l2_client: l2api [Order] 5s 后重连...
+2026-06-03 20:27:26 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out
+2026-06-03 20:27:26 [INFO] scripts.l2_client: l2api [Market] 5s 后重连...
+2026-06-03 20:27:32 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out
+2026-06-03 20:27:32 [INFO] scripts.l2_client: l2api [Order] 5s 后重连...
+2026-06-03 20:27:32 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out
+2026-06-03 20:27:32 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out
+2026-06-03 20:27:32 [INFO] scripts.l2_client: l2api [Tran] 5s 后重连...
+2026-06-03 20:27:32 [INFO] scripts.l2_client: l2api [Market] 5s 后重连...
+2026-06-03 20:27:38 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out
+2026-06-03 20:27:38 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out
+2026-06-03 20:27:38 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out
+2026-06-03 20:27:38 [INFO] scripts.l2_client: l2api [Tran] 5s 后重连...
+2026-06-03 20:27:38 [INFO] scripts.l2_client: l2api [Order] 5s 后重连...
+2026-06-03 20:27:38 [INFO] scripts.l2_client: l2api [Market] 5s 后重连...
+2026-06-03 20:27:44 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out
+2026-06-03 20:27:44 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out
+2026-06-03 20:27:44 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out
+2026-06-03 20:27:44 [INFO] scripts.l2_client: l2api [Order] 5s 后重连...
+2026-06-03 20:27:44 [INFO] scripts.l2_client: l2api [Tran] 5s 后重连...
+2026-06-03 20:27:44 [INFO] scripts.l2_client: l2api [Market] 5s 后重连...
+2026-06-03 20:27:50 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out
+2026-06-03 20:27:50 [INFO] scripts.l2_client: l2api [Market] 5s 后重连...
+2026-06-03 20:27:50 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out
+2026-06-03 20:27:50 [INFO] scripts.l2_client: l2api [Tran] 5s 后重连...
+2026-06-03 20:27:50 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out
+2026-06-03 20:27:50 [INFO] scripts.l2_client: l2api [Order] 5s 后重连...
+2026-06-03 20:28:17 [INFO] __main__: 正在启动 l2api Level2 连接...
+2026-06-03 20:28:17 [INFO] scripts.l2_client: l2api 启动 3 通道: [18100, 18103, 18105]
+2026-06-03 20:28:17 [INFO] scripts.l2_client: l2api 所有通道已启动
+2026-06-03 20:28:17 [INFO] __main__: l2api 已就绪
+2026-06-03 20:28:17 [INFO] __main__: 加载盯盘状态: 2 只
+2026-06-03 20:28:17 [INFO] __main__: 盯盘循环启动
+2026-06-03 20:28:17 [INFO] __main__: 盯盘引擎已启动
+2026-06-03 20:28:17 [INFO] __main__: ==================================================
+2026-06-03 20:28:17 [INFO] __main__: 盯盘引擎已启动！
+2026-06-03 20:28:17 [INFO] __main__: 状态文件: /root/maneki-agent/plays/watchdog/data/state.json
+2026-06-03 20:28:17 [INFO] __main__: 扫描间隔: 30s
+2026-06-03 20:28:17 [INFO] __main__: 盯盘上限: 5 只
+2026-06-03 20:28:17 [INFO] __main__: ==================================================
+2026-06-03 20:28:17 [INFO] __main__: 通过飞书发送指令: 盯/停/盯盘列表/清盯盘
+2026-06-03 20:28:18 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第0次, 2.5s后重连)
+2026-06-03 20:28:18 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第0次, 2.5s后重连)
+2026-06-03 20:28:18 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第0次, 2.5s后重连)
+2026-06-03 20:28:24 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第1次, 5s后重连)
+2026-06-03 20:28:24 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第1次, 5s后重连)
+2026-06-03 20:28:24 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第1次, 5s后重连)
+2026-06-03 20:28:35 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第2次, 10s后重连)
+2026-06-03 20:28:35 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第2次, 10s后重连)
+2026-06-03 20:28:35 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第2次, 10s后重连)
+2026-06-03 20:29:39 [INFO] __main__: 正在启动 l2api Level2 连接...
+2026-06-03 20:29:39 [INFO] scripts.l2_client: l2api 启动 3 通道: [18100, 18103, 18105]
+2026-06-03 20:29:39 [INFO] scripts.l2_client: l2api 所有通道已启动
+2026-06-03 20:29:39 [INFO] __main__: l2api 已就绪
+2026-06-03 20:29:39 [INFO] __main__: 加载盯盘状态: 2 只
+2026-06-03 20:29:39 [INFO] __main__: 盯盘循环启动
+2026-06-03 20:29:39 [INFO] __main__: 盯盘引擎已启动
+2026-06-03 20:29:39 [INFO] __main__: ==================================================
+2026-06-03 20:29:39 [INFO] __main__: 盯盘引擎已启动！
+2026-06-03 20:29:39 [INFO] __main__: 状态文件: /root/maneki-agent/plays/watchdog/data/state.json
+2026-06-03 20:29:39 [INFO] __main__: 扫描间隔: 30s
+2026-06-03 20:29:39 [INFO] __main__: 盯盘上限: 5 只
+2026-06-03 20:29:39 [INFO] __main__: ==================================================
+2026-06-03 20:29:39 [INFO] __main__: 通过飞书发送指令: 盯/停/盯盘列表/清盯盘
+2026-06-03 20:29:40 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第1次, 5s后重连)
+2026-06-03 20:29:40 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第1次, 5s后重连)
+2026-06-03 20:29:40 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第1次, 5s后重连)
+2026-06-03 20:29:46 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第2次, 10s后重连)
+2026-06-03 20:29:46 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第2次, 10s后重连)
+2026-06-03 20:29:46 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第2次, 10s后重连)
+2026-06-03 20:29:57 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第3次, 20s后重连)
+2026-06-03 20:29:57 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第3次, 20s后重连)
+2026-06-03 20:29:57 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第3次, 20s后重连)
+2026-06-03 20:30:18 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第4次, 40s后重连)
+2026-06-03 20:30:18 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第4次, 40s后重连)
+2026-06-03 20:30:18 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第4次, 40s后重连)
+2026-06-03 20:30:59 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第5次, 80s后重连)
+2026-06-03 20:30:59 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第5次, 80s后重连)
+2026-06-03 20:30:59 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第5次, 80s后重连)
+2026-06-03 20:32:20 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第6次, 160s后重连)
+2026-06-03 20:32:20 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第6次, 160s后重连)
+2026-06-03 20:32:20 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第6次, 160s后重连)
+2026-06-03 20:35:01 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第7次, 300s后重连)
+2026-06-03 20:35:01 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第7次, 300s后重连)
+2026-06-03 20:35:01 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第7次, 300s后重连)
+2026-06-03 20:40:02 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第8次, 300s后重连)
+2026-06-03 20:40:02 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第8次, 300s后重连)
+2026-06-03 20:40:02 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第8次, 300s后重连)
+2026-06-03 20:45:03 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第9次, 300s后重连)
+2026-06-03 20:45:03 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第9次, 300s后重连)
+2026-06-03 20:45:03 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第9次, 300s后重连)
+2026-06-03 20:50:04 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第10次, 300s后重连)
+2026-06-03 20:50:04 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第10次, 300s后重连)
+2026-06-03 20:50:04 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第10次, 300s后重连)
+2026-06-03 20:55:05 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第11次, 300s后重连)
+2026-06-03 20:55:05 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第11次, 300s后重连)
+2026-06-03 20:55:05 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第11次, 300s后重连)
+2026-06-03 21:00:06 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第12次, 300s后重连)
+2026-06-03 21:00:06 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第12次, 300s后重连)
+2026-06-03 21:00:06 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第12次, 300s后重连)
+2026-06-03 21:05:07 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第13次, 300s后重连)
+2026-06-03 21:05:07 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第13次, 300s后重连)
+2026-06-03 21:05:07 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第13次, 300s后重连)
+2026-06-03 21:10:08 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第14次, 300s后重连)
+2026-06-03 21:10:08 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第14次, 300s后重连)
+2026-06-03 21:10:08 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第14次, 300s后重连)
+2026-06-03 21:15:09 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第15次, 300s后重连)
+2026-06-03 21:15:09 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第15次, 300s后重连)
+2026-06-03 21:15:09 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第15次, 300s后重连)
+2026-06-03 21:20:10 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第16次, 300s后重连)
+2026-06-03 21:20:10 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第16次, 300s后重连)
+2026-06-03 21:20:10 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第16次, 300s后重连)
+2026-06-03 21:25:11 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第17次, 300s后重连)
+2026-06-03 21:25:11 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第17次, 300s后重连)
+2026-06-03 21:25:11 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第17次, 300s后重连)
+2026-06-03 21:30:12 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第18次, 300s后重连)
+2026-06-03 21:30:12 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第18次, 300s后重连)
+2026-06-03 21:30:12 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第18次, 300s后重连)
+2026-06-03 21:35:13 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第19次, 300s后重连)
+2026-06-03 21:35:13 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第19次, 300s后重连)
+2026-06-03 21:35:13 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第19次, 300s后重连)
+2026-06-03 21:40:14 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第20次, 300s后重连)
+2026-06-03 21:40:14 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第20次, 300s后重连)
+2026-06-03 21:40:14 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第20次, 300s后重连)
+2026-06-03 21:45:15 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第21次, 300s后重连)
+2026-06-03 21:45:15 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第21次, 300s后重连)
+2026-06-03 21:45:15 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第21次, 300s后重连)
+2026-06-03 21:50:16 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第22次, 300s后重连)
+2026-06-03 21:50:16 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第22次, 300s后重连)
+2026-06-03 21:50:16 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第22次, 300s后重连)
+2026-06-03 21:55:17 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第23次, 300s后重连)
+2026-06-03 21:55:17 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第23次, 300s后重连)
+2026-06-03 21:55:17 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第23次, 300s后重连)
+2026-06-03 22:00:18 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第24次, 300s后重连)
+2026-06-03 22:00:18 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第24次, 300s后重连)
+2026-06-03 22:00:18 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第24次, 300s后重连)
+2026-06-03 22:05:19 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第25次, 300s后重连)
+2026-06-03 22:05:19 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第25次, 300s后重连)
+2026-06-03 22:05:19 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第25次, 300s后重连)
+2026-06-03 22:10:20 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第26次, 300s后重连)
+2026-06-03 22:10:20 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第26次, 300s后重连)
+2026-06-03 22:10:20 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第26次, 300s后重连)
+2026-06-03 22:15:21 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第27次, 300s后重连)
+2026-06-03 22:15:21 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第27次, 300s后重连)
+2026-06-03 22:15:21 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第27次, 300s后重连)
+2026-06-03 22:20:22 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第28次, 300s后重连)
+2026-06-03 22:20:22 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第28次, 300s后重连)
+2026-06-03 22:20:22 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第28次, 300s后重连)
+2026-06-03 22:25:23 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第29次, 300s后重连)
+2026-06-03 22:25:23 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第29次, 300s后重连)
+2026-06-03 22:25:23 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第29次, 300s后重连)
+2026-06-03 22:30:24 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第30次, 300s后重连)
+2026-06-03 22:30:24 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第30次, 300s后重连)
+2026-06-03 22:30:24 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第30次, 300s后重连)
+2026-06-03 22:35:25 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第31次, 300s后重连)
+2026-06-03 22:35:25 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第31次, 300s后重连)
+2026-06-03 22:35:25 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第31次, 300s后重连)
+2026-06-03 22:40:26 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第32次, 300s后重连)
+2026-06-03 22:40:26 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第32次, 300s后重连)
+2026-06-03 22:40:26 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第32次, 300s后重连)
+2026-06-03 22:45:27 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第33次, 300s后重连)
+2026-06-03 22:45:27 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第33次, 300s后重连)
+2026-06-03 22:45:27 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第33次, 300s后重连)
+2026-06-03 22:50:28 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第34次, 300s后重连)
+2026-06-03 22:50:28 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第34次, 300s后重连)
+2026-06-03 22:50:28 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第34次, 300s后重连)
+2026-06-03 22:55:29 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第35次, 300s后重连)
+2026-06-03 22:55:29 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第35次, 300s后重连)
+2026-06-03 22:55:29 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第35次, 300s后重连)
+2026-06-03 23:00:30 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第36次, 300s后重连)
+2026-06-03 23:00:30 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第36次, 300s后重连)
+2026-06-03 23:00:30 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第36次, 300s后重连)
+2026-06-03 23:05:31 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第37次, 300s后重连)
+2026-06-03 23:05:31 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第37次, 300s后重连)
+2026-06-03 23:05:31 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第37次, 300s后重连)
+2026-06-03 23:10:32 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第38次, 300s后重连)
+2026-06-03 23:10:32 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第38次, 300s后重连)
+2026-06-03 23:10:32 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第38次, 300s后重连)
+2026-06-03 23:15:33 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第39次, 300s后重连)
+2026-06-03 23:15:33 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第39次, 300s后重连)
+2026-06-03 23:15:33 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第39次, 300s后重连)
+2026-06-03 23:20:34 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第40次, 300s后重连)
+2026-06-03 23:20:34 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第40次, 300s后重连)
+2026-06-03 23:20:34 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第40次, 300s后重连)
+2026-06-03 23:25:35 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第41次, 300s后重连)
+2026-06-03 23:25:35 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第41次, 300s后重连)
+2026-06-03 23:25:35 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第41次, 300s后重连)
+2026-06-03 23:30:36 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第42次, 300s后重连)
+2026-06-03 23:30:36 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第42次, 300s后重连)
+2026-06-03 23:30:36 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第42次, 300s后重连)
+2026-06-03 23:35:37 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第43次, 300s后重连)
+2026-06-03 23:35:37 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第43次, 300s后重连)
+2026-06-03 23:35:37 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第43次, 300s后重连)
+2026-06-03 23:40:38 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第44次, 300s后重连)
+2026-06-03 23:40:38 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第44次, 300s后重连)
+2026-06-03 23:40:38 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第44次, 300s后重连)
+2026-06-03 23:45:39 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第45次, 300s后重连)
+2026-06-03 23:45:39 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第45次, 300s后重连)
+2026-06-03 23:45:39 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第45次, 300s后重连)
+2026-06-03 23:50:40 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第46次, 300s后重连)
+2026-06-03 23:50:40 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第46次, 300s后重连)
+2026-06-03 23:50:40 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第46次, 300s后重连)
+2026-06-03 23:55:41 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第47次, 300s后重连)
+2026-06-03 23:55:41 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第47次, 300s后重连)
+2026-06-03 23:55:41 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第47次, 300s后重连)
+2026-06-04 00:00:42 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第48次, 300s后重连)
+2026-06-04 00:00:42 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第48次, 300s后重连)
+2026-06-04 00:00:42 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第48次, 300s后重连)
+2026-06-04 00:05:43 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第49次, 300s后重连)
+2026-06-04 00:05:43 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第49次, 300s后重连)
+2026-06-04 00:05:43 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第49次, 300s后重连)
+2026-06-04 00:10:44 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第50次, 300s后重连)
+2026-06-04 00:10:44 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第50次, 300s后重连)
+2026-06-04 00:10:44 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第50次, 300s后重连)
+2026-06-04 00:15:45 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第51次, 300s后重连)
+2026-06-04 00:15:45 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第51次, 300s后重连)
+2026-06-04 00:15:45 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第51次, 300s后重连)
+2026-06-04 00:20:46 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第52次, 300s后重连)
+2026-06-04 00:20:46 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第52次, 300s后重连)
+2026-06-04 00:20:46 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第52次, 300s后重连)
+2026-06-04 00:25:47 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第53次, 300s后重连)
+2026-06-04 00:25:47 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第53次, 300s后重连)
+2026-06-04 00:25:47 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第53次, 300s后重连)
+2026-06-04 00:30:48 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第54次, 300s后重连)
+2026-06-04 00:30:48 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第54次, 300s后重连)
+2026-06-04 00:30:48 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第54次, 300s后重连)
+2026-06-04 00:35:49 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第55次, 300s后重连)
+2026-06-04 00:35:49 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第55次, 300s后重连)
+2026-06-04 00:35:49 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第55次, 300s后重连)
+2026-06-04 00:40:50 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第56次, 300s后重连)
+2026-06-04 00:40:50 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第56次, 300s后重连)
+2026-06-04 00:40:50 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第56次, 300s后重连)
+2026-06-04 00:45:51 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第57次, 300s后重连)
+2026-06-04 00:45:51 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第57次, 300s后重连)
+2026-06-04 00:45:51 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第57次, 300s后重连)
+2026-06-04 00:50:52 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第58次, 300s后重连)
+2026-06-04 00:50:52 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第58次, 300s后重连)
+2026-06-04 00:50:52 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第58次, 300s后重连)
+2026-06-04 00:55:53 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第59次, 300s后重连)
+2026-06-04 00:55:53 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第59次, 300s后重连)
+2026-06-04 00:55:53 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第59次, 300s后重连)
+2026-06-04 01:00:54 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第60次, 300s后重连)
+2026-06-04 01:00:54 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第60次, 300s后重连)
+2026-06-04 01:00:54 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第60次, 300s后重连)
+2026-06-04 01:05:55 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第61次, 300s后重连)
+2026-06-04 01:05:55 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第61次, 300s后重连)
+2026-06-04 01:05:55 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第61次, 300s后重连)
+2026-06-04 01:10:56 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第62次, 300s后重连)
+2026-06-04 01:10:56 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第62次, 300s后重连)
+2026-06-04 01:10:56 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第62次, 300s后重连)
+2026-06-04 01:15:57 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第63次, 300s后重连)
+2026-06-04 01:15:57 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第63次, 300s后重连)
+2026-06-04 01:15:57 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第63次, 300s后重连)
+2026-06-04 01:20:58 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第64次, 300s后重连)
+2026-06-04 01:20:58 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第64次, 300s后重连)
+2026-06-04 01:20:58 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第64次, 300s后重连)
+2026-06-04 01:25:59 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第65次, 300s后重连)
+2026-06-04 01:25:59 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第65次, 300s后重连)
+2026-06-04 01:25:59 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第65次, 300s后重连)
+2026-06-04 01:31:00 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第66次, 300s后重连)
+2026-06-04 01:31:00 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第66次, 300s后重连)
+2026-06-04 01:31:00 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第66次, 300s后重连)
+2026-06-04 01:36:01 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第67次, 300s后重连)
+2026-06-04 01:36:01 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第67次, 300s后重连)
+2026-06-04 01:36:01 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第67次, 300s后重连)
+2026-06-04 01:41:02 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第68次, 300s后重连)
+2026-06-04 01:41:02 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第68次, 300s后重连)
+2026-06-04 01:41:02 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第68次, 300s后重连)
+2026-06-04 01:46:03 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第69次, 300s后重连)
+2026-06-04 01:46:03 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第69次, 300s后重连)
+2026-06-04 01:46:03 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第69次, 300s后重连)
+2026-06-04 01:51:04 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第70次, 300s后重连)
+2026-06-04 01:51:04 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第70次, 300s后重连)
+2026-06-04 01:51:04 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第70次, 300s后重连)
+2026-06-04 01:56:05 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第71次, 300s后重连)
+2026-06-04 01:56:05 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第71次, 300s后重连)
+2026-06-04 01:56:05 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第71次, 300s后重连)
+2026-06-04 02:01:06 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第72次, 300s后重连)
+2026-06-04 02:01:06 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第72次, 300s后重连)
+2026-06-04 02:01:06 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第72次, 300s后重连)
+2026-06-04 02:06:07 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第73次, 300s后重连)
+2026-06-04 02:06:07 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第73次, 300s后重连)
+2026-06-04 02:06:07 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第73次, 300s后重连)
+2026-06-04 02:11:08 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第74次, 300s后重连)
+2026-06-04 02:11:08 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第74次, 300s后重连)
+2026-06-04 02:11:08 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第74次, 300s后重连)
+2026-06-04 02:16:09 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第75次, 300s后重连)
+2026-06-04 02:16:09 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第75次, 300s后重连)
+2026-06-04 02:16:09 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第75次, 300s后重连)
+2026-06-04 02:21:10 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第76次, 300s后重连)
+2026-06-04 02:21:10 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第76次, 300s后重连)
+2026-06-04 02:21:10 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第76次, 300s后重连)
+2026-06-04 02:26:11 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第77次, 300s后重连)
+2026-06-04 02:26:11 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第77次, 300s后重连)
+2026-06-04 02:26:11 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第77次, 300s后重连)
+2026-06-04 02:31:12 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第78次, 300s后重连)
+2026-06-04 02:31:12 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第78次, 300s后重连)
+2026-06-04 02:31:12 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第78次, 300s后重连)
+2026-06-04 02:36:13 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第79次, 300s后重连)
+2026-06-04 02:36:13 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第79次, 300s后重连)
+2026-06-04 02:36:13 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第79次, 300s后重连)
+2026-06-04 02:41:14 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第80次, 300s后重连)
+2026-06-04 02:41:14 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第80次, 300s后重连)
+2026-06-04 02:41:14 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第80次, 300s后重连)
+2026-06-04 02:46:15 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第81次, 300s后重连)
+2026-06-04 02:46:15 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第81次, 300s后重连)
+2026-06-04 02:46:15 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第81次, 300s后重连)
+2026-06-04 02:51:16 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第82次, 300s后重连)
+2026-06-04 02:51:16 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第82次, 300s后重连)
+2026-06-04 02:51:16 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第82次, 300s后重连)
+2026-06-04 02:56:17 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第83次, 300s后重连)
+2026-06-04 02:56:17 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第83次, 300s后重连)
+2026-06-04 02:56:17 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第83次, 300s后重连)
+2026-06-04 03:01:18 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第84次, 300s后重连)
+2026-06-04 03:01:18 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第84次, 300s后重连)
+2026-06-04 03:01:18 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第84次, 300s后重连)
+2026-06-04 03:06:19 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第85次, 300s后重连)
+2026-06-04 03:06:19 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第85次, 300s后重连)
+2026-06-04 03:06:19 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第85次, 300s后重连)
+2026-06-04 03:11:20 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第86次, 300s后重连)
+2026-06-04 03:11:20 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第86次, 300s后重连)
+2026-06-04 03:11:20 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第86次, 300s后重连)
+2026-06-04 03:16:21 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第87次, 300s后重连)
+2026-06-04 03:16:21 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第87次, 300s后重连)
+2026-06-04 03:16:21 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第87次, 300s后重连)
+2026-06-04 03:21:22 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第88次, 300s后重连)
+2026-06-04 03:21:22 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第88次, 300s后重连)
+2026-06-04 03:21:22 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第88次, 300s后重连)
+2026-06-04 03:26:23 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第89次, 300s后重连)
+2026-06-04 03:26:23 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第89次, 300s后重连)
+2026-06-04 03:26:23 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第89次, 300s后重连)
+2026-06-04 03:31:24 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第90次, 300s后重连)
+2026-06-04 03:31:24 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第90次, 300s后重连)
+2026-06-04 03:31:24 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第90次, 300s后重连)
+2026-06-04 03:36:25 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第91次, 300s后重连)
+2026-06-04 03:36:25 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第91次, 300s后重连)
+2026-06-04 03:36:25 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第91次, 300s后重连)
+2026-06-04 03:41:26 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第92次, 300s后重连)
+2026-06-04 03:41:26 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第92次, 300s后重连)
+2026-06-04 03:41:26 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第92次, 300s后重连)
+2026-06-04 03:46:27 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第93次, 300s后重连)
+2026-06-04 03:46:27 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第93次, 300s后重连)
+2026-06-04 03:46:27 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第93次, 300s后重连)
+2026-06-04 03:51:28 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第94次, 300s后重连)
+2026-06-04 03:51:28 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第94次, 300s后重连)
+2026-06-04 03:51:28 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第94次, 300s后重连)
+2026-06-04 03:56:29 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第95次, 300s后重连)
+2026-06-04 03:56:29 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第95次, 300s后重连)
+2026-06-04 03:56:29 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第95次, 300s后重连)
+2026-06-04 04:01:30 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第96次, 300s后重连)
+2026-06-04 04:01:30 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第96次, 300s后重连)
+2026-06-04 04:01:30 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第96次, 300s后重连)
+2026-06-04 04:06:31 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第97次, 300s后重连)
+2026-06-04 04:06:31 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第97次, 300s后重连)
+2026-06-04 04:06:31 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第97次, 300s后重连)
+2026-06-04 04:11:32 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第98次, 300s后重连)
+2026-06-04 04:11:32 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第98次, 300s后重连)
+2026-06-04 04:11:32 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第98次, 300s后重连)
+2026-06-04 04:16:33 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第99次, 300s后重连)
+2026-06-04 04:16:33 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第99次, 300s后重连)
+2026-06-04 04:16:33 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第99次, 300s后重连)
+2026-06-04 04:21:34 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第100次, 300s后重连)
+2026-06-04 04:21:34 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第100次, 300s后重连)
+2026-06-04 04:21:34 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第100次, 300s后重连)
+2026-06-04 04:26:35 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第101次, 300s后重连)
+2026-06-04 04:26:35 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第101次, 300s后重连)
+2026-06-04 04:26:35 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第101次, 300s后重连)
+2026-06-04 04:31:37 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第102次, 300s后重连)
+2026-06-04 04:31:37 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第102次, 300s后重连)
+2026-06-04 04:31:37 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第102次, 300s后重连)
+2026-06-04 04:36:38 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第103次, 300s后重连)
+2026-06-04 04:36:38 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第103次, 300s后重连)
+2026-06-04 04:36:38 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第103次, 300s后重连)
+2026-06-04 04:41:39 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第104次, 300s后重连)
+2026-06-04 04:41:39 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第104次, 300s后重连)
+2026-06-04 04:41:39 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第104次, 300s后重连)
+2026-06-04 04:46:40 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第105次, 300s后重连)
+2026-06-04 04:46:40 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第105次, 300s后重连)
+2026-06-04 04:46:40 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第105次, 300s后重连)
+2026-06-04 04:51:41 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第106次, 300s后重连)
+2026-06-04 04:51:41 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第106次, 300s后重连)
+2026-06-04 04:51:41 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第106次, 300s后重连)
+2026-06-04 04:56:42 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第107次, 300s后重连)
+2026-06-04 04:56:42 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第107次, 300s后重连)
+2026-06-04 04:56:42 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第107次, 300s后重连)
+2026-06-04 05:01:43 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第108次, 300s后重连)
+2026-06-04 05:01:43 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第108次, 300s后重连)
+2026-06-04 05:01:43 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第108次, 300s后重连)
+2026-06-04 05:06:44 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第109次, 300s后重连)
+2026-06-04 05:06:44 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第109次, 300s后重连)
+2026-06-04 05:06:44 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第109次, 300s后重连)
+2026-06-04 05:11:45 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第110次, 300s后重连)
+2026-06-04 05:11:45 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第110次, 300s后重连)
+2026-06-04 05:11:45 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第110次, 300s后重连)
+2026-06-04 05:16:46 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第111次, 300s后重连)
+2026-06-04 05:16:46 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第111次, 300s后重连)
+2026-06-04 05:16:46 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第111次, 300s后重连)
+2026-06-04 05:21:47 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第112次, 300s后重连)
+2026-06-04 05:21:47 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第112次, 300s后重连)
+2026-06-04 05:21:47 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第112次, 300s后重连)
+2026-06-04 05:26:48 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第113次, 300s后重连)
+2026-06-04 05:26:48 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第113次, 300s后重连)
+2026-06-04 05:26:48 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第113次, 300s后重连)
+2026-06-04 05:31:49 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第114次, 300s后重连)
+2026-06-04 05:31:49 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第114次, 300s后重连)
+2026-06-04 05:31:49 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第114次, 300s后重连)
+2026-06-04 05:36:50 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第115次, 300s后重连)
+2026-06-04 05:36:50 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第115次, 300s后重连)
+2026-06-04 05:36:50 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第115次, 300s后重连)
+2026-06-04 05:41:51 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第116次, 300s后重连)
+2026-06-04 05:41:51 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第116次, 300s后重连)
+2026-06-04 05:41:51 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第116次, 300s后重连)
+2026-06-04 05:46:52 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第117次, 300s后重连)
+2026-06-04 05:46:52 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第117次, 300s后重连)
+2026-06-04 05:46:52 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第117次, 300s后重连)
+2026-06-04 05:51:53 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第118次, 300s后重连)
+2026-06-04 05:51:53 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第118次, 300s后重连)
+2026-06-04 05:51:53 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第118次, 300s后重连)
+2026-06-04 05:56:54 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第119次, 300s后重连)
+2026-06-04 05:56:54 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第119次, 300s后重连)
+2026-06-04 05:56:54 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第119次, 300s后重连)
+2026-06-04 06:01:55 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第120次, 300s后重连)
+2026-06-04 06:01:55 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第120次, 300s后重连)
+2026-06-04 06:01:55 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第120次, 300s后重连)
+2026-06-04 06:06:56 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第121次, 300s后重连)
+2026-06-04 06:06:56 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第121次, 300s后重连)
+2026-06-04 06:06:56 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第121次, 300s后重连)
+2026-06-04 06:11:57 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第122次, 300s后重连)
+2026-06-04 06:11:57 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第122次, 300s后重连)
+2026-06-04 06:11:57 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第122次, 300s后重连)
+2026-06-04 06:16:58 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第123次, 300s后重连)
+2026-06-04 06:16:58 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第123次, 300s后重连)
+2026-06-04 06:16:58 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第123次, 300s后重连)
+2026-06-04 06:21:59 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第124次, 300s后重连)
+2026-06-04 06:21:59 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第124次, 300s后重连)
+2026-06-04 06:21:59 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第124次, 300s后重连)
+2026-06-04 06:27:00 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第125次, 300s后重连)
+2026-06-04 06:27:00 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第125次, 300s后重连)
+2026-06-04 06:27:00 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第125次, 300s后重连)
+2026-06-04 06:32:01 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第126次, 300s后重连)
+2026-06-04 06:32:01 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第126次, 300s后重连)
+2026-06-04 06:32:01 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第126次, 300s后重连)
+2026-06-04 06:37:02 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第127次, 300s后重连)
+2026-06-04 06:37:02 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第127次, 300s后重连)
+2026-06-04 06:37:02 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第127次, 300s后重连)
+2026-06-04 06:42:03 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第128次, 300s后重连)
+2026-06-04 06:42:03 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第128次, 300s后重连)
+2026-06-04 06:42:03 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第128次, 300s后重连)
+2026-06-04 06:47:04 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第129次, 300s后重连)
+2026-06-04 06:47:04 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第129次, 300s后重连)
+2026-06-04 06:47:04 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第129次, 300s后重连)
+2026-06-04 06:52:05 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第130次, 300s后重连)
+2026-06-04 06:52:05 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第130次, 300s后重连)
+2026-06-04 06:52:05 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第130次, 300s后重连)
+2026-06-04 06:57:06 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第131次, 300s后重连)
+2026-06-04 06:57:06 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第131次, 300s后重连)
+2026-06-04 06:57:06 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第131次, 300s后重连)
+2026-06-04 07:02:07 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第132次, 300s后重连)
+2026-06-04 07:02:07 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第132次, 300s后重连)
+2026-06-04 07:02:07 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第132次, 300s后重连)
+2026-06-04 07:07:08 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第133次, 300s后重连)
+2026-06-04 07:07:08 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第133次, 300s后重连)
+2026-06-04 07:07:08 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第133次, 300s后重连)
+2026-06-04 07:12:09 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第134次, 300s后重连)
+2026-06-04 07:12:09 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第134次, 300s后重连)
+2026-06-04 07:12:09 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第134次, 300s后重连)
+2026-06-04 07:17:10 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第135次, 300s后重连)
+2026-06-04 07:17:10 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第135次, 300s后重连)
+2026-06-04 07:17:10 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第135次, 300s后重连)
+2026-06-04 07:22:11 [ERROR] scripts.l2_client: l2api [Order] 连接失败: timed out (第136次, 300s后重连)
+2026-06-04 07:22:11 [ERROR] scripts.l2_client: l2api [Tran] 连接失败: timed out (第136次, 300s后重连)
+2026-06-04 07:22:11 [ERROR] scripts.l2_client: l2api [Market] 连接失败: timed out (第136次, 300s后重连)
