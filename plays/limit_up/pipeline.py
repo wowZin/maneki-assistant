@@ -435,17 +435,31 @@ def push_feishu(results):
 
     # 推送筛选 (Top5，阈值30，按涨幅+情绪排序)
     THRESHOLD = 30
+
+    # 同日去重：已推送过的股票不再重复推送
+    pushed_codes_today = set()
+    pushed_dir = DATA_DIR / "pushed"
+    today_prefix = datetime.now().strftime("%Y%m%d")
+    if pushed_dir.exists():
+        for pf in pushed_dir.glob(f"{today_prefix}_*.json"):
+            try:
+                for item in json.loads(pf.read_text()):
+                    if isinstance(item, dict) and "code" in item:
+                        pushed_codes_today.add(item["code"])
+            except Exception:
+                pass
+
     above_threshold = sorted(
-        [r for r in results if r.get('total', 0) >= THRESHOLD],
+        [r for r in results if r.get('total', 0) >= THRESHOLD and r.get('code') not in pushed_codes_today],
         key=lambda x: x.get('pct_chg', 0) + x.get('scores', {}).get('sentiment', 0) / 100,
         reverse=True
     )[:5]
     if above_threshold:
         push_list = above_threshold
-        print(f"  推送池: {len(above_threshold)}只(综合评级>={THRESHOLD}, 按涨幅+情绪Top5)")
+        print(f"  推送池: {len(above_threshold)}只(综合评级>={THRESHOLD}, 按涨幅+情绪Top5{' 已去重' if pushed_codes_today else ''})")
     else:
         push_list = []
-        print(f"  无>={THRESHOLD}评级股票，不推送")
+        print(f"  无>={THRESHOLD}评级股票，不推送 (已推{pushed_codes_today}跳过)")
 
     if not push_list:
         print("  无可推送股票")
