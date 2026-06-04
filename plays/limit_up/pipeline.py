@@ -418,28 +418,31 @@ def push_feishu(results):
     """发送飞书卡片
 
     推送规则：
-    - 综合评级>=35(⭐⭐⭐)的股票按总分降序取前3只推送
-    - 如果没有>=35的股票，不推送
+    - 综合评级>=30的股票按涨幅+情绪排序取前5只推送
+    - 排序键: pct_chg + sentiment/100 (涨幅优先，情绪打破平局)
+    - 如果没有>=30的股票，不推送
     - 推送记录保存到 data/pushed/ 目录，供复盘使用
     """
     import requests
 
     def _stars(total):
-        """综合评级: >=55 ⭐⭐⭐⭐⭐  >=45 ⭐⭐⭐⭐  >=35 ⭐⭐⭐"""
+        """综合评级: >=55 ⭐⭐⭐⭐⭐  >=45 ⭐⭐⭐⭐  >=35 ⭐⭐⭐  >=30 ⭐⭐"""
         if total >= 55: return "⭐ ⭐ ⭐ ⭐ ⭐"  # noqa: E701
         if total >= 45: return "⭐ ⭐ ⭐ ⭐"  # noqa: E701
         if total >= 35: return "⭐ ⭐ ⭐"  # noqa: E701
+        if total >= 30: return "⭐ ⭐"  # noqa: E701
         return ""
 
-    # 推送筛选 (加权Top3择优，阈值35)
-    THRESHOLD = 35
+    # 推送筛选 (Top5，阈值30，按涨幅+情绪排序)
+    THRESHOLD = 30
     above_threshold = sorted(
         [r for r in results if r.get('total', 0) >= THRESHOLD],
-        key=lambda x: x.get('total', 0), reverse=True
-    )[:3]
+        key=lambda x: x.get('pct_chg', 0) + x.get('scores', {}).get('sentiment', 0) / 100,
+        reverse=True
+    )[:5]
     if above_threshold:
         push_list = above_threshold
-        print(f"  推送池: {len(above_threshold)}只(综合评级>={THRESHOLD}前3)")
+        print(f"  推送池: {len(above_threshold)}只(综合评级>={THRESHOLD}, 按涨幅+情绪Top5)")
     else:
         push_list = []
         print(f"  无>={THRESHOLD}评级股票，不推送")
@@ -466,7 +469,7 @@ def push_feishu(results):
     card = {
         "config": {"wide_screen_mode": True},
         "header": {
-            "title": {"tag": "plain_text", "content": f"{feishu_title_prefix()}涨停预测信号 ({datetime.now().strftime('%Y-%m-%d %H:%M')})"},
+            "title": {"tag": "plain_text", "content": f"{feishu_title_prefix()}涨停预测 Top5 ({datetime.now().strftime('%H:%M')})"},
             "template": "blue"
         },
         "elements": []
@@ -475,12 +478,13 @@ def push_feishu(results):
     for r in push_list:
         s = r.get('scores', {})
         stars = _stars(r['total'])
+        pct = r.get('pct_chg', 0)
         element = {
             "tag": "div",
             "text": {
                 "tag": "lark_md",
-                "content": f"**{r['code']} {r['name']}** {stars}\n"
-                          f"综合评分:{r['total']:.1f}  基本面:{s.get('fundamental',0):.0f} 技术面:{s.get('technical',0):.0f} 资金面:{s.get('fundflow',0):.0f} 情绪面:{s.get('sentiment',0):.0f} 短线:{s.get('shortterm',0):.0f}"
+                "content": f"**{r['code']} {r['name']}** {stars} 涨幅{pct:.1f}%\n"
+                          f"综合评分:{r['total']:.1f}  情绪面:{s.get('sentiment',0):.0f} 资金面:{s.get('fundflow',0):.0f} 基本面:{s.get('fundamental',0):.0f}"
             }
         }
         card["elements"].append(element)
