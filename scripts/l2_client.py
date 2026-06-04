@@ -290,6 +290,19 @@ class L2Client:
         self._cmd_queues: dict[int, queue.Queue] = {}
         self.debug = False  # 调试模式: 打印原始数据包
 
+        # ── 健康状态追踪 ──
+        # {port: {"connected_at": float|None, "last_data_at": float|None,
+        #         "reconnect_times": list[float], "connected": bool}}
+        self._channel_state: dict[int, dict] = {}
+        self._health_lock = threading.Lock()
+        for port in PORT_TYPE_MAP:
+            self._channel_state[port] = {
+                "connected_at": None,
+                "last_data_at": None,
+                "reconnect_times": [],
+                "connected": False,
+            }
+
     # ---- 生命周期 ----
 
     def start(self):
@@ -315,6 +328,96 @@ class L2Client:
             t.join(timeout=5)
         self._threads.clear()
         logger.info("l2api 已停止")
+
+    # ---- 健康检测 ----
+
+    def _on_channel_connected(self, port: int):
+        """记录通道连接成功（由 _recv_loop 调用）"""
+        now = time.time()
+        with self._health_lock:
+            state = self._channel_state[port]
+            state["connected_at"] = now
+            state["connected"] = True
+            # 清理超过 120s 的旧重连记录
+            state["reconnect_times"] = [
+                t for t in state["reconnect_times"] if now - t < 120
+            ]
+
+    def _on_channel_disconnected(self, port: int):
+        """记录通道断开（由 _recv_loop 调用）"""
+        now = time.time()
+        with self._health_lock:
+            state = self._channel_state[port]
+            state["connected"] = False
+            state["reconnect_times"].append(now)
+            # 清理超过 120s 的旧重连记录
+            state["reconnect_times"] = [
+                t for t in state["reconnect_times"] if now - t < 120
+            ]
+
+    def _on_channel_data(self, port: int):
+        """记录通道收到数据（由 _recv_loop 调用）"""
+        now = time.time()
+        with self._health_lock:
+            self._channel_state[port]["last_data_at"] = now
+
+    def is_healthy(self) -> bool:
+        """检查 L2 连接是否健康。
+
+        健康条件：至少有一个通道满足以下全部条件：
+        - 已连接
+        - 最近 60s 内重连次数 < 3（非震荡）
+        - 最近 30s 内有数据到达（或处于初始启动窗口：连接 <20s 且重连 <2 次）
+
+        所有通道均不健康时返回 False。
+        """
+        now = time.time()
+        with self._health_lock:
+            for port, state in self._channel_state.items():
+                recent_reconnects = sum(
+                    1 for t in state["reconnect_times"] if now - t < 60
+                )
+                last_data_age = (
+                    now - state["last_data_at"] if state["last_data_at"] else 9999
+                )
+                connected_age = (
+                    now - state["connected_at"] if state["connected_at"] else 9999
+                )
+
+                # 震荡检测：60s 内重连 >=3 次 → 不健康
+                if recent_reconnects >= 3:
+                    continue
+
+                # 数据超时检测：30s 无数据
+                if last_data_age > 30:
+                    # 初始启动窗口：连接 <20s 且重连 <2 → 放行
+                    if connected_age < 20 and recent_reconnects < 2:
+                        return True
+                    continue
+
+                # 通道健康
+                return True
+
+        return False
+
+    def health_summary(self) -> dict:
+        """返回各通道健康状态摘要（供日志/调试）"""
+        now = time.time()
+        channels = {}
+        with self._health_lock:
+            for port, state in self._channel_state.items():
+                type_name = PORT_TYPE_MAP.get(port, str(port))
+                channels[type_name] = {
+                    "connected": state["connected"],
+                    "last_data_age_s": (
+                        round(now - state["last_data_at"], 1)
+                        if state["last_data_at"] else None
+                    ),
+                    "recent_reconnects": sum(
+                        1 for t in state["reconnect_times"] if now - t < 60
+                    ),
+                }
+        return {"healthy": self.is_healthy(), "channels": channels}
 
     # ---- 订阅管理 ----
 
@@ -393,12 +496,14 @@ class L2Client:
             logger.error(f"l2api [{data_type}] 未找到命令队列，线程退出")
             return
 
+        consecutive_failures = 0
         while self._running:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(1)
             try:
                 sock.connect((self.host, port))
                 logger.info(f"l2api [{data_type}] 已连接 {self.host}:{port}")
+                self._on_channel_connected(port)
 
                 # 登录
                 sock.sendall(_cmd_login(self.account, self.password))
@@ -439,6 +544,7 @@ class L2Client:
                             break
                         last_recv = time.time()
                         self._process_data(data_type, data)
+                        self._on_channel_data(port)
                     except socket.timeout:
                         continue
                     except Exception as e:
@@ -446,16 +552,21 @@ class L2Client:
                         break
 
             except Exception as e:
-                logger.error(f"l2api [{data_type}] 连接失败: {e}")
+                consecutive_failures += 1
+                backoff = min(RECONNECT_DELAY * (2 ** (consecutive_failures - 1)), 300)
+                logger.error(f"l2api [{data_type}] 连接失败: {e} (第{consecutive_failures}次, {backoff}s后重连)")
+            else:
+                consecutive_failures = 0
             finally:
+                self._on_channel_disconnected(port)
                 try:
                     sock.close()
                 except Exception:
                     pass
 
             if self._running:
-                logger.info(f"l2api [{data_type}] {RECONNECT_DELAY}s 后重连...")
-                time.sleep(RECONNECT_DELAY)
+                sleep_for = min(RECONNECT_DELAY * (2 ** (consecutive_failures - 1)), 300) if consecutive_failures > 0 else RECONNECT_DELAY
+                time.sleep(sleep_for)
 
         logger.info(f"l2api [{data_type}] 线程退出")
 

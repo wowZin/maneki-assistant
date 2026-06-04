@@ -400,6 +400,20 @@ def score_sentiment(code):
 
 
 # ===== 6. 飞书推送 =====
+def _get_feishu_token():
+    """获取飞书 tenant_access_token"""
+    import requests
+    resp = requests.post(
+        "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal",
+        json={
+            "app_id": CONFIG["FEISHU_APP_ID"],
+            "app_secret": CONFIG["FEISHU_APP_SECRET"]
+        }
+    )
+    data = resp.json()
+    return data.get("tenant_access_token")
+
+
 def push_feishu(results):
     """发送飞书卡片
 
@@ -442,16 +456,7 @@ def push_feishu(results):
         json.dump(push_list, f, ensure_ascii=False, indent=2)
     print(f"  推送记录已保存: {pushed_file}")
 
-    # 获取token
-    resp = requests.post(
-        "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal",
-        json={
-            "app_id": CONFIG["FEISHU_APP_ID"],
-            "app_secret": CONFIG["FEISHU_APP_SECRET"]
-        }
-    )
-    _feishu_resp = resp.json()
-    token = _feishu_resp.get("tenant_access_token")
+    token = _get_feishu_token()
 
     if not token:
         print("飞书token获取失败")
@@ -615,12 +620,13 @@ def main():
     parser = argparse.ArgumentParser(description="涨停预测流程")
     parser.add_argument("--from-file", help="从已有信号文件加载", default=None)
     parser.add_argument("--top", type=int, default=50, help="分析前N只股票（默认50）")
+    parser.add_argument("--no-l2", action="store_true", help="跳过L2初始化（用于开盘早期无L2扫描）")
     args = parser.parse_args()
 
     clear_tushare_cache()
 
     # 数据源预检：关键源异常时阻塞执行，避免基于错误数据决策
-    from scripts.health_check import preflight_check  # noqa: E402
+    from scripts.health_check import preflight_check, _send_alert_sync  # noqa: E402
     if not preflight_check():
         print("[预检] 关键数据源异常，阻塞执行。详情见 data/health_state.json")
         _write_empty_result("预检阻断: 关键数据源不可用")
@@ -670,9 +676,27 @@ def main():
             except Exception:
                 pass
 
-    # 1.6 l2api 启动
+    # L2 健康告警（当日仅发一次，避免重复）
+    def _alert_l2(client):
+        flag = DATA_DIR / "analysis" / f".l2_alerted_{today_str}"
+        if flag.exists():
+            return
+        flag.touch()
+        hs = client.health_summary()
+        ch_info = hs.get("channels", {})
+        lines = [f"⚠️ L2 实时数据异常 ({datetime.now().strftime('%H:%M')})", ""]
+        for ch_name, st in ch_info.items():
+            data_age = f"{st['last_data_age_s']}s" if st.get("last_data_age_s") else "无数据"
+            lines.append(f"  {ch_name}: 连接={'✅' if st.get('connected') else '❌'} "
+                         f"数据={data_age} 重连={st.get('recent_reconnects', 0)}次")
+        lines.append("")
+        lines.append("→ 观测缩减至15s，评分不受影响")
+        _send_alert_sync("\n".join(lines))
+
+    # 1.6 l2api 启动（--no-l2 模式下跳过）
     l2api = None
-    if CONFIG.get("L2API_ENABLED", "").lower() == "true":
+    l2_unhealthy = False  # 标记L2是否不健康，供观测循环使用
+    if CONFIG.get("L2API_ENABLED", "").lower() == "true" and not args.no_l2:
         from scripts.l2_client import get_client
         account = CONFIG.get("L2API_ACCOUNT", "")
         password = CONFIG.get("L2API_PASSWORD", "")
@@ -682,10 +706,24 @@ def main():
                 l2api = get_client(account=account, password=password)
                 if not l2api._running:
                     l2api.start()
-                print("  l2api 已就绪")
+                # 快速健康评估：等待初始连接稳定
+                time.sleep(3)
+                if l2api.is_healthy():
+                    print("  l2api 已就绪")
+                else:
+                    hs = l2api.health_summary()
+                    print(f"  l2api 启动但连接不稳定: {hs}")
+                    print(f"  → 批次观测将缩减到15s，评分不受影响")
+                    l2_unhealthy = True
+                    # 飞书告警（当日首次，复用健康检查通道 FEISHU_ALERT_CHAT_ID）
+                    _alert_l2(l2api)
             except Exception as e:
                 print(f"  l2api 启动失败: {e}")
                 l2api = None
+    elif args.no_l2:
+        print("\n[1.6/5] l2api 已跳过 (--no-l2 模式)")
+    else:
+        print("\n[1.6/5] l2api 未启用")
 
     # 1.7 涨停相关性预排
     print("\n[1.7/5] 涨停相关性预排...")
@@ -707,11 +745,23 @@ def main():
         print(f"{'='*40}")
 
         if l2api:
+            # 健康门控：L2 不稳定时缩减观测，减少超时风险
+            obs = OBSERVE_SECONDS
+            if not l2api.is_healthy():
+                obs = 15
+                print(f"  [l2api] ⚠️ L2连接不健康，观测缩减为{obs}s (原{OBSERVE_SECONDS}s)")
+            else:
+                print(f"  [l2api] L2连接健康，观测{obs}s")
+
             l2api.sync_subscriptions(codes)
-            print(f"  [l2api] 订阅完成, 观测{OBSERVE_SECONDS}s...")
+            print(f"  [l2api] 订阅完成, 开始观测...")
             t0 = time.time()
-            while time.time() - t0 < OBSERVE_SECONDS:
+            while time.time() - t0 < obs:
                 time.sleep(1)
+                # 早期退出：L2 在观测中途断开，已观察 >10s 后允许提前结束
+                if obs > 15 and not l2api.is_healthy() and time.time() - t0 > 10:
+                    print(f"  [l2api] 连接异常，提前结束观测 (已观测{time.time()-t0:.0f}s)")
+                    break
             ready = sum(1 for c in codes if l2api.is_ready(c))
             print(f"  [l2api] 观测完成, 就绪{ready}/{len(codes)}")
 
