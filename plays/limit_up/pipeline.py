@@ -449,17 +449,36 @@ def push_feishu(results):
             except Exception:
                 pass
 
+    # 午后门槛：情绪面 < 25 的股票不推（午后高位横盘≠冲板）
+    is_afternoon = datetime.now().hour >= 13
+    pm_filtered = 0
+
+    def _pass_filter(r):
+        nonlocal pm_filtered
+        if r.get('total', 0) < THRESHOLD: return False
+        if r.get('code') in pushed_codes_today: return False
+        if is_afternoon and r.get('scores', {}).get('sentiment', 0) < 25:
+            pm_filtered += 1
+            return False
+        return True
+
     above_threshold = sorted(
-        [r for r in results if r.get('total', 0) >= THRESHOLD and r.get('code') not in pushed_codes_today],
+        [r for r in results if _pass_filter(r)],
         key=lambda x: x.get('pct_chg', 0) + x.get('scores', {}).get('sentiment', 0) / 100,
         reverse=True
     )[:5]
     if above_threshold:
         push_list = above_threshold
-        print(f"  推送池: {len(above_threshold)}只(综合评级>={THRESHOLD}, 按涨幅+情绪Top5{' 已去重' if pushed_codes_today else ''})")
+        extra = []
+        if pushed_codes_today: extra.append("已去重")
+        if pm_filtered: extra.append(f"午后情绪过滤{pm_filtered}只")
+        print(f"  推送池: {len(above_threshold)}只(综合评级>={THRESHOLD}, 按涨幅+情绪Top5{' ' + ', '.join(extra) if extra else ''})")
     else:
         push_list = []
-        print(f"  无>={THRESHOLD}评级股票，不推送 (已推{pushed_codes_today}跳过)")
+        extra = []
+        if pushed_codes_today: extra.append(f"已推{len(pushed_codes_today)}只")
+        if pm_filtered: extra.append(f"午后情绪不足{pm_filtered}只")
+        print(f"  无>={THRESHOLD}评级股票，不推送 ({', '.join(extra) if extra else '无候选'})")
 
     if not push_list:
         print("  无可推送股票")
