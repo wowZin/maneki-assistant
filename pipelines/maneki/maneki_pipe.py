@@ -392,126 +392,140 @@ async def main():
             return PermissionResultAllow()
         return PermissionResultDeny(message=f"Tool {tool_name} not allowed")
 
-    options = ClaudeCodeOptions(
-        allowed_tools=allowed_tools,
-        max_turns=claude_cfg.get("max_turns"),
-        model=claude_cfg.get("model"),
-        append_system_prompt=system_prompt,
-        can_use_tool=auto_approve,
-        resume=progress.session_id,
-        mcp_servers={"feishu": feishu_mcp},
-    )
+    poll = config.get("poll_interval", 2.0)
 
-    async with ClaudeSDKClient(options=options) as client:
-        if progress.session_id:
-            log.info("resuming session: %s", progress.session_id[:12])
+    while True:
+        # 每次循环重新读取 progress（超时后 session_id 可能已重置）
+        progress = Progress()
+        options = ClaudeCodeOptions(
+            allowed_tools=allowed_tools,
+            max_turns=claude_cfg.get("max_turns"),
+            model=claude_cfg.get("model"),
+            append_system_prompt=system_prompt,
+            can_use_tool=auto_approve,
+            resume=progress.session_id,
+            mcp_servers={"feishu": feishu_mcp},
+        )
 
-        poll = config.get("poll_interval", 2.0)
-        log.info("maneki pipe started, polling inbox every %.1fs", poll)
+        async with ClaudeSDKClient(options=options) as client:
+            if progress.session_id:
+                log.info("resuming session: %s", progress.session_id[:12])
+            log.info("maneki pipe started, polling inbox every %.1fs", poll)
 
-        while True:
-            # 每次循环刷新已知群聊（支持运行时新增）
-            for f in INBOX_DIR.glob("*.jsonl"):
-                known_chats.add(f.stem)
-            for chat_id in list(known_chats):
-                pos = progress.positions.get(chat_id, 0)
-                # 如果存档位置超过文件大小，说明 progress 已过期
-                # 将 position 重置到当前文件末尾（跳过已有内容），而不是回退到 0
-                # 避免因外部清空 inbox 导致的无限重放循环
-                fpath = INBOX_DIR / f"{chat_id}.jsonl"
-                if pos > 0 and fpath.exists() and fpath.stat().st_size < pos:
-                    old_pos = pos
-                    pos = 0  # 文件被替换过（飞书Bot新建了同名文件），从头读取
-                    log.info("file replaced for %s, reset position from %d to 0",
-                             chat_id, old_pos)
-                messages, new_pos = read_inbox(chat_id, pos)
+            restart_client = False
 
-                # 🐛 FIX: 保存 position 必须在处理消息之前，
-                # 否则 Claude 处理期间下一轮 poll 会重复读取同一条消息，造成无限回复
-                if new_pos > pos:
-                    progress.save(
-                        session_id=progress.session_id,
-                        positions={chat_id: new_pos, **progress.positions},
-                    )
+            while not restart_client:
+                # 每次循环刷新已知群聊（支持运行时新增）
+                for f in INBOX_DIR.glob("*.jsonl"):
+                    known_chats.add(f.stem)
+                for chat_id in list(known_chats):
+                    pos = progress.positions.get(chat_id, 0)
+                    # 如果存档位置超过文件大小，说明 progress 已过期
+                    fpath = INBOX_DIR / f"{chat_id}.jsonl"
+                    if pos > 0 and fpath.exists() and fpath.stat().st_size < pos:
+                        old_pos = pos
+                        pos = 0  # 文件被替换过（飞书Bot新建了同名文件），从头读取
+                        log.info("file replaced for %s, reset position from %d to 0",
+                                 chat_id, old_pos)
+                    messages, new_pos = read_inbox(chat_id, pos)
 
-                for msg in messages:
-                    text = msg.get("text", "")
-                    sender = msg.get("sender", "unknown")
-                    message_id = msg.get("message_id", "")
-                    if not text:
-                        continue
-
-                    prompt = f"[chat_id:{chat_id}] [message_id:{message_id}] [{sender}] {text}"
-                    log.info("msg: %s", prompt[:120])
-                    log.info("query start: chat=%s turn=%s", chat_id, progress.session_id[:12] if progress.session_id else "new")
-
-                    await client.query(prompt)
-
-                    # 响应超时兜底：为 _collect 创建独立 task, 超时后 cancel
-                    async def _collect():
-                        turn_count = 0
-                        final_session_id = None
-                        try:
-                            async for message in client.receive_response():
-                                turn_count += 1
-                                msg_type = type(message).__name__
-                                if isinstance(message, AssistantMessage):
-                                    has_tool = any(
-                                        getattr(b, 'type', None) == "tool_use"
-                                        for b in (message.content or [])
-                                    )
-                                    texts = [
-                                        getattr(b, 'text', '')[:60]
-                                        for b in (message.content or [])
-                                        if hasattr(b, 'text')
-                                    ]
-                                    log.info("turn%d: AssistantMessage tools=%s text=%s",
-                                             turn_count, has_tool, texts[0] if texts else "")
-                                elif isinstance(message, ResultMessage):
-                                    if not message.is_error:
-                                        final_session_id = message.session_id
-                                        log.info("turn%d: ResultMessage OK turns=%d", turn_count, message.num_turns)
-                                    else:
-                                        log.error("turn%d: ResultMessage ERROR %s", turn_count, message.subtype)
-                                else:
-                                    log.info("turn%d: %s", turn_count, msg_type)
-                        except asyncio.CancelledError:
-                            log.warning("_collect cancelled (timeout)")
-                            raise
-                        return turn_count, final_session_id
-
-                    task = asyncio.create_task(_collect())
-                    done, pending = await asyncio.wait({task}, timeout=120)
-                    if pending:
-                        task.cancel()
-                        log.error("query timeout 120s for chat=%s, killing claude session", chat_id)
-                        # 放弃旧 session, 下次起新 session
+                    # 🐛 FIX: 保存 position 必须在处理消息之前，
+                    # 否则 Claude 处理期间下一轮 poll 会重复读取同一条消息，造成无限回复
+                    if new_pos > pos:
                         progress.save(
-                            session_id=None,
+                            session_id=progress.session_id,
                             positions={chat_id: new_pos, **progress.positions},
                         )
-                        # 尝试取消剩余 pending task
-                        for t in pending:
-                            t.cancel()
-                    else:
-                        turns, sid = task.result()
-                        if sid:
+
+                    for msg in messages:
+                        text = msg.get("text", "")
+                        sender = msg.get("sender", "unknown")
+                        message_id = msg.get("message_id", "")
+                        if not text:
+                            continue
+
+                        prompt = f"[chat_id:{chat_id}] [message_id:{message_id}] [{sender}] {text}"
+                        log.info("msg: %s", prompt[:120])
+                        log.info("query start: chat=%s turn=%s", chat_id, progress.session_id[:12] if progress.session_id else "new")
+
+                        await client.query(prompt)
+
+                        # 响应超时兜底：为 _collect 创建独立 task, 超时后 cancel + 重启 client
+                        async def _collect():
+                            turn_count = 0
+                            final_session_id = None
+                            try:
+                                async for message in client.receive_response():
+                                    turn_count += 1
+                                    msg_type = type(message).__name__
+                                    if isinstance(message, AssistantMessage):
+                                        has_tool = any(
+                                            getattr(b, 'type', None) == "tool_use"
+                                            for b in (message.content or [])
+                                        )
+                                        texts = [
+                                            getattr(b, 'text', '')[:60]
+                                            for b in (message.content or [])
+                                            if hasattr(b, 'text')
+                                        ]
+                                        log.info("turn%d: AssistantMessage tools=%s text=%s",
+                                                 turn_count, has_tool, texts[0] if texts else "")
+                                    elif isinstance(message, ResultMessage):
+                                        if not message.is_error:
+                                            final_session_id = message.session_id
+                                            log.info("turn%d: ResultMessage OK turns=%d", turn_count, message.num_turns)
+                                        else:
+                                            log.error("turn%d: ResultMessage ERROR %s", turn_count, message.subtype)
+                                    else:
+                                        log.info("turn%d: %s", turn_count, msg_type)
+                            except asyncio.CancelledError:
+                                log.warning("_collect cancelled (timeout)")
+                                raise
+                            return turn_count, final_session_id
+
+                        task = asyncio.create_task(_collect())
+                        done, pending = await asyncio.wait({task}, timeout=120)
+                        if pending:
+                            task.cancel()
+                            log.error("query timeout 120s for chat=%s, restarting claude", chat_id)
+                            # 放弃旧 session, 退出 context manager 杀死 claude 进程
                             progress.save(
-                                session_id=sid,
+                                session_id=None,
                                 positions={chat_id: new_pos, **progress.positions},
                             )
-                        log.info("query done: chat=%s turns=%d", chat_id, turns)
+                            restart_client = True
+                            break
+                        else:
+                            turns, sid = task.result()
+                            if sid:
+                                progress.save(
+                                    session_id=sid,
+                                    positions={chat_id: new_pos, **progress.positions},
+                                )
+                            log.info("query done: chat=%s turns=%d", chat_id, turns)
 
-            await asyncio.sleep(poll)
+                    if restart_client:
+                        break
 
-            # 清理已读完的 inbox 文件
-            for chat_id in list(known_chats):
-                pos = progress.positions.get(chat_id, 0)
-                if pos > 0:
-                    fpath = INBOX_DIR / f"{chat_id}.jsonl"
-                    if fpath.exists() and fpath.stat().st_size == pos:
-                        fpath.unlink()
-                        log.info("cleaned inbox for %s", chat_id)
+                if restart_client:
+                    break
+
+                await asyncio.sleep(poll)
+
+                # 清理已读完的 inbox 文件
+                for chat_id in list(known_chats):
+                    pos = progress.positions.get(chat_id, 0)
+                    if pos > 0:
+                        fpath = INBOX_DIR / f"{chat_id}.jsonl"
+                        if fpath.exists() and fpath.stat().st_size == pos:
+                            fpath.unlink()
+                            log.info("cleaned inbox for %s", chat_id)
+
+        if restart_client:
+            log.info("recreating Claude SDK client...")
+            continue  # 外层 while → 重新创建 client
+        else:
+            break  # 正常退出（不会发生）
 
 
 if __name__ == "__main__":

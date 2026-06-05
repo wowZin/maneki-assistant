@@ -62,7 +62,16 @@ async def feishu_callback(request: Request):
     message = event.get("event", {}).get("message", {})
     chat_id = message.get("chat_id", "")
     message_id = message.get("message_id", "")
+    chat_type = message.get("chat_type", "")
     content_raw = message.get("content", "{}")
+
+    # @检测: 群聊中非@机器人的消息不处理
+    if chat_type == "group":
+        mentions = message.get("mentions", [])
+        if not mentions:
+            logger.debug("skip non-at message in group chat: %s", message_id[:12])
+            return JSONResponse({"code": 0})
+    # p2p 私聊: 始终处理
 
     try:
         content = json.loads(content_raw)
