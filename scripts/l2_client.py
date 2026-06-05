@@ -17,6 +17,8 @@ TCP长连接, 3通道推送: Market(行情快照+十档盘口), Order(逐笔委�
   client.stop()                                # 断开连接
 """
 
+import json
+import os
 import queue
 import socket
 import threading
@@ -611,16 +613,156 @@ class L2Client:
 # ============================================================
 # 全局单例
 # ============================================================
+# 本地代理客户端 — 当 l2_daemon 运行时自动使用, 避免多进程互踢
+# ============================================================
 
-_client: Optional[L2Client] = None
+L2_DAEMON_HOST = "127.0.0.1"
+L2_DAEMON_PORT = 18999
+L2_DAEMON_PID_FILE = "/root/maneki-agent/plays/limit_up/data/.l2_daemon.pid"
 
-def get_client(account: str = "", password: str = "") -> L2Client:
+
+class L2ProxyClient:
+    """L2 代理客户端 — 连接 l2_daemon 进程, 复用其 L2 连接。
+
+    与 L2Client 接口兼容, pipeline/watchdog 无需修改即可透明使用。
+    """
+
+    def __init__(self, host=L2_DAEMON_HOST, port=L2_DAEMON_PORT):
+        self._host = host
+        self._port = port
+        self._sock = None
+        self._lock = threading.Lock()
+        self._running = False
+        self.cache = _ProxyCache()
+        self.kline = _ProxyKline()
+        self.debug = False
+
+    def start(self):
+        if self._running: return
+        self._running = True
+
+    def stop(self):
+        self._running = False
+        with self._lock:
+            if self._sock:
+                try: self._sock.close()
+                except: pass
+                self._sock = None
+
+    def _send(self, cmd: str) -> str:
+        with self._lock:
+            if self._sock is None:
+                self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self._sock.settimeout(3)
+                self._sock.connect((self._host, self._port))
+            try:
+                self._sock.sendall((cmd + "\n").encode())
+                buf = b""
+                while b"\n" not in buf:
+                    data = self._sock.recv(4096)
+                    if not data: raise ConnectionError("daemon disconnected")
+                    buf += data
+                return buf.split(b"\n", 1)[0].decode()
+            except Exception:
+                try: self._sock.close()
+                except: pass
+                self._sock = None
+                raise
+
+    def subscribe(self, codes: list[str]):
+        if not codes: return
+        self._send(f"SUB {' '.join(codes)}")
+        self.cache._subbed.update(normalize_code(c) for c in codes)
+
+    def unsubscribe(self, codes: list[str]):
+        if not codes: return
+        self._send(f"UNSUB {' '.join(codes)}")
+        self.cache._subbed.difference_update(normalize_code(c) for c in codes)
+
+    def sync_subscriptions(self, codes: list[str]):
+        codes = [normalize_code(c) for c in codes]
+        target = set(codes)
+        current = self.cache.get_subscribed()
+        self.subscribe(list(target - current))
+        self.unsubscribe(list(current - target))
+
+    def get_market(self, code: str, max_age: float = 5.0):
+        try:
+            resp = self._send(f"MARKET {normalize_code(code)}")
+            if resp == "NULL": return None
+            return json.loads(resp)
+        except: return None
+
+    def get_vwap(self, code: str):
+        try: return float(self._send(f"VWAP {normalize_code(code)}"))
+        except: return None
+
+    def get_minute_kline(self, code: str, n: int = 60):
+        try: return json.loads(self._send(f"KLINE {normalize_code(code)} {n}"))
+        except: return []
+
+    def is_ready(self, code: str):
+        try: return self._send(f"IS_READY {normalize_code(code)}") == "1"
+        except: return False
+
+    def is_healthy(self):
+        try: return json.loads(self._send("HEALTH")).get("healthy", False)
+        except: return False
+
+    def health_summary(self):
+        try: return json.loads(self._send("HEALTH"))
+        except: return {"healthy": False, "channels": {}}
+
+
+class _ProxyCache:
+    def __init__(self): self._subbed: set[str] = set()
+    def get_subscribed(self): return self._subbed
+    def set_subscribed(self, s): self._subbed = s
+
+
+class _ProxyKline:
+    def get_bars(self, *args, **kwargs): return []
+    def get_vwap(self, *args, **kwargs): return None
+
+
+# ── 全局单例 ──
+_client: Optional[L2Client | L2ProxyClient] = None
+_daemon_checked: bool = False
+
+
+def _check_daemon() -> bool:
+    """检查 L2 daemon 是否运行"""
+    global _daemon_checked
+    if _daemon_checked: return isinstance(_client, L2ProxyClient)
+    _daemon_checked = True
+    pid_file = Path(L2_DAEMON_PID_FILE)
+    if not pid_file.exists(): return False
+    try:
+        pid = int(pid_file.read_text().strip())
+        os.kill(pid, 0)
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(1)
+        s.connect((L2_DAEMON_HOST, L2_DAEMON_PORT))
+        s.sendall(b"PING\n")
+        resp = s.recv(1024)
+        s.close()
+        return b"PONG" in resp
+    except: return False
+
+
+def get_client(account: str = "", password: str = "") -> L2Client | L2ProxyClient:
     global _client
     if _client is None:
-        if not account or not password:
-            raise ValueError("首次初始化需要提供 account 和 password")
-        _client = L2Client(account=account, password=password)
+        if _check_daemon():
+            logger.info("l2api 检测到 daemon, 使用代理连接")
+            _client = L2ProxyClient()
+            _client.start()
+        else:
+            if not account or not password:
+                raise ValueError("首次初始化需要提供 account 和 password")
+            _client = L2Client(account=account, password=password)
     return _client
+
 
 def has_client() -> bool:
     return _client is not None
