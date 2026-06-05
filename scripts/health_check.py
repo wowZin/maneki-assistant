@@ -15,8 +15,11 @@
 """
 
 import json
+import os
 import sys
 import time
+import socket
+import subprocess
 import logging
 import asyncio
 from pathlib import Path
@@ -466,12 +469,64 @@ def check_eastmoney_caches() -> list[HealthStatus]:
 
 
 # ═══════════════════════════════════════════════════════════
-# 3. Level2 TCP 巡检
+# 3. Level2 守护进程巡检 + 自动启动
 # ═══════════════════════════════════════════════════════════
+
+L2_DAEMON_PID = PROJECT_DIR / "plays" / "limit_up" / "data" / ".l2_daemon.pid"
+L2_DAEMON_HOST = "127.0.0.1"
+L2_DAEMON_PORT = 18999
+
+
+def _is_l2_hours() -> bool:
+    """L2 守护进程运行时段 (9:25-15:05, 工作日)"""
+    now = datetime.now()
+    hhmm = now.hour * 100 + now.minute
+    return now.weekday() < 5 and 925 <= hhmm <= 1505
+
+
+def _daemon_alive() -> bool:
+    """检查 PID 文件 + 进程存活 + TCP 端口响应"""
+    if not L2_DAEMON_PID.exists():
+        return False
+    try:
+        pid = int(L2_DAEMON_PID.read_text().strip())
+        os.kill(pid, 0)  # 进程存活?
+    except (ProcessLookupError, ValueError, OSError):
+        L2_DAEMON_PID.unlink(missing_ok=True)
+        return False
+    try:
+        s = socket.create_connection((L2_DAEMON_HOST, L2_DAEMON_PORT), timeout=2)
+        s.sendall(b"PING\n")
+        resp = s.recv(128)
+        s.close()
+        return resp.strip() == b"PONG"
+    except Exception:
+        return False
+
+
+def _start_daemon() -> tuple[bool, str]:
+    """启动 L2 守护进程, 返回 (成功?, 消息)"""
+    try:
+        script = str(PROJECT_DIR / "scripts" / "l2_daemon.py")
+        r = subprocess.run(
+            [sys.executable, script, "--daemon"],
+            cwd=str(PROJECT_DIR),
+            capture_output=True, timeout=15,
+        )
+        time.sleep(2)  # 等待进程初始化
+        alive = _daemon_alive()
+        if alive:
+            return True, f"已自动启动(PID={L2_DAEMON_PID.read_text().strip()})"
+        else:
+            out = (r.stdout or b"").decode().strip()
+            err = (r.stderr or b"").decode().strip()
+            return False, f"启动后验证失败: {out} {err}".strip()
+    except Exception as e:
+        return False, f"启动异常: {e}"
 
 
 def check_l2_connection() -> list[HealthStatus]:
-    """检查 Level2 TCP 连接状态和数据到达"""
+    """检查 L2 守护进程状态, 未运行时自动启动 (交易时段)"""
     results = []
     t0 = time.time()
 
@@ -488,59 +543,46 @@ def check_l2_connection() -> list[HealthStatus]:
             ))
             return results
 
-        from scripts.l2_client import has_client, get_client
+        # ── 守护进程存活检查 ──
+        alive = _daemon_alive()
 
-        if not has_client():
+        if not alive and _is_l2_hours():
+            ok, msg = _start_daemon()
+            results.append(HealthStatus(
+                source="l2:connection",
+                severity=Severity.OK if ok else Severity.WARNING,
+                message=msg,
+                latency_ms=(time.time() - t0) * 1000,
+            ))
+            alive = ok
+        elif not alive:
             results.append(HealthStatus(
                 source="l2:connection",
                 severity=Severity.OK,
-                message="未初始化(非pipeline上下文,跳过)",
+                message="未运行(非交易时段)",
                 latency_ms=(time.time() - t0) * 1000,
             ))
-            return results
-
-        client = get_client()
-        running = client._running
-        subscribed = client.cache.get_subscribed()
-
-        results.append(HealthStatus(
-            source="l2:connection",
-            severity=Severity.OK if running else Severity.WARNING,
-            message=f"{'运行中' if running else '已停止'}, 订阅{len(subscribed)}只",
-            detail={"running": running, "subscribed_count": len(subscribed)},
-            latency_ms=(time.time() - t0) * 1000,
-        ))
-
-        # 数据就绪检测
-        if running and subscribed:
-            stale_count = 0
-            sample_sym = None
-            for sym in list(subscribed)[:5]:
-                mkt = client.get_market(sym)
-                if mkt is None:
-                    stale_count += 1
-                else:
-                    sample_sym = sym
-                    break
-
-            if stale_count == len(list(subscribed)[:5]):
+        else:
+            # 获取详细状态
+            try:
+                s = socket.create_connection((L2_DAEMON_HOST, L2_DAEMON_PORT), timeout=2)
+                s.sendall(b"HEALTH\n")
+                resp = s.recv(4096)
+                s.close()
+                detail = json.loads(resp.decode().strip())
+                sc = detail.get("subscribed_count", 0)
                 results.append(HealthStatus(
-                    source="l2:data",
-                    severity=Severity.WARNING if _is_market_hours() else Severity.OK,
-                    message=f"无数据到达(订阅{len(subscribed)}只, 抽样{min(5,len(subscribed))}只均无数据)"
-                    if _is_market_hours() else f"非交易时段(订阅{len(subscribed)}只)",
-                    detail={"subscribed": len(subscribed), "stale_sample": stale_count},
-                    latency_ms=(time.time() - t0) * 1000,
-                ))
-            elif sample_sym:
-                from scripts.l2_client import to_price
-                mkt = client.get_market(sample_sym)
-                last = to_price(mkt.get("last", "0")) if mkt else 0
-                results.append(HealthStatus(
-                    source="l2:data",
+                    source="l2:connection",
                     severity=Severity.OK,
-                    message=f"数据正常 ({sample_sym} last={last:.2f})",
-                    detail={"sample_symbol": sample_sym, "last_price": last},
+                    message=f"运行中, 订阅{sc}只",
+                    latency_ms=(time.time() - t0) * 1000,
+                    detail=detail,
+                ))
+            except Exception:
+                results.append(HealthStatus(
+                    source="l2:connection",
+                    severity=Severity.OK,
+                    message="运行中(状态查询异常)",
                     latency_ms=(time.time() - t0) * 1000,
                 ))
 

@@ -15,6 +15,7 @@ import json
 import os
 import sys
 import time
+import socket
 import threading
 import logging
 from datetime import datetime
@@ -29,7 +30,7 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
 from plays.watchdog.indicators import calc_all, check_trend, check_pullback, check_entry_score, check_exit_signal
-from scripts.l2_client import get_client, has_client, to_price, to_volume, normalize_code  # noqa: E402
+from scripts.l2_client import to_price, to_volume, normalize_code  # noqa: E402
 from scripts.tu_share import call_tushare  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,27 @@ logger = logging.getLogger(__name__)
 STATE_FILE = PROJECT_DIR / "plays" / "watchdog" / "data" / "state.json"
 SCAN_INTERVAL = 30  # 每30秒检查一次信号
 MAX_WATCH = 5       # 同时盯盘上限5只
+
+# ── L2 守护进程客户端 ──
+
+_DAEMON_HOST = "127.0.0.1"
+_DAEMON_PORT = 18999
+
+
+def _daemon_cmd(cmd: str, timeout: int = 5) -> str:
+    """向 L2 守护进程发送命令, 返回响应"""
+    s = socket.create_connection((_DAEMON_HOST, _DAEMON_PORT), timeout=timeout)
+    s.sendall((cmd + "\n").encode())
+    resp = s.recv(8192).decode().strip()
+    s.close()
+    return resp
+
+
+def _daemon_alive() -> bool:
+    try:
+        return _daemon_cmd("PING", timeout=2) == "PONG"
+    except Exception:
+        return False
 
 # ---- 飞书推送 ----
 
@@ -155,10 +177,18 @@ class WatchdogEngine:
     def start(self):
         if self._running:
             return
-        if not has_client():
-            logger.warning("l2api 未启动，盯盘引擎无法工作")
+        if not _daemon_alive():
+            logger.warning("L2 守护进程未运行，盯盘引擎无法工作")
             return
         self._running = True
+        # 同步订阅历史标的
+        codes = list(self._states.keys())
+        if codes and _daemon_alive():
+            try:
+                _daemon_cmd(f"SUB {' '.join(codes)}")
+                logger.info(f"已同步订阅 {len(codes)} 只历史标的")
+            except Exception as e:
+                logger.warning(f"订阅历史标的失败: {e}")
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
         logger.info("盯盘引擎已启动")
@@ -206,13 +236,12 @@ class WatchdogEngine:
                 msgs.append(f"开始盯盘 {name}({code})")
             self._save_state()
 
-            # 同步l2api订阅（仅在daemon进程内有效，外部进程无client时跳过）
-            if has_client():
+            # 同步 L2 守护进程订阅
+            if _daemon_alive():
                 try:
-                    client = get_client()
-                    client.subscribe(list(self._states.keys()))
+                    _daemon_cmd(f"SUB {' '.join(self._states.keys())}")
                 except Exception as e:
-                    logger.warning(f"l2api订阅同步失败: {e}")
+                    logger.warning(f"L2守护进程订阅失败: {e}")
 
         # 为新增股票推送初始状态
         for code in codes:
@@ -240,13 +269,12 @@ class WatchdogEngine:
                 else:
                     msgs.append(f"{code} 未在盯盘中")
             self._save_state()
-            # 同步l2api取消订阅（仅在daemon进程内有效）
-            if has_client():
+            # 同步 L2 守护进程取消订阅
+            if _daemon_alive() and codes:
                 try:
-                    client = get_client()
-                    client.unsubscribe(list(codes))
+                    _daemon_cmd(f"UNSUB {' '.join(codes)}")
                 except Exception as e:
-                    logger.warning(f"l2api取消订阅失败: {e}")
+                    logger.warning(f"L2守护进程取消订阅失败: {e}")
         return "\n".join(msgs)
 
     def clear_all(self) -> str:
@@ -255,12 +283,11 @@ class WatchdogEngine:
             codes = list(self._states.keys())
             self._states.clear()
             self._save_state()
-            if has_client():
+            if _daemon_alive() and codes:
                 try:
-                    client = get_client()
-                    client.unsubscribe(codes)
+                    _daemon_cmd(f"UNSUB {' '.join(codes)}")
                 except Exception as e:
-                    logger.warning(f"l2api取消订阅失败: {e}")
+                    logger.warning(f"L2守护进程取消订阅失败: {e}")
         return f"已清空{count}只盯盘标的"
 
     def list_all(self) -> str:
@@ -317,7 +344,6 @@ class WatchdogEngine:
         logger.info("盯盘循环退出")
 
     def _scan_round(self, codes: list[str]):
-        client = get_client()
         today = datetime.now().strftime("%Y%m%d")
         now = datetime.now()
 
@@ -346,16 +372,23 @@ class WatchdogEngine:
                 logger.debug(f"  {code} 无指标数据，跳过")
                 continue
 
-            # 获取实时数据
-            market = client.get_market(code, max_age=30)
-            if not market:
-                # 每20轮才log一次，避免刷屏
+            # 通过守护进程获取实时数据
+            market_resp = _daemon_cmd(f"MARKET {code}")
+            if market_resp == "NULL":
                 if self._scan_count % 20 == 1:
-                    logger.info(f"  {code} 无实时行情(l2api未就绪或数据过期)")
+                    logger.info(f"  {code} 无实时行情(L2未就绪)")
+                continue
+
+            try:
+                market = json.loads(market_resp)
+            except Exception:
+                if self._scan_count % 20 == 1:
+                    logger.info(f"  {code} 行情解析失败: {market_resp[:60]}")
                 continue
 
             last = to_price(market.get("last", "0"))
-            vwap_val = client.get_vwap(code)
+            vwap_resp = _daemon_cmd(f"VWAP {code}")
+            vwap_val = float(vwap_resp) if vwap_resp != "None" else 0.0
             # 用Market trade_volume作为日内成交量
             current_vol = to_volume(market.get("trade_volume", "0"))
 
@@ -629,16 +662,15 @@ def main():
         logger.error("未配置 L2API_ACCOUNT / L2API_PASSWORD，无法启动盯盘")
         sys.exit(1)
 
-    # 启动 l2api 长连接
-    from scripts.l2_client import get_client as _get_l2, has_client as _has_l2
-    logger.info("正在启动 l2api Level2 连接...")
-    try:
-        l2 = _get_l2(account=account, password=password)
-        if not l2._running:
-            l2.start()
-        logger.info("l2api 已就绪")
-    except Exception as e:
-        logger.error(f"l2api 启动失败: {e}")
+    # 等待 L2 守护进程就绪
+    logger.info("正在连接 L2 守护进程...")
+    for _ in range(30):  # 最多等30秒
+        if _daemon_alive():
+            logger.info("L2 守护进程已就绪")
+            break
+        time.sleep(1)
+    else:
+        logger.error("L2 守护进程未运行，请先通过 health_check --full 启动")
         sys.exit(1)
 
     # 获取并启动盯盘引擎
@@ -664,7 +696,6 @@ def main():
     except KeyboardInterrupt:
         logger.info("收到停止信号，正在关闭...")
         engine.stop()
-        l2.stop()
         logger.info("盯盘引擎已关闭")
 
 

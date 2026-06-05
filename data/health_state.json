@@ -3,7 +3,7 @@
     "active": false,
     "consecutive_failures": 0
   },
-  "last_ok_at": "2026-06-05T11:30:42.821372",
+  "last_ok_at": "2026-06-05T12:15:51.632996",
   "alert_history": [
     {
       "timestamp": "2026-06-02T14:15:34.533144",
@@ -3319,6 +3319,451 @@
           "latency_ms": 10959.229230880737,
           "detail": {},
           "checked_at": "2026-06-04T19:20:55.523821"
+        }
+      ],
+      "circuit_breaker_active": false
+    },
+    {
+      "timestamp": "2026-06-05T12:15:56.321309",
+      "overall": "OK",
+      "checks": [
+        {
+          "source": "tushare:daily",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3045.593500137329,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "000001.SZ"
+          },
+          "checked_at": "2026-06-05T12:15:59.428961"
+        },
+        {
+          "source": "tushare:daily_basic",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3064.5592212677,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "000001.SZ"
+          },
+          "checked_at": "2026-06-05T12:16:02.493571"
+        },
+        {
+          "source": "tushare:moneyflow",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3100.8009910583496,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "000001.SZ"
+          },
+          "checked_at": "2026-06-05T12:16:05.594442"
+        },
+        {
+          "source": "tushare:stk_factor_pro",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3053.0850887298584,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "000001.SZ"
+          },
+          "checked_at": "2026-06-05T12:16:08.647567"
+        },
+        {
+          "source": "tushare:limit_list_d",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3028.8243293762207,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "20260604"
+          },
+          "checked_at": "2026-06-05T12:16:11.676435"
+        },
+        {
+          "source": "tushare:trade_cal",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 2980.8030128479004,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "SSE"
+          },
+          "checked_at": "2026-06-05T12:16:14.657281"
+        },
+        {
+          "source": "tushare:stock_basic",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 2916.1715507507324,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "000001.SZ"
+          },
+          "checked_at": "2026-06-05T12:16:17.573500"
+        },
+        {
+          "source": "tushare:fina_indicator",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 2993.767023086548,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "000001.SZ"
+          },
+          "checked_at": "2026-06-05T12:16:20.567311"
+        },
+        {
+          "source": "tushare:balancesheet",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3102.595806121826,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "000001.SZ"
+          },
+          "checked_at": "2026-06-05T12:16:23.669950"
+        },
+        {
+          "source": "tushare:income",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 2993.603229522705,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "000001.SZ"
+          },
+          "checked_at": "2026-06-05T12:16:26.663595"
+        },
+        {
+          "source": "tushare:top_list",
+          "severity": "OK",
+          "message": "正常 (105条)",
+          "latency_ms": 3061.197519302368,
+          "detail": {
+            "items_count": 105,
+            "latest_date": "20260604"
+          },
+          "checked_at": "2026-06-05T12:16:29.724836"
+        },
+        {
+          "source": "tushare:top_inst",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 2962.91184425354,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "20260604"
+          },
+          "checked_at": "2026-06-05T12:16:32.687827"
+        },
+        {
+          "source": "tushare:limit_cpt_list",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3087.970733642578,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "885431.TI"
+          },
+          "checked_at": "2026-06-05T12:16:35.775839"
+        },
+        {
+          "source": "tushare:daily_info",
+          "severity": "OK",
+          "message": "空(非交易时段/正常)",
+          "latency_ms": 3085.925340652466,
+          "detail": {
+            "items_count": 0
+          },
+          "checked_at": "2026-06-05T12:16:38.861808"
+        },
+        {
+          "source": "tushare:limit_step",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3027.5962352752686,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "002667.SZ"
+          },
+          "checked_at": "2026-06-05T12:16:41.889500"
+        },
+        {
+          "source": "eastmoney:pct_cache",
+          "severity": "OK",
+          "message": "非交易时段,跳过",
+          "latency_ms": 2.1283626556396484,
+          "detail": {},
+          "checked_at": "2026-06-05T12:16:41.891662"
+        },
+        {
+          "source": "eastmoney:fund_cache",
+          "severity": "OK",
+          "message": "非交易时段,跳过",
+          "latency_ms": 2.1452903747558594,
+          "detail": {},
+          "checked_at": "2026-06-05T12:16:41.891675"
+        },
+        {
+          "source": "l2:connection",
+          "severity": "OK",
+          "message": "未初始化(非pipeline上下文,跳过)",
+          "latency_ms": 0.9524822235107422,
+          "detail": {},
+          "checked_at": "2026-06-05T12:16:41.892637"
+        },
+        {
+          "source": "proxy:acquire",
+          "severity": "OK",
+          "message": "获取成功 (43.226.61.33:10159)",
+          "latency_ms": 89.42461013793945,
+          "detail": {
+            "proxy": "43.226.61.33:10159"
+          },
+          "checked_at": "2026-06-05T12:16:41.982084"
+        },
+        {
+          "source": "proxy:eastmoney",
+          "severity": "OK",
+          "message": "东财API正常 (code=000001)",
+          "latency_ms": 427.0036220550537,
+          "detail": {},
+          "checked_at": "2026-06-05T12:16:42.409117"
+        }
+      ],
+      "circuit_breaker_active": false
+    },
+    {
+      "timestamp": "2026-06-05T12:23:11.928965",
+      "overall": "OK",
+      "checks": [
+        {
+          "source": "tushare:daily",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3013.0529403686523,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "000001.SZ"
+          },
+          "checked_at": "2026-06-05T12:23:15.007866"
+        },
+        {
+          "source": "tushare:daily_basic",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3083.1820964813232,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "000001.SZ"
+          },
+          "checked_at": "2026-06-05T12:23:18.091094"
+        },
+        {
+          "source": "tushare:moneyflow",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3033.796787261963,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "000001.SZ"
+          },
+          "checked_at": "2026-06-05T12:23:21.124935"
+        },
+        {
+          "source": "tushare:stk_factor_pro",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3010.183095932007,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "000001.SZ"
+          },
+          "checked_at": "2026-06-05T12:23:24.135164"
+        },
+        {
+          "source": "tushare:limit_list_d",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 2965.7440185546875,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "20260604"
+          },
+          "checked_at": "2026-06-05T12:23:27.100953"
+        },
+        {
+          "source": "tushare:trade_cal",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3064.572811126709,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "SSE"
+          },
+          "checked_at": "2026-06-05T12:23:30.165562"
+        },
+        {
+          "source": "tushare:stock_basic",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3035.179615020752,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "000001.SZ"
+          },
+          "checked_at": "2026-06-05T12:23:33.200815"
+        },
+        {
+          "source": "tushare:fina_indicator",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3063.4779930114746,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "000001.SZ"
+          },
+          "checked_at": "2026-06-05T12:23:36.264332"
+        },
+        {
+          "source": "tushare:balancesheet",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3070.7595348358154,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "000001.SZ"
+          },
+          "checked_at": "2026-06-05T12:23:39.335144"
+        },
+        {
+          "source": "tushare:income",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 2976.937770843506,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "000001.SZ"
+          },
+          "checked_at": "2026-06-05T12:23:42.312120"
+        },
+        {
+          "source": "tushare:top_list",
+          "severity": "OK",
+          "message": "正常 (105条)",
+          "latency_ms": 3017.7559852600098,
+          "detail": {
+            "items_count": 105,
+            "latest_date": "20260604"
+          },
+          "checked_at": "2026-06-05T12:23:45.329916"
+        },
+        {
+          "source": "tushare:top_inst",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 2963.385820388794,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "20260604"
+          },
+          "checked_at": "2026-06-05T12:23:48.293355"
+        },
+        {
+          "source": "tushare:limit_cpt_list",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3096.7957973480225,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "885431.TI"
+          },
+          "checked_at": "2026-06-05T12:23:51.390193"
+        },
+        {
+          "source": "tushare:daily_info",
+          "severity": "OK",
+          "message": "空(非交易时段/正常)",
+          "latency_ms": 2970.890522003174,
+          "detail": {
+            "items_count": 0
+          },
+          "checked_at": "2026-06-05T12:23:54.361125"
+        },
+        {
+          "source": "tushare:limit_step",
+          "severity": "OK",
+          "message": "正常 (1条)",
+          "latency_ms": 3045.1455116271973,
+          "detail": {
+            "items_count": 1,
+            "latest_date": "002667.SZ"
+          },
+          "checked_at": "2026-06-05T12:23:57.406317"
+        },
+        {
+          "source": "eastmoney:pct_cache",
+          "severity": "OK",
+          "message": "非交易时段,跳过",
+          "latency_ms": 1.7397403717041016,
+          "detail": {},
+          "checked_at": "2026-06-05T12:23:57.408089"
+        },
+        {
+          "source": "eastmoney:fund_cache",
+          "severity": "OK",
+          "message": "非交易时段,跳过",
+          "latency_ms": 1.7571449279785156,
+          "detail": {},
+          "checked_at": "2026-06-05T12:23:57.408102"
+        },
+        {
+          "source": "l2:connection",
+          "severity": "OK",
+          "message": "运行中, 订阅0只",
+          "latency_ms": 1.6126632690429688,
+          "detail": {
+            "healthy": false,
+            "channels": {
+              "Market": {
+                "connected": false,
+                "last_data_age_s": 1.1,
+                "recent_reconnects": 6
+              },
+              "Order": {
+                "connected": false,
+                "last_data_age_s": 1.0,
+                "recent_reconnects": 6
+              },
+              "Tran": {
+                "connected": false,
+                "last_data_age_s": 1.1,
+                "recent_reconnects": 6
+              }
+            }
+          },
+          "checked_at": "2026-06-05T12:23:57.409727"
+        },
+        {
+          "source": "proxy:acquire",
+          "severity": "OK",
+          "message": "获取成功 (43.226.61.33:11707)",
+          "latency_ms": 116.58477783203125,
+          "detail": {
+            "proxy": "43.226.61.33:11707"
+          },
+          "checked_at": "2026-06-05T12:23:57.526340"
+        },
+        {
+          "source": "proxy:eastmoney",
+          "severity": "OK",
+          "message": "东财API正常 (code=000001)",
+          "latency_ms": 770.6975936889648,
+          "detail": {},
+          "checked_at": "2026-06-05T12:23:58.297067"
         }
       ],
       "circuit_breaker_active": false
