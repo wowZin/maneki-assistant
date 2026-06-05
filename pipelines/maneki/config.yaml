@@ -4,7 +4,7 @@
 # Claude 会话配置
 claude:
   model: null                # 模型覆盖，null 使用默认
-  max_turns: 20              # 每次消息最大 agentic turns，防止无限循环
+  max_turns: 50              # 每次消息最大 agentic turns，超出后超时兜底
   system_prompt_extra: ""    # 追加的系统提示词
 
 # inbox 轮询间隔（秒）
