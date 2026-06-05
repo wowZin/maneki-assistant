@@ -584,7 +584,7 @@ class L2Client:
 
         for m in PKG_PATTERN.finditer(text):
             payload = m.group(1)
-            if payload in ("HeartBeat", "欢迎") or payload.startswith("DL,"):
+            if payload in ("HeartBeat", "欢迎") or payload.startswith(("DL,", "KICK,")):
                 if self.debug:
                     print(f"[DEBUG {data_type}] 控制消息: {payload[:80]}")
                 continue
