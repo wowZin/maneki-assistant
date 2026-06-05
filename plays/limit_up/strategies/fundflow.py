@@ -265,7 +265,35 @@ def score_fundflow(code):
                     else:
                         veto_flags.append(f"资金背离[T+1]:涨{pct_change:.1f}%但净流出{abs(net_mf)/10000:.0f}万")
     
-    # 否决5 — 尾盘集中兑现（优先l2api分钟K线，降级日频代理）
+    # 否决5 — 观测窗口内走势恶化（l2api分钟K线实时检测）
+    dim3_recent_penalty = 0
+    if l2_kline and len(l2_kline) >= 5:
+        recent = l2_kline[-5:]  # 最近5分钟
+        # 检查价格趋势: 最近3根是否持续走低
+        last_3 = l2_kline[-3:]
+        if len(last_3) == 3:
+            closes = [b.get("close", 0) for b in last_3]
+            highs = [b.get("high", 0) for b in last_3]
+            if closes[-1] < closes[-2] < closes[-3] and highs[-1] < highs[-3]:
+                dim3_recent_penalty += 8
+                reason.append("[近期走弱]最近3分钟价格+高点持续下行-8")
+            elif closes[-1] < closes[-2] and highs[-1] < highs[-2]:
+                dim3_recent_penalty += 4
+                reason.append("[近期松动]最近2分钟走弱-4")
+        # 检查量价背离: 价格横盘但成交量萎缩
+        if len(recent) >= 5:
+            recent_vols = [b.get("volume", 0) for b in recent]
+            recent_closes = [b.get("close", 0) for b in recent]
+            price_range = max(recent_closes) - min(recent_closes)
+            avg_vol_first2 = (recent_vols[0] + recent_vols[1]) / 2 if len(recent_vols) >= 2 else 0
+            avg_vol_last2 = (recent_vols[-2] + recent_vols[-1]) / 2 if len(recent_vols) >= 2 else 0
+            # 价格窄幅(<1%) + 成交量萎缩>30% = 高位横盘出货
+            close_avg = sum(recent_closes) / len(recent_closes)
+            if close_avg > 0 and price_range / close_avg < 0.01 and avg_vol_first2 > 0 and avg_vol_last2 / avg_vol_first2 < 0.7:
+                dim3_recent_penalty += 6
+                reason.append("[高位滞涨]近5分钟价窄量缩-6")
+
+    # 否决6 — 尾盘集中兑现（优先l2api分钟K线，降级日频代理）
     dim3_tail_penalty = 0
     if l2_kline and len(l2_kline) >= 5:
         # 有分钟K线: 精确检测尾盘走弱
@@ -676,6 +704,7 @@ def score_fundflow(code):
             dim3_reason.append(f"对倒嫌疑换手{turnover_rate:.1f}%-12")
 
     # 尾盘走弱扣分（l2api精确或日频代理）
+    dim3_score -= dim3_recent_penalty
     dim3_score -= dim3_tail_penalty
 
     dim3_score = max(0, min(20, dim3_score))  # l2api上线,上限恢复20
