@@ -9,6 +9,7 @@
 """
 
 import json
+import os
 import re
 import sys
 import time
@@ -418,8 +419,9 @@ def push_feishu(results):
     """发送飞书卡片
 
     推送规则：
-    - 综合评级>=30的股票按涨幅+情绪排序取前5只推送
-    - 排序键: pct_chg + sentiment/100 (涨幅优先，情绪打破平局)
+    - 综合评级>=30的股票按总分降序取前5只推送
+    - 午后叠加情绪面>=25门槛(过滤高位横盘伪信号)
+    - 同日已推送的股票不再重复推送
     - 如果没有>=30的股票，不推送
     - 推送记录保存到 data/pushed/ 目录，供复盘使用
     """
@@ -464,7 +466,7 @@ def push_feishu(results):
 
     above_threshold = sorted(
         [r for r in results if _pass_filter(r)],
-        key=lambda x: x.get('pct_chg', 0) + x.get('scores', {}).get('sentiment', 0) / 100,
+        key=lambda x: x.get('total', 0),
         reverse=True
     )[:5]
     if above_threshold:
@@ -472,7 +474,7 @@ def push_feishu(results):
         extra = []
         if pushed_codes_today: extra.append("已去重")
         if pm_filtered: extra.append(f"午后情绪过滤{pm_filtered}只")
-        print(f"  推送池: {len(above_threshold)}只(综合评级>={THRESHOLD}, 按涨幅+情绪Top5{' ' + ', '.join(extra) if extra else ''})")
+        print(f"  推送池: {len(above_threshold)}只(综合评级>={THRESHOLD}, 按总分Top5{' ' + ', '.join(extra) if extra else ''})")
     else:
         push_list = []
         extra = []
