@@ -814,10 +814,15 @@ def _run_pipeline(args):
         if l2_available:
             from scripts.l2_daemon_client import daemon_subscribe, daemon_is_ready
             daemon_subscribe(codes)
-            print(f"  [L2] 已订阅{len(codes)}只, 等待数据...")
-            time.sleep(5)
-            ready = sum(1 for c in codes if daemon_is_ready(c))
-            print(f"  [L2] 就绪{ready}/{len(codes)}")
+            print(f"  [L2] 已订阅{len(codes)}只, 等待数据到达...", end="", flush=True)
+            ready = 0
+            for _ in range(10):  # 最多等 20 秒, 每 2 秒检查就绪比例
+                time.sleep(2)
+                ready = sum(1 for c in codes if daemon_is_ready(c))
+                print(f" {ready}/{len(codes)}", end="", flush=True)
+                if ready >= len(codes) * 0.8:  # 80% 以上就绪即可提前结束
+                    break
+            print(f"\n  [L2] 最终就绪 {ready}/{len(codes)}")
 
         for stock in batch:
             code = stock["code"]
