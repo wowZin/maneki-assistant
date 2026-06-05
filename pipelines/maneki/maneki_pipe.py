@@ -446,33 +446,51 @@ async def main():
                     log.info("query start: chat=%s turn=%s", chat_id, progress.session_id[:12] if progress.session_id else "new")
 
                     await client.query(prompt)
-                    turn_count = 0
-                    async for message in client.receive_response():
-                        turn_count += 1
-                        msg_type = type(message).__name__
-                        if isinstance(message, AssistantMessage):
-                            has_tool = any(
-                                getattr(b, 'type', None) == "tool_use"
-                                for b in (message.content or [])
-                            )
-                            texts = [
-                                getattr(b, 'text', '')[:60]
-                                for b in (message.content or [])
-                                if hasattr(b, 'text')
-                            ]
-                            log.info("turn%d: AssistantMessage tools=%s text=%s",
-                                     turn_count, has_tool, texts[0] if texts else "")
-                        elif isinstance(message, ResultMessage):
-                            if not message.is_error:
-                                progress.save(
-                                    session_id=message.session_id,
-                                    positions={chat_id: new_pos, **progress.positions},
+
+                    # 响应超时兜底：60秒无响应则放弃本轮，继续处理下一条消息
+                    async def _collect():
+                        turn_count = 0
+                        final_session_id = None
+                        async for message in client.receive_response():
+                            turn_count += 1
+                            msg_type = type(message).__name__
+                            if isinstance(message, AssistantMessage):
+                                has_tool = any(
+                                    getattr(b, 'type', None) == "tool_use"
+                                    for b in (message.content or [])
                                 )
-                                log.info("turn%d: ResultMessage OK turns=%d", turn_count, message.num_turns)
+                                texts = [
+                                    getattr(b, 'text', '')[:60]
+                                    for b in (message.content or [])
+                                    if hasattr(b, 'text')
+                                ]
+                                log.info("turn%d: AssistantMessage tools=%s text=%s",
+                                         turn_count, has_tool, texts[0] if texts else "")
+                            elif isinstance(message, ResultMessage):
+                                if not message.is_error:
+                                    final_session_id = message.session_id
+                                    log.info("turn%d: ResultMessage OK turns=%d", turn_count, message.num_turns)
+                                else:
+                                    log.error("turn%d: ResultMessage ERROR %s", turn_count, message.subtype)
                             else:
-                                log.error("turn%d: ResultMessage ERROR %s", turn_count, message.subtype)
-                        else:
-                            log.info("turn%d: %s", turn_count, msg_type)
+                                log.info("turn%d: %s", turn_count, msg_type)
+                        return turn_count, final_session_id
+
+                    try:
+                        turns, sid = await asyncio.wait_for(_collect(), timeout=120)
+                        if sid:
+                            progress.save(
+                                session_id=sid,
+                                positions={chat_id: new_pos, **progress.positions},
+                            )
+                        log.info("query done: chat=%s turns=%d", chat_id, turns)
+                    except asyncio.TimeoutError:
+                        log.error("query timeout after 120s for chat=%s, abandoning session", chat_id)
+                        # 超时后丢弃当前 session，下次启动新 session
+                        progress.save(
+                            session_id=None,
+                            positions={chat_id: new_pos, **progress.positions},
+                        )
 
             await asyncio.sleep(poll)
 
