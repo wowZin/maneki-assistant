@@ -610,6 +610,28 @@ def score_fundflow(code):
                 dim3_score -= 5
                 dim3_reason.append(f"VWAP下方{vwap_dev:.2%}-5")
 
+        # 卖盘压单检测: 卖一档堆量远大于买一档 → 拉高出货
+        ask_qtys_raw = [to_volume(q) for q in l2_market.get("ask_qty", [])]
+        bid_qtys_raw = [to_volume(q) for q in l2_market.get("bid_qty", [])]
+        ask1_qty = ask_qtys_raw[0] if len(ask_qtys_raw) > 0 else 0
+        bid1_qty = bid_qtys_raw[0] if len(bid_qtys_raw) > 0 else 0
+        ask_top3 = sum(ask_qtys_raw[:3])
+        bid_top3 = sum(bid_qtys_raw[:3])
+        if ask1_qty > 0 and bid1_qty > 0:
+            if ask1_qty > bid1_qty * 5:
+                dim3_score -= 10
+                dim3_reason.append(f"卖一压单{ask1_qty/10000:.0f}万手(买一{bid1_qty/10000:.0f}万手×5)-10")
+            elif ask1_qty > bid1_qty * 3:
+                dim3_score -= 6
+                dim3_reason.append(f"卖盘堆量{ask1_qty/10000:.0f}万手(买一{bid1_qty/10000:.0f}万手×3)-6")
+            elif ask1_qty > bid1_qty * 2:
+                dim3_score -= 3
+                dim3_reason.append(f"卖盘偏重{ask1_qty/10000:.0f}万手(买一{bid1_qty/10000:.0f}万手×2)-3")
+        # 前三档卖盘总量 > 买盘总量2倍
+        if ask_top3 > 0 and bid_top3 > 0 and ask_top3 > bid_top3 * 2:
+            dim3_score -= 4
+            dim3_reason.append(f"卖盘深度压倒买盘(卖{ask_top3/10000:.0f}vs买{bid_top3/10000:.0f}万手)-4")
+
     # --- 日频代理因子 (优先实时东财，降级 T+1) ---
     # 无 L2 时，用东财实时缓存替代 T+1 moneyflow 的 net_mf / turnover_rate
     _rt_fund3 = _get_realtime_fund_cache()

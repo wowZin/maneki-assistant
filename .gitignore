@@ -9,4 +9,4 @@ __pycache__/
 
 # Claude SDK 管道运行时文件
 /pipes/*/inbox/
-/pipes/*/progress.json
+/pipes/*/progress.jsonplays/limit_up/data/pipeline.lock
