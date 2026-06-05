@@ -568,15 +568,18 @@ def check_l2_connection() -> list[HealthStatus]:
                 s = socket.create_connection((L2_DAEMON_HOST, L2_DAEMON_PORT), timeout=2)
                 s.sendall(b"HEALTH\n")
                 resp = s.recv(4096)
+                s.sendall(b"SUBSCRIBED\n")
+                sub_resp = s.recv(4096)
                 s.close()
                 detail = json.loads(resp.decode().strip())
-                sc = detail.get("subscribed_count", 0)
+                subs = json.loads(sub_resp.decode().strip())
+                sc = len(subs)
                 results.append(HealthStatus(
                     source="l2:connection",
                     severity=Severity.OK,
                     message=f"运行中, 订阅{sc}只",
                     latency_ms=(time.time() - t0) * 1000,
-                    detail=detail,
+                    detail={"subscriptions": subs, **detail},
                 ))
             except Exception:
                 results.append(HealthStatus(

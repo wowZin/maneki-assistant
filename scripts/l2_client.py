@@ -521,6 +521,9 @@ class L2Client:
                     sock.sendall(_cmd_sub(self.account, self.password, symbol))
                     time.sleep(0.03)
 
+                # 查询当前订阅（触发服务端开始推送数据）
+                sock.sendall(_cmd_query(self.account, self.password))
+
                 last_recv = time.time()
 
                 while self._running:
@@ -587,7 +590,7 @@ class L2Client:
 
         for m in PKG_PATTERN.finditer(text):
             payload = m.group(1)
-            if payload in ("HeartBeat", "欢迎") or payload.startswith(("DL,", "KICK,")):
+            if payload in ("HeartBeat", "欢迎") or payload.startswith(("DL,", "KICK,", "DY2,")):
                 if self.debug:
                     print(f"[DEBUG {data_type}] 控制消息: {payload[:80]}")
                 continue

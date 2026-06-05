@@ -555,7 +555,31 @@ def _score_one(stock: dict, l2_available: bool, weights: dict,
     name = stock["name"]
 
     if cache_hit and scored_cache and code in scored_cache:
-        return scored_cache[code]
+        cached = scored_cache[code]
+        # cached: {dim: (score, reason), ...} → reconstruct full result
+        f_sc = cached.get("fundamental", (0, ""))[0]
+        t_sc = cached.get("technical", (0, ""))[0]
+        m_sc = cached.get("fundflow", (0, ""))[0]
+        s_sc = cached.get("sentiment", (0, ""))[0]
+        st_sc = cached.get("shortterm", (0, ""))[0]
+        dc = [(f_sc, weights.get("fundamental", 1.0)), (t_sc, weights.get("technical", 1.0)),
+              (m_sc, weights.get("fundflow", 1.0)), (s_sc, weights.get("sentiment", 1.0)),
+              (st_sc, weights.get("shortterm", 1.5))]
+        dc.sort(key=lambda x: x[0] * x[1], reverse=True)
+        top3 = dc[:3]
+        total = sum(s * w for s, w in top3) / sum(w for _, w in top3) if sum(w for _, w in top3) > 0 else 0
+        rc = sum([f_sc >= 75, t_sc >= 75, m_sc >= 75, s_sc >= 75, st_sc >= 75])
+        return {"code": code, "name": name,
+                "scores": {"fundamental": f_sc, "technical": t_sc, "fundflow": m_sc,
+                           "sentiment": s_sc, "shortterm": st_sc},
+                "reasons": {"fundamental": cached.get("fundamental", ("", ""))[1],
+                            "technical": cached.get("technical", ("", ""))[1],
+                            "fundflow": cached.get("fundflow", ("", ""))[1],
+                            "sentiment": cached.get("sentiment", ("", ""))[1],
+                            "shortterm": cached.get("shortterm", ("", ""))[1]},
+                "total": total, "top3_score": round(total, 1),
+                "resonance": {"count": rc, "threshold": 75, "is_resonance": rc >= 3},
+                "pct_chg": round(stock.get("pct_chg", 0), 1), "l2api": None}
 
     # 并行五维度评分
     funcs: dict[str, Callable] = {}
@@ -755,7 +779,6 @@ def _run_pipeline(args):
                                 for dim in item["scores"]}
             except Exception:
                 pass
-    scored_cache = _load_scored_cache()
     print(f"  scored_cache: {len(scored_cache)} 只缓存" if scored_cache else "  scored_cache: 无缓存")
     # 1.6 检查 L2 守护进程（--no-l2 模式下跳过）
     l2_available = False

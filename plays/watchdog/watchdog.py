@@ -156,15 +156,15 @@ class WatchdogEngine:
     def start(self):
         if self._running:
             return
-        if not _daemon_alive():
+        if not daemon_alive():
             logger.warning("L2 守护进程未运行，盯盘引擎无法工作")
             return
         self._running = True
         # 同步订阅历史标的
         codes = list(self._states.keys())
-        if codes and _daemon_alive():
+        if codes and daemon_alive():
             try:
-                _daemon_cmd(f"SUB {' '.join(codes)}")
+                daemon_cmd(f"SUB {' '.join(codes)}")
                 logger.info(f"已同步订阅 {len(codes)} 只历史标的")
             except Exception as e:
                 logger.warning(f"订阅历史标的失败: {e}")
@@ -216,9 +216,9 @@ class WatchdogEngine:
             self._save_state()
 
             # 同步 L2 守护进程订阅
-            if _daemon_alive():
+            if daemon_alive():
                 try:
-                    _daemon_cmd(f"SUB {' '.join(self._states.keys())}")
+                    daemon_cmd(f"SUB {' '.join(self._states.keys())}")
                 except Exception as e:
                     logger.warning(f"L2守护进程订阅失败: {e}")
 
@@ -249,9 +249,9 @@ class WatchdogEngine:
                     msgs.append(f"{code} 未在盯盘中")
             self._save_state()
             # 同步 L2 守护进程取消订阅
-            if _daemon_alive() and codes:
+            if daemon_alive() and codes:
                 try:
-                    _daemon_cmd(f"UNSUB {' '.join(codes)}")
+                    daemon_cmd(f"UNSUB {' '.join(codes)}")
                 except Exception as e:
                     logger.warning(f"L2守护进程取消订阅失败: {e}")
         return "\n".join(msgs)
@@ -262,9 +262,9 @@ class WatchdogEngine:
             codes = list(self._states.keys())
             self._states.clear()
             self._save_state()
-            if _daemon_alive() and codes:
+            if daemon_alive() and codes:
                 try:
-                    _daemon_cmd(f"UNSUB {' '.join(codes)}")
+                    daemon_cmd(f"UNSUB {' '.join(codes)}")
                 except Exception as e:
                     logger.warning(f"L2守护进程取消订阅失败: {e}")
         return f"已清空{count}只盯盘标的"
@@ -352,7 +352,7 @@ class WatchdogEngine:
                 continue
 
             # 通过守护进程获取实时数据
-            market_resp = _daemon_cmd(f"MARKET {code}")
+            market_resp = daemon_cmd(f"MARKET {code}")
             if market_resp == "NULL":
                 if self._scan_count % 20 == 1:
                     logger.info(f"  {code} 无实时行情(L2未就绪)")
@@ -366,7 +366,7 @@ class WatchdogEngine:
                 continue
 
             last = to_price(market.get("last", "0"))
-            vwap_resp = _daemon_cmd(f"VWAP {code}")
+            vwap_resp = daemon_cmd(f"VWAP {code}")
             vwap_val = float(vwap_resp) if vwap_resp != "None" else 0.0
             # 用Market trade_volume作为日内成交量
             current_vol = to_volume(market.get("trade_volume", "0"))
@@ -644,7 +644,7 @@ def main():
     # 等待 L2 守护进程就绪
     logger.info("正在连接 L2 守护进程...")
     for _ in range(30):  # 最多等30秒
-        if _daemon_alive():
+        if daemon_alive():
             logger.info("L2 守护进程已就绪")
             break
         time.sleep(1)

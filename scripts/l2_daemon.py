@@ -104,7 +104,8 @@ class L2Proxy:
         
         elif action == "MARKET":
             code = normalize_code(parts[1]) if len(parts) > 1 else ""
-            mkt = self.l2.get_market(code) if code else None
+            max_age = float(parts[2]) if len(parts) > 2 else 30.0
+            mkt = self.l2.get_market(code, max_age=max_age) if code else None
             sock.sendall((json.dumps(mkt) + "\n").encode() if mkt else b"NULL\n")
         
         elif action == "VWAP":
