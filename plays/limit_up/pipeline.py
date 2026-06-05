@@ -419,10 +419,9 @@ def push_feishu(results):
     """发送飞书卡片
 
     推送规则：
-    - 综合评级>=30的股票按总分降序取前5只推送
-    - 午后叠加情绪面>=25门槛(过滤高位横盘伪信号)
+    - 高确信度筛选: 情绪≥40 + 资金≥40 + 总分≥45 (三灯全亮才推送)
+    - 午后叠加情绪面>=25门槛
     - 同日已推送的股票不再重复推送
-    - 如果没有>=30的股票，不推送
     - 推送记录保存到 data/pushed/ 目录，供复盘使用
     """
     import requests
@@ -454,14 +453,18 @@ def push_feishu(results):
     # 午后门槛：情绪面 < 25 的股票不推（午后高位横盘≠冲板）
     is_afternoon = datetime.now().hour >= 13
     pm_filtered = 0
+    hc_filtered = 0  # 高确信度筛选
 
     def _pass_filter(r):
-        nonlocal pm_filtered
+        nonlocal pm_filtered, hc_filtered
+        s = r.get('scores', {})
         if r.get('total', 0) < THRESHOLD: return False
         if r.get('code') in pushed_codes_today: return False
-        if is_afternoon and r.get('scores', {}).get('sentiment', 0) < 25:
-            pm_filtered += 1
-            return False
+        if is_afternoon and s.get('sentiment', 0) < 25:
+            pm_filtered += 1; return False
+        # 高确信度筛选: 情绪+资金双强 + 总分≥45
+        if not (s.get('sentiment', 0) >= 40 and s.get('fundflow', 0) >= 40 and r.get('total', 0) >= 45):
+            hc_filtered += 1; return False
         return True
 
     above_threshold = sorted(
@@ -473,14 +476,16 @@ def push_feishu(results):
         push_list = above_threshold
         extra = []
         if pushed_codes_today: extra.append("已去重")
-        if pm_filtered: extra.append(f"午后情绪过滤{pm_filtered}只")
-        print(f"  推送池: {len(above_threshold)}只(综合评级>={THRESHOLD}, 按总分Top5{' ' + ', '.join(extra) if extra else ''})")
+        if pm_filtered: extra.append(f"午后过滤{pm_filtered}只")
+        if hc_filtered: extra.append(f"高确信过滤{hc_filtered}只")
+        print(f"  推送池: {len(above_threshold)}只(情绪≥40+资金≥40+总分≥45{' ' + ', '.join(extra) if extra else ''})")
     else:
         push_list = []
         extra = []
         if pushed_codes_today: extra.append(f"已推{len(pushed_codes_today)}只")
-        if pm_filtered: extra.append(f"午后情绪不足{pm_filtered}只")
-        print(f"  无>={THRESHOLD}评级股票，不推送 ({', '.join(extra) if extra else '无候选'})")
+        if pm_filtered: extra.append(f"午后不足{pm_filtered}只")
+        if hc_filtered: extra.append(f"高确信不足{hc_filtered}只")
+        print(f"  无符合条件的股票 ({', '.join(extra) if extra else '无候选'})")
 
     if not push_list:
         print("  无可推送股票")
