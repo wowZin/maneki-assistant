@@ -434,7 +434,7 @@ async def main():
                     if new_pos > pos:
                         progress.save(
                             session_id=progress.session_id,
-                            positions={chat_id: new_pos, **progress.positions},
+                            positions={**progress.positions, chat_id: new_pos},
                         )
 
                     for msg in messages:
@@ -491,7 +491,7 @@ async def main():
                             # 放弃旧 session, 退出 context manager 杀死 claude 进程
                             progress.save(
                                 session_id=None,
-                                positions={chat_id: new_pos, **progress.positions},
+                                positions={**progress.positions, chat_id: new_pos},
                             )
                             restart_client = True
                             break
@@ -500,7 +500,7 @@ async def main():
                             if sid:
                                 progress.save(
                                     session_id=sid,
-                                    positions={chat_id: new_pos, **progress.positions},
+                                    positions={**progress.positions, chat_id: new_pos},
                                 )
                             log.info("query done: chat=%s turns=%d", chat_id, turns)
 

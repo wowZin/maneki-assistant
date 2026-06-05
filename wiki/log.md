@@ -76,3 +76,6 @@
 - Created: entities/20260604-扫描汇总.md — 200 只股票, 总分均值 29.9
 - 2026-06-05 archive: pre-June data archived to wiki/raw/ (L2 unavailable before June, realtime data unreliable)
 - 2026-06-05 cleanup: removed pre-June signals, old heartbeat logs
+
+## [2026-06-05] compile | 20260605 扫描汇总
+- Created: entities/20260605-扫描汇总.md — 327 只股票, 总分均值 30.5
