@@ -1,8 +1,8 @@
 {
-  "601991.SH": {
-    "code": "601991.SH",
-    "name": "大唐发电",
-    "added_at": "2026-06-01T20:34:05.568801",
+  "001896.SZ": {
+    "code": "001896.SZ",
+    "name": "豫能控股",
+    "added_at": "2026-06-05T13:52:32.824833",
     "status": "watching",
     "entry_price": 0.0,
     "entry_at": "",
@@ -15,10 +15,10 @@
     "last_alert_at": "",
     "last_daily_update": "20260605"
   },
-  "000657.SZ": {
-    "code": "000657.SZ",
-    "name": "中钨高新",
-    "added_at": "2026-06-01T20:34:05.996947",
+  "601101.SH": {
+    "code": "601101.SH",
+    "name": "昊华能源",
+    "added_at": "2026-06-05T13:52:33.289751",
     "status": "watching",
     "entry_price": 0.0,
     "entry_at": "",
