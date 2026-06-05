@@ -421,9 +421,9 @@ async def main():
                 fpath = INBOX_DIR / f"{chat_id}.jsonl"
                 if pos > 0 and fpath.exists() and fpath.stat().st_size < pos:
                     old_pos = pos
-                    pos = fpath.stat().st_size
-                    log.info("position stale for %s, reset from %d to %d (end of file)",
-                             chat_id, old_pos, pos)
+                    pos = 0  # 文件被替换过（飞书Bot新建了同名文件），从头读取
+                    log.info("file replaced for %s, reset position from %d to 0",
+                             chat_id, old_pos)
                 messages, new_pos = read_inbox(chat_id, pos)
 
                 # 🐛 FIX: 保存 position 必须在处理消息之前，
