@@ -17,7 +17,9 @@ maneki-agent/
 │   ├── proxy_utils.py       ← 动态代理池 + 重试机制
 │   ├── l2_client.py          ← Level2 实时行情 SDK (TCP 长连接)
 │   ├── tu_share.py           ← Tushare API 封装 (含缓存 & 日期回退)
-│   └── health_check.py       ← 数据源健康巡检 (支持熔断阻断)
+│   ├── health_check.py       ← 数据源健康巡检 (支持熔断阻断, 自动拉起L2)
+│   ├── l2_daemon.py           ← L2 守护进程 (TCP代理, 单例长连接)
+│   └── l2_daemon_client.py    ← L2 守护进程 TCP 客户端
 ├── feishu_bot/             ← 飞书桥梁（只写 inbox，不决策）
 │   ├── main.py             ← FastAPI → 写入 inbox
 │   └── feishu_client.py    ← 飞书 API 封装
@@ -98,7 +100,8 @@ plays/limit_up/
 | 收盘复盘 | 周一至五 18:00 | `python plays/limit_up/review.py` |
 | 权重优化 | 周一至五 19:00 | `python plays/limit_up/optimize.py` |
 | Wiki 编译 | 周一至五 20:00 | `python wiki/compile.py` |
-| 数据巡检(开盘前) | 周一至五 9:25 | `python scripts/health_check.py --full` |
+| L2 守护进程 | 周一至五 9:25 (随--full巡检自动拉起) | `scripts/l2_daemon.py` (15:05自动退出) |
+| 全量数据巡检(含L2启动) | 周一至五 9:25 | `python scripts/health_check.py --full` |
 | 数据巡检(盘中) | 周一至五 9:35~14:30 每小时 | `python scripts/health_check.py` |
 | 玩法巡检 | 周一至五 10~14点整点 | `python plays/limit_up/health_patrol.py` |
 
@@ -142,7 +145,13 @@ nohup python3 pipelines/maneki/maneki_pipe.py \
 nohup python3 plays/watchdog/watchdog.py \
   > data/logs/watchdog.log 2>&1 &
 
-# ===== 4. 涨停预测（手动/定时触发） =====
+# ===== 4. L2 守护进程（自动/手动） =====
+# 维护唯一 L2 长连接，供 pipeline/watchdog 通过 TCP 共享 (127.0.0.1:18999)
+# 开盘日 9:25 由 health_check --full 自动拉起，15:05 自动退出
+# 也可手动启动：
+# python3 scripts/l2_daemon.py --daemon
+
+# ===== 5. 涨停预测（手动/定时触发） =====
 # 主流程: 异动扫描 → 五维评分 → 排序 → 飞书推送
 python3 plays/limit_up/pipeline.py
 
@@ -169,10 +178,13 @@ python3 scripts/health_check.py
 
 ```bash
 # 检查各服务进程
-ps aux | grep -E "uvicorn|maneki_pipe|watchdog" | grep -v grep
+ps aux | grep -E "uvicorn|maneki_pipe|watchdog|l2_daemon" | grep -v grep
 
 # 检查飞书 Bot 健康
 curl http://localhost:8080/
+
+# 检查 L2 守护进程
+echo "HEALTH" | nc localhost 18999
 
 # 检查 inbox 积压消息
 ls -la pipelines/maneki/inbox/
