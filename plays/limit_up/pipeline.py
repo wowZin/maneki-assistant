@@ -808,21 +808,6 @@ def _run_pipeline(args):
     batch_count = (len(candidates) + BATCH_SIZE - 1) // BATCH_SIZE
     print(f"\n[2/5] 分批深度分析: {len(candidates)}只 -> {batch_count}批x{BATCH_SIZE}只, {OBSERVE_SECONDS}s/轮")
 
-    # L2 一次性全订阅(daemon支持多股并发), 避免串行等待
-    all_codes = [c["code"] for c in candidates]
-    if l2_available:
-        from scripts.l2_daemon_client import daemon_subscribe, daemon_is_ready
-        daemon_subscribe(all_codes)
-        print(f"  [L2] 已订阅全部{len(all_codes)}只, 等待首批数据就绪...", end="", flush=True)
-        ready = 0
-        for _ in range(15):
-            time.sleep(2)
-            ready = sum(1 for c in all_codes if daemon_is_ready(c))
-            print(f" {ready}/{len(all_codes)}", end="", flush=True)
-            if ready >= len(all_codes) * 0.8:
-                break
-        print(f"\n  [L2] 最终就绪 {ready}/{len(all_codes)}")
-
     results = []
     for bi in range(batch_count):
         batch = candidates[bi * BATCH_SIZE : (bi + 1) * BATCH_SIZE]
@@ -830,6 +815,19 @@ def _run_pipeline(args):
         print(f"\n{'='*40}")
         print(f"批次 {bi+1}/{batch_count}: {len(codes)}只 {codes[:3]}...")
         print(f"{'='*40}")
+
+        if l2_available:
+            from scripts.l2_daemon_client import daemon_subscribe, daemon_is_ready
+            daemon_subscribe(codes)
+            print(f"  [L2] 已订阅{len(codes)}只, 等待数据到达...", end="", flush=True)
+            ready = 0
+            for _ in range(15):  # 最多等 30 秒, 每 2 秒检查就绪比例
+                time.sleep(2)
+                ready = sum(1 for c in codes if daemon_is_ready(c))
+                print(f" {ready}/{len(codes)}", end="", flush=True)
+                if ready >= len(codes) * 0.8:  # 80% 以上就绪即可提前结束
+                    break
+            print(f"\n  [L2] 最终就绪 {ready}/{len(codes)}")
 
         for stock in batch:
             code = stock["code"]
@@ -842,9 +840,9 @@ def _run_pipeline(args):
             except Exception as e:
                 print(f"  {code} 评分失败: {e}")
 
-    if l2_available:
-        from scripts.l2_daemon_client import daemon_unsubscribe
-        daemon_unsubscribe(all_codes)
+        if l2_available:
+            from scripts.l2_daemon_client import daemon_unsubscribe
+            daemon_unsubscribe(codes)
 
     # 排序
     results.sort(key=lambda x: x["total"], reverse=True)
