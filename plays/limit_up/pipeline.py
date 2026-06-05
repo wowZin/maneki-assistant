@@ -816,7 +816,7 @@ def _run_pipeline(args):
             daemon_subscribe(codes)
             print(f"  [L2] 已订阅{len(codes)}只, 等待数据到达...", end="", flush=True)
             ready = 0
-            for _ in range(10):  # 最多等 20 秒, 每 2 秒检查就绪比例
+            for _ in range(15):  # 最多等 30 秒, 每 2 秒检查就绪比例
                 time.sleep(2)
                 ready = sum(1 for c in codes if daemon_is_ready(c))
                 print(f" {ready}/{len(codes)}", end="", flush=True)
