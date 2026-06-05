@@ -23,21 +23,19 @@ def score_fundflow(code):
 
     today = datetime.now().strftime("%Y%m%d")
 
-    # 尝试获取l2api实时数据
+    # 通过 L2 守护进程获取实时数据
     l2_market = None
     l2_vwap = None
     l2_kline = []
     try:
-        from scripts.l2_client import has_client, get_client, to_price, to_volume
-        if has_client():
-            c = get_client()
-            l2_market = c.get_market(code)
-            if l2_market:
-                l2_vwap = c.get_vwap(code)
-                l2_kline = c.get_minute_kline(code, n=30)
-                # 聚合最近5分钟Tran净流向
-                l2_kline[-5:] if len(l2_kline) >= 5 else l2_kline
-                # Tran数据通过K线间接反映(volume增量方向)
+        from scripts.l2_daemon_client import daemon_get_market, daemon_get_vwap, daemon_get_kline
+        from scripts.l2_client import to_price, to_volume
+        l2_market = daemon_get_market(code)
+        if l2_market:
+            l2_vwap = daemon_get_vwap(code)
+            l2_kline = daemon_get_kline(code, n=30)
+            # 聚合最近5分钟Tran净流向
+            l2_kline[-5:] if len(l2_kline) >= 5 else l2_kline
     except Exception:
         pass
     

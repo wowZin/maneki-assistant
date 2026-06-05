@@ -15,7 +15,6 @@ import json
 import os
 import sys
 import time
-import socket
 import threading
 import logging
 from datetime import datetime
@@ -31,6 +30,7 @@ sys.path.insert(0, str(PROJECT_DIR))
 
 from plays.watchdog.indicators import calc_all, check_trend, check_pullback, check_entry_score, check_exit_signal
 from scripts.l2_client import to_price, to_volume, normalize_code  # noqa: E402
+from scripts.l2_daemon_client import daemon_alive, daemon_cmd  # noqa: E402
 from scripts.tu_share import call_tushare  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -38,27 +38,6 @@ logger = logging.getLogger(__name__)
 STATE_FILE = PROJECT_DIR / "plays" / "watchdog" / "data" / "state.json"
 SCAN_INTERVAL = 30  # 每30秒检查一次信号
 MAX_WATCH = 5       # 同时盯盘上限5只
-
-# ── L2 守护进程客户端 ──
-
-_DAEMON_HOST = "127.0.0.1"
-_DAEMON_PORT = 18999
-
-
-def _daemon_cmd(cmd: str, timeout: int = 5) -> str:
-    """向 L2 守护进程发送命令, 返回响应"""
-    s = socket.create_connection((_DAEMON_HOST, _DAEMON_PORT), timeout=timeout)
-    s.sendall((cmd + "\n").encode())
-    resp = s.recv(8192).decode().strip()
-    s.close()
-    return resp
-
-
-def _daemon_alive() -> bool:
-    try:
-        return _daemon_cmd("PING", timeout=2) == "PONG"
-    except Exception:
-        return False
 
 # ---- 飞书推送 ----
 

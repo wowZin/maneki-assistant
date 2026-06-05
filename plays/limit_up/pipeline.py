@@ -535,16 +535,6 @@ def push_feishu(results):
         }
     )
 
-    result = resp.json()
-    if result.get("code") == 0:
-        print(f"飞书推送成功: {result['data']['message_id']}")
-        return True
-    else:
-        print(f"飞书推送失败: {result}")
-        return False
-
-
-# ===== 主流程 =====
 
 def _write_empty_result(reason=""):
     """写入零结果分析文件（兜底：避免扫空静默失败）"""
@@ -558,24 +548,49 @@ def _write_empty_result(reason=""):
     print(f"零结果已记录: {output_path}")
 
 
-def _score_one(stock, l2api, weights, scored_cache, cache_hit):
-    """单只股票五维评分"""
+def _score_one(stock: dict, l2_available: bool, weights: dict,
+               scored_cache: dict | None = None, cache_hit: bool = False) -> dict:
+    """单只股票评分"""
     code = stock["code"]
-    if cache_hit:
-        cached = scored_cache[code]
-        scores = {dim: v[0] for dim, v in cached.items()}
-        reasons = {dim: v[1] for dim, v in cached.items()}
-    else:
-        scores = {}
-        reasons = {}
+    name = stock["name"]
 
+    if cache_hit and scored_cache and code in scored_cache:
+        return scored_cache[code]
+
+    # 并行五维度评分
+    funcs: dict[str, Callable] = {}
     from concurrent.futures import ThreadPoolExecutor, as_completed
-    from plays.limit_up.strategies.shortterm import score_shortterm
-    funcs = {"fundamental": score_fundamental, "technical": score_technical,
-             "fundflow": score_fundflow, "sentiment": score_sentiment, "shortterm": score_shortterm}
-    to_run = {dim: fn for dim, fn in funcs.items() if dim not in scores}
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = {executor.submit(fn, code): dim for dim, fn in to_run.items()}
+    from typing import Callable
+    try:
+        from plays.limit_up.strategies.fundamental import score_fundamental
+        funcs["fundamental"] = score_fundamental
+    except ImportError:
+        pass
+    try:
+        from plays.limit_up.strategies.technical import score_technical
+        funcs["technical"] = score_technical
+    except ImportError:
+        pass
+    try:
+        from plays.limit_up.strategies.fundflow import score_fundflow
+        funcs["fundflow"] = score_fundflow
+    except ImportError:
+        pass
+    try:
+        from plays.limit_up.strategies.sentiment import score_sentiment
+        funcs["sentiment"] = score_sentiment
+    except ImportError:
+        pass
+    try:
+        from plays.limit_up.strategies.shortterm import score_shortterm
+        funcs["shortterm"] = score_shortterm
+    except ImportError:
+        pass
+
+    scores: dict[str, int | float] = {}
+    reasons: dict[str, str] = {}
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = {pool.submit(fn, code): name for name, fn in funcs.items()}
         for future in as_completed(futures):
             dim = futures[future]
             try:
@@ -599,12 +614,13 @@ def _score_one(stock, l2api, weights, scored_cache, cache_hit):
     rc = sum([f_sc >= 75, t_sc >= 75, m_sc >= 75, s_sc >= 75, st_sc >= 75])
 
     l2data = None
-    if l2api:
+    if l2_available:
         try:
+            from scripts.l2_daemon_client import daemon_get_market, daemon_get_vwap, daemon_get_kline
             from scripts.l2_client import to_price
-            mkt = l2api.get_market(code)
-            vwap = l2api.get_vwap(code)
-            kb = l2api.get_minute_kline(code, n=5)
+            mkt = daemon_get_market(code)
+            vwap = daemon_get_vwap(code)
+            kb = daemon_get_kline(code, n=5)
             if mkt:
                 l2data = {"last": to_price(mkt.get("last", "0")),
                           "bid1_p": to_price(mkt.get("bid_price", [""])[0]) if mkt.get("bid_price") else 0,
@@ -739,55 +755,19 @@ def _run_pipeline(args):
                                 for dim in item["scores"]}
             except Exception:
                 pass
-
-    # L2 健康告警（当日仅发一次，避免重复）
-    def _alert_l2(client):
-        flag = DATA_DIR / "analysis" / f".l2_alerted_{today_str}"
-        if flag.exists():
-            return
-        flag.touch()
-        hs = client.health_summary()
-        ch_info = hs.get("channels", {})
-        lines = [f"⚠️ L2 实时数据异常 ({datetime.now().strftime('%H:%M')})", ""]
-        for ch_name, st in ch_info.items():
-            data_age = f"{st['last_data_age_s']}s" if st.get("last_data_age_s") else "无数据"
-            lines.append(f"  {ch_name}: 连接={'✅' if st.get('connected') else '❌'} "
-                         f"数据={data_age} 重连={st.get('recent_reconnects', 0)}次")
-        lines.append("")
-        lines.append("→ 观测缩减至15s，评分不受影响")
-        _send_alert_sync("\n".join(lines))
-
-    # 1.6 l2api 启动（--no-l2 模式下跳过）
-    l2api = None
-    l2_unhealthy = False  # 标记L2是否不健康，供观测循环使用
-    if CONFIG.get("L2API_ENABLED", "").lower() == "true" and not args.no_l2:
-        from scripts.l2_client import get_client
-        account = CONFIG.get("L2API_ACCOUNT", "")
-        password = CONFIG.get("L2API_PASSWORD", "")
-        if account and password:
-            print("\n[1.6/5] l2api Level2 实时数据接入...")
-            try:
-                l2api = get_client(account=account, password=password)
-                if not l2api._running:
-                    l2api.start()
-                # 快速健康评估：等待初始连接稳定
-                time.sleep(3)
-                if l2api.is_healthy():
-                    print("  l2api 已就绪")
-                else:
-                    hs = l2api.health_summary()
-                    print(f"  l2api 启动但连接不稳定: {hs}")
-                    print(f"  → 批次观测将缩减到15s，评分不受影响")
-                    l2_unhealthy = True
-                    # 飞书告警（当日首次，复用健康检查通道 FEISHU_ALERT_CHAT_ID）
-                    _alert_l2(l2api)
-            except Exception as e:
-                print(f"  l2api 启动失败: {e}")
-                l2api = None
-    elif args.no_l2:
-        print("\n[1.6/5] l2api 已跳过 (--no-l2 模式)")
+    scored_cache = _load_scored_cache()
+    print(f"  scored_cache: {len(scored_cache)} 只缓存" if scored_cache else "  scored_cache: 无缓存")
+    # 1.6 检查 L2 守护进程（--no-l2 模式下跳过）
+    l2_available = False
+    if not args.no_l2:
+        from scripts.l2_daemon_client import daemon_alive
+        l2_available = daemon_alive()
+        if l2_available:
+            print("  [L2] L2 守护进程已就绪")
+        else:
+            print("  [L2] L2 守护进程未运行（将跳过实时行情）")
     else:
-        print("\n[1.6/5] l2api 未启用")
+        print("  [L2] 已跳过 (--no-l2 模式)")
 
     # 1.7 涨停相关性预排
     print("\n[1.7/5] 涨停相关性预排...")
@@ -808,26 +788,13 @@ def _run_pipeline(args):
         print(f"批次 {bi+1}/{batch_count}: {len(codes)}只 {codes[:3]}...")
         print(f"{'='*40}")
 
-        if l2api:
-            # 健康门控：L2 不稳定时缩减观测，减少超时风险
-            obs = OBSERVE_SECONDS
-            if not l2api.is_healthy():
-                obs = 15
-                print(f"  [l2api] ⚠️ L2连接不健康，观测缩减为{obs}s (原{OBSERVE_SECONDS}s)")
-            else:
-                print(f"  [l2api] L2连接健康，观测{obs}s")
-
-            l2api.sync_subscriptions(codes)
-            print(f"  [l2api] 订阅完成, 开始观测...")
-            t0 = time.time()
-            while time.time() - t0 < obs:
-                time.sleep(1)
-                # 早期退出：L2 在观测中途断开，已观察 >10s 后允许提前结束
-                if obs > 15 and not l2api.is_healthy() and time.time() - t0 > 10:
-                    print(f"  [l2api] 连接异常，提前结束观测 (已观测{time.time()-t0:.0f}s)")
-                    break
-            ready = sum(1 for c in codes if l2api.is_ready(c))
-            print(f"  [l2api] 观测完成, 就绪{ready}/{len(codes)}")
+        if l2_available:
+            from scripts.l2_daemon_client import daemon_subscribe, daemon_is_ready
+            daemon_subscribe(codes)
+            print(f"  [L2] 已订阅{len(codes)}只, 等待数据...")
+            time.sleep(5)
+            ready = sum(1 for c in codes if daemon_is_ready(c))
+            print(f"  [L2] 就绪{ready}/{len(codes)}")
 
         for stock in batch:
             code = stock["code"]
@@ -835,13 +802,14 @@ def _run_pipeline(args):
             tag = "[缓存]" if cache_hit else "评分中"
             print(f"  {code} {stock['name']} {tag}")
             try:
-                r = _score_one(stock, l2api, weights, scored_cache, cache_hit)
+                r = _score_one(stock, l2_available, weights, scored_cache, cache_hit)
                 results.append(r)
             except Exception as e:
                 print(f"  {code} 评分失败: {e}")
 
-        if l2api:
-            l2api.unsubscribe(codes)
+        if l2_available:
+            from scripts.l2_daemon_client import daemon_unsubscribe
+            daemon_unsubscribe(codes)
 
     # 排序
     results.sort(key=lambda x: x["total"], reverse=True)
@@ -862,9 +830,7 @@ def _run_pipeline(args):
     print("\n[3/5] 飞书推送...")
     push_feishu(results)
 
-    # l2api 常驻
-    if l2api:
-        print(f"\n[l2api] 保持连接 (当前订阅: {len(l2api.cache.get_subscribed())} 只)")
+    # L2 订阅清理：已随批次循环结束时自动退订
 
     print("\n" + "=" * 50)
     print("流程完成!")
