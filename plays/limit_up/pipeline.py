@@ -804,9 +804,9 @@ def _run_pipeline(args):
 
     # 2. 分批深度分析: 每批订阅→观测45s→评分→立即推送(不等全部完成)
     BATCH_SIZE = 25
-    OBSERVE_SECONDS = 45
+    L2_WAIT_MAX = 24  # 最多等 24 秒, 80%就绪提前结束
     batch_count = (len(candidates) + BATCH_SIZE - 1) // BATCH_SIZE
-    print(f"\n[2/5] 分批深度分析: {len(candidates)}只 -> {batch_count}批x{BATCH_SIZE}只, {OBSERVE_SECONDS}s/轮")
+    print(f"\n[2/5] 分批深度分析: {len(candidates)}只 -> {batch_count}批x{BATCH_SIZE}只, 最多{L2_WAIT_MAX}s观测")
 
     all_results = []
     for bi in range(batch_count):
@@ -821,7 +821,7 @@ def _run_pipeline(args):
             daemon_subscribe(codes)
             print(f"  [L2] 已订阅{len(codes)}只, 等待数据到达...", end="", flush=True)
             ready = 0
-            for _ in range(12):  # 最多等 24 秒(45s观测缩短)
+            for _ in range(L2_WAIT_MAX // 2):  # 每2秒检查一次
                 time.sleep(2)
                 ready = sum(1 for c in codes if daemon_is_ready(c))
                 print(f" {ready}/{len(codes)}", end="", flush=True)
