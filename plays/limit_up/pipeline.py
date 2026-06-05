@@ -660,6 +660,31 @@ def main():
     parser.add_argument("--no-l2", action="store_true", help="跳过L2初始化（用于开盘早期无L2扫描）")
     args = parser.parse_args()
 
+    # ── 进程锁：防止多个 pipeline 实例同时跑导致 L2 互踢 ──
+    lock_file = DATA_DIR / "pipeline.lock"
+    if lock_file.exists():
+        try:
+            old_pid = int(lock_file.read_text().strip())
+            # 检查旧进程是否还在运行
+            os.kill(old_pid, 0)
+            print(f"跳过: 另一个 pipeline 实例正在运行 (PID={old_pid})")
+            return
+        except (OSError, ValueError):
+            # 旧进程已死，清理过期锁
+            lock_file.unlink(missing_ok=True)
+    lock_file.write_text(str(os.getpid()))
+
+    def _release_lock():
+        try: lock_file.unlink(missing_ok=True)
+        except: pass
+
+    try:
+        _run_pipeline(args)
+    finally:
+        _release_lock()
+
+
+def _run_pipeline(args):
     clear_tushare_cache()
 
     # 数据源预检：关键源异常时阻塞执行，避免基于错误数据决策
