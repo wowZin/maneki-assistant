@@ -447,50 +447,60 @@ async def main():
 
                     await client.query(prompt)
 
-                    # 响应超时兜底：60秒无响应则放弃本轮，继续处理下一条消息
+                    # 响应超时兜底：为 _collect 创建独立 task, 超时后 cancel
                     async def _collect():
                         turn_count = 0
                         final_session_id = None
-                        async for message in client.receive_response():
-                            turn_count += 1
-                            msg_type = type(message).__name__
-                            if isinstance(message, AssistantMessage):
-                                has_tool = any(
-                                    getattr(b, 'type', None) == "tool_use"
-                                    for b in (message.content or [])
-                                )
-                                texts = [
-                                    getattr(b, 'text', '')[:60]
-                                    for b in (message.content or [])
-                                    if hasattr(b, 'text')
-                                ]
-                                log.info("turn%d: AssistantMessage tools=%s text=%s",
-                                         turn_count, has_tool, texts[0] if texts else "")
-                            elif isinstance(message, ResultMessage):
-                                if not message.is_error:
-                                    final_session_id = message.session_id
-                                    log.info("turn%d: ResultMessage OK turns=%d", turn_count, message.num_turns)
+                        try:
+                            async for message in client.receive_response():
+                                turn_count += 1
+                                msg_type = type(message).__name__
+                                if isinstance(message, AssistantMessage):
+                                    has_tool = any(
+                                        getattr(b, 'type', None) == "tool_use"
+                                        for b in (message.content or [])
+                                    )
+                                    texts = [
+                                        getattr(b, 'text', '')[:60]
+                                        for b in (message.content or [])
+                                        if hasattr(b, 'text')
+                                    ]
+                                    log.info("turn%d: AssistantMessage tools=%s text=%s",
+                                             turn_count, has_tool, texts[0] if texts else "")
+                                elif isinstance(message, ResultMessage):
+                                    if not message.is_error:
+                                        final_session_id = message.session_id
+                                        log.info("turn%d: ResultMessage OK turns=%d", turn_count, message.num_turns)
+                                    else:
+                                        log.error("turn%d: ResultMessage ERROR %s", turn_count, message.subtype)
                                 else:
-                                    log.error("turn%d: ResultMessage ERROR %s", turn_count, message.subtype)
-                            else:
-                                log.info("turn%d: %s", turn_count, msg_type)
+                                    log.info("turn%d: %s", turn_count, msg_type)
+                        except asyncio.CancelledError:
+                            log.warning("_collect cancelled (timeout)")
+                            raise
                         return turn_count, final_session_id
 
-                    try:
-                        turns, sid = await asyncio.wait_for(_collect(), timeout=120)
+                    task = asyncio.create_task(_collect())
+                    done, pending = await asyncio.wait({task}, timeout=120)
+                    if pending:
+                        task.cancel()
+                        log.error("query timeout 120s for chat=%s, killing claude session", chat_id)
+                        # 放弃旧 session, 下次起新 session
+                        progress.save(
+                            session_id=None,
+                            positions={chat_id: new_pos, **progress.positions},
+                        )
+                        # 尝试取消剩余 pending task
+                        for t in pending:
+                            t.cancel()
+                    else:
+                        turns, sid = task.result()
                         if sid:
                             progress.save(
                                 session_id=sid,
                                 positions={chat_id: new_pos, **progress.positions},
                             )
                         log.info("query done: chat=%s turns=%d", chat_id, turns)
-                    except asyncio.TimeoutError:
-                        log.error("query timeout after 120s for chat=%s, abandoning session", chat_id)
-                        # 超时后丢弃当前 session，下次启动新 session
-                        progress.save(
-                            session_id=None,
-                            positions={chat_id: new_pos, **progress.positions},
-                        )
 
             await asyncio.sleep(poll)
 
