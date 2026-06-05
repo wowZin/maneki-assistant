@@ -802,13 +802,13 @@ def _run_pipeline(args):
     _get_popularity_rank("")  # 触发人气缓存
     candidates = _pre_rank(candidates, top_n=args.top)
 
-    # 2. 分批 Level2 深度分析
+    # 2. 分批深度分析: 每批订阅→观测45s→评分→立即推送(不等全部完成)
     BATCH_SIZE = 25
-    OBSERVE_SECONDS = 60
+    OBSERVE_SECONDS = 45
     batch_count = (len(candidates) + BATCH_SIZE - 1) // BATCH_SIZE
     print(f"\n[2/5] 分批深度分析: {len(candidates)}只 -> {batch_count}批x{BATCH_SIZE}只, {OBSERVE_SECONDS}s/轮")
 
-    results = []
+    all_results = []
     for bi in range(batch_count):
         batch = candidates[bi * BATCH_SIZE : (bi + 1) * BATCH_SIZE]
         codes = [c["code"] for c in batch]
@@ -821,14 +821,15 @@ def _run_pipeline(args):
             daemon_subscribe(codes)
             print(f"  [L2] 已订阅{len(codes)}只, 等待数据到达...", end="", flush=True)
             ready = 0
-            for _ in range(15):  # 最多等 30 秒, 每 2 秒检查就绪比例
+            for _ in range(12):  # 最多等 24 秒(45s观测缩短)
                 time.sleep(2)
                 ready = sum(1 for c in codes if daemon_is_ready(c))
                 print(f" {ready}/{len(codes)}", end="", flush=True)
-                if ready >= len(codes) * 0.8:  # 80% 以上就绪即可提前结束
+                if ready >= len(codes) * 0.8:
                     break
             print(f"\n  [L2] 最终就绪 {ready}/{len(codes)}")
 
+        batch_results = []
         for stock in batch:
             code = stock["code"]
             cache_hit = code in scored_cache
@@ -836,7 +837,8 @@ def _run_pipeline(args):
             print(f"  {code} {stock['name']} {tag}")
             try:
                 r = _score_one(stock, l2_available, weights, scored_cache, cache_hit)
-                results.append(r)
+                batch_results.append(r)
+                all_results.append(r)
             except Exception as e:
                 print(f"  {code} 评分失败: {e}")
 
@@ -844,24 +846,26 @@ def _run_pipeline(args):
             from scripts.l2_daemon_client import daemon_unsubscribe
             daemon_unsubscribe(codes)
 
-    # 排序
-    results.sort(key=lambda x: x["total"], reverse=True)
+        # 每批出分后立即尝试推送(不等后续批次)
+        if batch_results:
+            batch_results.sort(key=lambda x: x["total"], reverse=True)
+            top3_str = ", ".join(f"{r['code']}({r['total']:.0f})" for r in batch_results[:3])
+            print(f"  批次Top3: {top3_str}")
+            push_feishu(batch_results)
+
+    # 全量排序 + 保存
+    all_results.sort(key=lambda x: x["total"], reverse=True)
     print("\n[排序结果]")
-    for i, r in enumerate(results, 1):
+    for i, r in enumerate(all_results, 1):
         tag = " [共振]" if r.get("resonance", {}).get("is_resonance") else ""
         print(f"  {i}. {r['code']} {r['name']} - 总分:{r['total']:.1f}{tag}")
 
-    # 保存结果
     output_dir = DATA_DIR / "analysis"
     output_dir.mkdir(parents=True, exist_ok=True)
     output_file = output_dir / f"{datetime.now().strftime('%Y%m%d_%H%M')}.json"
     with open(output_file, "w") as f:
-        json.dump(results, f, ensure_ascii=False, indent=2)
+        json.dump(all_results, f, ensure_ascii=False, indent=2)
     print(f"\n结果已保存: {output_file}")
-
-    # 3. 飞书推送
-    print("\n[3/5] 飞书推送...")
-    push_feishu(results)
 
     # L2 订阅清理：已随批次循环结束时自动退订
 
