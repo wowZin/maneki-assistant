@@ -101,7 +101,7 @@ plays/limit_up/
 | 权重优化 | 周一至五 19:00 | `python plays/limit_up/optimize.py` |
 | Wiki 编译 | 周一至五 20:00 | `python wiki/compile.py` |
 | L2 守护进程 | 周一至五 9:25 (随--full巡检自动拉起) | `scripts/l2_daemon.py` (15:05自动退出) |
-| 全量数据巡检(含L2启动) | 周一至五 9:25 | `python scripts/health_check.py` |
+| 全量数据巡检(含L2启动) | 周一至五 9:25 | `python scripts/health_check.py --full` |
 | 数据巡检(盘中) | 周一至五 9:35~14:30 每小时 | `python scripts/health_check.py` |
 | 玩法巡检 | 周一至五 10~14点整点 | `python plays/limit_up/health_patrol.py` |
 
