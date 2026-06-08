@@ -773,6 +773,9 @@ def run_health_check(full: bool = False, quiet: bool = False) -> HealthReport:
     report = HealthReport()
     report.circuit_breaker_active = CircuitBreaker.is_active()
 
+    # 0. L2 守护进程（放最前，Tushare 慢检查之前就拉起）
+    report.checks.extend(check_l2_connection())
+
     # 1. Tushare
     report.checks.extend(check_tushare_apis(full=full))
 
@@ -780,7 +783,7 @@ def run_health_check(full: bool = False, quiet: bool = False) -> HealthReport:
     report.checks.extend(check_eastmoney_caches())
 
     # 3. Level2
-    report.checks.extend(check_l2_connection())
+    # (已提到最前)
 
     # 4. 代理
     report.checks.extend(check_proxy())
