@@ -804,7 +804,7 @@ def _run_pipeline(args):
 
     # 2. 分批深度分析: 每批订阅→观测45s→评分→立即推送(不等全部完成)
     BATCH_SIZE = 25
-    L2_WAIT_MAX = 24  # 最多等 24 秒, 80%就绪提前结束
+    L2_WAIT_MAX = 60  # 最多等 60 秒, 80%就绪提前结束
     batch_count = (len(candidates) + BATCH_SIZE - 1) // BATCH_SIZE
     print(f"\n[2/5] 分批深度分析: {len(candidates)}只 -> {batch_count}批x{BATCH_SIZE}只, 最多{L2_WAIT_MAX}s观测")
 
