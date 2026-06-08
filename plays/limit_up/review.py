@@ -118,8 +118,7 @@ def load_today_analysis(today: str) -> tuple:
     analysis_dir = PLAY_DIR / "data" / "analysis"
     stock_best = {}  # 每只股票取最佳分数版本（用于全量统计）
 
-    # 按时段读取分析文件，每个文件独立应用推送规则
-    per_slot_pushed = []  # 各时段推送结果的累加
+    # 按时段读取分析文件
     for f in sorted(analysis_dir.glob(f"{today}*.json")):
         try:
             with open(f) as fp:
@@ -132,22 +131,13 @@ def load_today_analysis(today: str) -> tuple:
                 total = item.get("total", 0) or 0
                 if code not in stock_best or total > stock_best[code].get("total", 0):
                     stock_best[code] = item
-            # 对本时段独立应用推送规则
-            above_threshold = sorted(
-                [item for item in data if item.get("total", 0) >= 35],
-                key=lambda x: x.get("total", 0), reverse=True
-            )[:3]
-            if above_threshold:
-                slot_push = above_threshold
-            else:
-                slot_push = []
-            per_slot_pushed.extend(slot_push)
+            # 时段信号汇总（仅用于全量统计，非推送依据）
+            pass
         except Exception as e:
             print(f"读取分析文件失败 {f}: {e}")
 
     all_items = list(stock_best.values())
-
-    # 优先从data/pushed/目录读取实际推送记录（最权威）
+    # 从data/pushed/目录读取实际推送记录（唯一权威来源）
     pushed_dir = PLAY_DIR / "data" / "pushed"
     pushed_items = []
     if pushed_dir.exists():
@@ -157,9 +147,10 @@ def load_today_analysis(today: str) -> tuple:
                     pushed_data = json.load(fp)
                 if isinstance(pushed_data, list):
                     pushed_items.extend(pushed_data)
+                else:
+                    pushed_items.append(pushed_data)
             except Exception as e:
                 print(f"读取推送记录失败 {pf}: {e}")
-
     if pushed_items:
         # 推送记录存在，取每只股票最佳分数版本去重
         pushed_best = {}
@@ -170,18 +161,9 @@ def load_today_analysis(today: str) -> tuple:
                 pushed_best[code] = item
         pushed = list(pushed_best.values())
         print(f"从推送记录获取: {len(pushed)}只")
-    elif per_slot_pushed:
-        # 无推送记录，用各时段推送结果累加去重（重建推送池）
-        pushed_best = {}
-        for item in per_slot_pushed:
-            code = item.get("code", "")
-            total = item.get("total", 0) or 0
-            if code not in pushed_best or total > pushed_best[code].get("total", 0):
-                pushed_best[code] = item
-        pushed = list(pushed_best.values())
-        print(f"从分析结果重建推送池(累加去重): {len(pushed)}只")
     else:
         pushed = []
+        print(f"今日无推送记录（push_feishu 未触发），推送数据: 0只")
 
     # 标记推送状态
     pushed_codes_set = set(item.get("code", "") for item in pushed)
