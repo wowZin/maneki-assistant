@@ -283,7 +283,7 @@ def _check_single_tushare(api_name: str, criticality: str) -> HealthStatus:
     t0 = time.time()
 
     try:
-        r = call_tushare(api_name, params, "", timeout=5)
+        r = call_tushare(api_name, params, "", timeout=3)
         if not isinstance(r, dict):
             return HealthStatus(
                 source=f"tushare:{api_name}",
