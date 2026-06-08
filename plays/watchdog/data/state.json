@@ -2,7 +2,7 @@
   "001896.SZ": {
     "code": "001896.SZ",
     "name": "豫能控股",
-    "added_at": "2026-06-05T13:52:32.824833",
+    "added_at": "2026-06-08T11:00:00",
     "status": "watching",
     "entry_price": 0.0,
     "entry_at": "",
@@ -13,12 +13,12 @@
     "signal_at": "",
     "avg_vol_20": 0.0,
     "last_alert_at": "",
-    "last_daily_update": "20260605"
+    "last_daily_update": "20260608"
   },
   "601101.SH": {
     "code": "601101.SH",
     "name": "昊华能源",
-    "added_at": "2026-06-05T13:52:33.289751",
+    "added_at": "2026-06-08T11:00:00",
     "status": "watching",
     "entry_price": 0.0,
     "entry_at": "",
@@ -29,6 +29,6 @@
     "signal_at": "",
     "avg_vol_20": 0.0,
     "last_alert_at": "",
-    "last_daily_update": "20260605"
+    "last_daily_update": "20260608"
   }
 }
