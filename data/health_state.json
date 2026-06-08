@@ -3,7 +3,7 @@
     "active": false,
     "consecutive_failures": 0
   },
-  "last_ok_at": "2026-06-05T14:55:37.205818",
+  "last_ok_at": "2026-06-08T14:55:43.459103",
   "alert_history": [
     {
       "timestamp": "2026-06-02T14:15:34.533144",
@@ -12,7 +12,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3088.123321533203,
           "detail": {
             "items_count": 1,
@@ -23,7 +23,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3114.3927574157715,
           "detail": {
             "items_count": 1,
@@ -34,7 +34,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3141.725778579712,
           "detail": {
             "items_count": 1,
@@ -45,7 +45,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3208.178997039795,
           "detail": {
             "items_count": 1,
@@ -56,7 +56,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3075.4661560058594,
           "detail": {
             "items_count": 1,
@@ -67,7 +67,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3111.365795135498,
           "detail": {
             "items_count": 1,
@@ -78,7 +78,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3021.226406097412,
           "detail": {
             "items_count": 1,
@@ -89,7 +89,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3030.3006172180176,
           "detail": {
             "items_count": 1,
@@ -100,7 +100,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3048.727035522461,
           "detail": {
             "items_count": 1,
@@ -111,7 +111,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3086.578607559204,
           "detail": {
             "items_count": 1,
@@ -122,7 +122,7 @@
         {
           "source": "tushare:concept_detail",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3101.0799407958984,
           "detail": {
             "items_count": 1,
@@ -133,7 +133,7 @@
         {
           "source": "tushare:top_list",
           "severity": "WARNING",
-          "message": "\u5f02\u5e38: 'NoneType' object has no attribute 'get'",
+          "message": "异常: 'NoneType' object has no attribute 'get'",
           "latency_ms": 3077.789783477783,
           "detail": {
             "error": "'NoneType' object has no attribute 'get'"
@@ -143,7 +143,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3068.5832500457764,
           "detail": {
             "items_count": 1,
@@ -154,7 +154,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3034.60431098938,
           "detail": {
             "items_count": 1,
@@ -165,7 +165,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 3085.325002670288,
           "detail": {
             "items_count": 0
@@ -175,7 +175,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3032.616376876831,
           "detail": {
             "items_count": 1,
@@ -186,7 +186,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "WARNING",
-          "message": "\u4ea4\u6613\u65f6\u6bb5\u6da8\u8dcc\u5e45\u7f13\u5b58\u4e3a\u7a7a(\u4ee3\u7406\u53ef\u80fd\u5f02\u5e38)",
+          "message": "交易时段涨跌幅缓存为空(代理可能异常)",
           "latency_ms": 1.959085464477539,
           "detail": {
             "cache_size": 0,
@@ -197,7 +197,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "WARNING",
-          "message": "\u4ea4\u6613\u65f6\u6bb5\u8d44\u91d1\u6d41\u7f13\u5b58\u4e3a\u7a7a(\u4ee3\u7406\u53ef\u80fd\u5f02\u5e38)",
+          "message": "交易时段资金流缓存为空(代理可能异常)",
           "latency_ms": 0,
           "detail": {
             "cache_size": 0,
@@ -208,7 +208,7 @@
         {
           "source": "l2:connection",
           "severity": "WARNING",
-          "message": "\u5ba2\u6237\u7aef\u672a\u521d\u59cb\u5316",
+          "message": "客户端未初始化",
           "latency_ms": 0.797271728515625,
           "detail": {},
           "checked_at": "2026-06-02T14:16:23.929053"
@@ -216,7 +216,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:12698)",
+          "message": "获取成功 (43.226.61.33:12698)",
           "latency_ms": 71.92134857177734,
           "detail": {
             "proxy": "43.226.61.33:12698"
@@ -226,7 +226,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "WARNING",
-          "message": "\u901a\u8fc7\u4ee3\u7406\u65e0\u6cd5\u8bbf\u95ee\u4e1c\u8d22API(\u91cd\u8bd5\u540e\u4ecd\u5931\u8d25)",
+          "message": "通过代理无法访问东财API(重试后仍失败)",
           "latency_ms": 6960.383415222168,
           "detail": {},
           "checked_at": "2026-06-02T14:16:30.961412"
@@ -241,7 +241,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2989.684581756592,
           "detail": {
             "items_count": 1,
@@ -252,7 +252,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3011.4901065826416,
           "detail": {
             "items_count": 1,
@@ -263,7 +263,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3019.023656845093,
           "detail": {
             "items_count": 1,
@@ -274,7 +274,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3033.994436264038,
           "detail": {
             "items_count": 1,
@@ -285,7 +285,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3033.141851425171,
           "detail": {
             "items_count": 1,
@@ -296,7 +296,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3033.97274017334,
           "detail": {
             "items_count": 1,
@@ -307,7 +307,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3054.7430515289307,
           "detail": {
             "items_count": 1,
@@ -318,7 +318,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3072.9334354400635,
           "detail": {
             "items_count": 1,
@@ -329,7 +329,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2967.74959564209,
           "detail": {
             "items_count": 1,
@@ -340,7 +340,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3057.91974067688,
           "detail": {
             "items_count": 1,
@@ -351,7 +351,7 @@
         {
           "source": "tushare:concept_detail",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3008.389949798584,
           "detail": {
             "items_count": 1,
@@ -362,7 +362,7 @@
         {
           "source": "tushare:top_list",
           "severity": "WARNING",
-          "message": "\u5f02\u5e38: 'NoneType' object has no attribute 'get'",
+          "message": "异常: 'NoneType' object has no attribute 'get'",
           "latency_ms": 2996.8461990356445,
           "detail": {
             "error": "'NoneType' object has no attribute 'get'"
@@ -372,7 +372,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3009.532690048218,
           "detail": {
             "items_count": 1,
@@ -383,7 +383,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3093.1692123413086,
           "detail": {
             "items_count": 1,
@@ -394,7 +394,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 3001.762866973877,
           "detail": {
             "items_count": 0
@@ -404,7 +404,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3016.7510509490967,
           "detail": {
             "items_count": 1,
@@ -415,7 +415,7 @@
         {
           "source": "tushare:stk_holdernumber",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2989.1698360443115,
           "detail": {
             "items_count": 1,
@@ -426,7 +426,7 @@
         {
           "source": "tushare:share_float",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3081.7787647247314,
           "detail": {
             "items_count": 1,
@@ -437,7 +437,7 @@
         {
           "source": "tushare:fina_forecast",
           "severity": "WARNING",
-          "message": "\u5f02\u5e38: 'NoneType' object has no attribute 'get'",
+          "message": "异常: 'NoneType' object has no attribute 'get'",
           "latency_ms": 3146.913766860962,
           "detail": {
             "error": "'NoneType' object has no attribute 'get'"
@@ -447,7 +447,7 @@
         {
           "source": "tushare:hk_hold",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3079.0576934814453,
           "detail": {
             "items_count": 1,
@@ -458,7 +458,7 @@
         {
           "source": "tushare:margin_detail",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3113.661050796509,
           "detail": {
             "items_count": 1,
@@ -469,7 +469,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "WARNING",
-          "message": "\u4ea4\u6613\u65f6\u6bb5\u6da8\u8dcc\u5e45\u7f13\u5b58\u4e3a\u7a7a(\u4ee3\u7406\u53ef\u80fd\u5f02\u5e38)",
+          "message": "交易时段涨跌幅缓存为空(代理可能异常)",
           "latency_ms": 3.872394561767578,
           "detail": {
             "cache_size": 0,
@@ -480,7 +480,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "WARNING",
-          "message": "\u4ea4\u6613\u65f6\u6bb5\u8d44\u91d1\u6d41\u7f13\u5b58\u4e3a\u7a7a(\u4ee3\u7406\u53ef\u80fd\u5f02\u5e38)",
+          "message": "交易时段资金流缓存为空(代理可能异常)",
           "latency_ms": 0,
           "detail": {
             "cache_size": 0,
@@ -491,7 +491,7 @@
         {
           "source": "l2:connection",
           "severity": "WARNING",
-          "message": "\u5ba2\u6237\u7aef\u672a\u521d\u59cb\u5316",
+          "message": "客户端未初始化",
           "latency_ms": 1.8656253814697266,
           "detail": {},
           "checked_at": "2026-06-02T14:17:41.267382"
@@ -499,7 +499,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:11185)",
+          "message": "获取成功 (43.226.61.33:11185)",
           "latency_ms": 90.04068374633789,
           "detail": {
             "proxy": "43.226.61.33:11185"
@@ -509,7 +509,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "WARNING",
-          "message": "\u901a\u8fc7\u4ee3\u7406\u65e0\u6cd5\u8bbf\u95ee\u4e1c\u8d22API(\u91cd\u8bd5\u540e\u4ecd\u5931\u8d25)",
+          "message": "通过代理无法访问东财API(重试后仍失败)",
           "latency_ms": 9310.0266456604,
           "detail": {},
           "checked_at": "2026-06-02T14:17:50.667494"
@@ -524,7 +524,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3008.981466293335,
           "detail": {
             "items_count": 1,
@@ -535,7 +535,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2848.4129905700684,
           "detail": {
             "items_count": 1,
@@ -546,7 +546,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2882.370710372925,
           "detail": {
             "items_count": 1,
@@ -557,7 +557,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2985.245943069458,
           "detail": {
             "items_count": 1,
@@ -568,7 +568,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2933.673620223999,
           "detail": {
             "items_count": 1,
@@ -579,7 +579,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2924.8592853546143,
           "detail": {
             "items_count": 1,
@@ -590,7 +590,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2930.11212348938,
           "detail": {
             "items_count": 1,
@@ -601,7 +601,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2919.064998626709,
           "detail": {
             "items_count": 1,
@@ -612,7 +612,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2882.3819160461426,
           "detail": {
             "items_count": 1,
@@ -623,7 +623,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2855.297803878784,
           "detail": {
             "items_count": 1,
@@ -634,7 +634,7 @@
         {
           "source": "tushare:concept_detail",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3035.863161087036,
           "detail": {
             "items_count": 1,
@@ -645,7 +645,7 @@
         {
           "source": "tushare:top_list",
           "severity": "WARNING",
-          "message": "\u5f02\u5e38: 'NoneType' object has no attribute 'get'",
+          "message": "异常: 'NoneType' object has no attribute 'get'",
           "latency_ms": 2854.8762798309326,
           "detail": {
             "error": "'NoneType' object has no attribute 'get'"
@@ -655,7 +655,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2923.3505725860596,
           "detail": {
             "items_count": 1,
@@ -666,7 +666,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2879.5535564422607,
           "detail": {
             "items_count": 1,
@@ -677,7 +677,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 2983.2699298858643,
           "detail": {
             "items_count": 0
@@ -687,7 +687,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2939.389705657959,
           "detail": {
             "items_count": 1,
@@ -698,7 +698,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "WARNING",
-          "message": "\u4ea4\u6613\u65f6\u6bb5\u6da8\u8dcc\u5e45\u7f13\u5b58\u4e3a\u7a7a(\u4ee3\u7406\u53ef\u80fd\u5f02\u5e38)",
+          "message": "交易时段涨跌幅缓存为空(代理可能异常)",
           "latency_ms": 2.149343490600586,
           "detail": {
             "cache_size": 0,
@@ -709,7 +709,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "WARNING",
-          "message": "\u4ea4\u6613\u65f6\u6bb5\u8d44\u91d1\u6d41\u7f13\u5b58\u4e3a\u7a7a(\u4ee3\u7406\u53ef\u80fd\u5f02\u5e38)",
+          "message": "交易时段资金流缓存为空(代理可能异常)",
           "latency_ms": 0,
           "detail": {
             "cache_size": 0,
@@ -720,7 +720,7 @@
         {
           "source": "l2:connection",
           "severity": "WARNING",
-          "message": "\u5ba2\u6237\u7aef\u672a\u521d\u59cb\u5316",
+          "message": "客户端未初始化",
           "latency_ms": 0.8780956268310547,
           "detail": {},
           "checked_at": "2026-06-02T14:21:36.024894"
@@ -728,7 +728,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:12346)",
+          "message": "获取成功 (43.226.61.33:12346)",
           "latency_ms": 78.33480834960938,
           "detail": {
             "proxy": "43.226.61.33:12346"
@@ -738,7 +738,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "WARNING",
-          "message": "\u901a\u8fc7\u4ee3\u7406\u65e0\u6cd5\u8bbf\u95ee\u4e1c\u8d22API(\u91cd\u8bd5\u540e\u4ecd\u5931\u8d25)",
+          "message": "通过代理无法访问东财API(重试后仍失败)",
           "latency_ms": 10889.514684677124,
           "detail": {},
           "checked_at": "2026-06-02T14:21:46.992785"
@@ -753,7 +753,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2968.524932861328,
           "detail": {
             "items_count": 1,
@@ -764,7 +764,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2888.686418533325,
           "detail": {
             "items_count": 1,
@@ -775,7 +775,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3036.1626148223877,
           "detail": {
             "items_count": 1,
@@ -786,7 +786,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2876.1017322540283,
           "detail": {
             "items_count": 1,
@@ -797,7 +797,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2925.886869430542,
           "detail": {
             "items_count": 1,
@@ -808,7 +808,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2909.7371101379395,
           "detail": {
             "items_count": 1,
@@ -819,7 +819,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2978.137254714966,
           "detail": {
             "items_count": 1,
@@ -830,7 +830,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2955.4054737091064,
           "detail": {
             "items_count": 1,
@@ -841,7 +841,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3381.7968368530273,
           "detail": {
             "items_count": 1,
@@ -852,7 +852,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2979.5238971710205,
           "detail": {
             "items_count": 1,
@@ -863,7 +863,7 @@
         {
           "source": "tushare:concept_detail",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2935.6515407562256,
           "detail": {
             "items_count": 1,
@@ -874,7 +874,7 @@
         {
           "source": "tushare:top_list",
           "severity": "WARNING",
-          "message": "\u5f02\u5e38: 'NoneType' object has no attribute 'get'",
+          "message": "异常: 'NoneType' object has no attribute 'get'",
           "latency_ms": 2873.668909072876,
           "detail": {
             "error": "'NoneType' object has no attribute 'get'"
@@ -884,7 +884,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2854.7449111938477,
           "detail": {
             "items_count": 1,
@@ -895,7 +895,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2936.1367225646973,
           "detail": {
             "items_count": 1,
@@ -906,7 +906,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 3034.1250896453857,
           "detail": {
             "items_count": 0
@@ -916,7 +916,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2981.682538986206,
           "detail": {
             "items_count": 1,
@@ -927,7 +927,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "WARNING",
-          "message": "\u4ea4\u6613\u65f6\u6bb5\u6da8\u8dcc\u5e45\u7f13\u5b58\u4e3a\u7a7a(\u4ee3\u7406\u53ef\u80fd\u5f02\u5e38)",
+          "message": "交易时段涨跌幅缓存为空(代理可能异常)",
           "latency_ms": 2.5556087493896484,
           "detail": {
             "cache_size": 0,
@@ -938,7 +938,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "WARNING",
-          "message": "\u4ea4\u6613\u65f6\u6bb5\u8d44\u91d1\u6d41\u7f13\u5b58\u4e3a\u7a7a(\u4ee3\u7406\u53ef\u80fd\u5f02\u5e38)",
+          "message": "交易时段资金流缓存为空(代理可能异常)",
           "latency_ms": 0,
           "detail": {
             "cache_size": 0,
@@ -949,7 +949,7 @@
         {
           "source": "l2:connection",
           "severity": "WARNING",
-          "message": "\u5ba2\u6237\u7aef\u672a\u521d\u59cb\u5316",
+          "message": "客户端未初始化",
           "latency_ms": 1.5714168548583984,
           "detail": {},
           "checked_at": "2026-06-02T14:35:07.904257"
@@ -957,7 +957,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:10983)",
+          "message": "获取成功 (43.226.61.33:10983)",
           "latency_ms": 84.63358879089355,
           "detail": {
             "proxy": "43.226.61.33:10983"
@@ -967,7 +967,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "WARNING",
-          "message": "\u901a\u8fc7\u4ee3\u7406\u65e0\u6cd5\u8bbf\u95ee\u4e1c\u8d22API(\u91cd\u8bd5\u540e\u4ecd\u5931\u8d25)",
+          "message": "通过代理无法访问东财API(重试后仍失败)",
           "latency_ms": 14077.028274536133,
           "detail": {},
           "checked_at": "2026-06-02T14:35:22.065977"
@@ -982,7 +982,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2897.686004638672,
           "detail": {
             "items_count": 1,
@@ -993,7 +993,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2926.231861114502,
           "detail": {
             "items_count": 1,
@@ -1004,7 +1004,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2879.6818256378174,
           "detail": {
             "items_count": 1,
@@ -1015,7 +1015,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2911.870241165161,
           "detail": {
             "items_count": 1,
@@ -1026,7 +1026,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2878.612518310547,
           "detail": {
             "items_count": 1,
@@ -1037,7 +1037,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2882.441282272339,
           "detail": {
             "items_count": 1,
@@ -1048,7 +1048,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2926.372528076172,
           "detail": {
             "items_count": 1,
@@ -1059,7 +1059,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2920.2558994293213,
           "detail": {
             "items_count": 1,
@@ -1070,7 +1070,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2802.246570587158,
           "detail": {
             "items_count": 1,
@@ -1081,7 +1081,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2854.255437850952,
           "detail": {
             "items_count": 1,
@@ -1092,7 +1092,7 @@
         {
           "source": "tushare:concept_detail",
           "severity": "WARNING",
-          "message": "\u5f02\u5e38: 'NoneType' object has no attribute 'get'",
+          "message": "异常: 'NoneType' object has no attribute 'get'",
           "latency_ms": 2932.1298599243164,
           "detail": {
             "error": "'NoneType' object has no attribute 'get'"
@@ -1102,7 +1102,7 @@
         {
           "source": "tushare:top_list",
           "severity": "WARNING",
-          "message": "\u5f02\u5e38: 'NoneType' object has no attribute 'get'",
+          "message": "异常: 'NoneType' object has no attribute 'get'",
           "latency_ms": 2893.3186531066895,
           "detail": {
             "error": "'NoneType' object has no attribute 'get'"
@@ -1112,7 +1112,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2914.8173332214355,
           "detail": {
             "items_count": 1,
@@ -1123,7 +1123,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2890.589714050293,
           "detail": {
             "items_count": 1,
@@ -1134,7 +1134,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 2889.249324798584,
           "detail": {
             "items_count": 0
@@ -1144,7 +1144,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2869.2967891693115,
           "detail": {
             "items_count": 1,
@@ -1155,7 +1155,7 @@
         {
           "source": "tushare:stk_holdernumber",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2908.0660343170166,
           "detail": {
             "items_count": 1,
@@ -1166,7 +1166,7 @@
         {
           "source": "tushare:share_float",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2894.1500186920166,
           "detail": {
             "items_count": 1,
@@ -1177,7 +1177,7 @@
         {
           "source": "tushare:fina_forecast",
           "severity": "WARNING",
-          "message": "\u5f02\u5e38: 'NoneType' object has no attribute 'get'",
+          "message": "异常: 'NoneType' object has no attribute 'get'",
           "latency_ms": 2917.9790019989014,
           "detail": {
             "error": "'NoneType' object has no attribute 'get'"
@@ -1187,7 +1187,7 @@
         {
           "source": "tushare:hk_hold",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2892.371654510498,
           "detail": {
             "items_count": 1,
@@ -1198,7 +1198,7 @@
         {
           "source": "tushare:margin_detail",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2892.8520679473877,
           "detail": {
             "items_count": 1,
@@ -1209,7 +1209,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "OK",
-          "message": "\u975e\u4ea4\u6613\u65f6\u6bb5,\u8df3\u8fc7",
+          "message": "非交易时段,跳过",
           "latency_ms": 1.6911029815673828,
           "detail": {},
           "checked_at": "2026-06-03T09:26:41.440244"
@@ -1217,7 +1217,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "OK",
-          "message": "\u975e\u4ea4\u6613\u65f6\u6bb5,\u8df3\u8fc7",
+          "message": "非交易时段,跳过",
           "latency_ms": 1.7058849334716797,
           "detail": {},
           "checked_at": "2026-06-03T09:26:41.440255"
@@ -1225,7 +1225,7 @@
         {
           "source": "l2:connection",
           "severity": "WARNING",
-          "message": "\u5ba2\u6237\u7aef\u672a\u521d\u59cb\u5316",
+          "message": "客户端未初始化",
           "latency_ms": 0.7712841033935547,
           "detail": {},
           "checked_at": "2026-06-03T09:26:41.441034"
@@ -1233,7 +1233,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:11201)",
+          "message": "获取成功 (43.226.61.33:11201)",
           "latency_ms": 82.11970329284668,
           "detail": {
             "proxy": "43.226.61.33:11201"
@@ -1243,7 +1243,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "WARNING",
-          "message": "\u901a\u8fc7\u4ee3\u7406\u65e0\u6cd5\u8bbf\u95ee\u4e1c\u8d22API(\u91cd\u8bd5\u540e\u4ecd\u5931\u8d25)",
+          "message": "通过代理无法访问东财API(重试后仍失败)",
           "latency_ms": 18804.961919784546,
           "detail": {},
           "checked_at": "2026-06-03T09:27:00.328156"
@@ -1258,7 +1258,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 5616.690635681152,
           "detail": {
             "items_count": 1,
@@ -1269,7 +1269,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 5364.315748214722,
           "detail": {
             "items_count": 1,
@@ -1280,7 +1280,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 4953.956842422485,
           "detail": {
             "items_count": 1,
@@ -1291,7 +1291,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 5575.004100799561,
           "detail": {
             "items_count": 1,
@@ -1302,7 +1302,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 4215.577840805054,
           "detail": {
             "items_count": 1,
@@ -1313,7 +1313,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3094.104766845703,
           "detail": {
             "items_count": 1,
@@ -1324,7 +1324,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 5756.4451694488525,
           "detail": {
             "items_count": 1,
@@ -1335,7 +1335,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 4930.924892425537,
           "detail": {
             "items_count": 1,
@@ -1346,7 +1346,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3338.371992111206,
           "detail": {
             "items_count": 1,
@@ -1357,7 +1357,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 4306.183338165283,
           "detail": {
             "items_count": 1,
@@ -1368,7 +1368,7 @@
         {
           "source": "tushare:concept_detail",
           "severity": "WARNING",
-          "message": "\u5f02\u5e38: 'NoneType' object has no attribute 'get'",
+          "message": "异常: 'NoneType' object has no attribute 'get'",
           "latency_ms": 4785.036563873291,
           "detail": {
             "error": "'NoneType' object has no attribute 'get'"
@@ -1378,7 +1378,7 @@
         {
           "source": "tushare:top_list",
           "severity": "WARNING",
-          "message": "\u5f02\u5e38: 'NoneType' object has no attribute 'get'",
+          "message": "异常: 'NoneType' object has no attribute 'get'",
           "latency_ms": 4937.224626541138,
           "detail": {
             "error": "'NoneType' object has no attribute 'get'"
@@ -1388,7 +1388,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 5526.576519012451,
           "detail": {
             "items_count": 1,
@@ -1399,7 +1399,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 5179.640054702759,
           "detail": {
             "items_count": 1,
@@ -1410,7 +1410,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 4984.478950500488,
           "detail": {
             "items_count": 0
@@ -1420,7 +1420,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 4988.301038742065,
           "detail": {
             "items_count": 1,
@@ -1431,7 +1431,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "WARNING",
-          "message": "\u4ea4\u6613\u65f6\u6bb5\u6da8\u8dcc\u5e45\u7f13\u5b58\u4e3a\u7a7a(\u4ee3\u7406\u53ef\u80fd\u5f02\u5e38)",
+          "message": "交易时段涨跌幅缓存为空(代理可能异常)",
           "latency_ms": 1.9843578338623047,
           "detail": {
             "cache_size": 0,
@@ -1442,7 +1442,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "WARNING",
-          "message": "\u4ea4\u6613\u65f6\u6bb5\u8d44\u91d1\u6d41\u7f13\u5b58\u4e3a\u7a7a(\u4ee3\u7406\u53ef\u80fd\u5f02\u5e38)",
+          "message": "交易时段资金流缓存为空(代理可能异常)",
           "latency_ms": 0,
           "detail": {
             "cache_size": 0,
@@ -1453,7 +1453,7 @@
         {
           "source": "l2:connection",
           "severity": "WARNING",
-          "message": "\u5ba2\u6237\u7aef\u672a\u521d\u59cb\u5316",
+          "message": "客户端未初始化",
           "latency_ms": 0.8294582366943359,
           "detail": {},
           "checked_at": "2026-06-03T09:31:19.450883"
@@ -1461,7 +1461,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:11747)",
+          "message": "获取成功 (43.226.61.33:11747)",
           "latency_ms": 85.66570281982422,
           "detail": {
             "proxy": "43.226.61.33:11747"
@@ -1471,7 +1471,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "OK",
-          "message": "\u4e1c\u8d22API\u6b63\u5e38 (code=000001)",
+          "message": "东财API正常 (code=000001)",
           "latency_ms": 429.68177795410156,
           "detail": {},
           "checked_at": "2026-06-03T09:31:19.966274"
@@ -1486,7 +1486,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3271.1896896362305,
           "detail": {
             "items_count": 1,
@@ -1497,7 +1497,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2968.7225818634033,
           "detail": {
             "items_count": 1,
@@ -1508,7 +1508,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3070.6992149353027,
           "detail": {
             "items_count": 1,
@@ -1519,7 +1519,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3008.6886882781982,
           "detail": {
             "items_count": 1,
@@ -1530,7 +1530,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3047.8763580322266,
           "detail": {
             "items_count": 1,
@@ -1541,7 +1541,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3045.194387435913,
           "detail": {
             "items_count": 1,
@@ -1552,7 +1552,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3531.5029621124268,
           "detail": {
             "items_count": 1,
@@ -1563,7 +1563,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3945.6496238708496,
           "detail": {
             "items_count": 1,
@@ -1574,7 +1574,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3018.765687942505,
           "detail": {
             "items_count": 1,
@@ -1585,7 +1585,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2965.2860164642334,
           "detail": {
             "items_count": 1,
@@ -1596,7 +1596,7 @@
         {
           "source": "tushare:top_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (86\u6761)",
+          "message": "正常 (86条)",
           "latency_ms": 3129.483938217163,
           "detail": {
             "items_count": 86,
@@ -1607,7 +1607,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3079.6635150909424,
           "detail": {
             "items_count": 1,
@@ -1618,7 +1618,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3107.8717708587646,
           "detail": {
             "items_count": 1,
@@ -1629,7 +1629,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 3075.079917907715,
           "detail": {
             "items_count": 0
@@ -1639,7 +1639,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3013.0615234375,
           "detail": {
             "items_count": 1,
@@ -1650,7 +1650,7 @@
         {
           "source": "tushare:stk_holdernumber",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3069.411039352417,
           "detail": {
             "items_count": 1,
@@ -1661,7 +1661,7 @@
         {
           "source": "tushare:share_float",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2986.7093563079834,
           "detail": {
             "items_count": 1,
@@ -1672,7 +1672,7 @@
         {
           "source": "tushare:forecast",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3025.927782058716,
           "detail": {
             "items_count": 1,
@@ -1683,7 +1683,7 @@
         {
           "source": "tushare:hk_hold",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3108.079433441162,
           "detail": {
             "items_count": 1,
@@ -1694,7 +1694,7 @@
         {
           "source": "tushare:margin_detail",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3063.2646083831787,
           "detail": {
             "items_count": 1,
@@ -1705,7 +1705,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "WARNING",
-          "message": "\u4ea4\u6613\u65f6\u6bb5\u6da8\u8dcc\u5e45\u7f13\u5b58\u4e3a\u7a7a(\u4ee3\u7406\u53ef\u80fd\u5f02\u5e38)",
+          "message": "交易时段涨跌幅缓存为空(代理可能异常)",
           "latency_ms": 2.703428268432617,
           "detail": {
             "cache_size": 0,
@@ -1716,7 +1716,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "WARNING",
-          "message": "\u4ea4\u6613\u65f6\u6bb5\u8d44\u91d1\u6d41\u7f13\u5b58\u4e3a\u7a7a(\u4ee3\u7406\u53ef\u80fd\u5f02\u5e38)",
+          "message": "交易时段资金流缓存为空(代理可能异常)",
           "latency_ms": 0,
           "detail": {
             "cache_size": 0,
@@ -1727,7 +1727,7 @@
         {
           "source": "l2:connection",
           "severity": "OK",
-          "message": "\u672a\u521d\u59cb\u5316(\u975epipeline\u4e0a\u4e0b\u6587,\u8df3\u8fc7)",
+          "message": "未初始化(非pipeline上下文,跳过)",
           "latency_ms": 0.8046627044677734,
           "detail": {},
           "checked_at": "2026-06-03T10:25:51.680647"
@@ -1735,7 +1735,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:12205)",
+          "message": "获取成功 (43.226.61.33:12205)",
           "latency_ms": 820.8401203155518,
           "detail": {
             "proxy": "43.226.61.33:12205"
@@ -1745,7 +1745,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "OK",
-          "message": "\u4e1c\u8d22API\u6b63\u5e38 (code=000001)",
+          "message": "东财API正常 (code=000001)",
           "latency_ms": 2354.8483848571777,
           "detail": {},
           "checked_at": "2026-06-03T10:25:54.856381"
@@ -1760,7 +1760,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 4722.80216217041,
           "detail": {
             "items_count": 1,
@@ -1771,7 +1771,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 5358.947038650513,
           "detail": {
             "items_count": 1,
@@ -1782,7 +1782,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 4160.757541656494,
           "detail": {
             "items_count": 1,
@@ -1793,7 +1793,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3146.824598312378,
           "detail": {
             "items_count": 1,
@@ -1804,7 +1804,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 4247.342824935913,
           "detail": {
             "items_count": 1,
@@ -1815,7 +1815,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2917.5901412963867,
           "detail": {
             "items_count": 1,
@@ -1826,7 +1826,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3598.458766937256,
           "detail": {
             "items_count": 1,
@@ -1837,7 +1837,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 4117.378950119019,
           "detail": {
             "items_count": 1,
@@ -1848,7 +1848,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3134.8159313201904,
           "detail": {
             "items_count": 1,
@@ -1859,7 +1859,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 4486.487627029419,
           "detail": {
             "items_count": 1,
@@ -1870,7 +1870,7 @@
         {
           "source": "tushare:top_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (86\u6761)",
+          "message": "正常 (86条)",
           "latency_ms": 3877.668619155884,
           "detail": {
             "items_count": 86,
@@ -1881,7 +1881,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 4864.431858062744,
           "detail": {
             "items_count": 1,
@@ -1892,7 +1892,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2955.026149749756,
           "detail": {
             "items_count": 1,
@@ -1903,7 +1903,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 4804.72469329834,
           "detail": {
             "items_count": 0
@@ -1913,7 +1913,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 5397.020101547241,
           "detail": {
             "items_count": 1,
@@ -1924,7 +1924,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "OK",
-          "message": "\u7f13\u5b58\u4e3a\u7a7a(\u8de8\u8fdb\u7a0b\u5de1\u68c0,\u8df3\u8fc7)",
+          "message": "缓存为空(跨进程巡检,跳过)",
           "latency_ms": 1.9104480743408203,
           "detail": {
             "cache_size": 0,
@@ -1935,7 +1935,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "OK",
-          "message": "\u7f13\u5b58\u4e3a\u7a7a(\u8de8\u8fdb\u7a0b\u5de1\u68c0,\u8df3\u8fc7)",
+          "message": "缓存为空(跨进程巡检,跳过)",
           "latency_ms": 0,
           "detail": {
             "cache_size": 0,
@@ -1946,7 +1946,7 @@
         {
           "source": "l2:connection",
           "severity": "OK",
-          "message": "\u672a\u521d\u59cb\u5316(\u975epipeline\u4e0a\u4e0b\u6587,\u8df3\u8fc7)",
+          "message": "未初始化(非pipeline上下文,跳过)",
           "latency_ms": 1.1360645294189453,
           "detail": {},
           "checked_at": "2026-06-03T10:32:05.706150"
@@ -1954,7 +1954,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:11013)",
+          "message": "获取成功 (43.226.61.33:11013)",
           "latency_ms": 86.04216575622559,
           "detail": {
             "proxy": "43.226.61.33:11013"
@@ -1964,7 +1964,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "OK",
-          "message": "\u4e1c\u8d22API\u6b63\u5e38 (code=000001)",
+          "message": "东财API正常 (code=000001)",
           "latency_ms": 3939.0673637390137,
           "detail": {},
           "checked_at": "2026-06-03T10:32:09.731304"
@@ -1979,7 +1979,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 5536.099910736084,
           "detail": {
             "items_count": 1,
@@ -1990,7 +1990,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3572.768449783325,
           "detail": {
             "items_count": 1,
@@ -2001,7 +2001,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3188.6885166168213,
           "detail": {
             "items_count": 1,
@@ -2012,7 +2012,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3561.030864715576,
           "detail": {
             "items_count": 1,
@@ -2023,7 +2023,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 5772.2742557525635,
           "detail": {
             "items_count": 1,
@@ -2034,7 +2034,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 5412.428617477417,
           "detail": {
             "items_count": 1,
@@ -2045,7 +2045,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 4042.8059101104736,
           "detail": {
             "items_count": 1,
@@ -2056,7 +2056,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3097.843885421753,
           "detail": {
             "items_count": 1,
@@ -2067,7 +2067,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 4561.640977859497,
           "detail": {
             "items_count": 1,
@@ -2078,7 +2078,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3546.1039543151855,
           "detail": {
             "items_count": 1,
@@ -2089,7 +2089,7 @@
         {
           "source": "tushare:top_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (86\u6761)",
+          "message": "正常 (86条)",
           "latency_ms": 3036.4978313446045,
           "detail": {
             "items_count": 86,
@@ -2100,7 +2100,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 4720.400810241699,
           "detail": {
             "items_count": 1,
@@ -2111,7 +2111,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 4949.265718460083,
           "detail": {
             "items_count": 1,
@@ -2122,7 +2122,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 2976.923942565918,
           "detail": {
             "items_count": 0
@@ -2132,7 +2132,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3031.252861022949,
           "detail": {
             "items_count": 1,
@@ -2143,7 +2143,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "OK",
-          "message": "\u7f13\u5b58\u4e3a\u7a7a(\u8de8\u8fdb\u7a0b\u5de1\u68c0,\u8df3\u8fc7)",
+          "message": "缓存为空(跨进程巡检,跳过)",
           "latency_ms": 2.0520687103271484,
           "detail": {
             "cache_size": 0,
@@ -2154,7 +2154,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "OK",
-          "message": "\u7f13\u5b58\u4e3a\u7a7a(\u8de8\u8fdb\u7a0b\u5de1\u68c0,\u8df3\u8fc7)",
+          "message": "缓存为空(跨进程巡检,跳过)",
           "latency_ms": 0,
           "detail": {
             "cache_size": 0,
@@ -2165,7 +2165,7 @@
         {
           "source": "l2:connection",
           "severity": "OK",
-          "message": "\u672a\u521d\u59cb\u5316(\u975epipeline\u4e0a\u4e0b\u6587,\u8df3\u8fc7)",
+          "message": "未初始化(非pipeline上下文,跳过)",
           "latency_ms": 1.009225845336914,
           "detail": {},
           "checked_at": "2026-06-03T10:33:13.820881"
@@ -2173,7 +2173,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:11794)",
+          "message": "获取成功 (43.226.61.33:11794)",
           "latency_ms": 84.90252494812012,
           "detail": {
             "proxy": "43.226.61.33:11794"
@@ -2183,7 +2183,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "OK",
-          "message": "\u4e1c\u8d22API\u6b63\u5e38 (code=000001)",
+          "message": "东财API正常 (code=000001)",
           "latency_ms": 471.9505310058594,
           "detail": {},
           "checked_at": "2026-06-03T10:33:14.377786"
@@ -2198,7 +2198,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2964.625358581543,
           "detail": {
             "items_count": 1,
@@ -2209,7 +2209,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2912.9254817962646,
           "detail": {
             "items_count": 1,
@@ -2220,7 +2220,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3000.3409385681152,
           "detail": {
             "items_count": 1,
@@ -2231,7 +2231,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2872.2493648529053,
           "detail": {
             "items_count": 1,
@@ -2242,7 +2242,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2945.8823204040527,
           "detail": {
             "items_count": 1,
@@ -2253,7 +2253,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2956.7153453826904,
           "detail": {
             "items_count": 1,
@@ -2264,7 +2264,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3051.0759353637695,
           "detail": {
             "items_count": 1,
@@ -2275,7 +2275,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2876.2714862823486,
           "detail": {
             "items_count": 1,
@@ -2286,7 +2286,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2971.005916595459,
           "detail": {
             "items_count": 1,
@@ -2297,7 +2297,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2881.7129135131836,
           "detail": {
             "items_count": 1,
@@ -2308,7 +2308,7 @@
         {
           "source": "tushare:top_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (86\u6761)",
+          "message": "正常 (86条)",
           "latency_ms": 2925.828218460083,
           "detail": {
             "items_count": 86,
@@ -2319,7 +2319,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2869.5080280303955,
           "detail": {
             "items_count": 1,
@@ -2330,7 +2330,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2945.5106258392334,
           "detail": {
             "items_count": 1,
@@ -2341,7 +2341,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 2888.143301010132,
           "detail": {
             "items_count": 0
@@ -2351,7 +2351,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2846.025228500366,
           "detail": {
             "items_count": 1,
@@ -2362,7 +2362,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "OK",
-          "message": "\u975e\u4ea4\u6613\u65f6\u6bb5,\u8df3\u8fc7",
+          "message": "非交易时段,跳过",
           "latency_ms": 2.5589466094970703,
           "detail": {},
           "checked_at": "2026-06-03T11:31:26.790629"
@@ -2370,7 +2370,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "OK",
-          "message": "\u975e\u4ea4\u6613\u65f6\u6bb5,\u8df3\u8fc7",
+          "message": "非交易时段,跳过",
           "latency_ms": 2.5739669799804688,
           "detail": {},
           "checked_at": "2026-06-03T11:31:26.790641"
@@ -2378,7 +2378,7 @@
         {
           "source": "l2:connection",
           "severity": "OK",
-          "message": "\u672a\u521d\u59cb\u5316(\u975epipeline\u4e0a\u4e0b\u6587,\u8df3\u8fc7)",
+          "message": "未初始化(非pipeline上下文,跳过)",
           "latency_ms": 1.318216323852539,
           "detail": {},
           "checked_at": "2026-06-03T11:31:26.791970"
@@ -2386,7 +2386,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:11236)",
+          "message": "获取成功 (43.226.61.33:11236)",
           "latency_ms": 69.81611251831055,
           "detail": {
             "proxy": "43.226.61.33:11236"
@@ -2396,7 +2396,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "OK",
-          "message": "\u4e1c\u8d22API\u6b63\u5e38 (code=000001)",
+          "message": "东财API正常 (code=000001)",
           "latency_ms": 502.3195743560791,
           "detail": {},
           "checked_at": "2026-06-03T11:31:27.364150"
@@ -2411,7 +2411,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2940.1369094848633,
           "detail": {
             "items_count": 1,
@@ -2422,7 +2422,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2888.0958557128906,
           "detail": {
             "items_count": 1,
@@ -2433,7 +2433,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2938.295364379883,
           "detail": {
             "items_count": 1,
@@ -2444,7 +2444,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2790.255308151245,
           "detail": {
             "items_count": 1,
@@ -2455,7 +2455,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2872.3034858703613,
           "detail": {
             "items_count": 1,
@@ -2466,7 +2466,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2955.5134773254395,
           "detail": {
             "items_count": 1,
@@ -2477,7 +2477,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2890.6302452087402,
           "detail": {
             "items_count": 1,
@@ -2488,7 +2488,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2821.014642715454,
           "detail": {
             "items_count": 1,
@@ -2499,7 +2499,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2871.107578277588,
           "detail": {
             "items_count": 1,
@@ -2510,7 +2510,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2899.479389190674,
           "detail": {
             "items_count": 1,
@@ -2521,7 +2521,7 @@
         {
           "source": "tushare:top_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (86\u6761)",
+          "message": "正常 (86条)",
           "latency_ms": 2867.0578002929688,
           "detail": {
             "items_count": 86,
@@ -2532,7 +2532,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2853.5118103027344,
           "detail": {
             "items_count": 1,
@@ -2543,7 +2543,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2978.130340576172,
           "detail": {
             "items_count": 1,
@@ -2554,7 +2554,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 2896.3711261749268,
           "detail": {
             "items_count": 0
@@ -2564,7 +2564,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2811.802864074707,
           "detail": {
             "items_count": 1,
@@ -2575,7 +2575,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "OK",
-          "message": "\u7f13\u5b58\u4e3a\u7a7a(\u8de8\u8fdb\u7a0b\u5de1\u68c0,\u8df3\u8fc7)",
+          "message": "缓存为空(跨进程巡检,跳过)",
           "latency_ms": 1.5816688537597656,
           "detail": {
             "cache_size": 0,
@@ -2586,7 +2586,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "OK",
-          "message": "\u7f13\u5b58\u4e3a\u7a7a(\u8de8\u8fdb\u7a0b\u5de1\u68c0,\u8df3\u8fc7)",
+          "message": "缓存为空(跨进程巡检,跳过)",
           "latency_ms": 0,
           "detail": {
             "cache_size": 0,
@@ -2597,7 +2597,7 @@
         {
           "source": "l2:connection",
           "severity": "OK",
-          "message": "\u672a\u521d\u59cb\u5316(\u975epipeline\u4e0a\u4e0b\u6587,\u8df3\u8fc7)",
+          "message": "未初始化(非pipeline上下文,跳过)",
           "latency_ms": 0.8013248443603516,
           "detail": {},
           "checked_at": "2026-06-03T13:34:46.770651"
@@ -2605,7 +2605,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:12622)",
+          "message": "获取成功 (43.226.61.33:12622)",
           "latency_ms": 77.21066474914551,
           "detail": {
             "proxy": "43.226.61.33:12622"
@@ -2615,7 +2615,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "OK",
-          "message": "\u4e1c\u8d22API\u6b63\u5e38 (code=000001)",
+          "message": "东财API正常 (code=000001)",
           "latency_ms": 721.625804901123,
           "detail": {},
           "checked_at": "2026-06-03T13:34:47.569533"
@@ -2630,7 +2630,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2911.698579788208,
           "detail": {
             "items_count": 1,
@@ -2641,7 +2641,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2833.0469131469727,
           "detail": {
             "items_count": 1,
@@ -2652,7 +2652,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2884.6163749694824,
           "detail": {
             "items_count": 1,
@@ -2663,7 +2663,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2883.060932159424,
           "detail": {
             "items_count": 1,
@@ -2674,7 +2674,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2897.6640701293945,
           "detail": {
             "items_count": 1,
@@ -2685,7 +2685,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2939.1815662384033,
           "detail": {
             "items_count": 1,
@@ -2696,7 +2696,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2858.875513076782,
           "detail": {
             "items_count": 1,
@@ -2707,7 +2707,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2905.4930210113525,
           "detail": {
             "items_count": 1,
@@ -2718,7 +2718,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2890.0318145751953,
           "detail": {
             "items_count": 1,
@@ -2729,7 +2729,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3227.8709411621094,
           "detail": {
             "items_count": 1,
@@ -2740,7 +2740,7 @@
         {
           "source": "tushare:top_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (86\u6761)",
+          "message": "正常 (86条)",
           "latency_ms": 2981.1441898345947,
           "detail": {
             "items_count": 86,
@@ -2751,7 +2751,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2921.8432903289795,
           "detail": {
             "items_count": 1,
@@ -2762,7 +2762,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2784.972906112671,
           "detail": {
             "items_count": 1,
@@ -2773,7 +2773,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 2871.568441390991,
           "detail": {
             "items_count": 0
@@ -2783,7 +2783,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2853.7495136260986,
           "detail": {
             "items_count": 1,
@@ -2794,7 +2794,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "OK",
-          "message": "\u7f13\u5b58\u4e3a\u7a7a(\u8de8\u8fdb\u7a0b\u5de1\u68c0,\u8df3\u8fc7)",
+          "message": "缓存为空(跨进程巡检,跳过)",
           "latency_ms": 2.0880699157714844,
           "detail": {
             "cache_size": 0,
@@ -2805,7 +2805,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "OK",
-          "message": "\u7f13\u5b58\u4e3a\u7a7a(\u8de8\u8fdb\u7a0b\u5de1\u68c0,\u8df3\u8fc7)",
+          "message": "缓存为空(跨进程巡检,跳过)",
           "latency_ms": 0,
           "detail": {
             "cache_size": 0,
@@ -2816,7 +2816,7 @@
         {
           "source": "l2:connection",
           "severity": "OK",
-          "message": "\u672a\u521d\u59cb\u5316(\u975epipeline\u4e0a\u4e0b\u6587,\u8df3\u8fc7)",
+          "message": "未初始化(非pipeline上下文,跳过)",
           "latency_ms": 0.8885860443115234,
           "detail": {},
           "checked_at": "2026-06-03T14:39:50.509995"
@@ -2824,7 +2824,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:10998)",
+          "message": "获取成功 (43.226.61.33:10998)",
           "latency_ms": 122.33996391296387,
           "detail": {
             "proxy": "43.226.61.33:10998"
@@ -2834,7 +2834,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "OK",
-          "message": "\u4e1c\u8d22API\u6b63\u5e38 (code=000001)",
+          "message": "东财API正常 (code=000001)",
           "latency_ms": 544.1684722900391,
           "detail": {},
           "checked_at": "2026-06-03T14:39:51.176542"
@@ -2849,7 +2849,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2733.607292175293,
           "detail": {
             "items_count": 1,
@@ -2860,7 +2860,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2889.324426651001,
           "detail": {
             "items_count": 1,
@@ -2871,7 +2871,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2708.6055278778076,
           "detail": {
             "items_count": 1,
@@ -2882,7 +2882,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2895.2128887176514,
           "detail": {
             "items_count": 1,
@@ -2893,7 +2893,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2793.8547134399414,
           "detail": {
             "items_count": 1,
@@ -2904,7 +2904,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2707.7033519744873,
           "detail": {
             "items_count": 1,
@@ -2915,7 +2915,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2762.124538421631,
           "detail": {
             "items_count": 1,
@@ -2926,7 +2926,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2835.3209495544434,
           "detail": {
             "items_count": 1,
@@ -2937,7 +2937,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2746.372699737549,
           "detail": {
             "items_count": 1,
@@ -2948,7 +2948,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2830.270528793335,
           "detail": {
             "items_count": 1,
@@ -2959,7 +2959,7 @@
         {
           "source": "tushare:top_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (105\u6761)",
+          "message": "正常 (105条)",
           "latency_ms": 2802.933931350708,
           "detail": {
             "items_count": 105,
@@ -2970,7 +2970,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2802.791118621826,
           "detail": {
             "items_count": 1,
@@ -2981,7 +2981,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2791.893720626831,
           "detail": {
             "items_count": 1,
@@ -2992,7 +2992,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 2724.815607070923,
           "detail": {
             "items_count": 0
@@ -3002,7 +3002,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2829.3726444244385,
           "detail": {
             "items_count": 1,
@@ -3013,7 +3013,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "OK",
-          "message": "\u975e\u4ea4\u6613\u65f6\u6bb5,\u8df3\u8fc7",
+          "message": "非交易时段,跳过",
           "latency_ms": 1.94549560546875,
           "detail": {},
           "checked_at": "2026-06-04T19:16:48.493132"
@@ -3021,7 +3021,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "OK",
-          "message": "\u975e\u4ea4\u6613\u65f6\u6bb5,\u8df3\u8fc7",
+          "message": "非交易时段,跳过",
           "latency_ms": 1.962900161743164,
           "detail": {},
           "checked_at": "2026-06-04T19:16:48.493146"
@@ -3029,7 +3029,7 @@
         {
           "source": "l2:connection",
           "severity": "OK",
-          "message": "\u672a\u521d\u59cb\u5316(\u975epipeline\u4e0a\u4e0b\u6587,\u8df3\u8fc7)",
+          "message": "未初始化(非pipeline上下文,跳过)",
           "latency_ms": 0.9317398071289062,
           "detail": {},
           "checked_at": "2026-06-04T19:16:48.494090"
@@ -3037,7 +3037,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:10818)",
+          "message": "获取成功 (43.226.61.33:10818)",
           "latency_ms": 112.4563217163086,
           "detail": {
             "proxy": "43.226.61.33:10818"
@@ -3047,7 +3047,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "OK",
-          "message": "\u4e1c\u8d22API\u6b63\u5e38 (code=000001)",
+          "message": "东财API正常 (code=000001)",
           "latency_ms": 1396.421194076538,
           "detail": {},
           "checked_at": "2026-06-04T19:16:50.003017"
@@ -3062,7 +3062,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2791.2912368774414,
           "detail": {
             "items_count": 1,
@@ -3073,7 +3073,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2802.4110794067383,
           "detail": {
             "items_count": 1,
@@ -3084,7 +3084,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2800.3532886505127,
           "detail": {
             "items_count": 1,
@@ -3095,7 +3095,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2900.8395671844482,
           "detail": {
             "items_count": 1,
@@ -3106,7 +3106,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2753.9350986480713,
           "detail": {
             "items_count": 1,
@@ -3117,7 +3117,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2775.438070297241,
           "detail": {
             "items_count": 1,
@@ -3128,7 +3128,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2877.5930404663086,
           "detail": {
             "items_count": 1,
@@ -3139,7 +3139,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2885.3962421417236,
           "detail": {
             "items_count": 1,
@@ -3150,7 +3150,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2733.4628105163574,
           "detail": {
             "items_count": 1,
@@ -3161,7 +3161,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2889.314651489258,
           "detail": {
             "items_count": 1,
@@ -3172,7 +3172,7 @@
         {
           "source": "tushare:top_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (105\u6761)",
+          "message": "正常 (105条)",
           "latency_ms": 2735.8644008636475,
           "detail": {
             "items_count": 105,
@@ -3183,7 +3183,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2748.192548751831,
           "detail": {
             "items_count": 1,
@@ -3194,7 +3194,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2823.587656021118,
           "detail": {
             "items_count": 1,
@@ -3205,7 +3205,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 2741.5308952331543,
           "detail": {
             "items_count": 0
@@ -3215,7 +3215,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2881.709337234497,
           "detail": {
             "items_count": 1,
@@ -3226,7 +3226,7 @@
         {
           "source": "tushare:stk_holdernumber",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2665.3974056243896,
           "detail": {
             "items_count": 1,
@@ -3237,7 +3237,7 @@
         {
           "source": "tushare:share_float",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2787.7683639526367,
           "detail": {
             "items_count": 1,
@@ -3248,7 +3248,7 @@
         {
           "source": "tushare:forecast",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2770.6198692321777,
           "detail": {
             "items_count": 1,
@@ -3259,7 +3259,7 @@
         {
           "source": "tushare:hk_hold",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2756.519079208374,
           "detail": {
             "items_count": 1,
@@ -3270,7 +3270,7 @@
         {
           "source": "tushare:margin_detail",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2806.356191635132,
           "detail": {
             "items_count": 1,
@@ -3281,7 +3281,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "OK",
-          "message": "\u975e\u4ea4\u6613\u65f6\u6bb5,\u8df3\u8fc7",
+          "message": "非交易时段,跳过",
           "latency_ms": 1.8031597137451172,
           "detail": {},
           "checked_at": "2026-06-04T19:20:44.488149"
@@ -3289,7 +3289,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "OK",
-          "message": "\u975e\u4ea4\u6613\u65f6\u6bb5,\u8df3\u8fc7",
+          "message": "非交易时段,跳过",
           "latency_ms": 1.819610595703125,
           "detail": {},
           "checked_at": "2026-06-04T19:20:44.488162"
@@ -3297,7 +3297,7 @@
         {
           "source": "l2:connection",
           "severity": "OK",
-          "message": "\u672a\u521d\u59cb\u5316(\u975epipeline\u4e0a\u4e0b\u6587,\u8df3\u8fc7)",
+          "message": "未初始化(非pipeline上下文,跳过)",
           "latency_ms": 0.8158683776855469,
           "detail": {},
           "checked_at": "2026-06-04T19:20:44.488987"
@@ -3305,7 +3305,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:12977)",
+          "message": "获取成功 (43.226.61.33:12977)",
           "latency_ms": 75.55508613586426,
           "detail": {
             "proxy": "43.226.61.33:12977"
@@ -3315,7 +3315,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "WARNING",
-          "message": "\u901a\u8fc7\u4ee3\u7406\u65e0\u6cd5\u8bbf\u95ee\u4e1c\u8d22API(\u91cd\u8bd5\u540e\u4ecd\u5931\u8d25)",
+          "message": "通过代理无法访问东财API(重试后仍失败)",
           "latency_ms": 10959.229230880737,
           "detail": {},
           "checked_at": "2026-06-04T19:20:55.523821"
@@ -3330,7 +3330,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3045.593500137329,
           "detail": {
             "items_count": 1,
@@ -3341,7 +3341,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3064.5592212677,
           "detail": {
             "items_count": 1,
@@ -3352,7 +3352,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3100.8009910583496,
           "detail": {
             "items_count": 1,
@@ -3363,7 +3363,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3053.0850887298584,
           "detail": {
             "items_count": 1,
@@ -3374,7 +3374,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3028.8243293762207,
           "detail": {
             "items_count": 1,
@@ -3385,7 +3385,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2980.8030128479004,
           "detail": {
             "items_count": 1,
@@ -3396,7 +3396,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2916.1715507507324,
           "detail": {
             "items_count": 1,
@@ -3407,7 +3407,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2993.767023086548,
           "detail": {
             "items_count": 1,
@@ -3418,7 +3418,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3102.595806121826,
           "detail": {
             "items_count": 1,
@@ -3429,7 +3429,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2993.603229522705,
           "detail": {
             "items_count": 1,
@@ -3440,7 +3440,7 @@
         {
           "source": "tushare:top_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (105\u6761)",
+          "message": "正常 (105条)",
           "latency_ms": 3061.197519302368,
           "detail": {
             "items_count": 105,
@@ -3451,7 +3451,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2962.91184425354,
           "detail": {
             "items_count": 1,
@@ -3462,7 +3462,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3087.970733642578,
           "detail": {
             "items_count": 1,
@@ -3473,7 +3473,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 3085.925340652466,
           "detail": {
             "items_count": 0
@@ -3483,7 +3483,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3027.5962352752686,
           "detail": {
             "items_count": 1,
@@ -3494,7 +3494,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "OK",
-          "message": "\u975e\u4ea4\u6613\u65f6\u6bb5,\u8df3\u8fc7",
+          "message": "非交易时段,跳过",
           "latency_ms": 2.1283626556396484,
           "detail": {},
           "checked_at": "2026-06-05T12:16:41.891662"
@@ -3502,7 +3502,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "OK",
-          "message": "\u975e\u4ea4\u6613\u65f6\u6bb5,\u8df3\u8fc7",
+          "message": "非交易时段,跳过",
           "latency_ms": 2.1452903747558594,
           "detail": {},
           "checked_at": "2026-06-05T12:16:41.891675"
@@ -3510,7 +3510,7 @@
         {
           "source": "l2:connection",
           "severity": "OK",
-          "message": "\u672a\u521d\u59cb\u5316(\u975epipeline\u4e0a\u4e0b\u6587,\u8df3\u8fc7)",
+          "message": "未初始化(非pipeline上下文,跳过)",
           "latency_ms": 0.9524822235107422,
           "detail": {},
           "checked_at": "2026-06-05T12:16:41.892637"
@@ -3518,7 +3518,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:10159)",
+          "message": "获取成功 (43.226.61.33:10159)",
           "latency_ms": 89.42461013793945,
           "detail": {
             "proxy": "43.226.61.33:10159"
@@ -3528,7 +3528,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "OK",
-          "message": "\u4e1c\u8d22API\u6b63\u5e38 (code=000001)",
+          "message": "东财API正常 (code=000001)",
           "latency_ms": 427.0036220550537,
           "detail": {},
           "checked_at": "2026-06-05T12:16:42.409117"
@@ -3543,7 +3543,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3013.0529403686523,
           "detail": {
             "items_count": 1,
@@ -3554,7 +3554,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3083.1820964813232,
           "detail": {
             "items_count": 1,
@@ -3565,7 +3565,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3033.796787261963,
           "detail": {
             "items_count": 1,
@@ -3576,7 +3576,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3010.183095932007,
           "detail": {
             "items_count": 1,
@@ -3587,7 +3587,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2965.7440185546875,
           "detail": {
             "items_count": 1,
@@ -3598,7 +3598,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3064.572811126709,
           "detail": {
             "items_count": 1,
@@ -3609,7 +3609,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3035.179615020752,
           "detail": {
             "items_count": 1,
@@ -3620,7 +3620,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3063.4779930114746,
           "detail": {
             "items_count": 1,
@@ -3631,7 +3631,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3070.7595348358154,
           "detail": {
             "items_count": 1,
@@ -3642,7 +3642,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2976.937770843506,
           "detail": {
             "items_count": 1,
@@ -3653,7 +3653,7 @@
         {
           "source": "tushare:top_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (105\u6761)",
+          "message": "正常 (105条)",
           "latency_ms": 3017.7559852600098,
           "detail": {
             "items_count": 105,
@@ -3664,7 +3664,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2963.385820388794,
           "detail": {
             "items_count": 1,
@@ -3675,7 +3675,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3096.7957973480225,
           "detail": {
             "items_count": 1,
@@ -3686,7 +3686,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 2970.890522003174,
           "detail": {
             "items_count": 0
@@ -3696,7 +3696,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3045.1455116271973,
           "detail": {
             "items_count": 1,
@@ -3707,7 +3707,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "OK",
-          "message": "\u975e\u4ea4\u6613\u65f6\u6bb5,\u8df3\u8fc7",
+          "message": "非交易时段,跳过",
           "latency_ms": 1.7397403717041016,
           "detail": {},
           "checked_at": "2026-06-05T12:23:57.408089"
@@ -3715,7 +3715,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "OK",
-          "message": "\u975e\u4ea4\u6613\u65f6\u6bb5,\u8df3\u8fc7",
+          "message": "非交易时段,跳过",
           "latency_ms": 1.7571449279785156,
           "detail": {},
           "checked_at": "2026-06-05T12:23:57.408102"
@@ -3723,7 +3723,7 @@
         {
           "source": "l2:connection",
           "severity": "OK",
-          "message": "\u8fd0\u884c\u4e2d, \u8ba2\u96050\u53ea",
+          "message": "运行中, 订阅0只",
           "latency_ms": 1.6126632690429688,
           "detail": {
             "healthy": false,
@@ -3750,7 +3750,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:11707)",
+          "message": "获取成功 (43.226.61.33:11707)",
           "latency_ms": 116.58477783203125,
           "detail": {
             "proxy": "43.226.61.33:11707"
@@ -3760,7 +3760,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "OK",
-          "message": "\u4e1c\u8d22API\u6b63\u5e38 (code=000001)",
+          "message": "东财API正常 (code=000001)",
           "latency_ms": 770.6975936889648,
           "detail": {},
           "checked_at": "2026-06-05T12:23:58.297067"
@@ -3775,7 +3775,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3040.3363704681396,
           "detail": {
             "items_count": 1,
@@ -3786,7 +3786,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3004.2576789855957,
           "detail": {
             "items_count": 1,
@@ -3797,7 +3797,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2989.7239208221436,
           "detail": {
             "items_count": 1,
@@ -3808,7 +3808,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3226.970672607422,
           "detail": {
             "items_count": 1,
@@ -3819,7 +3819,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2853.0757427215576,
           "detail": {
             "items_count": 1,
@@ -3830,7 +3830,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2993.415117263794,
           "detail": {
             "items_count": 1,
@@ -3841,7 +3841,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3092.4291610717773,
           "detail": {
             "items_count": 1,
@@ -3852,7 +3852,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2990.699529647827,
           "detail": {
             "items_count": 1,
@@ -3863,7 +3863,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3098.379611968994,
           "detail": {
             "items_count": 1,
@@ -3874,7 +3874,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3052.9232025146484,
           "detail": {
             "items_count": 1,
@@ -3885,7 +3885,7 @@
         {
           "source": "tushare:top_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (105\u6761)",
+          "message": "正常 (105条)",
           "latency_ms": 3135.8704566955566,
           "detail": {
             "items_count": 105,
@@ -3896,7 +3896,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2988.7166023254395,
           "detail": {
             "items_count": 1,
@@ -3907,7 +3907,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3017.099618911743,
           "detail": {
             "items_count": 1,
@@ -3918,7 +3918,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 2922.640800476074,
           "detail": {
             "items_count": 0
@@ -3928,7 +3928,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3068.2122707366943,
           "detail": {
             "items_count": 1,
@@ -3939,7 +3939,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "OK",
-          "message": "\u975e\u4ea4\u6613\u65f6\u6bb5,\u8df3\u8fc7",
+          "message": "非交易时段,跳过",
           "latency_ms": 1.8050670623779297,
           "detail": {},
           "checked_at": "2026-06-05T12:47:14.322224"
@@ -3947,7 +3947,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "OK",
-          "message": "\u975e\u4ea4\u6613\u65f6\u6bb5,\u8df3\u8fc7",
+          "message": "非交易时段,跳过",
           "latency_ms": 1.8270015716552734,
           "detail": {},
           "checked_at": "2026-06-05T12:47:14.322243"
@@ -3955,7 +3955,7 @@
         {
           "source": "l2:connection",
           "severity": "OK",
-          "message": "\u8fd0\u884c\u4e2d, \u8ba2\u96050\u53ea",
+          "message": "运行中, 订阅0只",
           "latency_ms": 1.2760162353515625,
           "detail": {
             "healthy": true,
@@ -3982,7 +3982,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:11822)",
+          "message": "获取成功 (43.226.61.33:11822)",
           "latency_ms": 93.4152603149414,
           "detail": {
             "proxy": "43.226.61.33:11822"
@@ -3992,7 +3992,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "WARNING",
-          "message": "\u901a\u8fc7\u4ee3\u7406\u65e0\u6cd5\u8bbf\u95ee\u4e1c\u8d22API(\u91cd\u8bd5\u540e\u4ecd\u5931\u8d25)",
+          "message": "通过代理无法访问东财API(重试后仍失败)",
           "latency_ms": 11114.098072052002,
           "detail": {},
           "checked_at": "2026-06-05T12:47:25.531101"
@@ -4007,7 +4007,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3037.566900253296,
           "detail": {
             "items_count": 1,
@@ -4018,7 +4018,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3028.2106399536133,
           "detail": {
             "items_count": 1,
@@ -4029,7 +4029,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3011.249780654907,
           "detail": {
             "items_count": 1,
@@ -4040,7 +4040,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3066.195249557495,
           "detail": {
             "items_count": 1,
@@ -4051,7 +4051,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2930.544137954712,
           "detail": {
             "items_count": 1,
@@ -4062,7 +4062,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3076.7955780029297,
           "detail": {
             "items_count": 1,
@@ -4073,7 +4073,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2935.9004497528076,
           "detail": {
             "items_count": 1,
@@ -4084,7 +4084,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3041.3057804107666,
           "detail": {
             "items_count": 1,
@@ -4095,7 +4095,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3006.2453746795654,
           "detail": {
             "items_count": 1,
@@ -4106,7 +4106,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3010.279655456543,
           "detail": {
             "items_count": 1,
@@ -4117,7 +4117,7 @@
         {
           "source": "tushare:top_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (105\u6761)",
+          "message": "正常 (105条)",
           "latency_ms": 2931.701421737671,
           "detail": {
             "items_count": 105,
@@ -4128,7 +4128,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3043.764352798462,
           "detail": {
             "items_count": 1,
@@ -4139,7 +4139,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2985.4555130004883,
           "detail": {
             "items_count": 1,
@@ -4150,7 +4150,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 2978.318214416504,
           "detail": {
             "items_count": 0
@@ -4160,7 +4160,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3043.346166610718,
           "detail": {
             "items_count": 1,
@@ -4171,7 +4171,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "OK",
-          "message": "\u7f13\u5b58\u4e3a\u7a7a(\u8de8\u8fdb\u7a0b\u5de1\u68c0,\u8df3\u8fc7)",
+          "message": "缓存为空(跨进程巡检,跳过)",
           "latency_ms": 1.6469955444335938,
           "detail": {
             "cache_size": 0,
@@ -4182,7 +4182,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "OK",
-          "message": "\u7f13\u5b58\u4e3a\u7a7a(\u8de8\u8fdb\u7a0b\u5de1\u68c0,\u8df3\u8fc7)",
+          "message": "缓存为空(跨进程巡检,跳过)",
           "latency_ms": 0,
           "detail": {
             "cache_size": 0,
@@ -4193,7 +4193,7 @@
         {
           "source": "l2:connection",
           "severity": "OK",
-          "message": "\u8fd0\u884c\u4e2d, \u8ba2\u96050\u53ea",
+          "message": "运行中, 订阅0只",
           "latency_ms": 1.0437965393066406,
           "detail": {
             "healthy": true,
@@ -4220,7 +4220,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:10363)",
+          "message": "获取成功 (43.226.61.33:10363)",
           "latency_ms": 117.27499961853027,
           "detail": {
             "proxy": "43.226.61.33:10363"
@@ -4230,7 +4230,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "WARNING",
-          "message": "\u901a\u8fc7\u4ee3\u7406\u65e0\u6cd5\u8bbf\u95ee\u4e1c\u8d22API(\u91cd\u8bd5\u540e\u4ecd\u5931\u8d25)",
+          "message": "通过代理无法访问东财API(重试后仍失败)",
           "latency_ms": 7191.961288452148,
           "detail": {},
           "checked_at": "2026-06-05T13:01:55.496027"
@@ -4245,7 +4245,7 @@
         {
           "source": "tushare:daily",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3017.9011821746826,
           "detail": {
             "items_count": 1,
@@ -4256,7 +4256,7 @@
         {
           "source": "tushare:daily_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2899.0814685821533,
           "detail": {
             "items_count": 1,
@@ -4267,7 +4267,7 @@
         {
           "source": "tushare:moneyflow",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2972.2208976745605,
           "detail": {
             "items_count": 1,
@@ -4278,7 +4278,7 @@
         {
           "source": "tushare:stk_factor_pro",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3044.9318885803223,
           "detail": {
             "items_count": 1,
@@ -4289,7 +4289,7 @@
         {
           "source": "tushare:limit_list_d",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3009.570837020874,
           "detail": {
             "items_count": 1,
@@ -4300,7 +4300,7 @@
         {
           "source": "tushare:trade_cal",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2942.7809715270996,
           "detail": {
             "items_count": 1,
@@ -4311,7 +4311,7 @@
         {
           "source": "tushare:stock_basic",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3051.0377883911133,
           "detail": {
             "items_count": 1,
@@ -4322,7 +4322,7 @@
         {
           "source": "tushare:fina_indicator",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2990.713119506836,
           "detail": {
             "items_count": 1,
@@ -4333,7 +4333,7 @@
         {
           "source": "tushare:balancesheet",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3032.433032989502,
           "detail": {
             "items_count": 1,
@@ -4344,7 +4344,7 @@
         {
           "source": "tushare:income",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2993.67356300354,
           "detail": {
             "items_count": 1,
@@ -4355,7 +4355,7 @@
         {
           "source": "tushare:top_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (105\u6761)",
+          "message": "正常 (105条)",
           "latency_ms": 3001.80983543396,
           "detail": {
             "items_count": 105,
@@ -4366,7 +4366,7 @@
         {
           "source": "tushare:top_inst",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3187.941551208496,
           "detail": {
             "items_count": 1,
@@ -4377,7 +4377,7 @@
         {
           "source": "tushare:limit_cpt_list",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 2963.1550312042236,
           "detail": {
             "items_count": 1,
@@ -4388,7 +4388,7 @@
         {
           "source": "tushare:daily_info",
           "severity": "OK",
-          "message": "\u7a7a(\u975e\u4ea4\u6613\u65f6\u6bb5/\u6b63\u5e38)",
+          "message": "空(非交易时段/正常)",
           "latency_ms": 2991.285800933838,
           "detail": {
             "items_count": 0
@@ -4398,7 +4398,7 @@
         {
           "source": "tushare:limit_step",
           "severity": "OK",
-          "message": "\u6b63\u5e38 (1\u6761)",
+          "message": "正常 (1条)",
           "latency_ms": 3051.0759353637695,
           "detail": {
             "items_count": 1,
@@ -4409,7 +4409,7 @@
         {
           "source": "eastmoney:pct_cache",
           "severity": "OK",
-          "message": "\u7f13\u5b58\u4e3a\u7a7a(\u8de8\u8fdb\u7a0b\u5de1\u68c0,\u8df3\u8fc7)",
+          "message": "缓存为空(跨进程巡检,跳过)",
           "latency_ms": 1.7032623291015625,
           "detail": {
             "cache_size": 0,
@@ -4420,7 +4420,7 @@
         {
           "source": "eastmoney:fund_cache",
           "severity": "OK",
-          "message": "\u7f13\u5b58\u4e3a\u7a7a(\u8de8\u8fdb\u7a0b\u5de1\u68c0,\u8df3\u8fc7)",
+          "message": "缓存为空(跨进程巡检,跳过)",
           "latency_ms": 0,
           "detail": {
             "cache_size": 0,
@@ -4431,7 +4431,7 @@
         {
           "source": "l2:connection",
           "severity": "OK",
-          "message": "\u8fd0\u884c\u4e2d, \u8ba2\u96052\u53ea",
+          "message": "运行中, 订阅2只",
           "latency_ms": 1.2481212615966797,
           "detail": {
             "subscriptions": [
@@ -4462,7 +4462,7 @@
         {
           "source": "proxy:acquire",
           "severity": "OK",
-          "message": "\u83b7\u53d6\u6210\u529f (43.226.61.33:12319)",
+          "message": "获取成功 (43.226.61.33:12319)",
           "latency_ms": 72.38888740539551,
           "detail": {
             "proxy": "43.226.61.33:12319"
@@ -4472,7 +4472,7 @@
         {
           "source": "proxy:eastmoney",
           "severity": "WARNING",
-          "message": "\u901a\u8fc7\u4ee3\u7406\u65e0\u6cd5\u8bbf\u95ee\u4e1c\u8d22API(\u91cd\u8bd5\u540e\u4ecd\u5931\u8d25)",
+          "message": "通过代理无法访问东财API(重试后仍失败)",
           "latency_ms": 9131.744623184204,
           "detail": {},
           "checked_at": "2026-06-05T13:03:41.381411"
