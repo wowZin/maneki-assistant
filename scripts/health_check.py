@@ -511,7 +511,7 @@ def _start_daemon() -> tuple[bool, str]:
         r = subprocess.run(
             [sys.executable, script, "--daemon"],
             cwd=str(PROJECT_DIR),
-            capture_output=True, timeout=15,
+            capture_output=True, timeout=30,
         )
         time.sleep(2)  # 等待进程初始化
         alive = _daemon_alive()
