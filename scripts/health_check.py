@@ -508,19 +508,18 @@ def _start_daemon() -> tuple[bool, str]:
     """启动 L2 守护进程, 返回 (成功?, 消息)"""
     try:
         script = str(PROJECT_DIR / "scripts" / "l2_daemon.py")
-        r = subprocess.run(
+        # 使用 Popen (不 capture_output) 避免 fork 后子进程继承管道导致死等
+        subprocess.Popen(
             [sys.executable, script, "--daemon"],
             cwd=str(PROJECT_DIR),
-            capture_output=True, timeout=30,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
-        time.sleep(2)  # 等待进程初始化
+        time.sleep(3)  # 等待进程初始化和 PID 文件写入
         alive = _daemon_alive()
         if alive:
             return True, f"已自动启动(PID={L2_DAEMON_PID.read_text().strip()})"
         else:
-            out = (r.stdout or b"").decode().strip()
-            err = (r.stderr or b"").decode().strip()
-            return False, f"启动后验证失败: {out} {err}".strip()
+            return False, "启动后验证失败(守护进程未就绪)"
     except Exception as e:
         return False, f"启动异常: {e}"
 
