@@ -463,7 +463,7 @@ def push_feishu(results):
         if is_afternoon and s.get('sentiment', 0) < 25:
             pm_filtered += 1; return False
         # 高确信度筛选: 情绪+资金双强 + 总分≥45
-        if not (s.get('sentiment', 0) >= 38 and s.get('fundflow', 0) >= 40 and r.get('total', 0) >= 45):
+        if not (s.get('sentiment', 0) >= 40 and s.get('fundflow', 0) >= 40 and r.get('total', 0) >= 45):
             hc_filtered += 1; return False
         return True
 
