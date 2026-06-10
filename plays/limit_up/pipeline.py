@@ -419,7 +419,7 @@ def push_feishu(results):
     """发送飞书卡片
 
     推送规则：
-    - 高确信度筛选: 情绪≥40 + 资金≥40 + 总分≥45 (三灯全亮才推送)
+    - 高确信度筛选: 情绪≥35 + 资金≥35 + 总分≥40 (三灯全亮才推送)
     - 午后叠加情绪面>=25门槛
     - 同日已推送的股票不再重复推送
     - 推送记录保存到 data/pushed/ 目录，供复盘使用
@@ -462,8 +462,8 @@ def push_feishu(results):
         if r.get('code') in pushed_codes_today: return False
         if is_afternoon and s.get('sentiment', 0) < 25:
             pm_filtered += 1; return False
-        # 高确信度筛选: 情绪+资金双强 + 总分≥45
-        if not (s.get('sentiment', 0) >= 40 and s.get('fundflow', 0) >= 40 and r.get('total', 0) >= 45):
+        # 高确信度筛选: 情绪+资金双强 + 总分达标
+        if not (s.get('sentiment', 0) >= 35 and s.get('fundflow', 0) >= 35 and r.get('total', 0) >= 40):
             hc_filtered += 1; return False
         return True
 
@@ -478,7 +478,7 @@ def push_feishu(results):
         if pushed_codes_today: extra.append("已去重")
         if pm_filtered: extra.append(f"午后过滤{pm_filtered}只")
         if hc_filtered: extra.append(f"高确信过滤{hc_filtered}只")
-        print(f"  推送池: {len(above_threshold)}只(情绪≥40+资金≥40+总分≥45{' ' + ', '.join(extra) if extra else ''})")
+        print(f"  推送池: {len(above_threshold)}只(情绪≥35+资金≥35+总分≥40{' ' + ', '.join(extra) if extra else ''})")
     else:
         push_list = []
         extra = []
