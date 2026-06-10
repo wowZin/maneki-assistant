@@ -1,14 +1,9 @@
 {
   "circuit_breaker": {
-    "active": true,
-    "consecutive_failures": 1,
-    "triggered_at": "2026-06-09T14:51:08.964734",
-    "triggered_by": [
-      "proxy:acquire: 无法获取代理IP(配额耗尽或服务异常)"
-    ],
-    "cooldown_until": "2026-06-09T14:56:08.964750"
+    "active": false,
+    "consecutive_failures": 0
   },
-  "last_ok_at": "2026-06-09T14:11:07.599426",
+  "last_ok_at": "2026-06-10T14:55:44.566871",
   "alert_history": [
     {
       "timestamp": "2026-06-02T14:15:34.533144",
