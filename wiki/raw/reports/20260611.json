@@ -1,0 +1,131 @@
+{
+  "date": "20260611",
+  "pushed_count": 1,
+  "cumulative_limit_count": 64,
+  "hit_count": 0,
+  "hit_rate": 0.0,
+  "win_rate": 0.0,
+  "win_count": 0,
+  "win_total": 1,
+  "hit_codes": [],
+  "miss_codes": [
+    "002552.SZ"
+  ],
+  "hit_details": [],
+  "dim_performance": {
+    "fundamental": {
+      "total": 1,
+      "hit_avg": 0,
+      "miss_avg": 65.3
+    },
+    "technical": {
+      "total": 1,
+      "hit_avg": 0,
+      "miss_avg": 48.0
+    },
+    "fundflow": {
+      "total": 1,
+      "hit_avg": 0,
+      "miss_avg": 58.0
+    },
+    "sentiment": {
+      "total": 1,
+      "hit_avg": 0,
+      "miss_avg": 36.0
+    },
+    "shortterm": {
+      "total": 1,
+      "hit_avg": 0,
+      "miss_avg": 26.2
+    }
+  },
+  "confidence_dist": {
+    "high": 1,
+    "medium": 0,
+    "low": 0
+  },
+  "ab_comparison": {
+    "enabled": true,
+    "prev": {
+      "weights": {
+        "fundamental": 0.6,
+        "technical": 1.9,
+        "fundflow": 2.0,
+        "sentiment": 1.1,
+        "shortterm": 1.0
+      },
+      "pushed": 54,
+      "codes": [
+        "603211.SH",
+        "000921.SZ",
+        "600549.SH",
+        "002338.SZ",
+        "603256.SH",
+        "002636.SZ",
+        "002378.SZ",
+        "603011.SH",
+        "603194.SH",
+        "600573.SH",
+        "002057.SZ",
+        "600505.SH",
+        "603650.SH",
+        "603311.SH",
+        "000037.SZ",
+        "603124.SH",
+        "002155.SZ",
+        "603078.SH",
+        "605006.SH",
+        "600378.SH",
+        "002356.SZ",
+        "603186.SH",
+        "002981.SZ",
+        "603938.SH",
+        "600869.SH",
+        "002080.SZ",
+        "600392.SH",
+        "002937.SZ",
+        "000657.SZ",
+        "600178.SH",
+        "603303.SH",
+        "600397.SH",
+        "002803.SZ",
+        "002240.SZ",
+        "002857.SZ",
+        "002414.SZ",
+        "600698.SH",
+        "003018.SZ",
+        "000628.SZ",
+        "002025.SZ",
+        "002254.SZ",
+        "002735.SZ",
+        "600078.SH",
+        "002824.SZ",
+        "000636.SZ",
+        "603992.SH",
+        "600160.SH",
+        "603226.SH",
+        "603016.SH",
+        "600176.SH",
+        "002490.SZ",
+        "600183.SH",
+        "002125.SZ",
+        "603283.SH"
+      ],
+      "hits": 8
+    },
+    "curr": {
+      "weights": {
+        "fundamental": 0.5,
+        "technical": 0.9,
+        "fundflow": 2.2,
+        "sentiment": 0.9,
+        "shortterm": 1.0
+      },
+      "pushed": 1,
+      "codes": [
+        "002552.SZ"
+      ],
+      "hits": 0
+    }
+  }
+}
