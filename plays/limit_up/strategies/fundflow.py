@@ -205,8 +205,10 @@ def score_fundflow(code):
                 total_net_buy += nb
             else:
                 total_net_sell += abs(nb)
-        if total_net_sell > total_net_buy * 2 and total_net_sell > 1000:  # 万元
-            veto_flags.append(f"龙虎榜净卖出{total_net_sell:.0f}万")
+        # Tushare top_inst.net_buy 单位为"元", 转换为万元进行比较和展示
+        sell_wan = total_net_sell / 10000  # 元→万元
+        if total_net_sell > total_net_buy * 2 and sell_wan > 1000:  # 净卖出>1000万
+            veto_flags.append(f"龙虎榜净卖出{sell_wan:.0f}万")
     
     # 否决3 — 分时资金背离（增加尾盘抢筹豁免+换手率/累计流入双重验证）
     corr_threshold = -0.6  # 默认相关系数阈值

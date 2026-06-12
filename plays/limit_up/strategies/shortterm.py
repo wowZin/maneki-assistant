@@ -278,8 +278,8 @@ def _get_jj_data_eastmoney(code: str) -> dict:
             if not d:
                 return result
 
-            # 已验证: f60=昨收×100, f170=涨跌幅×100, f166=换手率×100
-            # 未验证: f43/f46/f47 (映射已过时)
+            # 已验证: f60=昨收×100, f170=涨跌幅×100
+            # f166 含义已变(不再=换手率×100), 换手率改用成交量÷流通股本计算
 
             stock_now = _safe_float(d.get("f60", 0)) / 100
             if "now_price" not in result:
@@ -294,12 +294,15 @@ def _get_jj_data_eastmoney(code: str) -> dict:
                         pass
 
             if "turnover_rate" not in result:
-                f166_raw = d.get("f166")
-                if f166_raw is not None and f166_raw != "-":
-                    try:
-                        result["turnover_rate"] = float(f166_raw) / 10000
-                    except (ValueError, TypeError):
-                        pass
+                # f166 字段已在EM API中变更含义(不再=换手率×100)
+                # 改用成交量(f47,手) ÷ 流通股本(f116÷现价) 计算换手率
+                vol_shou = _safe_float(d.get("f47", 0))
+                circ_mv = _safe_float(d.get("f116", 0))
+                price = _safe_float(d.get("f43", 0)) / 100
+                if vol_shou > 0 and circ_mv > 0 and price > 0:
+                    circ_shares = circ_mv / price
+                    if circ_shares > 0:
+                        result["turnover_rate"] = (vol_shou * 100) / circ_shares
 
             if "circ_mv" not in result:
                 result["circ_mv"] = _safe_float(d.get("f116", 0))

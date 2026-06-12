@@ -419,14 +419,27 @@ async def main():
                 for f in INBOX_DIR.glob("*.jsonl"):
                     known_chats.add(f.stem)
                 for chat_id in list(known_chats):
-                    pos = progress.positions.get(chat_id, 0)
-                    # 如果存档位置超过文件大小，说明 progress 已过期
+                    # 兼容旧格式(int)和新格式([position, inode])
+                    raw_pos = progress.positions.get(chat_id, 0)
+                    if isinstance(raw_pos, list):
+                        pos, last_inode = raw_pos[0], raw_pos[1]
+                    else:
+                        pos, last_inode = raw_pos, None
+
                     fpath = INBOX_DIR / f"{chat_id}.jsonl"
-                    if pos > 0 and fpath.exists() and fpath.stat().st_size < pos:
-                        old_pos = pos
-                        pos = 0  # 文件被替换过（飞书Bot新建了同名文件），从头读取
-                        log.info("file replaced for %s, reset position from %d to 0",
-                                 chat_id, old_pos)
+                    current_inode = fpath.stat().st_ino if fpath.exists() else None
+
+                    # 检测文件是否被替换（inode 变化或文件大小 <= 旧位置）
+                    if pos > 0 and fpath.exists():
+                        if last_inode is not None and current_inode != last_inode:
+                            log.info("file replaced (inode changed) for %s, reset position from %d to 0",
+                                     chat_id, pos)
+                            pos = 0
+                        elif fpath.stat().st_size <= pos:
+                            log.info("file replaced (size %d <= pos %d) for %s, reset position to 0",
+                                     fpath.stat().st_size, pos, chat_id)
+                            pos = 0
+
                     messages, new_pos = read_inbox(chat_id, pos)
 
                     # 🐛 FIX: 保存 position 必须在处理消息之前，
@@ -434,7 +447,7 @@ async def main():
                     if new_pos > pos:
                         progress.save(
                             session_id=progress.session_id,
-                            positions={**progress.positions, chat_id: new_pos},
+                            positions={**progress.positions, chat_id: [new_pos, current_inode]},
                         )
 
                     for msg in messages:
@@ -489,18 +502,22 @@ async def main():
                             task.cancel()
                             log.error("query timeout 120s for chat=%s, restarting claude", chat_id)
                             # 放弃旧 session, 退出 context manager 杀死 claude 进程
+                            fpath2 = INBOX_DIR / f"{chat_id}.jsonl"
+                            cur_ino = fpath2.stat().st_ino if fpath2.exists() else None
                             progress.save(
                                 session_id=None,
-                                positions={**progress.positions, chat_id: new_pos},
+                                positions={**progress.positions, chat_id: [new_pos, cur_ino]},
                             )
                             restart_client = True
                             break
                         else:
                             turns, sid = task.result()
                             if sid:
+                                fpath2 = INBOX_DIR / f"{chat_id}.jsonl"
+                                cur_ino = fpath2.stat().st_ino if fpath2.exists() else None
                                 progress.save(
                                     session_id=sid,
-                                    positions={**progress.positions, chat_id: new_pos},
+                                    positions={**progress.positions, chat_id: [new_pos, cur_ino]},
                                 )
                             log.info("query done: chat=%s turns=%d", chat_id, turns)
 
@@ -514,7 +531,8 @@ async def main():
 
                 # 清理已读完的 inbox 文件
                 for chat_id in list(known_chats):
-                    pos = progress.positions.get(chat_id, 0)
+                    raw_pos = progress.positions.get(chat_id, 0)
+                    pos = raw_pos[0] if isinstance(raw_pos, list) else raw_pos
                     if pos > 0:
                         fpath = INBOX_DIR / f"{chat_id}.jsonl"
                         if fpath.exists() and fpath.stat().st_size == pos:
