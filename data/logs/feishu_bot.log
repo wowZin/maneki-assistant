@@ -1,0 +1,6 @@
+INFO:     Started server process [8814]
+INFO:     Waiting for application startup.
+2026-06-15 13:00:15 [INFO] feishu_bot: 飞书Bot回调服务启动: inbox writer mode
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+INFO:     127.0.0.1:50868 - "GET / HTTP/1.1" 200 OK
