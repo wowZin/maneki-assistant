@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Tushare API 封装：配置加载、缓存查询、行业映射"""
+"""Tushare API 封装：配置加载、缓存查询、同花顺概念映射"""
 
 import json
 import logging
 import sys
+import time
 from pathlib import Path
 
 import requests
@@ -107,15 +108,31 @@ def call_tushare(api_name, params, fields="", timeout=10):
         payload = {"api_name": api_name, "token": TUSHARE_TOKEN, "params": params}
         if fields:
             payload["fields"] = fields
+        t0 = time.time()
         resp = requests.post("https://api.tushare.pro", json=payload, timeout=timeout)
+        latency = (time.time() - t0) * 1000
         result = resp.json()
         if result is None:
             result = {}  # API 返回 null (如 top_list 无数据)
+        items = len(result.get("data", {}).get("items", [])) if result.get("data") else 0
+        ok = result.get("code", -1) == 0 or (result.get("data") is not None)
+        from scripts.audit import record
+        record("tushare", api_name, ok=ok, items=items, latency_ms=latency,
+               extra=_tushare_date_extra(params))
         _TUSHARE_CACHE[cache_key] = result
         return result
     except Exception as e:
         logger.warning("Tushare %s 失败 (不缓存): %s", api_name, e)
+        from scripts.audit import record
+        record("tushare", api_name, ok=False, items=0, latency_ms=0, extra=str(e)[:40])
         return {}
+
+def _tushare_date_extra(params: dict) -> str:
+    """提取日期信息用于审计"""
+    for k in ("trade_date", "start_date"):
+        if k in params:
+            return f"{params[k]}"
+    return ""
 
 
 def clear_tushare_cache():
@@ -124,41 +141,67 @@ def clear_tushare_cache():
     _LAST_TRADE_DATE_CACHE = None
 
 
-# ===== stock_basic 行业映射缓存 =====
-_INDUSTRY_MAP = {}
-_INDUSTRY_PEERS = {}
+# ===== 同花顺概念映射缓存 (替代 stock_basic industry) =====
+# 数据来源: THS hot_list concept_tag，零额外API调用
+_CONCEPT_MAP: dict[str, str] = {}       # code_short → primary_concept
+_CONCEPT_PEERS: dict[str, list[str]] = {}  # concept_name → [code_short, ...]
 
 
-def _ensure_industry_map():
-    global _INDUSTRY_MAP, _INDUSTRY_PEERS
-    if _INDUSTRY_MAP:
-        return
-    try:
-        resp = call_tushare("stock_basic", {"list_status": "L"}, "ts_code,industry")
-        items = resp.get("data", {}).get("items", [])
-        for item in items:
-            if len(item) >= 2:
-                code, ind = item[0], (item[1] or '')
-                _INDUSTRY_MAP[code] = ind
-                if ind:
-                    _INDUSTRY_PEERS.setdefault(ind, []).append(code)
-        print(f"  行业映射缓存: {len(_INDUSTRY_MAP)}只股票, {len(_INDUSTRY_PEERS)}个行业")
-    except Exception as e:
-        print(f"  行业映射加载失败: {e}")
+def build_concept_map(hot_concept_tags: dict[str, list[str]]):
+    """从同花顺热门榜概念标签构建概念↔股票映射
+
+    Args:
+        hot_concept_tags: {code_short: [concept_name, ...]} from THS hot_list
+    """
+    global _CONCEPT_MAP, _CONCEPT_PEERS
+    _CONCEPT_MAP.clear()
+    _CONCEPT_PEERS.clear()
+
+    # 概念 → 股票列表
+    for code, tags in hot_concept_tags.items():
+        for tag in tags:
+            _CONCEPT_PEERS.setdefault(tag, []).append(code)
+
+    # 股票 → 主概念（选同概念股票数最多的）
+    for code, tags in hot_concept_tags.items():
+        if tags:
+            best = max(tags, key=lambda t: len(_CONCEPT_PEERS.get(t, [])))
+            _CONCEPT_MAP[code] = best
 
 
-def get_industry(code):
-    _ensure_industry_map()
-    return _INDUSTRY_MAP.get(code, '')
+def get_concept(code: str) -> str:
+    """获取个股所属主概念（同花顺概念，非申万行业）"""
+    code_short = code.replace('.SH', '').replace('.SZ', '')
+    return _CONCEPT_MAP.get(code_short, '')
 
 
-def get_industry_peers(industry, limit=20):
-    _ensure_industry_map()
-    peers = _INDUSTRY_PEERS.get(industry, [])
+def get_concept_peers(concept: str, limit: int = 20) -> list[str]:
+    """获取同概念股票列表"""
+    peers = _CONCEPT_PEERS.get(concept, [])
     return peers[:limit]
 
 
+def clear_concept_cache():
+    global _CONCEPT_MAP, _CONCEPT_PEERS
+    _CONCEPT_MAP = {}
+    _CONCEPT_PEERS = {}
+
+
+# ===== 兼容旧接口（已废弃，保留兼容） =====
+def _ensure_industry_map():
+    """已废弃: 使用 build_concept_map + get_concept 替代"""
+    pass
+
+
+def get_industry(code):
+    """已废弃: 使用 get_concept 替代"""
+    return get_concept(code)
+
+
+def get_industry_peers(industry, limit=20):
+    """已废弃: 使用 get_concept_peers 替代"""
+    return get_concept_peers(industry, limit)
+
+
 def clear_industry_cache():
-    global _INDUSTRY_MAP, _INDUSTRY_PEERS
-    _INDUSTRY_MAP = {}
-    _INDUSTRY_PEERS = {}
+    clear_concept_cache()

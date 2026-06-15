@@ -18,11 +18,23 @@ _PORT = 18999
 
 def daemon_cmd(cmd: str, timeout: int = 5) -> str:
     """向 L2 守护进程发送命令, 返回响应字符串"""
-    s = socket.create_connection((_HOST, _PORT), timeout=timeout)
-    s.sendall((cmd + "\n").encode())
-    resp = s.recv(32768).decode().strip()
-    s.close()
-    return resp
+    import time
+    t0 = time.time()
+    ok = False
+    try:
+        s = socket.create_connection((_HOST, _PORT), timeout=timeout)
+        s.sendall((cmd + "\n").encode())
+        resp = s.recv(32768).decode().strip()
+        s.close()
+        ok = resp and resp != "NULL"
+        return resp
+    except Exception:
+        return ""
+    finally:
+        api = cmd.split()[0].lower() if cmd else "?"
+        from scripts.audit import record
+        record("l2", api, ok=ok, items=1 if ok else 0,
+               latency_ms=(time.time()-t0)*1000)
 
 
 def daemon_alive() -> bool:

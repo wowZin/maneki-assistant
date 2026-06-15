@@ -16,7 +16,7 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
-import requests  # noqa: E402 (used in _get_jj_data_eastmoney)
+import requests  # noqa: E402 (used in _get_realtime_quote)
 
 # ── 全局跨股票缓存（减少 Tushare 调用） ──────────────────────
 _LIMIT_UP_CACHE = None        # 今日全市场涨停列表
@@ -183,7 +183,7 @@ def _get_daily_data(code: str, days=30) -> object:
 
 def _get_daily_basic(code: str) -> dict:
     """获取个股基础面数据（流通股本、换手率、量比等）
-    注：盘中 daily_basic 仅有 T-1 数据，实时换手/量比请用 _get_jj_data_eastmoney()。
+    注：盘中 daily_basic 仅有 T-1 数据，实时换手/量比请用 _get_realtime_quote()。
     """
     today = _query_date()
     try:
@@ -199,16 +199,16 @@ def _get_daily_basic(code: str) -> dict:
     return {}
 
 
-def _get_jj_data_eastmoney(code: str) -> dict:
-    """通过东方财富实时行情获取集合竞价/盘口数据
+def _get_realtime_quote(code: str) -> dict:
+    """通过同花顺直连获取实时行情数据
 
     返回: {change_pct, open_pct, amount, vol_ratio, turnover_rate,
            circ_mv, now_price, jj_active}
-    盘中优先用 clist 缓存(字段映射已验证正确)，降级 stock/get API。
+    盘后降级使用 Tushare。
     """
     from plays.limit_up.utils import is_market_closed, get_stock_quote
 
-    # 盘后降级：使用 Tushare 数据
+    # 盘后降级：使用 Tushare
     if is_market_closed():
         q = get_stock_quote(code)
         if q.get("change_pct") is not None:
@@ -219,106 +219,33 @@ def _get_jj_data_eastmoney(code: str) -> dict:
         return {}
 
     result = {}
-    short = code.split('.')[0]
 
-    # ═══ 第一优先：clist 缓存（字段映射已验证正确） ═══
+    # 同花顺直连获取实时行情
     try:
-        from plays.limit_up.pipeline import _get_realtime_fund_cache, _batch_fetch_realtime_pct
-        pct = _batch_fetch_realtime_pct().get(short)
-        fund = _get_realtime_fund_cache().get(short, {})
-
-        if pct is not None:
-            try:
-                pct_f = float(pct)
-                if abs(pct_f) < 30:  # 异常值防护(东财偶发-192%)
-                    result["change_pct"] = pct_f
-            except (ValueError, TypeError):
-                pass
-
-        if fund:
-            result["amount"] = fund.get("amount", 0)
-            result["vol_ratio"] = fund.get("vol_ratio", 0)
-            rt = fund.get("turnover", 0)  # 百分比(5.32=5.32%)
+        from scripts.ths_client import get_ths_client
+        ths = get_ths_client()
+        quote = ths.get_quote(code)
+        if quote:
+            result["change_pct"] = quote.get("pct_chg", 0)
+            result["now_price"] = quote.get("price", 0)
+            result["amount"] = quote.get("amount", 0)
+            result["vol_ratio"] = quote.get("vol_ratio", 0)
+            rt = quote.get("turnover", 0)
             if rt:
-                result["turnover_rate"] = rt / 100  # → 小数(0.0532)
-    except Exception:
-        pass
-
-    # ═══ 第二优先：stock/get API 补充缓存缺失字段 ═══
-    need_stock = (
-        "change_pct" not in result
-        or "now_price" not in result
-        or "circ_mv" not in result
-    )
-
-    if need_stock:
-        try:
-            from scripts.proxy_utils import request_with_proxy_retry
-
-            if code.endswith(".SH"):
-                em_code = f"1.{code.replace('.SH','')}"
-            elif code.endswith(".SZ"):
-                em_code = f"0.{code.replace('.SZ','')}"
-            else:
-                em_code = code
-
-            url = (
-                f"https://push2.eastmoney.com/api/qt/stock/get"
-                f"?secid={em_code}&fields=f43,f44,f45,f46,f47,f48,f49,f50,f51,f52,f57,f58,f60,f116,f117,f162,f166,f167,f168,f169,f170,f171"
-            )
-            headers = {
-                "User-Agent": "Mozilla/5.0",
-                "Referer": "https://quote.eastmoney.com/",
-            }
-            resp = request_with_proxy_retry(url, timeout=10, headers=headers)
-            if resp is None:
-                return result
-            data = resp.json()
-            d = data.get("data", {})
-            if not d:
-                return result
-
-            # 已验证: f60=昨收×100, f170=涨跌幅×100
-            # f166 含义已变(不再=换手率×100), 换手率改用成交量÷流通股本计算
-
-            stock_now = _safe_float(d.get("f60", 0)) / 100
-            if "now_price" not in result:
-                result["now_price"] = stock_now
-
-            if "change_pct" not in result:
-                f170_raw = d.get("f170")
-                if f170_raw is not None and f170_raw != "-":
-                    try:
-                        result["change_pct"] = float(f170_raw) / 100
-                    except (ValueError, TypeError):
-                        pass
-
-            if "turnover_rate" not in result:
-                # f166 字段已在EM API中变更含义(不再=换手率×100)
-                # 改用成交量(f47,手) ÷ 流通股本(f116÷现价) 计算换手率
-                vol_shou = _safe_float(d.get("f47", 0))
-                circ_mv = _safe_float(d.get("f116", 0))
-                price = _safe_float(d.get("f43", 0)) / 100
-                if vol_shou > 0 and circ_mv > 0 and price > 0:
-                    circ_shares = circ_mv / price
-                    if circ_shares > 0:
-                        result["turnover_rate"] = (vol_shou * 100) / circ_shares
-
-            if "circ_mv" not in result:
-                result["circ_mv"] = _safe_float(d.get("f116", 0))
-
-            # open_pct / jj_active 仅 stock/get 可提供(字段不可靠, 作参考)
-            if "open_pct" not in result:
-                stock_open = _safe_float(d.get("f46"))
-                if stock_now > 0 and stock_open > 0 and stock_open < stock_now * 1500:
-                    result["open_pct"] = (stock_open / 100 - stock_now) / stock_now * 100
+                result["turnover_rate"] = rt / 100  # 百分比→小数(5.32→0.0532)
+            if quote.get("f_407", 0) > 0:
+                result["circ_mv"] = quote.get("f_407", 0)
+            price = quote.get("price", 0)
+            open_p = quote.get("open", 0)
+            if price > 0 and open_p > 0:
+                result["open_pct"] = (open_p - price) / price * 100
 
             result["jj_active"] = (
                 result.get("vol_ratio", 0) > 1.5
                 and abs(result.get("open_pct", 0)) > 2
             )
-        except Exception:
-            pass
+    except Exception:
+        pass
 
     return result
 
@@ -845,7 +772,7 @@ def score_shortterm(code: str) -> tuple:
     cache["limit_history"] = _get_limit_history(code)
     cache["daily_basic"] = _get_daily_basic(code)
     cache["concept_names"] = _get_concept_names(code)
-    cache["em_data"] = _get_jj_data_eastmoney(code)
+    cache["em_data"] = _get_realtime_quote(code)
 
     # 今日涨停数据 (从 limit_list_d 取个股数据)
     today_ul_df = _get_today_limit_ups()
@@ -897,7 +824,7 @@ def score_aggression(code: str) -> tuple:
     """兼容旧接口: 单参数 → 内部构造 cache"""
     cache = {}
     cache["daily_data"] = _get_daily_data(code)
-    cache["em_data"] = _get_jj_data_eastmoney(code)
+    cache["em_data"] = _get_realtime_quote(code)
     cache["limit_history"] = _get_limit_history(code)
     return _score_aggression(code, cache)
 
@@ -912,7 +839,7 @@ def score_seal_quality(code: str) -> tuple:
             cache["today_ul_data"] = matches.iloc[0]
     cache["limit_history"] = _get_limit_history(code)
     cache["daily_basic"] = _get_daily_basic(code)
-    cache["em_data"] = _get_jj_data_eastmoney(code)
+    cache["em_data"] = _get_realtime_quote(code)
     return _score_seal_quality(code, cache)
 
 
@@ -927,7 +854,7 @@ def score_open_battle(code: str) -> tuple:
     cache = {}
     cache["daily_data"] = _get_daily_data(code)
     cache["daily_basic"] = _get_daily_basic(code)
-    cache["em_data"] = _get_jj_data_eastmoney(code)
+    cache["em_data"] = _get_realtime_quote(code)
     return _score_open_battle(code, cache)
 
 

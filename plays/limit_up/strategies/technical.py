@@ -7,13 +7,13 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 sys.path.insert(0, str(PROJECT_DIR / "scripts"))
 
-from scripts.tu_share import call_tushare, get_industry, get_industry_peers  # noqa: E402
+from scripts.tu_share import call_tushare, get_concept, get_concept_peers  # noqa: E402
 from plays.limit_up.utils import safe_float_none, is_trading_time  # noqa: E402
 from plays.limit_up.pipeline import _get_realtime_fund_cache  # noqa: E402
 
-# 模块级缓存：行业 → {code: {close, ma_bfq_20}}
-# 单次扫描中多个候选股同行业时避重复API调用
-_INDUSTRY_MA20_CACHE = {}
+# 模块级缓存：概念 → {code: {close, ma_bfq_20}}
+# 单次扫描中多个候选股同概念时避重复API调用
+_CONCEPT_MA20_CACHE = {}
 
 
 def score_technical(code):
@@ -427,38 +427,40 @@ def score_technical(code):
     sector_above_ma20_ratio = 0.5  # 中性的默认值
 
     try:
-        # 获取所属行业（从缓存映射，避免逐只调stock_basic）
-        industry = get_industry(code)
-        if industry:
-            # 获取同行业股票（客户端过滤，Tushare stock_basic不支持industry参数）
-            ind_codes = get_industry_peers(industry, limit=20)
-            if ind_codes and len(ind_codes) > 1:
+        # 获取所属同花顺概念
+        concept = get_concept(code)
+        if concept:
+            # 获取同概念股票
+            peer_codes = get_concept_peers(concept, limit=20)
+            if peer_codes and len(peer_codes) > 1:
                 above_ma20_count = 0
                 total_count = 0
-                # 行业MA20数据缓存：单次扫描内同行业不重复请求
-                if industry not in _INDUSTRY_MA20_CACHE:
-                    _INDUSTRY_MA20_CACHE[industry] = {}
-                    for ind_code in ind_codes:
-                        if not ind_code:
+                # 概念MA20数据缓存：单次扫描内同概念不重复请求
+                if concept not in _CONCEPT_MA20_CACHE:
+                    _CONCEPT_MA20_CACHE[concept] = {}
+                    for peer_code in peer_codes:
+                        if not peer_code:
                             continue
                         try:
-                            resp_daily = call_tushare("stk_factor_pro", {"ts_code": ind_code}, "trade_date,close,ma_bfq_20")
+                            # hot_list 返回的是纯数字code，补全后缀
+                            ts_code = f"{peer_code}.SH" if peer_code.startswith("6") else f"{peer_code}.SZ"
+                            resp_daily = call_tushare("stk_factor_pro", {"ts_code": ts_code}, "trade_date,close,ma_bfq_20")
                             d_items = resp_daily.get("data", {}).get("items", [])
                             if d_items:
                                 d_fields = resp_daily.get("data", {}).get("fields", [])
                                 d_dict = dict(zip(d_fields, d_items[0])) if d_fields else {}
-                                _INDUSTRY_MA20_CACHE[industry][ind_code] = {
+                                _CONCEPT_MA20_CACHE[concept][peer_code] = {
                                     "close": safe_float(d_dict.get('close')),
                                     "ma20": safe_float(d_dict.get('ma_bfq_20')),
                                 }
                         except Exception:
                             pass
                 # 从缓存读取
-                for ind_code in ind_codes:
-                    if not ind_code:
+                for peer_code in peer_codes:
+                    if not peer_code:
                         continue
                     total_count += 1
-                    d = _INDUSTRY_MA20_CACHE[industry].get(ind_code)
+                    d = _CONCEPT_MA20_CACHE[concept].get(peer_code)
                     if d and d.get("close") and d.get("ma20") and d["close"] > d["ma20"]:
                         above_ma20_count += 1
                 if total_count > 0:
@@ -466,13 +468,13 @@ def score_technical(code):
 
                     if sector_above_ma20_ratio >= 0.4:
                         sector_score += 5
-                        sector_reasons.append(f"板块共振({sector_above_ma20_ratio*100:.0f}%>MA20)+5")
+                        sector_reasons.append(f"概念共振({concept} {sector_above_ma20_ratio*100:.0f}%>MA20)+5")
                     elif sector_above_ma20_ratio >= 0.2:
                         sector_score += 2
-                        sector_reasons.append(f"板块中性({sector_above_ma20_ratio*100:.0f}%>MA20)+2")
+                        sector_reasons.append(f"概念中性({concept} {sector_above_ma20_ratio*100:.0f}%>MA20)+2")
                     else:
                         # 板块弱势天花板：总分上限74
-                        sector_reasons.append("板块弱势(<20%>MA20)天花板74分")
+                        sector_reasons.append(f"概念弱势({concept} <20%>MA20)天花板74分")
     except Exception:
         pass
 

@@ -735,11 +735,7 @@ def preflight_check() -> bool:
         if status.severity == Severity.CRITICAL:
             critical_failures.append(f"tushare:{api}: {status.message}")
 
-    # 代理 (不检查东财缓存, 因为 preflight 可能在 pipeline 填充缓存之前运行)
-    proxy_results = check_proxy()
-    for s in proxy_results:
-        if s.severity == Severity.CRITICAL:
-            critical_failures.append(f"{s.source}: {s.message}")
+    # 代理/东财已全量迁移到同花顺直连，不再检查代理可达性
 
     # 3. 判定
     if critical_failures:
@@ -778,14 +774,12 @@ def run_health_check(full: bool = False, quiet: bool = False) -> HealthReport:
     # 1. Tushare
     report.checks.extend(check_tushare_apis(full=full))
 
-    # 2. 东财缓存
-    report.checks.extend(check_eastmoney_caches())
+    # 2. 东财缓存 (已废弃，全量迁移同花顺)
 
     # 3. Level2
     # (已提到最前)
 
-    # 4. 代理
-    report.checks.extend(check_proxy())
+    # 4. 代理 (已废弃，全量迁移同花顺)
 
     # 汇总
     severities = [c.severity for c in report.checks]

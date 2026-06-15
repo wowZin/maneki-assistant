@@ -1,0 +1,272 @@
+[
+  {
+    "code": "603738.SH",
+    "name": "泰晶科技",
+    "pct_chg": 0.0,
+    "signals": {
+      "concept_resonance": {
+        "triggered": true,
+        "confidence": 1.0,
+        "detail": "共封装光学(CPO) 6只涨停 最强概念"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无资金流数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 1.0,
+        "detail": "强势突破: 量比3.0, 涨幅10.0%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅0.0%"
+      },
+      "limit_dna": {
+        "triggered": true,
+        "confidence": 0.6,
+        "detail": "涨停记忆: 近20日涨停1次 60日最高3连板"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "大盘: 流通市值219.6亿"
+      }
+    },
+    "triggered_count": 3,
+    "triggered_signals": [
+      "concept_resonance",
+      "volume_breakout",
+      "limit_dna"
+    ],
+    "push_decision": {
+      "should_push": true,
+      "combination": "E:概念+资金/量价",
+      "confidence": 1.0
+    },
+    "signal_summary": "[FIRE]概念共振 [CHART]量价突破 [DNA]连板基因"
+  },
+  {
+    "code": "002428.SZ",
+    "name": "云南锗业",
+    "pct_chg": 0.0,
+    "signals": {
+      "concept_resonance": {
+        "triggered": true,
+        "confidence": 1.0,
+        "detail": "光纤概念 5只涨停 最强概念"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无资金流数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 1.0,
+        "detail": "强势突破: 量比3.0, 涨幅10.0%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅0.0%"
+      },
+      "limit_dna": {
+        "triggered": true,
+        "confidence": 0.85,
+        "detail": "连板基因: 近20日涨停2次"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "大盘: 流通市值662.8亿"
+      }
+    },
+    "triggered_count": 3,
+    "triggered_signals": [
+      "concept_resonance",
+      "volume_breakout",
+      "limit_dna"
+    ],
+    "push_decision": {
+      "should_push": true,
+      "combination": "E:概念+资金/量价",
+      "confidence": 1.0
+    },
+    "signal_summary": "[FIRE]概念共振 [CHART]量价突破 [DNA]连板基因"
+  },
+  {
+    "code": "002579.SZ",
+    "name": "中京电子",
+    "pct_chg": 0.0,
+    "signals": {
+      "concept_resonance": {
+        "triggered": true,
+        "confidence": 1.0,
+        "detail": "PCB概念 5只涨停 最强概念"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无资金流数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 1.0,
+        "detail": "强势突破: 量比3.0, 涨幅8.3%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅0.0%"
+      },
+      "limit_dna": {
+        "triggered": true,
+        "confidence": 1.0,
+        "detail": "强连板基因: 近20日涨停5次"
+      },
+      "smallcap": {
+        "triggered": true,
+        "confidence": 0.3,
+        "detail": "中盘: 流通市值95.4亿"
+      }
+    },
+    "triggered_count": 4,
+    "triggered_signals": [
+      "concept_resonance",
+      "volume_breakout",
+      "limit_dna",
+      "smallcap"
+    ],
+    "push_decision": {
+      "should_push": true,
+      "combination": "E:概念+资金/量价",
+      "confidence": 1.0
+    },
+    "signal_summary": "[FIRE]概念共振 [CHART]量价突破 [DNA]连板基因 [HOME]小盘弹性"
+  },
+  {
+    "code": "002491.SZ",
+    "name": "通鼎互联",
+    "pct_chg": 0.0,
+    "signals": {
+      "concept_resonance": {
+        "triggered": true,
+        "confidence": 1.0,
+        "detail": "光纤概念 5只涨停 最强概念"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无资金流数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.85,
+        "detail": "强势突破: 量比3.0, 涨幅6.2%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅0.0%"
+      },
+      "limit_dna": {
+        "triggered": true,
+        "confidence": 0.6,
+        "detail": "涨停记忆: 近20日涨停1次 60日最高4连板"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "大盘: 流通市值283.9亿"
+      }
+    },
+    "triggered_count": 3,
+    "triggered_signals": [
+      "concept_resonance",
+      "volume_breakout",
+      "limit_dna"
+    ],
+    "push_decision": {
+      "should_push": true,
+      "combination": "E:概念+资金/量价",
+      "confidence": 0.933
+    },
+    "signal_summary": "[FIRE]概念共振 [CHART]量价突破 [DNA]连板基因"
+  },
+  {
+    "code": "600498.SH",
+    "name": "烽火通信",
+    "pct_chg": 0.0,
+    "signals": {
+      "concept_resonance": {
+        "triggered": true,
+        "confidence": 1.0,
+        "detail": "光纤概念 5只涨停 最强概念"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无资金流数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.85,
+        "detail": "强势突破: 量比2.0, 涨幅7.4%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅0.0%"
+      },
+      "limit_dna": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无近期涨停记录"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "大盘: 流通市值862.5亿"
+      }
+    },
+    "triggered_count": 2,
+    "triggered_signals": [
+      "concept_resonance",
+      "volume_breakout"
+    ],
+    "push_decision": {
+      "should_push": true,
+      "combination": "E:概念+资金/量价",
+      "confidence": 0.933
+    },
+    "signal_summary": "[FIRE]概念共振 [CHART]量价突破"
+  }
+]

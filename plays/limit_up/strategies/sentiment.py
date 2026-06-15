@@ -5,7 +5,7 @@ sys.path.insert(0, str(PROJECT_DIR))
 sys.path.insert(0, str(PROJECT_DIR / "scripts"))
 from scripts.tu_share import call_tushare  # noqa: E402  # noqa: E402
 from plays.limit_up.utils import safe_float_none, safe_int_none, list_to_dict  # noqa: E402
-from plays.limit_up.pipeline import _get_popularity_rank, _batch_fetch_realtime_pct, _get_realtime_fund_cache  # noqa: E402
+from plays.limit_up.pipeline import _get_popularity_rank, _get_realtime_fund_cache, _THS_QUOTE_CACHE, _HOT_CONCEPT_CACHE, _HOT_LIST_ITEMS  # noqa: E402
 
 
 def score_sentiment(code):
@@ -24,17 +24,12 @@ def score_sentiment(code):
 
     # ===== 0. 获取交易日期 =====
     today_str = datetime.now().strftime('%Y%m%d')
+    # call_tushare 内部自动修正 trade_date：若查询 today 但数据未就绪，自动回退到上一交易日
 
     # ===== 1. 数据获取 =====
-    # 1.1 获取个股所属概念板块（离线数据）
-    concept_names = []
-    try:
-        resp = call_tushare("concept_detail", {"ts_code": code}, "id,concept_name")
-        data = resp.get("data", {})
-        items = data.get("items", [])
-        concept_names = [c[1] for c in items if len(c) > 1] if items else []
-    except Exception:
-        pass
+    # 1.1 获取个股所属概念板块（同花顺热门榜 concept_tag，实时在线）
+    code_short = code.split('.')[0]
+    concept_names = _HOT_CONCEPT_CACHE.get(code_short, []) if _HOT_CONCEPT_CACHE else []
 
     # 1.2 获取全市场涨停数据（T+1）
     limit_fields = ["trade_date", "ts_code", "name", "close", "pct_chg", "limit", "limit_times", "up_stat"]
@@ -73,42 +68,32 @@ def score_sentiment(code):
     except Exception:
         pass
 
-    # 1.6 获取涨停最强板块统计（概念涨停家数）
-    cpt_fields = ["ts_code", "name", "trade_date", "days", "up_stat", "cons_nums", "up_nums", "pct_chg", "rank"]
-    cpt_data = []
-    try:
-        resp = call_tushare("limit_cpt_list", {"trade_date": today_str}, ",".join(cpt_fields))
-        data = resp.get("data", {})
-        cpt_data = list_to_dict(data.get("items", []), cpt_fields)
-    except Exception:
-        pass
-
-    # 构建概念→涨停家数映射（含模糊匹配：consum电子 vs consum电子概念）
+    # 1.6 用同花顺热门榜自建概念涨停统计（替代 limit_cpt_list T+1数据）
+    # 优势：概念名与 hot_list concept_tag 完全一致，零名称匹配问题
     concept_ul_cnt = {}
-    if cpt_data:
-        for cpt in cpt_data:
-            cpt_name = cpt.get('name', '')
-            up_nums = safe_int(cpt.get('up_nums', 0)) or 0
-            if cpt_name and up_nums > 0:
-                concept_ul_cnt[cpt_name] = up_nums
+    if _HOT_CONCEPT_CACHE and _HOT_LIST_ITEMS:
+        for s in _HOT_LIST_ITEMS:
+            pct = float(s.get('pct_chg', 0))
+            if pct >= 9.5:  # 涨停或接近涨停
+                tags = s.get('tag', {}).get('concept_tag', [])
+                for tag in tags:
+                    concept_ul_cnt[tag] = concept_ul_cnt.get(tag, 0) + 1
+        # 同时统计涨幅≥5%的作为「活跃」概念辅助
+        for s in _HOT_LIST_ITEMS:
+            pct = float(s.get('pct_chg', 0))
+            if 5 <= pct < 9.5:
+                tags = s.get('tag', {}).get('concept_tag', [])
+                for tag in tags:
+                    if tag not in concept_ul_cnt:
+                        concept_ul_cnt[tag] = 0  # 标记有活跃但无涨停
 
     def _get_ul_cnt(concept_name):
-        """模糊匹配概念涨停数：处理'消费电子'vs'消费电子概念'类差异"""
-        if concept_name in concept_ul_cnt:
-            return concept_ul_cnt[concept_name]
-        for k, v in concept_ul_cnt.items():
-            if concept_name in k or k in concept_name:
-                return v
-        return 0
+        """获取概念涨停家数（精确匹配，concept_tag 与概念名一致）"""
+        return concept_ul_cnt.get(concept_name, 0)
 
     def _has_concept_data(concept_name):
-        """检查概念是否在limit_cpt_list中（有数据），避免误杀未收录的概念"""
-        if concept_name in concept_ul_cnt:
-            return True
-        for k in concept_ul_cnt:
-            if concept_name in k or k in concept_name:
-                return True
-        return False
+        """检查概念是否有数据"""
+        return concept_name in concept_ul_cnt
     # 1.7 获取个股昨日成交量（CallVolRatio量纲修正）
     yesterday_vol = 0
     try:
@@ -245,7 +230,7 @@ def score_sentiment(code):
     # 否决2(主线崩塌)：核心龙头断板 或 所属题材无涨停
     # T+1场景简化：概念涨停数=0视为主线崩塌（=1留给否决5纯跟风）
     # 注意：limit_cpt_list只返回当天前20概念，未收录的概念不能视为"无涨停"
-    if concept_names and cpt_data:
+    if concept_names and concept_ul_cnt:
         # 只检查在limit_cpt_list中有数据的概念
         tracked_concepts = [n for n in concept_names if _has_concept_data(n)]
         if tracked_concepts:
@@ -370,14 +355,13 @@ def score_sentiment(code):
     # Null处理：跳过人气排名检查
     popularity_rank = _get_popularity_rank(code)  # 真实人气排名
 
-    # 获取个股当日涨幅（优先实时缓存 > 个股实时接口 > Tushare日线 > limit_data）
+    # 获取个股当日涨幅（优先同花顺实时缓存 > 东财缓存 > Tushare日线 > limit_data）
     stock_pct = 0
-    # 盘中优先使用实时数据缓存
     code_short = code.split('.')[0]
-    realtime_cache = _batch_fetch_realtime_pct()
-    if code_short in realtime_cache:
-        stock_pct = realtime_cache[code_short] or 0
-        # 异常值防护(东财API偶发错误值如-192%)
+
+    # 1st: 同花顺实时行情缓存（pipeline 1.8步已批量预取，数据最新）
+    if code_short in _THS_QUOTE_CACHE:
+        stock_pct = _THS_QUOTE_CACHE[code_short].get("pct_chg", 0) or 0
         if abs(stock_pct) > 30:
             stock_pct = 0
 
@@ -407,19 +391,6 @@ def score_sentiment(code):
             if hasattr(item, 'get') and item.get('ts_code', '') == code:
                 stock_pct = safe_float(item.get('pct_chg', 0)) or 0
                 break
-
-    # 判断是否主线题材（用概念涨停数代理：≥3只涨停=主线）
-    is_main_theme = False
-    if concept_names and cpt_data:
-        max_ul = max([_get_ul_cnt(n) for n in concept_names], default=0)
-        is_main_theme = max_ul >= 3
-
-    if stock_pct < 3:
-        return 0, f"纯跟风弱势:涨幅仅{stock_pct:.1f}%<3%"
-    elif is_main_theme and popularity_rank is not None and popularity_rank > 200:
-        return 0, f"纯跟风弱势:主线题材但人气仅{popularity_rank}名>200"
-    elif not is_main_theme and popularity_rank is not None and popularity_rank > 200:
-        return 0, f"纯跟风弱势:非主线且人气{popularity_rank}名>200"
 
     # ===== 3. 五维度评分 =====
     score = 0
@@ -487,7 +458,7 @@ def score_sentiment(code):
     theme_score = 0
     theme_reasons = []
 
-    if concept_names and cpt_data:
+    if concept_names and concept_ul_cnt:
         max([concept_ul_cnt.get(n, 0) for n in concept_names], default=0)
         # 找当前股票所属的最佳概念
         best_concept = None
@@ -498,14 +469,14 @@ def score_sentiment(code):
                 best_ul_cnt = cnt
                 best_concept = name
 
-        # [题材地位] 梯度加分：1名+10, 2-3名+5, 4-5名+2 
-        if cpt_data:
-            # 从cpt_data找题材排名
+        # [题材地位] 梯度加分：按涨停家数排名，1名+10, 2-3名+5, 4-5名+2
+        if concept_ul_cnt and best_concept:
+            # 按涨停数降序排列概念
+            ranked = sorted(concept_ul_cnt.items(), key=lambda x: x[1], reverse=True)
             theme_rank = 99
-            for cpt in cpt_data:
-                cpt_name = cpt.get('name', '')
-                if cpt_name == best_concept:
-                    theme_rank = safe_int(cpt.get('rank', 99)) or 99
+            for ri, (cn, _) in enumerate(ranked, 1):
+                if cn == best_concept:
+                    theme_rank = ri
                     break
             if theme_rank == 1:
                 theme_score += 10

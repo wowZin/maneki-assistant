@@ -700,11 +700,11 @@ def score_fundflow(code):
                 dim3_score = 0
                 dim3_reason.append(f"净流出{abs(net_mf)/100000000:.2f}亿")
 
-        # 负向过滤（优先实时涨跌幅，降级 T+1）
+        # 负向过滤（优先同花顺实时涨跌幅，降级 T+1）
         if _use_rt:
-            from plays.limit_up.pipeline import _batch_fetch_realtime_pct as _rt_pct
-            _pct_cache = _rt_pct()
-            _pct_val = _pct_cache.get(code.split('.')[0])
+            from plays.limit_up.pipeline import _THS_QUOTE_CACHE
+            _quote = _THS_QUOTE_CACHE.get(code.split('.')[0], {}) or {}
+            _pct_val = _quote.get("pct_chg", 0)
             try:
                 pct_chg = float(_pct_val) if _pct_val is not None else 0
             except (ValueError, TypeError):
