@@ -268,7 +268,8 @@ class THSClient:
             ok = True
             # 标准化字段名
             for item in items:
-                item["pct_chg"] = float(item.pop("rise_and_fall", 0))
+                rf = item.pop("rise_and_fall", 0)
+                item["pct_chg"] = float(rf) if rf is not None else 0.0
                 item["hot_rank"] = item.get("display_order", 0)
             return items
         except Exception as e:
