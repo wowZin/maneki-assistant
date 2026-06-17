@@ -430,7 +430,7 @@ def push_feishu(results):
         if is_afternoon and s.get('sentiment', 0) < 25:
             pm_filtered += 1; return False
         # 高确信度筛选: 情绪+总分达标（双灯，移除资金面门禁）
-        if not (s.get('sentiment', 0) >= 35 and r.get('total', 0) >= 40):
+        if not (s.get('sentiment', 0) >= 25 and r.get('total', 0) >= 35):
             hc_filtered += 1; return False
         return True
 

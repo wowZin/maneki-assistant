@@ -478,13 +478,22 @@ async def main():
                                             getattr(b, 'type', None) == "tool_use"
                                             for b in (message.content or [])
                                         )
-                                        texts = [
-                                            getattr(b, 'text', '')[:60]
+                                        texts_full = [
+                                            getattr(b, 'text', '')
                                             for b in (message.content or [])
                                             if hasattr(b, 'text')
                                         ]
+                                        texts_trunc = [t[:60] for t in texts_full]
                                         log.info("turn%d: AssistantMessage tools=%s text=%s",
-                                                 turn_count, has_tool, texts[0] if texts else "")
+                                                 turn_count, has_tool, texts_trunc[0] if texts_trunc else "")
+                                        # Claude 未使用工具时，主动将文本回复发送到飞书
+                                        if not has_tool and texts_full:
+                                            full_text = texts_full[0]
+                                            try:
+                                                await feishu.reply_text(message_id, full_text)
+                                                log.info("  → forwarded to feishu (len=%d)", len(full_text))
+                                            except Exception as e:
+                                                log.error("  → forward feishu failed: %s", e)
                                     elif isinstance(message, ResultMessage):
                                         if not message.is_error:
                                             final_session_id = message.session_id

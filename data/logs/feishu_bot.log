@@ -50,3 +50,13 @@ INFO:     101.126.59.9:0 - "POST /feishu/callback HTTP/1.1" 200 OK
 2026-06-17 15:34:39 [INFO] feishu_bot: inbox: chat=oc_64b3222f6c03fca14f6d779cdf9f43eb msg=om_x100b6c10 text=明天江海股份应该怎么操作
 INFO:     123.58.10.239:0 - "POST /feishu/callback HTTP/1.1" 200 OK
 2026-06-17 15:34:40 [INFO] httpx: HTTP Request: POST https://open.feishu.cn/open-apis/im/v1/messages/om_x100b6c10ae2c7ca4c240f624bd34659/reply "HTTP/1.1 200 OK"
+INFO:     101.126.59.7:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+2026-06-17 18:07:37 [INFO] feishu_bot: inbox: chat=oc_64b3222f6c03fca14f6d779cdf9f43eb msg=om_x100b6c13 text=重启一下 又不回消息了
+INFO:     123.58.10.238:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+2026-06-17 18:07:37 [INFO] httpx: HTTP Request: POST https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal "HTTP/1.1 200 OK"
+2026-06-17 18:07:38 [INFO] httpx: HTTP Request: POST https://open.feishu.cn/open-apis/im/v1/messages/om_x100b6c13504854acb3965d4e2ffd865/reply "HTTP/1.1 200 OK"
+2026-06-17 18:09:05 [INFO] feishu_bot: inbox: chat=oc_64b3222f6c03fca14f6d779cdf9f43eb msg=om_x100b6c13 text=明天江海股份应该怎么操作
+INFO:     101.126.59.9:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+2026-06-17 18:09:06 [INFO] httpx: HTTP Request: POST https://open.feishu.cn/open-apis/im/v1/messages/om_x100b6c136ac6f0acb2ebd7c9f9dc43b/reply "HTTP/1.1 200 OK"
+INFO:     123.58.10.238:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+INFO:     101.126.59.7:0 - "POST /feishu/callback HTTP/1.1" 200 OK

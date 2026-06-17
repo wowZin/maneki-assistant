@@ -1,0 +1,117 @@
+{
+  "date": "20260617",
+  "pushed_count": 5,
+  "cumulative_limit_count": 93,
+  "hit_count": 1,
+  "hit_rate": 20.0,
+  "win_rate": 50.0,
+  "win_count": 2,
+  "win_total": 4,
+  "hit_codes": [
+    "600176.SH"
+  ],
+  "miss_codes": [
+    "002971.SZ",
+    "605589.SH",
+    "600183.SH",
+    "603399.SH"
+  ],
+  "hit_details": [
+    {
+      "code": "600176.SH",
+      "name": "中国巨石"
+    }
+  ],
+  "dim_performance": {
+    "fundamental": {
+      "total": 5,
+      "hit_avg": 68.0,
+      "miss_avg": 55.7
+    },
+    "technical": {
+      "total": 5,
+      "hit_avg": 36.0,
+      "miss_avg": 34.0
+    },
+    "fundflow": {
+      "total": 5,
+      "hit_avg": 50.0,
+      "miss_avg": 4.2
+    },
+    "sentiment": {
+      "total": 5,
+      "hit_avg": 34.0,
+      "miss_avg": 48.5
+    },
+    "shortterm": {
+      "total": 5,
+      "hit_avg": 32.5,
+      "miss_avg": 37.4
+    }
+  },
+  "confidence_dist": {
+    "high": 0,
+    "medium": 0,
+    "low": 5
+  },
+  "ab_comparison": {
+    "enabled": true,
+    "prev": {
+      "weights": {
+        "fundamental": 0.2,
+        "technical": 1.3,
+        "fundflow": 1.6,
+        "sentiment": 1.2,
+        "shortterm": 1.0
+      },
+      "pushed": 26,
+      "codes": [
+        "002436.SZ",
+        "603738.SH",
+        "603186.SH",
+        "600378.SH",
+        "600183.SH",
+        "603002.SH",
+        "600460.SH",
+        "002428.SZ",
+        "002217.SZ",
+        "603773.SH",
+        "603256.SH",
+        "000636.SZ",
+        "002585.SZ",
+        "002409.SZ",
+        "002815.SZ",
+        "603629.SH",
+        "000657.SZ",
+        "605006.SH",
+        "601208.SH",
+        "600500.SH",
+        "600176.SH",
+        "002552.SZ",
+        "603399.SH",
+        "600869.SH",
+        "605589.SH",
+        "600226.SH"
+      ],
+      "hits": 5
+    },
+    "curr": {
+      "weights": {
+        "fundamental": 0.1,
+        "technical": 0.3,
+        "fundflow": 0.5,
+        "sentiment": 0.1,
+        "shortterm": 2.1
+      },
+      "pushed": 5,
+      "codes": [
+        "002971.SZ",
+        "600176.SH",
+        "603399.SH",
+        "605589.SH",
+        "600183.SH"
+      ],
+      "hits": 1
+    }
+  }
+}
