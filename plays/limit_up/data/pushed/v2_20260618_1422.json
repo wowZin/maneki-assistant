@@ -1,0 +1,110 @@
+[
+  {
+    "code": "002384.SZ",
+    "name": "东山精密",
+    "pct_chg": 7.3,
+    "signals": {
+      "concept_resonance": {
+        "triggered": true,
+        "confidence": 0.9,
+        "detail": "共封装光学(CPO) 5只涨停 最强概念"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.5,
+        "detail": "放量启动: 涨幅7.3%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": true,
+        "confidence": 0.4,
+        "detail": "尾盘高位: 涨幅7.3%"
+      },
+      "limit_dna": {
+        "triggered": true,
+        "confidence": 0.85,
+        "detail": "连板基因: 近20日涨停2次"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 4,
+    "triggered_signals": [
+      "concept_resonance",
+      "volume_breakout",
+      "morning_power",
+      "limit_dna"
+    ],
+    "push_decision": {
+      "should_push": true,
+      "combination": "C:概念+早盘+连板",
+      "confidence": 0.735
+    },
+    "signal_summary": "[FIRE]概念共振 [CHART]量价突破 [CLOCK]早盘强势 [DNA]连板基因"
+  },
+  {
+    "code": "000988.SZ",
+    "name": "华工科技",
+    "pct_chg": 5.47,
+    "signals": {
+      "concept_resonance": {
+        "triggered": true,
+        "confidence": 0.9,
+        "detail": "共封装光学(CPO) 5只涨停 最强概念"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.35,
+        "detail": "放量启动: 涨幅5.5%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅5.5%"
+      },
+      "limit_dna": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无近期涨停记录"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 2,
+    "triggered_signals": [
+      "concept_resonance",
+      "volume_breakout"
+    ],
+    "push_decision": {
+      "should_push": true,
+      "combination": "E:概念+资金/量价",
+      "confidence": 0.653
+    },
+    "signal_summary": "[FIRE]概念共振 [CHART]量价突破"
+  }
+]
