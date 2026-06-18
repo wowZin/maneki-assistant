@@ -60,3 +60,12 @@ INFO:     101.126.59.9:0 - "POST /feishu/callback HTTP/1.1" 200 OK
 2026-06-17 18:09:06 [INFO] httpx: HTTP Request: POST https://open.feishu.cn/open-apis/im/v1/messages/om_x100b6c136ac6f0acb2ebd7c9f9dc43b/reply "HTTP/1.1 200 OK"
 INFO:     123.58.10.238:0 - "POST /feishu/callback HTTP/1.1" 200 OK
 INFO:     101.126.59.7:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+INFO:     123.58.10.239:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+2026-06-17 22:17:06 [INFO] feishu_bot: inbox: chat=oc_64b3222f6c03fca14f6d779cdf9f43eb msg=om_x100b6c1e text=tcl科技怎么样
+INFO:     101.126.59.7:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+2026-06-17 22:17:07 [INFO] httpx: HTTP Request: POST https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal "HTTP/1.1 200 OK"
+2026-06-17 22:17:07 [INFO] httpx: HTTP Request: POST https://open.feishu.cn/open-apis/im/v1/messages/om_x100b6c1e88d9f8a4b1f29dddaa4a05d/reply "HTTP/1.1 200 OK"
+INFO:     123.58.10.238:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+INFO:     101.126.59.9:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+INFO:     123.58.10.238:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+INFO:     101.126.59.7:0 - "POST /feishu/callback HTTP/1.1" 200 OK
