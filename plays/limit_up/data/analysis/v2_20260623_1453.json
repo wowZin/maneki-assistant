@@ -1,0 +1,795 @@
+[
+  {
+    "code": "002008.SZ",
+    "name": "大族激光",
+    "pct_chg": 8.85,
+    "signals": {
+      "concept_resonance": {
+        "triggered": true,
+        "confidence": 0.7,
+        "detail": "光纤概念 3只涨停 概念共振"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.65,
+        "detail": "放量启动: 量比1.6, 涨幅8.8%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": true,
+        "confidence": 0.4,
+        "detail": "尾盘高位: 涨幅8.8%"
+      },
+      "limit_dna": {
+        "triggered": true,
+        "confidence": 0.6,
+        "detail": "涨停记忆: 近20日涨停1次"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 4,
+    "triggered_signals": [
+      "concept_resonance",
+      "volume_breakout",
+      "morning_power",
+      "limit_dna"
+    ],
+    "push_decision": {
+      "should_push": true,
+      "combination": "C:概念+早盘+连板",
+      "confidence": 0.58
+    },
+    "signal_summary": "[FIRE]概念共振 [CHART]量价突破 [CLOCK]早盘强势 [DNA]连板基因"
+  },
+  {
+    "code": "002297.SZ",
+    "name": "博云新材",
+    "pct_chg": 5.0,
+    "signals": {
+      "concept_resonance": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "培育钻石 仅1只涨停 弱共振(不触发)"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.5,
+        "detail": "放量启动: 量比1.9, 涨幅5.0%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅5.0%"
+      },
+      "limit_dna": {
+        "triggered": true,
+        "confidence": 1.0,
+        "detail": "强连板基因: 近20日涨停3次"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 2,
+    "triggered_signals": [
+      "volume_breakout",
+      "limit_dna"
+    ],
+    "push_decision": {
+      "should_push": false,
+      "combination": "无组合",
+      "confidence": 0.0
+    },
+    "signal_summary": "[CHART]量价突破 [DNA]连板基因"
+  },
+  {
+    "code": "603906.SH",
+    "name": "龙蟠科技",
+    "pct_chg": 4.43,
+    "signals": {
+      "concept_resonance": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "所属概念无涨停"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.3,
+        "detail": "温和放量: 量比1.6, 涨幅4.4%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅4.4%"
+      },
+      "limit_dna": {
+        "triggered": true,
+        "confidence": 0.6,
+        "detail": "涨停记忆: 近20日涨停1次"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 2,
+    "triggered_signals": [
+      "volume_breakout",
+      "limit_dna"
+    ],
+    "push_decision": {
+      "should_push": false,
+      "combination": "无组合",
+      "confidence": 0.0
+    },
+    "signal_summary": "[CHART]量价突破 [DNA]连板基因"
+  },
+  {
+    "code": "600206.SH",
+    "name": "有研新材",
+    "pct_chg": 3.25,
+    "signals": {
+      "concept_resonance": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "所属概念无涨停"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.15,
+        "detail": "温和放量: 涨幅3.2%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅3.2%"
+      },
+      "limit_dna": {
+        "triggered": true,
+        "confidence": 1.0,
+        "detail": "强连板基因: 近20日涨停3次"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 2,
+    "triggered_signals": [
+      "volume_breakout",
+      "limit_dna"
+    ],
+    "push_decision": {
+      "should_push": false,
+      "combination": "无组合",
+      "confidence": 0.0
+    },
+    "signal_summary": "[CHART]量价突破 [DNA]连板基因"
+  },
+  {
+    "code": "603629.SH",
+    "name": "利通电子",
+    "pct_chg": 3.97,
+    "signals": {
+      "concept_resonance": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "所属概念无涨停"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.15,
+        "detail": "温和放量: 涨幅4.0%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅4.0%"
+      },
+      "limit_dna": {
+        "triggered": true,
+        "confidence": 0.85,
+        "detail": "连板基因: 近20日涨停2次"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 2,
+    "triggered_signals": [
+      "volume_breakout",
+      "limit_dna"
+    ],
+    "push_decision": {
+      "should_push": false,
+      "combination": "无组合",
+      "confidence": 0.0
+    },
+    "signal_summary": "[CHART]量价突破 [DNA]连板基因"
+  },
+  {
+    "code": "002083.SZ",
+    "name": "孚日股份",
+    "pct_chg": 4.5,
+    "signals": {
+      "concept_resonance": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "氟化工概念 仅2只涨停 弱共振(不触发)"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.15,
+        "detail": "温和放量: 涨幅4.5%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅4.5%"
+      },
+      "limit_dna": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无近期涨停记录"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 1,
+    "triggered_signals": [
+      "volume_breakout"
+    ],
+    "push_decision": {
+      "should_push": false,
+      "combination": "无组合",
+      "confidence": 0.0
+    },
+    "signal_summary": "[CHART]量价突破"
+  },
+  {
+    "code": "600703.SH",
+    "name": "三安光电",
+    "pct_chg": 3.0067,
+    "signals": {
+      "concept_resonance": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "共封装光学(CPO) 仅1只涨停 弱共振(不触发)"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.15,
+        "detail": "温和放量: 涨幅3.0%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅3.0%"
+      },
+      "limit_dna": {
+        "triggered": true,
+        "confidence": 1.0,
+        "detail": "强连板基因: 近20日涨停3次"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 2,
+    "triggered_signals": [
+      "volume_breakout",
+      "limit_dna"
+    ],
+    "push_decision": {
+      "should_push": false,
+      "combination": "无组合",
+      "confidence": 0.0
+    },
+    "signal_summary": "[CHART]量价突破 [DNA]连板基因"
+  },
+  {
+    "code": "601162.SH",
+    "name": "天风证券",
+    "pct_chg": 6.8,
+    "signals": {
+      "concept_resonance": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "期货概念 仅2只涨停 弱共振(不触发)"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.85,
+        "detail": "强势突破: 量比3.4, 涨幅6.8%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅6.8%"
+      },
+      "limit_dna": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无近期涨停记录"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 1,
+    "triggered_signals": [
+      "volume_breakout"
+    ],
+    "push_decision": {
+      "should_push": false,
+      "combination": "无组合",
+      "confidence": 0.0
+    },
+    "signal_summary": "[CHART]量价突破"
+  },
+  {
+    "code": "600707.SH",
+    "name": "彩虹股份",
+    "pct_chg": 8.63,
+    "signals": {
+      "concept_resonance": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "所属概念无涨停"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.5,
+        "detail": "放量启动: 涨幅8.6%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": true,
+        "confidence": 0.4,
+        "detail": "尾盘高位: 涨幅8.6%"
+      },
+      "limit_dna": {
+        "triggered": true,
+        "confidence": 0.6,
+        "detail": "涨停记忆: 近20日涨停1次"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 3,
+    "triggered_signals": [
+      "volume_breakout",
+      "morning_power",
+      "limit_dna"
+    ],
+    "push_decision": {
+      "should_push": false,
+      "combination": "无组合",
+      "confidence": 0.0
+    },
+    "signal_summary": "[CHART]量价突破 [CLOCK]早盘强势 [DNA]连板基因"
+  },
+  {
+    "code": "002837.SZ",
+    "name": "英维克",
+    "pct_chg": 5.2911,
+    "signals": {
+      "concept_resonance": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "所属概念无涨停"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.35,
+        "detail": "放量启动: 涨幅5.3%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅5.3%"
+      },
+      "limit_dna": {
+        "triggered": true,
+        "confidence": 0.6,
+        "detail": "涨停记忆: 近20日涨停1次"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 2,
+    "triggered_signals": [
+      "volume_breakout",
+      "limit_dna"
+    ],
+    "push_decision": {
+      "should_push": false,
+      "combination": "无组合",
+      "confidence": 0.0
+    },
+    "signal_summary": "[CHART]量价突破 [DNA]连板基因"
+  },
+  {
+    "code": "600460.SH",
+    "name": "士兰微",
+    "pct_chg": 5.58,
+    "signals": {
+      "concept_resonance": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "汽车芯片 仅2只涨停 弱共振(不触发)"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.35,
+        "detail": "放量启动: 涨幅5.6%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅5.6%"
+      },
+      "limit_dna": {
+        "triggered": true,
+        "confidence": 0.6,
+        "detail": "涨停记忆: 近20日涨停1次"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 2,
+    "triggered_signals": [
+      "volume_breakout",
+      "limit_dna"
+    ],
+    "push_decision": {
+      "should_push": false,
+      "combination": "无组合",
+      "confidence": 0.0
+    },
+    "signal_summary": "[CHART]量价突破 [DNA]连板基因"
+  },
+  {
+    "code": "002747.SZ",
+    "name": "埃斯顿",
+    "pct_chg": 2.8,
+    "signals": {
+      "concept_resonance": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "工业母机 仅1只涨停 弱共振(不触发)"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "量价平淡: 量比1.3 涨幅2.8%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅2.8%"
+      },
+      "limit_dna": {
+        "triggered": true,
+        "confidence": 1.0,
+        "detail": "强连板基因: 近20日涨停4次"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 1,
+    "triggered_signals": [
+      "limit_dna"
+    ],
+    "push_decision": {
+      "should_push": false,
+      "combination": "无组合",
+      "confidence": 0.0
+    },
+    "signal_summary": "[DNA]连板基因"
+  },
+  {
+    "code": "600522.SH",
+    "name": "中天科技",
+    "pct_chg": 2.2807,
+    "signals": {
+      "concept_resonance": {
+        "triggered": true,
+        "confidence": 0.7,
+        "detail": "光纤概念 3只涨停 概念共振"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "量价平淡: 量比0.0 涨幅2.3%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅2.3%"
+      },
+      "limit_dna": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无近期涨停记录"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 1,
+    "triggered_signals": [
+      "concept_resonance"
+    ],
+    "push_decision": {
+      "should_push": false,
+      "combination": "无组合",
+      "confidence": 0.0
+    },
+    "signal_summary": "[FIRE]概念共振"
+  },
+  {
+    "code": "600961.SH",
+    "name": "株冶集团",
+    "pct_chg": 4.83,
+    "signals": {
+      "concept_resonance": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "所属概念无涨停"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.5,
+        "detail": "放量启动: 量比2.0, 涨幅4.8%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅4.8%"
+      },
+      "limit_dna": {
+        "triggered": true,
+        "confidence": 0.85,
+        "detail": "连板基因: 近20日涨停2次"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 2,
+    "triggered_signals": [
+      "volume_breakout",
+      "limit_dna"
+    ],
+    "push_decision": {
+      "should_push": false,
+      "combination": "无组合",
+      "confidence": 0.0
+    },
+    "signal_summary": "[CHART]量价突破 [DNA]连板基因"
+  },
+  {
+    "code": "001309.SZ",
+    "name": "德明利",
+    "pct_chg": 2.98,
+    "signals": {
+      "concept_resonance": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "存储芯片 仅1只涨停 弱共振(不触发)"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "量价平淡: 量比1.2 涨幅3.0%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "尾盘平淡: 涨幅3.0%"
+      },
+      "limit_dna": {
+        "triggered": true,
+        "confidence": 0.6,
+        "detail": "涨停记忆: 近20日涨停1次"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 1,
+    "triggered_signals": [
+      "limit_dna"
+    ],
+    "push_decision": {
+      "should_push": false,
+      "combination": "无组合",
+      "confidence": 0.0
+    },
+    "signal_summary": "[DNA]连板基因"
+  }
+]
