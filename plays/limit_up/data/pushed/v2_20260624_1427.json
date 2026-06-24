@@ -1,0 +1,56 @@
+[
+  {
+    "code": "002475.SZ",
+    "name": "立讯精密",
+    "pct_chg": 9.0,
+    "signals": {
+      "concept_resonance": {
+        "triggered": true,
+        "confidence": 0.7,
+        "detail": "共封装光学(CPO) 3只涨停 概念共振"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.85,
+        "detail": "强势突破: 量比2.1, 涨幅9.0%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": true,
+        "confidence": 0.4,
+        "detail": "尾盘高位: 涨幅9.0%"
+      },
+      "limit_dna": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无近期涨停记录"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 3,
+    "triggered_signals": [
+      "concept_resonance",
+      "volume_breakout",
+      "morning_power"
+    ],
+    "push_decision": {
+      "should_push": true,
+      "combination": "E:概念+资金/量价",
+      "confidence": 0.768
+    },
+    "signal_summary": "[FIRE]概念共振 [CHART]量价突破 [CLOCK]早盘强势"
+  }
+]
