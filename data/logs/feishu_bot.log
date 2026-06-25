@@ -69,3 +69,7 @@ INFO:     123.58.10.238:0 - "POST /feishu/callback HTTP/1.1" 200 OK
 INFO:     101.126.59.9:0 - "POST /feishu/callback HTTP/1.1" 200 OK
 INFO:     123.58.10.238:0 - "POST /feishu/callback HTTP/1.1" 200 OK
 INFO:     101.126.59.7:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+2026-06-25 15:10:56 [INFO] feishu_bot: inbox: chat=oc_1e1d48ce58abd8f6a88bdf0ac3848e2e msg=om_x100b6cf9 text=@_user_1 英维克怎么样
+INFO:     123.58.10.238:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+2026-06-25 15:10:56 [INFO] httpx: HTTP Request: POST https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal "HTTP/1.1 200 OK"
+2026-06-25 15:10:57 [INFO] httpx: HTTP Request: POST https://open.feishu.cn/open-apis/im/v1/messages/om_x100b6cf9092878e0c3d78b8875798c0/reply "HTTP/1.1 200 OK"
