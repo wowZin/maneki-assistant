@@ -3,7 +3,7 @@
     "active": false,
     "consecutive_failures": 0
   },
-  "last_ok_at": "2026-06-25T14:37:54.105073",
+  "last_ok_at": "2026-06-26T14:57:33.003124",
   "alert_history": [
     {
       "timestamp": "2026-06-02T14:15:34.533144",
