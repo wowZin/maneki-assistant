@@ -750,6 +750,11 @@ def factor_new_total_v2(row: pd.Series) -> float:
     score += factor_reversal_signal(row) * 1.0          # 0-20 → 0-20
     score += factor_sentiment_contrarian(row) * 0.8     # 0-10 → 0-8
 
+    # ── 新增：概念动量 + 机构因子 ──
+    score += factor_concept_momentum(row) * 0.6       # 概念轮动
+    score += factor_concept_up_streak(row) * 0.3      # 概念持续性
+    score += factor_inst_following(row) * 0.4         # 机构跟随
+
     return round(score, 2)
 
 
@@ -781,6 +786,13 @@ def factor_balanced_total(row: pd.Series) -> float:
     score += factor_pullback_from_peak(row) * 0.8        # 0-15 → 0-12
     score += factor_sentiment_contrarian(row) * 1.0      # 0-10
     score += factor_gap_up_quality(row) * 0.6            # 0-18 → 0-10.8
+
+    # ── 新增：概念动量（弱市关键）+ 机构因子 ──
+    score += factor_concept_momentum(row) * 0.8         # 概念共振（提权）
+    score += factor_concept_up_streak(row) * 0.3        # 概念持续性
+    score += factor_concept_turnover(row) * 0.3         # 概念换手热度
+    score += factor_inst_consistency(row) * 0.3         # 机构共识
+    score += factor_top_list_quality(row) * 0.2         # 龙虎榜质量
 
     # ── 追高惩罚（乘法） ──
     penalty = 1.0
@@ -882,6 +894,168 @@ def factor_sentiment_anti_chasing(row: pd.Series) -> float:
 
 
 # ═══════════════════════════════════════════════════════════
+# 第十二类：概念动量因子（新增）
+# ═══════════════════════════════════════════════════════════
+
+def factor_concept_momentum(row: pd.Series) -> float:
+    """概念动量：股票所属强势概念的综合动量评分。
+
+    使用概念最大动量（最强概念驱动）和概念广度（多概念共振）。
+    """
+    ret1 = _safe(row.get("cpt_ret_1d_max"), 0.0)
+    ret3 = _safe(row.get("cpt_ret_3d_max"), 0.0)
+    ret5 = _safe(row.get("cpt_ret_5d_max"), 0.0)
+    ret1_avg = _safe(row.get("cpt_ret_1d_avg"), 0.0)
+    ret3_avg = _safe(row.get("cpt_ret_3d_avg"), 0.0)
+    n_cpt = _safe(row.get("n_concepts"), 0.0)
+    up_ratio = _safe(row.get("cpt_up_ratio"), 0.5)
+
+    # 核心：最强概念近3日动量（主要信号）
+    score = ret3 * 2.5  # 概念3日动量权重最高
+
+    # 辅助：1日动量（短期爆发）+ 5日趋势
+    if ret1 > 2.0:  # 当日大涨的概念
+        score += ret1 * 0.8
+    elif ret1 < -2.0:  # 当日大跌但3日仍强 → 可能是回调买点
+        if ret3 > 3.0:
+            score += ret3 * 0.3  # 不给负分，等待确认
+
+    if ret5 > 5.0:  # 5日持续强势
+        score += 5.0
+    elif ret5 < -5.0:
+        score -= 8.0  # 概念持续走弱
+
+    # 平均动量（多概念共振）
+    if ret3_avg > 2.0 and ret1_avg > 0:
+        score += ret3_avg * 1.0  # 多概念都在涨 → 板块轮动确认
+
+    # 概念广度
+    if n_cpt >= 5:
+        if up_ratio > 0.6:  # >60%概念上涨 → 广泛共振
+            score += 8.0
+        elif up_ratio > 0.4:
+            score += 4.0
+    elif n_cpt >= 3:
+        if up_ratio > 0.6:
+            score += 5.0
+    else:  # 概念少 → 专注度高但不加分（可能是冷门概念）
+        pass
+
+    return round(score, 2)
+
+
+def factor_concept_up_streak(row: pd.Series) -> float:
+    """概念上涨持续性：最强概念连续上涨天数。
+
+    连续上涨 → 概念趋势确立，炒作情绪高涨。
+    """
+    streak = _safe(row.get("cpt_up_streak_max"), 0.0)
+    ret1 = _safe(row.get("cpt_ret_1d_max"), 0.0)
+
+    score = 0.0
+    if streak >= 3 and ret1 > 0:
+        score = 12.0  # 连续3天上涨+今天还在涨 → 强趋势
+    elif streak >= 2 and ret1 > 0:
+        score = 7.0
+    elif streak >= 2:
+        score = 3.0  # 连续涨但今天回调 → 可能是进场机会
+
+    return score
+
+
+def factor_concept_turnover(row: pd.Series) -> float:
+    """概念换手率：概念板块交易活跃度。
+
+    高换手+正涨幅 → 资金积极涌入概念。
+    高换手+负涨幅 → 资金出逃。
+    """
+    turn = _safe(row.get("cpt_turn_5d_max"), 0.0)
+    ret3 = _safe(row.get("cpt_ret_3d_max"), 0.0)
+
+    if turn > 15 and ret3 > 2:
+        return 10.0  # 高活跃+正收益 = 资金涌入
+    elif turn > 10 and ret3 > 0:
+        return 5.0
+    elif turn > 20:  # 极高换手但没涨 → 出货嫌疑
+        return -8.0
+    elif turn < 3:  # 极低换手 → 无人关注
+        return -5.0
+
+    return 0.0
+
+
+# ═══════════════════════════════════════════════════════════
+# 第十三类：龙虎榜机构因子（新增）
+# ═══════════════════════════════════════════════════════════
+
+def factor_inst_following(row: pd.Series) -> float:
+    """机构跟随信号：龙虎榜机构买卖强度。
+
+    机构净买入+多机构参与 → 机构看好，胜率高。
+    """
+    net = _safe(row.get("inst_net_amount"), 0.0)
+    n_buyers = _safe(row.get("n_inst_buyers"), 0.0)
+    buy_ratio = _safe(row.get("inst_buy_ratio"), 0.5)
+    score = _safe(row.get("inst_score"), 0.0)
+
+    # 综合 score 已经是 0-10 的量级，直接使用
+    return score
+
+
+def factor_top_list_quality(row: pd.Series) -> float:
+    """龙虎榜质量：上榜个股的买卖质量。
+
+    净买入+高涨幅上榜 → 强势股获机构认可。
+    净卖出上榜 → 出货信号。
+    """
+    is_tl = _safe(row.get("is_top_list"), 0.0)
+    if is_tl < 1:
+        return 0.0  # 没上榜，不评分
+
+    quality = _safe(row.get("tl_quality"), 0.0)
+    net = _safe(row.get("tl_net_amount"), 0.0)
+
+    # quality 0-10
+    score = quality
+
+    # 额外加分：上榜且大额净买入
+    if net > 1e8:  # 净买入>1亿
+        score += 3.0
+    elif net > 5e7:  # >5000万
+        score += 1.5
+
+    # 上榜但净卖出 → 负分
+    if net < -5e7:
+        score -= 5.0
+
+    return score
+
+
+def factor_inst_consistency(row: pd.Series) -> float:
+    """机构一致性：买方机构数量和质量。
+
+    多家知名机构同时买入 → 强烈看多信号。
+    """
+    n_buyers = _safe(row.get("n_inst_buyers"), 0.0)
+    buy_ratio = _safe(row.get("inst_buy_ratio"), 0.5)
+    trade_count = _safe(row.get("inst_trade_count"), 0.0)
+
+    score = 0.0
+    if n_buyers >= 5:
+        score = 12.0  # 5+机构买入 → 强共识
+    elif n_buyers >= 3:
+        score = 7.0
+    elif n_buyers >= 1:
+        score = 3.0
+
+    # 买方占比加成
+    if buy_ratio > 0.8 and trade_count >= 5:
+        score += 3.0  # 高度一致的买盘
+
+    return score
+
+
+# ═══════════════════════════════════════════════════════════
 # 因子注册表
 # ═══════════════════════════════════════════════════════════
 
@@ -917,6 +1091,13 @@ STANDALONE_FACTORS = {
     "volume_ratio_penalty": factor_volume_ratio_penalty,
     "net_mf_signal": factor_net_mf_signal,
     "elg_inflow_signal": factor_elg_inflow_signal,
+    # 第十三/十四类：概念动量 + 龙虎榜机构
+    "concept_momentum": factor_concept_momentum,
+    "concept_up_streak": factor_concept_up_streak,
+    "concept_turnover": factor_concept_turnover,
+    "inst_following": factor_inst_following,
+    "top_list_quality": factor_top_list_quality,
+    "inst_consistency": factor_inst_consistency,
 }
 
 # 调整因子（加到现有维度分上）
