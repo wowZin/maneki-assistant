@@ -367,6 +367,200 @@ def score_sentiment(code):
     return _score_sentiment(code)
 
 
+# ===== new_total_v2 计算 =====
+# 缓存当日 Tushare daily 和 limit_list 数据（避免重复请求）
+_NV2_DAILY_CACHE: dict[str, list[dict]] = {}  # code → [{trade_date, close, high, low, ...}]
+_NV2_LIMIT_CACHE: dict[str, int] = {}         # code → 近20日涨停次数
+_NV2_DATE = ""
+
+
+def _fetch_nv2_data(codes: list[str]):
+    """批量拉取 new_total_v2 所需的 Tushare 数据
+
+    数据源:
+      - daily: 前收盘价(pre_close) → 计算 trailing_10/5
+      - limit_list_d: 近20日涨停次数 → 涨停基因
+    """
+    global _NV2_DAILY_CACHE, _NV2_LIMIT_CACHE, _NV2_DATE
+    today = datetime.now().strftime("%Y%m%d")
+    if _NV2_DATE == today and _NV2_DAILY_CACHE:
+        return
+
+    from scripts.tu_share import call_tushare
+    from datetime import timedelta
+
+    # 1. 日线数据 (近30天)
+    start30 = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
+    ts_codes = [c for c in codes if c not in _NV2_DAILY_CACHE]
+    if ts_codes:
+        try:
+            resp = call_tushare("daily", {
+                "ts_code": ",".join(ts_codes),
+                "start_date": start30, "end_date": today,
+            }, "ts_code,trade_date,pre_close,close,high,low,vol,amount")
+            items = resp.get("data", {}).get("items", [])
+            flds = resp.get("data", {}).get("fields", [])
+            for row in items:
+                d = dict(zip(flds, row))
+                code = d.get("ts_code", "")
+                if code:
+                    if code not in _NV2_DAILY_CACHE:
+                        _NV2_DAILY_CACHE[code] = []
+                    _NV2_DAILY_CACHE[code].append(d)
+            print(f"  [NV2] daily: {len(items)}条, {len(ts_codes)}只")
+        except Exception as e:
+            print(f"  [NV2] daily拉取失败: {e}")
+
+    # 2. 涨停基因 (近20日)
+    ts_codes_l = [c for c in codes if c not in _NV2_LIMIT_CACHE]
+    if ts_codes_l:
+        try:
+            start20 = (datetime.now() - timedelta(days=20)).strftime("%Y%m%d")
+            resp = call_tushare("limit_list_d", {
+                "ts_code": ",".join(ts_codes_l),
+                "start_date": start20, "end_date": today,
+                "limit_type": "U",
+            }, "ts_code,trade_date")
+            items = resp.get("data", {}).get("items", [])
+            flds = resp.get("data", {}).get("fields", [])
+            from collections import Counter
+            counts = Counter()
+            for row in items:
+                d = dict(zip(flds, row))
+                counts[d.get("ts_code", "")] += 1
+            for code in ts_codes_l:
+                _NV2_LIMIT_CACHE[code] = counts.get(code, 0)
+            print(f"  [NV2] limit_list: {len(items)}条涨停记录")
+        except Exception as e:
+            print(f"  [NV2] limit_list拉取失败: {e}")
+            for code in ts_codes_l:
+                _NV2_LIMIT_CACHE.setdefault(code, 0)
+
+    _NV2_DATE = today
+
+
+def _compute_new_total_v2_batch(results: list[dict]):
+    """为批次结果计算 new_total_v2 评分。
+
+    new_total_v2 = shortterm * 1.8
+                  + fundamental * 0.6
+                  + technical * 0.5
+                  + limit_up_gene * 1.0
+                  + pullback_quality * 0.8
+                  - chasing_penalty
+
+    其中 trailing_10/position_20d/pullback_10d 从 Tushare daily 计算。
+    """
+    if not results:
+        return
+
+    codes = [r["code"] for r in results]
+    _fetch_nv2_data(codes)
+
+    today = datetime.now().strftime("%Y%m%d")
+
+    for r in results:
+        code = r["code"]
+        code_short = code.replace(".SH", "").replace(".SZ", "")
+        s = r.get("scores", {})
+        st = s.get("shortterm", 0)
+        fund = s.get("fundamental", 0)
+        tech = s.get("technical", 0)
+        pct = r.get("pct_chg", 0)
+
+        # --- trailing_10: 近10日涨幅 ---
+        daily_rows = _NV2_DAILY_CACHE.get(code, [])
+        daily_rows.sort(key=lambda x: x.get("trade_date", ""), reverse=True)
+        trailing_10 = None
+        if len(daily_rows) >= 10:
+            close_today = daily_rows[0].get("close")
+            close_10ago = daily_rows[min(9, len(daily_rows)-1)].get("close")
+            if close_today and close_10ago:
+                try:
+                    trailing_10 = (float(close_today) / float(close_10ago) - 1) * 100
+                except (ValueError, TypeError):
+                    pass
+        if trailing_10 is None:
+            trailing_10 = pct  # 降级：用当日涨幅
+
+        # --- trailing_5: 近5日涨幅 ---
+        trailing_5 = None
+        if len(daily_rows) >= 5:
+            close_today = daily_rows[0].get("close")
+            close_5ago = daily_rows[min(4, len(daily_rows)-1)].get("close")
+            if close_today and close_5ago:
+                try:
+                    trailing_5 = (float(close_today) / float(close_5ago) - 1) * 100
+                except (ValueError, TypeError):
+                    pass
+        if trailing_5 is None:
+            trailing_5 = pct
+
+        # --- position_20d: 现价处于20日区间位置 (0~1) ---
+        position_20d = 0.5
+        if len(daily_rows) >= 5:
+            try:
+                highs = [float(rr.get("high", 0)) for rr in daily_rows[:20] if rr.get("high")]
+                lows = [float(rr.get("low", 0)) for rr in daily_rows[:20] if rr.get("low")]
+                closes = [float(rr.get("close", 0)) for rr in daily_rows[:20] if rr.get("close")]
+                if highs and lows and closes:
+                    h20 = max(highs)
+                    l20 = min(lows)
+                    c0 = closes[0]
+                    if h20 > l20:
+                        position_20d = (c0 - l20) / (h20 - l20)
+            except (ValueError, TypeError):
+                pass
+
+        # --- pullback_10d: 距10日高点回撤幅度 (0~1)---
+        pullback_10d = 0.1
+        if len(daily_rows) >= 2:
+            try:
+                highs_10 = [float(rr.get("high", 0)) for rr in daily_rows[:10] if rr.get("high")]
+                closes = [float(rr.get("close", 0)) for rr in daily_rows[:10] if rr.get("close")]
+                if highs_10 and closes:
+                    h10 = max(highs_10)
+                    c0 = closes[0]
+                    if h10 > 0:
+                        pullback_10d = max(0.0, (h10 - c0) / h10)
+            except (ValueError, TypeError):
+                pass
+
+        # --- limit_up_gene: 近20日涨停次数 → 归一化到 0-25 ---
+        limit_gene = min(_NV2_LIMIT_CACHE.get(code, 0) * 5, 25)
+
+        # --- 追高惩罚: position_20d > 0.85 时降权 ---
+        chasing_penalty = 0.0
+        if position_20d > 0.85:
+            chasing_penalty = (position_20d - 0.85) * 30
+
+        # --- new_total_v2 计算 ---
+        score = st * 1.8             # 短线博弈为核心 (0-50 → 0-90)
+        score += fund * 0.6          # 基本面提胜率
+        score += tech * 0.5          # 技术面确认
+
+        # 涨停基因
+        score += limit_gene          # 0-25
+
+        # 回调质量: 有回撤时加分（回调越深质量分越高）
+        pb_score = pullback_10d * 12  # 0-12
+        score += pb_score
+
+        # 追高惩罚
+        score -= chasing_penalty
+
+        # 短线热度修正: trailing_10 过高的降权 (防追涨过头)
+        if trailing_10 > 30:
+            score -= (trailing_10 - 30) * 0.5
+
+        score = max(0, min(100, score))
+
+        r["new_total_v2"] = round(score, 1)
+        r["_nv2_trailing_10"] = round(trailing_10, 1)
+        r["_nv2_position_20d"] = round(position_20d, 3)
+        r["_nv2_limit_gene"] = limit_gene
+
+
 # ===== 6. 飞书推送 =====
 def _get_feishu_token():
     """获取飞书 tenant_access_token"""
@@ -385,11 +579,13 @@ def _get_feishu_token():
 def push_feishu(results):
     """发送飞书卡片
 
-    推送规则：
-    - 高确信度筛选: 情绪≥35 + 资金≥35 + 总分≥40 (三灯全亮才推送)
-    - 午后叠加情绪面>=25门槛
+    推送规则（V2 ScoreGap）：
+    - 按 new_total_v2 排序
+    - 取 >= max_score * 0.95 的股票（ScoreGap）
+    - 最少 2 只，最多 5 只
     - 同日已推送的股票不再重复推送
-    - 推送记录保存到 data/pushed/ 目录，供复盘使用
+    - 午后情绪面<25过滤
+    - 推送记录保存到 data/pushed/ 目录
     """
     import requests
 
@@ -401,10 +597,7 @@ def push_feishu(results):
         if total >= 30: return "⭐ ⭐"  # noqa: E701
         return ""
 
-    # 推送筛选 (Top5，阈值30，按涨幅+情绪排序)
-    THRESHOLD = 30
-
-    # 同日去重：已推送过的股票不再重复推送
+    # 同日去重
     pushed_codes_today = set()
     pushed_dir = DATA_DIR / "pushed"
     today_prefix = datetime.now().strftime("%Y%m%d")
@@ -417,42 +610,51 @@ def push_feishu(results):
             except Exception:
                 pass
 
-    # 午后门槛：情绪面 < 25 的股票不推（午后高位横盘≠冲板）
+    # 午后情绪过滤
     is_afternoon = datetime.now().hour >= 13
-    pm_filtered = 0
-    hc_filtered = 0  # 高确信度筛选
 
-    def _pass_filter(r):
-        nonlocal pm_filtered, hc_filtered
-        s = r.get('scores', {})
-        if r.get('total', 0) < THRESHOLD: return False
-        if r.get('code') in pushed_codes_today: return False
-        if is_afternoon and s.get('sentiment', 0) < 25:
-            pm_filtered += 1; return False
-        # 高确信度筛选: 情绪+总分达标（双灯，移除资金面门禁）
-        if not (s.get('sentiment', 0) >= 25 and r.get('total', 0) >= 35):
-            hc_filtered += 1; return False
-        return True
+    # ScoreGap: 按 new_total_v2 排序，取 >= max * 0.95
+    sorted_results = sorted(
+        results,
+        key=lambda x: x.get("new_total_v2", x.get("total", 0)),
+        reverse=True,
+    )
+    if not sorted_results:
+        print("  无可推送股票")
+        return False
 
-    above_threshold = sorted(
-        [r for r in results if _pass_filter(r)],
-        key=lambda x: x.get('total', 0),
-        reverse=True
-    )[:5]
-    if above_threshold:
-        push_list = above_threshold
-        extra = []
-        if pushed_codes_today: extra.append("已去重")
-        if pm_filtered: extra.append(f"午后过滤{pm_filtered}只")
-        if hc_filtered: extra.append(f"高确信过滤{hc_filtered}只")
-        print(f"  推送池: {len(above_threshold)}只(情绪≥35+总分≥40{' ' + ', '.join(extra) if extra else ''})")
-    else:
-        push_list = []
-        extra = []
-        if pushed_codes_today: extra.append(f"已推{len(pushed_codes_today)}只")
-        if pm_filtered: extra.append(f"午后不足{pm_filtered}只")
-        if hc_filtered: extra.append(f"高确信不足{hc_filtered}只")
-        print(f"  无符合条件的股票 ({', '.join(extra) if extra else '无候选'})")
+    max_nv2 = sorted_results[0].get("new_total_v2", sorted_results[0].get("total", 0))
+    gap_threshold = max_nv2 * 0.95 if max_nv2 > 0 else 0
+
+    push_list = []
+    for r in sorted_results:
+        code = r["code"]
+        nv2 = r.get("new_total_v2", r.get("total", 0))
+        s = r.get("scores", {})
+
+        if code in pushed_codes_today:
+            continue
+        if nv2 < gap_threshold:
+            continue
+        if is_afternoon and s.get("sentiment", 0) < 25:
+            continue
+
+        push_list.append(r)
+        if len(push_list) >= 5:
+            break
+
+    # 最少 2 只保底（如果 gap 阈值不够，补排名靠前的）
+    if len(push_list) < 2:
+        for r in sorted_results:
+            if r["code"] not in {p["code"] for p in push_list} and r["code"] not in pushed_codes_today:
+                s = r.get("scores", {})
+                if is_afternoon and s.get("sentiment", 0) < 25:
+                    continue
+                push_list.append(r)
+                if len(push_list) >= 2:
+                    break
+
+    print(f"  ScoreGap: max_nv2={max_nv2:.1f} threshold={gap_threshold:.1f} → {len(push_list)}只推送")
 
     if not push_list:
         print("  无可推送股票")
@@ -476,7 +678,7 @@ def push_feishu(results):
     card = {
         "config": {"wide_screen_mode": True},
         "header": {
-            "title": {"tag": "plain_text", "content": f"{feishu_title_prefix()}涨停预测 Top5 ({datetime.now().strftime('%H:%M')})"},
+            "title": {"tag": "plain_text", "content": f"{feishu_title_prefix()}涨停预测 ({datetime.now().strftime('%H:%M')})"},
             "template": "blue"
         },
         "elements": []
@@ -484,14 +686,15 @@ def push_feishu(results):
 
     for r in push_list:
         s = r.get('scores', {})
-        stars = _stars(r['total'])
+        nv2 = r.get('new_total_v2', r['total'])
+        stars = _stars(nv2)
         pct = r.get('pct_chg', 0)
         element = {
             "tag": "div",
             "text": {
                 "tag": "lark_md",
                 "content": f"**{r['code']} {r['name']}** {stars} 涨幅{pct:.1f}%\n"
-                          f"综合评分:{r['total']:.1f}  情绪面:{s.get('sentiment',0):.0f} 资金面:{s.get('fundflow',0):.0f} 基本面:{s.get('fundamental',0):.0f}"
+                          f"NV2:{nv2:.0f} 情绪:{s.get('sentiment',0):.0f} 资金:{s.get('fundflow',0):.0f} 短线:{s.get('shortterm',0):.0f}"
             }
         }
         card["elements"].append(element)
@@ -814,16 +1017,19 @@ def _run_pipeline(args):
                 batch_results.append(r)
                 all_results.append(r)
             except Exception as e:
-                print(f"  {code} 评分失败: {e}")
+                print(f"  {code} 评分失败: {e}\n")
 
         if l2_available:
             from scripts.l2_daemon_client import daemon_unsubscribe
             daemon_unsubscribe(codes)
 
+        # 计算每只股票的 new_total_v2（用 Tushare daily + limit_list 数据）
+        _compute_new_total_v2_batch(batch_results)
+
         # 每批出分后立即尝试推送(不等后续批次)
         if batch_results:
-            batch_results.sort(key=lambda x: x["total"], reverse=True)
-            top3_str = ", ".join(f"{r['code']}({r['total']:.0f})" for r in batch_results[:3])
+            batch_results.sort(key=lambda x: x.get('new_total_v2', x['total']), reverse=True)
+            top3_str = ", ".join(f"{r['code']}(nv2={r.get('new_total_v2',r['total']):.0f})" for r in batch_results[:3])
             print(f"  批次Top3: {top3_str}")
             push_feishu(batch_results)
 
