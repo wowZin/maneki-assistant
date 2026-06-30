@@ -1,0 +1,171 @@
+{
+  "summary": {
+    "total_pushes": 71,
+    "total_hits": 4,
+    "total_wins": 18,
+    "hit_rate": 0.0563,
+    "win_rate": 0.2535
+  },
+  "daily": [
+    {
+      "date": "20260602",
+      "n_scans": 2,
+      "n_pushes_total": 6,
+      "n_unique_pushes": 6,
+      "hits": 1,
+      "wins": 1
+    },
+    {
+      "date": "20260603",
+      "n_scans": 2,
+      "n_pushes_total": 5,
+      "n_unique_pushes": 5,
+      "hits": 0,
+      "wins": 1
+    },
+    {
+      "date": "20260604",
+      "n_scans": 3,
+      "n_pushes_total": 4,
+      "n_unique_pushes": 4,
+      "hits": 0,
+      "wins": 4
+    },
+    {
+      "date": "20260605",
+      "n_scans": 2,
+      "n_pushes_total": 8,
+      "n_unique_pushes": 8,
+      "hits": 0,
+      "wins": 0
+    },
+    {
+      "date": "20260608",
+      "n_scans": 2,
+      "n_pushes_total": 3,
+      "n_unique_pushes": 2,
+      "hits": 0,
+      "wins": 2
+    },
+    {
+      "date": "20260609",
+      "n_scans": 2,
+      "n_pushes_total": 0,
+      "n_unique_pushes": 0,
+      "hits": 0,
+      "wins": 0
+    },
+    {
+      "date": "20260610",
+      "n_scans": 2,
+      "n_pushes_total": 12,
+      "n_unique_pushes": 12,
+      "hits": 1,
+      "wins": 4
+    },
+    {
+      "date": "20260611",
+      "n_scans": 2,
+      "n_pushes_total": 2,
+      "n_unique_pushes": 2,
+      "hits": 0,
+      "wins": 0
+    },
+    {
+      "date": "20260612",
+      "n_scans": 2,
+      "n_pushes_total": 7,
+      "n_unique_pushes": 6,
+      "hits": 0,
+      "wins": 0
+    },
+    {
+      "date": "20260615",
+      "n_scans": 2,
+      "n_pushes_total": 0,
+      "n_unique_pushes": 0,
+      "hits": 0,
+      "wins": 0
+    },
+    {
+      "date": "20260616",
+      "n_scans": 2,
+      "n_pushes_total": 0,
+      "n_unique_pushes": 0,
+      "hits": 0,
+      "wins": 0
+    },
+    {
+      "date": "20260617",
+      "n_scans": 2,
+      "n_pushes_total": 2,
+      "n_unique_pushes": 1,
+      "hits": 0,
+      "wins": 1
+    },
+    {
+      "date": "20260618",
+      "n_scans": 2,
+      "n_pushes_total": 2,
+      "n_unique_pushes": 1,
+      "hits": 0,
+      "wins": 0
+    },
+    {
+      "date": "20260619",
+      "n_scans": 2,
+      "n_pushes_total": 2,
+      "n_unique_pushes": 1,
+      "hits": 0,
+      "wins": 0
+    },
+    {
+      "date": "20260622",
+      "n_scans": 2,
+      "n_pushes_total": 2,
+      "n_unique_pushes": 1,
+      "hits": 0,
+      "wins": 0
+    },
+    {
+      "date": "20260623",
+      "n_scans": 2,
+      "n_pushes_total": 9,
+      "n_unique_pushes": 5,
+      "hits": 1,
+      "wins": 3
+    },
+    {
+      "date": "20260624",
+      "n_scans": 2,
+      "n_pushes_total": 8,
+      "n_unique_pushes": 4,
+      "hits": 1,
+      "wins": 2
+    },
+    {
+      "date": "20260625",
+      "n_scans": 2,
+      "n_pushes_total": 2,
+      "n_unique_pushes": 1,
+      "hits": 0,
+      "wins": 0
+    },
+    {
+      "date": "20260626",
+      "n_scans": 2,
+      "n_pushes_total": 18,
+      "n_unique_pushes": 9,
+      "hits": 0,
+      "wins": 0
+    },
+    {
+      "date": "20260629",
+      "n_scans": 2,
+      "n_pushes_total": 5,
+      "n_unique_pushes": 3,
+      "hits": 0,
+      "wins": 0
+    }
+  ]
+}
