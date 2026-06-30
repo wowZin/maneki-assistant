@@ -1,0 +1,10 @@
+{
+  "cohens_d": 0.6172,
+  "weights": {
+    "fundamental": 0.5,
+    "technical": 0.5,
+    "fundflow": 1.5,
+    "sentiment": 1.0,
+    "shortterm": 0.5
+  }
+}

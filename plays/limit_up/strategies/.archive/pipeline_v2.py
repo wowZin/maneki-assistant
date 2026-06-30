@@ -496,7 +496,7 @@ def _run_pipeline(args):
     # 3. L2 检查
     l2_available = False
     if not args.no_l2:
-        from scripts.l2_daemon_client import daemon_alive
+        from scripts.jvquant_ws_client import daemon_alive
         l2_available = daemon_alive()
         if l2_available:
             print("  [L2] 守护进程已就绪")

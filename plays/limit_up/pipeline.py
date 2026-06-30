@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 涨停预测完整流程脚本
-流程：异动扫描(东财API+代理) → 五维度评分 → 排序 → 飞书推送
+流程：异动扫描(同花顺直连) → 五维度评分 → 排序 → 飞书推送
 
 用法:
   python plays/limit_up/pipeline.py                  # 完整流程(requests+代理)
@@ -34,11 +34,11 @@ def feishu_title_prefix():
 
 # ===== Agent 权重配置 =====
 AGENT_WEIGHTS = {
-    "fundamental": float(CONFIG.get("AGENT_WEIGHT_FUNDAMENTAL", "1.5")),
-    "technical": float(CONFIG.get("AGENT_WEIGHT_TECHNICAL", "1.0")),
-    "fundflow": float(CONFIG.get("AGENT_WEIGHT_FUND_FLOW", "1.0")),
-    "sentiment": float(CONFIG.get("AGENT_WEIGHT_SENTIMENT", "1.2")),
-    "shortterm": float(CONFIG.get("AGENT_WEIGHT_SHORTTERM", "1.5")),
+    "fundamental": float(CONFIG.get("AGENT_WEIGHT_FUNDAMENTAL", "0.5")),
+    "technical": float(CONFIG.get("AGENT_WEIGHT_TECHNICAL", "0.5")),
+    "fundflow": float(CONFIG.get("AGENT_WEIGHT_FUND_FLOW", "1.5")),
+    "sentiment": float(CONFIG.get("AGENT_WEIGHT_SENTIMENT", "1.0")),
+    "shortterm": float(CONFIG.get("AGENT_WEIGHT_SHORTTERM", "0.5")),
 }
 
 # ===== 1. 扫描异动股 =====
@@ -350,7 +350,7 @@ def _get_realtime_fund_cache():
 def _get_l2_net_flow(code_short: str) -> float:
     """从 L2 守护进程获取个股大单净流向（特大单+大单主动性买卖差值）"""
     try:
-        from scripts.l2_daemon_client import daemon_alive, daemon_cmd
+        from scripts.jvquant_ws_client import daemon_alive, daemon_cmd
         if not daemon_alive():
             return 0.0
         code = f"{code_short}.SH" if code_short.startswith("6") else f"{code_short}.SZ"
@@ -437,6 +437,33 @@ def _fetch_nv2_data(codes: list[str]):
                 _NV2_LIMIT_CACHE.setdefault(code, 0)
 
     _NV2_DATE = today
+
+
+def _send_jvquant_error(msg: str):
+    """jvQuant 异常时发送飞书报警"""
+    print(f"  [jvQuant] ⚠️ {msg}")
+    try:
+        import requests
+        token_resp = requests.post(
+            "https://open.feishu.cn/open-apis/v3/tenant_access_token/internal",
+            json={"app_id": CONFIG["FEISHU_APP_ID"],
+                  "app_secret": CONFIG["FEISHU_APP_SECRET"]},
+            timeout=10)
+        token = token_resp.json().get("tenant_access_token", "")
+        if token:
+            alert = (f"⚠️ jvQuant 行情异常\n"
+                     f"错误: {msg}\n"
+                     f"时间: {datetime.now().strftime('%H:%M:%S')}\n"
+                     f"影响: 本轮无实时盘口数据，评分继续")
+            requests.post(
+                "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"receive_id": CONFIG.get("FEISHU_CHAT_ID_SIGNAL", ""),
+                      "msg_type": "text",
+                      "content": json.dumps({"text": alert})},
+                timeout=10)
+    except Exception:
+        pass
 
 
 def _compute_new_total_v2_batch(results: list[dict]):
@@ -804,16 +831,19 @@ def _score_one(stock: dict, l2_available: bool, weights: dict,
     l2data = None
     if l2_available:
         try:
-            from scripts.l2_daemon_client import daemon_get_market, daemon_get_vwap, daemon_get_kline
-            from scripts.l2_client import to_price
+            from scripts.jvquant_ws_client import daemon_get_market, daemon_get_vwap, daemon_get_kline
             mkt = daemon_get_market(code)
             vwap = daemon_get_vwap(code)
             kb = daemon_get_kline(code, n=5)
             if mkt:
-                l2data = {"last": to_price(mkt.get("last", "0")),
-                          "bid1_p": to_price(mkt.get("bid_price", [""])[0]) if mkt.get("bid_price") else 0,
-                          "ask1_p": to_price(mkt.get("ask_price", [""])[0]) if mkt.get("ask_price") else 0,
-                          "vwap": round(vwap, 2) if vwap else None, "kline_bars": len(kb)}
+                last_val = float(mkt.get("last", 0))
+                bid_prices = mkt.get("bid_price", [])
+                ask_prices = mkt.get("ask_price", [])
+                l2data = {"last": last_val,
+                          "bid1_p": float(bid_prices[0]) if bid_prices and bid_prices[0] else 0,
+                          "ask1_p": float(ask_prices[0]) if ask_prices and ask_prices[0] else 0,
+                          "vwap": round(vwap, 2) if vwap else None,
+                          "kline_bars": len(kb)}
         except Exception:
             pass
 
@@ -909,7 +939,7 @@ def _run_pipeline(args):
     if args.from_file:
         candidates = load_from_file(args.from_file)
     else:
-        print("\n[1/5] 异动扫描(东财API+代理)...")
+        print("\n[1/5] 异动扫描(同花顺直连)...")
         candidates = scan_surge()
 
     if not candidates:
@@ -945,17 +975,23 @@ def _run_pipeline(args):
             except Exception:
                 pass
     print(f"  scored_cache: {len(scored_cache)} 只缓存" if scored_cache else "  scored_cache: 无缓存")
-    # 1.6 检查 L2 守护进程（--no-l2 模式下跳过）
+    # 1.6 检查 jvQuant WebSocket 行情数据源
     l2_available = False
     if not args.no_l2:
-        from scripts.l2_daemon_client import daemon_alive
-        l2_available = daemon_alive()
-        if l2_available:
-            print("  [L2] L2 守护进程已就绪")
-        else:
-            print("  [L2] L2 守护进程未运行（将跳过实时行情）")
+        try:
+            from scripts.jvquant_ws_client import daemon_alive, daemon_stats
+            if daemon_alive():
+                l2_available = True
+                s = daemon_stats()
+                print(f"  [jvQuant WS] 已连接 | 今日{s['total_subscribed_today']}只={s['daily_cost']}元")
+            else:
+                _send_jvquant_error("jvQuant WebSocket 连接失败")
+        except ImportError as e:
+            _send_jvquant_error(f"jvQuant 模块未安装: {e}")
+        except Exception as e:
+            _send_jvquant_error(f"jvQuant 初始化异常: {e}")
     else:
-        print("  [L2] 已跳过 (--no-l2 模式)")
+        print("  [行情] 已跳过 (--no-l2 模式)")
 
     # 1.7 涨停相关性预排
     print("\n[1.7/5] 涨停相关性预排...")
@@ -968,59 +1004,56 @@ def _run_pipeline(args):
     print("\n[1.8/5] 同花顺实时行情预取...")
     _batch_fetch_ths_for_candidates(candidates)
 
-    # 2. 分批深度分析: 每批订阅→观测45s→评分→立即推送(不等全部完成)
-    BATCH_SIZE = 25
-    L2_WAIT_MAX = 60  # 最多等 60 秒, 80%就绪提前结束
-    batch_count = (len(candidates) + BATCH_SIZE - 1) // BATCH_SIZE
-    print(f"\n[2/5] 分批深度分析: {len(candidates)}只 -> {batch_count}批x{BATCH_SIZE}只, 最多{L2_WAIT_MAX}s观测")
+    # 2. jvQuant 分层订阅 → 深度评分 → 推送
+    if l2_available:
+        print(f"\n[2/5] 深度分析: {len(candidates)}只 (jvQuant 分层订阅, 无等待)")
+        from scripts.jvquant_ws_client import subscribe_tiered, daemon_unsubscribe as jv_unsub
+        subscribe_tiered(candidates, top_n_l1=min(15, len(candidates)),
+                         top_n_l10=min(6, len(candidates)),
+                         top_n_l2=min(2, len(candidates)))
+        time.sleep(3)  # 等待首批数据到达
+    else:
+        print(f"\n[2/5] 深度分析: {len(candidates)}只 (无实时行情)")
 
     all_results = []
-    for bi in range(batch_count):
-        batch = candidates[bi * BATCH_SIZE : (bi + 1) * BATCH_SIZE]
-        codes = [c["code"] for c in batch]
-        print(f"\n{'='*40}")
-        print(f"批次 {bi+1}/{batch_count}: {len(codes)}只 {codes[:3]}...")
-        print(f"{'='*40}")
+    for stock in candidates:
+        code = stock["code"]
+        cache_hit = code in scored_cache
+        tag = "[缓存]" if cache_hit else "评分中"
+        print(f"  {code} {stock['name']} {tag}")
+        try:
+            r = _score_one(stock, l2_available, weights, scored_cache, cache_hit)
+            all_results.append(r)
+        except Exception as e:
+            print(f"  {code} 评分失败: {e}")
 
-        if l2_available:
-            from scripts.l2_daemon_client import daemon_subscribe, daemon_is_ready
-            daemon_subscribe(codes)
-            print(f"  [L2] 已订阅{len(codes)}只, 等待数据到达...", end="", flush=True)
-            ready = 0
-            for _ in range(L2_WAIT_MAX // 2):  # 每2秒检查一次
-                time.sleep(2)
-                ready = sum(1 for c in codes if daemon_is_ready(c))
-                print(f" {ready}/{len(codes)}", end="", flush=True)
-                if ready >= len(codes) * 0.8:
-                    break
-            print(f"\n  [L2] 最终就绪 {ready}/{len(codes)}")
+    # 推送前对 Top 高分股升到 L2 做最终确认
+    all_results.sort(key=lambda x: x["total"], reverse=True)
+    if l2_available:
+        top_codes = [r["code"] for r in all_results[:3] if r["total"] >= 35]
+        if top_codes:
+            from scripts.jvquant_ws_client import daemon_subscribe_l2
+            daemon_subscribe_l2(top_codes)
+            time.sleep(2)
+            for r in all_results[:3]:
+                if r["code"] in top_codes:
+                    try:
+                        from scripts.jvquant_ws_client import daemon_get_market, daemon_get_vwap, daemon_get_kline
+                        mkt = daemon_get_market(r["code"])
+                        vwap = daemon_get_vwap(r["code"])
+                        kb = daemon_get_kline(r["code"], n=5)
+                        if mkt:
+                            r["l2api"] = {"last": float(mkt.get("last", 0)),
+                                          "vwap": round(vwap, 2) if vwap else None,
+                                          "kline_bars": len(kb)}
+                    except Exception:
+                        pass
+        # 退订所有
+        from scripts.jvquant_ws_client import daemon_unsubscribe as jv_unsub
+        all_codes = [c["code"] for c in candidates]
+        jv_unsub(all_codes)
 
-        batch_results = []
-        for stock in batch:
-            code = stock["code"]
-            cache_hit = code in scored_cache
-            tag = "[缓存]" if cache_hit else "评分中"
-            print(f"  {code} {stock['name']} {tag}")
-            try:
-                r = _score_one(stock, l2_available, weights, scored_cache, cache_hit)
-                batch_results.append(r)
-                all_results.append(r)
-            except Exception as e:
-                print(f"  {code} 评分失败: {e}\n")
-
-        if l2_available:
-            from scripts.l2_daemon_client import daemon_unsubscribe
-            daemon_unsubscribe(codes)
-
-        # 计算每只股票的 new_total_v2（用 Tushare daily + limit_list 数据）
-        _compute_new_total_v2_batch(batch_results)
-
-        # 每批出分后立即尝试推送(不等后续批次)
-        if batch_results:
-            batch_results.sort(key=lambda x: x.get('new_total_v2', x['total']), reverse=True)
-            top3_str = ", ".join(f"{r['code']}(nv2={r.get('new_total_v2',r['total']):.0f})" for r in batch_results[:3])
-            print(f"  批次Top3: {top3_str}")
-            push_feishu(batch_results)
+    push_feishu(all_results)
 
     # 全量排序 + 保存
     all_results.sort(key=lambda x: x["total"], reverse=True)

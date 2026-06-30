@@ -30,7 +30,7 @@ sys.path.insert(0, str(PROJECT_DIR))
 
 from plays.watchdog.indicators import calc_all, check_trend, check_pullback, check_entry_score, check_exit_signal
 from scripts.l2_client import to_price, to_volume, normalize_code  # noqa: E402
-from scripts.l2_daemon_client import daemon_alive, daemon_cmd  # noqa: E402
+from scripts.jvquant_ws_client import daemon_alive, daemon_cmd  # noqa: E402
 from scripts.tu_share import call_tushare  # noqa: E402
 
 logger = logging.getLogger(__name__)
