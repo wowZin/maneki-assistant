@@ -25,7 +25,7 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 sys.path.insert(0, str(PROJECT_DIR / "scripts"))
 
-WIKI_DIR = PROJECT_DIR / "wiki" / "raw" / "analysis"
+ANALYSIS_DIR = PROJECT_DIR / "plays" / "limit_up" / "data" / "analysis"
 BT_DIR = Path(__file__).resolve().parent / "data" / "backtest"
 BT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -39,10 +39,14 @@ DIM_MAP = {"f": "fundamental", "t": "technical", "fl": "fundflow",
 
 def load_scans(days=20):
     """加载 wiki 扫描文件, 返回 {date: [(file, time_str, codes)]}"""
-    files = sorted(os.listdir(WIKI_DIR))
+    files = sorted(os.listdir(ANALYSIS_DIR))
     by_date = {}
     for fn in files:
         if not fn.endswith('.json'): continue
+        # 跳过 v2_ 前缀的历史文件 (旧 pipeline_v2 产物)
+        if fn.startswith('v2_'): continue
+        # 格式: YYYYMMDD_HHMM.json
+        if len(fn) < 13 or fn[8] != '_': continue
         date = fn[:8]
         time_str = fn[9:13]  # HHMM
         by_date.setdefault(date, []).append((fn, time_str))
@@ -210,7 +214,7 @@ def run(days=5):
     for d in dates:
         codes = set()
         for fn, _ in by_date[d]:
-            with open(WIKI_DIR / fn) as f:
+            with open(ANALYSIS_DIR / fn) as f:
                 data = json.load(f)
             for item in (data if isinstance(data, list) else []):
                 if isinstance(item, dict) and "code" in item:
@@ -229,7 +233,7 @@ def run(days=5):
         scan_data = []  # [(fn, time_str, codes)]
         for fn, time_str in by_date[date]:
             try:
-                with open(WIKI_DIR / fn) as f:
+                with open(ANALYSIS_DIR / fn) as f:
                     data = json.load(f)
                 codes = [d["code"] for d in data if isinstance(d, dict) and "code" in d]
                 daily_codes.update(codes)

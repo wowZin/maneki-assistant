@@ -1,0 +1,304 @@
+{
+  "config": {
+    "days": 5,
+    "weights": {
+      "f": 0.5,
+      "t": 0.5,
+      "fl": 1.5,
+      "s": 1.0,
+      "st": 0.5
+    },
+    "scoregap": 0.9
+  },
+  "summary": {
+    "days": 5,
+    "total_scans": 192,
+    "total_pool": 268,
+    "total_pushes": 28,
+    "total_hits": 6,
+    "total_wins": 12,
+    "hit_rate": 0.2143,
+    "win_rate": 0.4286,
+    "avg_hit_rate": 0.1238,
+    "avg_win_rate": 0.2476,
+    "avg_daily_pushes": 5.6
+  },
+  "daily": [
+    {
+      "date": "20260624",
+      "scans": 45,
+      "unique_stocks": 64,
+      "push_total": 104,
+      "push_unique": 7,
+      "hits": 2,
+      "wins": 4,
+      "score_time_s": 139.0
+    },
+    {
+      "date": "20260625",
+      "scans": 43,
+      "unique_stocks": 67,
+      "push_total": 41,
+      "push_unique": 1,
+      "hits": 0,
+      "wins": 0,
+      "score_time_s": 76.0
+    },
+    {
+      "date": "20260626",
+      "scans": 48,
+      "unique_stocks": 51,
+      "push_total": 79,
+      "push_unique": 7,
+      "hits": 0,
+      "wins": 0,
+      "score_time_s": 50.0
+    },
+    {
+      "date": "20260629",
+      "scans": 49,
+      "unique_stocks": 57,
+      "push_total": 100,
+      "push_unique": 12,
+      "hits": 4,
+      "wins": 8,
+      "score_time_s": 47.0
+    },
+    {
+      "date": "20260630",
+      "scans": 7,
+      "unique_stocks": 29,
+      "push_total": 1,
+      "push_unique": 1,
+      "hits": 0,
+      "wins": 0,
+      "score_time_s": 13.0
+    }
+  ],
+  "push_details": [
+    {
+      "date": "20260624",
+      "scan": "20260624_0935.json",
+      "code": "600667.SH",
+      "total": 53.7,
+      "is_hit": true,
+      "next_pct": 10.0
+    },
+    {
+      "date": "20260624",
+      "scan": "20260624_0935.json",
+      "code": "000756.SZ",
+      "total": 49.0,
+      "is_hit": false,
+      "next_pct": -5.21
+    },
+    {
+      "date": "20260624",
+      "scan": "20260624_0937.json",
+      "code": "600584.SH",
+      "total": 53.4,
+      "is_hit": true,
+      "next_pct": 10.0
+    },
+    {
+      "date": "20260624",
+      "scan": "20260624_0951.json",
+      "code": "000636.SZ",
+      "total": 57.9,
+      "is_hit": false,
+      "next_pct": 10.0
+    },
+    {
+      "date": "20260624",
+      "scan": "20260624_1021.json",
+      "code": "002407.SZ",
+      "total": 56.4,
+      "is_hit": false,
+      "next_pct": -1.04
+    },
+    {
+      "date": "20260624",
+      "scan": "20260624_1051.json",
+      "code": "600378.SH",
+      "total": 54.5,
+      "is_hit": false,
+      "next_pct": 1.86
+    },
+    {
+      "date": "20260624",
+      "scan": "20260624_1325.json",
+      "code": "000988.SZ",
+      "total": 53.2,
+      "is_hit": false,
+      "next_pct": 3.39
+    },
+    {
+      "date": "20260625",
+      "scan": "20260625_0935.json",
+      "code": "000021.SZ",
+      "total": 65.6,
+      "is_hit": false,
+      "next_pct": 0.58
+    },
+    {
+      "date": "20260626",
+      "scan": "20260626_0934.json",
+      "code": "000021.SZ",
+      "total": 65.6,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260626",
+      "scan": "20260626_1306.json",
+      "code": "002202.SZ",
+      "total": 49.5,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260626",
+      "scan": "20260626_1306.json",
+      "code": "002617.SZ",
+      "total": 49.3,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260626",
+      "scan": "20260626_1306.json",
+      "code": "605358.SH",
+      "total": 46.5,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260626",
+      "scan": "20260626_1310.json",
+      "code": "002008.SZ",
+      "total": 45.4,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260626",
+      "scan": "20260626_1330.json",
+      "code": "002579.SZ",
+      "total": 52.3,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260626",
+      "scan": "20260626_1341.json",
+      "code": "001309.SZ",
+      "total": 49.6,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260629",
+      "scan": "20260629_0934.json",
+      "code": "000021.SZ",
+      "total": 65.6,
+      "is_hit": true,
+      "next_pct": 9.19
+    },
+    {
+      "date": "20260629",
+      "scan": "20260629_0944.json",
+      "code": "000636.SZ",
+      "total": 57.9,
+      "is_hit": false,
+      "next_pct": -10.0
+    },
+    {
+      "date": "20260629",
+      "scan": "20260629_0944.json",
+      "code": "600378.SH",
+      "total": 54.5,
+      "is_hit": true,
+      "next_pct": 10.0
+    },
+    {
+      "date": "20260629",
+      "scan": "20260629_0944.json",
+      "code": "600667.SH",
+      "total": 53.7,
+      "is_hit": false,
+      "next_pct": 0.83
+    },
+    {
+      "date": "20260629",
+      "scan": "20260629_0944.json",
+      "code": "600584.SH",
+      "total": 53.4,
+      "is_hit": false,
+      "next_pct": 0.29
+    },
+    {
+      "date": "20260629",
+      "scan": "20260629_0944.json",
+      "code": "000100.SZ",
+      "total": 52.2,
+      "is_hit": false,
+      "next_pct": 10.02
+    },
+    {
+      "date": "20260629",
+      "scan": "20260629_1003.json",
+      "code": "600552.SH",
+      "total": 54.7,
+      "is_hit": false,
+      "next_pct": 3.49
+    },
+    {
+      "date": "20260629",
+      "scan": "20260629_1003.json",
+      "code": "002106.SZ",
+      "total": 50.8,
+      "is_hit": false,
+      "next_pct": 9.98
+    },
+    {
+      "date": "20260629",
+      "scan": "20260629_1003.json",
+      "code": "603986.SH",
+      "total": 50.1,
+      "is_hit": false,
+      "next_pct": -2.98
+    },
+    {
+      "date": "20260629",
+      "scan": "20260629_1355.json",
+      "code": "603650.SH",
+      "total": 54.0,
+      "is_hit": true,
+      "next_pct": 3.78
+    },
+    {
+      "date": "20260629",
+      "scan": "20260629_1406.json",
+      "code": "000988.SZ",
+      "total": 53.2,
+      "is_hit": true,
+      "next_pct": 4.28
+    },
+    {
+      "date": "20260629",
+      "scan": "20260629_1415.json",
+      "code": "002119.SZ",
+      "total": 55.8,
+      "is_hit": false,
+      "next_pct": 10.0
+    },
+    {
+      "date": "20260630",
+      "scan": "20260630_1441.json",
+      "code": "000021.SZ",
+      "total": 65.6,
+      "is_hit": false,
+      "next_pct": 0
+    }
+  ]
+}
