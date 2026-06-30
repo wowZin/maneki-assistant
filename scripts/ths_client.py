@@ -283,7 +283,7 @@ class THSClient:
     def get_hot_rank_map(self) -> dict[str, int]:
         """获取热门榜排名映射 {code_short: rank(1-based)}
 
-        用于替代东财 f62 人气排名。
+        用于替代 f62 人气排名。
         """
         items = self.get_hot_list()
         return {item["code"]: item.get("hot_rank", 0) for item in items if item.get("code")}

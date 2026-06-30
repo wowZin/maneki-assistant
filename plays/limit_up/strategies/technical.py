@@ -97,7 +97,7 @@ def score_technical(code: str) -> tuple[int | float, str]:
     upper_ratio = (upper_shadow / body) if body > 0 else 0
     lower_ratio = (lower_shadow / body) if body > 0 else 0
 
-    # 盘中优先使用东财实时量比（替代 T-1 vol_ratio）
+    # 盘中优先使用实时量比（替代 T-1 vol_ratio）
     if is_trading_time():
         fund_cache = _get_realtime_fund_cache()
         code_short = code.split(".")[0]

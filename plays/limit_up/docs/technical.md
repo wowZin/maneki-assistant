@@ -4,7 +4,7 @@
 
 专注A股T+1~T+3周期涨停潜力预判的纯技术面分析。六维度量化评分，含一票否决规则（动态阈值）、板块弱势天花板、时间因子。
 
-数据源：Tushare stk_factor_pro（T-1）+ 东财实时量比。盘中优先使用东财实时量比覆盖（从 fund_cache 获取），替代 T-1 vol_ratio。
+数据源：Tushare stk_factor_pro（T-1）+ 同花顺实时量比。盘中优先使用同花顺实时量比覆盖（从 fund_cache 获取），替代 T-1 vol_ratio。
 
 ## 六维度权重
 

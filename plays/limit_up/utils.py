@@ -1,4 +1,4 @@
-"""limit_up 玩法工具函数：类型转换、交易时间、东财→Tushare 盘后降级
+"""limit_up 玩法工具函数：类型转换、交易时间、实时→Tushare 盘后降级
 
 盘后降级原则：
 - 仅在非交易时段（15:30~次日9:00 + 周末）自动切换数据源
@@ -115,7 +115,7 @@ def batch_get_fundflow_tushare(trade_date: str = None) -> dict[str, dict]:
         if code and net is not None:
             code_short = code.split(".")[0]
             try:
-                # net_mf_amount 单位是万元，转成元保持与东财一致
+                # net_mf_amount 单位是万元，转成元保持与实时数据一致
                 fundflow[code_short] = {"net_flow": float(net) * 10000}
             except (ValueError, TypeError):
                 pass
@@ -280,7 +280,7 @@ def get_stock_pct(code: str) -> float | None:
 
 def get_stock_quote(code: str) -> dict:
     """获取个股行情数据（同 get_stock_quote_tushare 签名）
-    盘后走 Tushare，盘中返回空字典（走东财实时数据）
+    盘后走 Tushare，盘中返回空字典（走实时数据）
     """
     if is_market_closed():
         return get_stock_quote_tushare(code)

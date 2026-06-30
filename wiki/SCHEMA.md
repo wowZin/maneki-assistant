@@ -55,7 +55,7 @@ sources: [raw/articles/source.md]
 
 - **dimension**: fundamental, technical, fundflow, sentiment, shortterm
 - **methodology**: scoring, ranking, weighting, threshold
-- **data-source**: eastmoney, tushare, proxy
+- **data-source**: ths, tushare
 - **weight**: optimization, ab-comparison
 - **scan**: intraday, closing-review
 - **pipeline**: push, feishu, review

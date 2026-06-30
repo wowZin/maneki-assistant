@@ -4,7 +4,7 @@
 
 专注A股涨停板打板博弈。五因子加权评分，针对两个核心问题：今天能不能封住（封板质量+板块助攻），明天有没有溢价（连板动量+攻击独特性）。
 
-数据源：Tushare limit_list_d/stk_auction/daily/concept_detail/limit_cpt_list + 东财实时行情（集合竞价、换手率、量比）。
+数据源：Tushare limit_list_d/stk_auction/daily/concept_detail/limit_cpt_list + 同花顺实时行情（集合竞价、换手率、量比）。
 
 ## 五因子权重
 
@@ -111,7 +111,7 @@
 | > 2 | +10 |
 | > 1.5 | +5 |
 
-东财实时换手和量比可作为兜底数据。
+同花顺实时换手和量比可作为兜底数据。
 
 ### 4. 板块助攻（15%×100分→截断至100）
 

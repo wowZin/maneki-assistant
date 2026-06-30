@@ -395,7 +395,7 @@ def check_ths_connectivity() -> list[HealthStatus]:
     return results
 
 def check_realtime_caches() -> list[HealthStatus]:
-    """检查东财实时缓存的数据完整性和异常值"""
+    """检查实时缓存的数据完整性和异常值"""
     results = []
     t0 = time.time()
 
@@ -532,7 +532,7 @@ def check_jvquant_ws() -> list[HealthStatus]:
             message=f"jvQuant 检查异常: {e}", latency_ms=(time.time()-t0)*1000))
     return results
 
-# 4. 代理/东财 (已废弃, 全量迁移到同花顺+jvQuant)
+# 4. 代理 (已废弃, 全量迁移到同花顺+jvQuant)
 
 # check_proxy 已移除
 
@@ -575,7 +575,7 @@ def preflight_check() -> bool:
         if status.severity == Severity.CRITICAL:
             critical_failures.append(f"tushare:{api}: {status.message}")
 
-    # 代理/东财已全量迁移到同花顺直连，不再检查代理可达性
+    # 代理已全量迁移到同花顺直连，不再检查代理可达性
 
     # 3. 判定
     if critical_failures:
@@ -614,7 +614,7 @@ def run_health_check(full: bool = False, quiet: bool = False) -> HealthReport:
     # 1. Tushare
     report.checks.extend(check_tushare_apis(full=full))
 
-    # 2. 东财缓存 (已废弃，全量迁移同花顺)
+    # 2. 实时缓存 (已废弃，全量迁移同花顺)
 
     # 3. Level2
     # (已提到最前)

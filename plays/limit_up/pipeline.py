@@ -144,7 +144,7 @@ def score_fundflow(code):
     from plays.limit_up.strategies.fundflow import score_fundflow as _score_fundflow
     return _score_fundflow(code)
 
-# 实时行情缓存（同花顺 Cookie 直连，替代东财 push2+代理）
+# 实时行情缓存（同花顺 Cookie 直连）
 _REALTIME_PCT_CACHE = {}   # {code_short: pct_chg}  兼容旧接口
 _THS_QUOTE_CACHE = {}       # {code_short: {...}}    完整同花顺行情
 _REALTIME_PCT_TS = ""
@@ -154,7 +154,7 @@ _HOT_LIST_ITEMS: list[dict] = []            # 热门榜原始数据（含 pct_ch
 
 
 def _batch_fetch_ths_for_candidates(candidates: list[dict]) -> dict[str, dict]:
-    """用同花顺批量获取候选股实时行情（替代东财全市场扫描）
+    """用同花顺批量获取候选股实时行情（替代原全市场扫描）
 
     Args:
         candidates: [{code, name, pct_chg, ...}]
@@ -240,7 +240,7 @@ def _batch_fetch_realtime_pct():
 
 
 def _fetch_ths_hot_list():
-    """获取同花顺热门榜数据（替代东财人气排名，无代理依赖）
+    """获取同花顺热门榜数据（替代原人气排名方式）
 
     填充 _POPULARITY_RANK_CACHE 和 _HOT_CONCEPT_CACHE。
     """
@@ -1000,7 +1000,7 @@ def _run_pipeline(args):
     build_concept_map(_HOT_CONCEPT_CACHE)  # 构建同花顺概念映射（替代 stock_basic 行业）
     candidates = _pre_rank(candidates, top_n=args.top)
 
-    # 1.8 同花顺实时行情预取（替代东财批量缓存）
+    # 1.8 同花顺实时行情预取
     print("\n[1.8/5] 同花顺实时行情预取...")
     _batch_fetch_ths_for_candidates(candidates)
 

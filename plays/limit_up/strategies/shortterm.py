@@ -113,7 +113,7 @@ def _get_daily_basic(code: str) -> dict:
 
 
 def _get_realtime_quote(code: str) -> dict:
-    """获取实时行情数据（优先东财实时，盘后降级 Tushare）"""
+    """获取实时行情数据（优先实时，盘后降级 Tushare）"""
     from plays.limit_up.utils import is_market_closed, get_stock_quote
 
     if is_market_closed():
@@ -629,7 +629,7 @@ def _score_fund_resonance(code: str, moneyflow_tushare: dict,
     reasons = []
     score = 0
 
-    # ── 源1: 实时东财主力净流入（优先 fundflow_data，降级实时查询） ──
+    # ── 源1: 实时主力净流入（优先 fundflow_data，降级实时查询） ──
     rt_net_flow = 0
     rt_amount = 0
 
@@ -639,7 +639,7 @@ def _score_fund_resonance(code: str, moneyflow_tushare: dict,
         rt_net_flow = _safe_float(rt.get("net_flow", 0))
         rt_amount = _safe_float(rt.get("amount", 0))
     else:
-        # 降级: 尝试从东财实时获取
+        # 降级: 尝试从实时缓存获取
         try:
             from plays.limit_up.pipeline import _get_realtime_fund_cache
             cache = _get_realtime_fund_cache()
@@ -664,16 +664,16 @@ def _score_fund_resonance(code: str, moneyflow_tushare: dict,
     mf_positive = mf_md_net > 0 or mf_total_net > 0
 
     if rt_positive and mf_positive:
-        # 双源共振: 东财主力净流入 + Tushare 中单/主力净流入 > 0
+        # 双源共振: 实时主力净流入 + Tushare 中单/主力净流入 > 0
         score += 60
         # 进一步: 如果占比健康 > 3%，加分
         if rt_amount > 0 and rt_net_flow / rt_amount > 0.03:
             score += 20
             reasons.append(f"双源共振(主力占比{rt_net_flow/rt_amount*100:.1f}%)+80")
         else:
-            reasons.append(f"双源共振(东财流入{rt_net_flow/1e4:.0f}万+Tushare流入)+60")
+            reasons.append(f"双源共振(实时流入{rt_net_flow/1e4:.0f}万+Tushare流入)+60")
     elif rt_positive:
-        # 仅东财实时流入
+        # 仅实时流入
         score += 35
         if rt_amount > 0 and rt_net_flow / rt_amount > 0.03:
             score += 15
@@ -690,7 +690,7 @@ def _score_fund_resonance(code: str, moneyflow_tushare: dict,
     elif rt_net_flow < 0 and mf_md_net < 0:
         # 双源流出 → 扣分
         score -= 15
-        reasons.append(f"双源流出(东财{rt_net_flow/1e4:.0f}万+Tushare{mf_md_net:.0f}万)-15")
+        reasons.append(f"双源流出(实时{rt_net_flow/1e4:.0f}万+Tushare{mf_md_net:.0f}万)-15")
     elif rt_net_flow < 0:
         score -= 5
         reasons.append(f"实时主力流出({rt_net_flow/1e4:.0f}万)-5")
