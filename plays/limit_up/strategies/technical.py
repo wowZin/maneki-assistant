@@ -171,6 +171,21 @@ def score_technical(code: str) -> tuple[int | float, str]:
                         )
 
     # ═══════════════════════════════════════════════════════
+    # 4.3 竞价跌停开盘预检: 提前拉取auc_gap供否决使用
+    auc_gap = None
+    try:
+        resp_auc = call_tushare("stk_auction", {"ts_code": code}, "price,pre_close")
+        auc_items = resp_auc.get("data", {}).get("items", [])
+        if auc_items:
+            auc_f = resp_auc.get("data", {}).get("fields", [])
+            auc_d = dict(zip(auc_f, auc_items[0]))
+            auc_p = safe_float(auc_d.get("price"))
+            auc_pre = safe_float(auc_d.get("pre_close"))
+            if auc_pre > 0: auc_gap = (auc_p - auc_pre) / auc_pre * 100
+    except: pass
+    if auc_gap is not None and auc_gap < -9:
+        return 0, f"竞价跌停开盘:竞价{auc_gap:.1f}%"
+
     # 5. 四维度评分
     # ═══════════════════════════════════════════════════════
     score = 0
@@ -229,25 +244,19 @@ def score_technical(code: str) -> tuple[int | float, str]:
             vol_reasons.append(f"换手过热({turnover:.1f}%)-5")
 
     # 5.1c 竞价跳空因子 (0-5pts, d=+0.15~0.17)
-    auc_gap = 0
-    try:
-        resp_auc = call_tushare("stk_auction", {"ts_code": code}, "price,pre_close")
-        auc_items = resp_auc.get("data", {}).get("items", [])
-        if auc_items:
-            auc_f = resp_auc.get("data", {}).get("fields", [])
-            auc_d = dict(zip(auc_f, auc_items[0]))
-            auc_p = safe_float(auc_d.get("price"))
-            auc_pre = safe_float(auc_d.get("pre_close"))
-            if auc_pre > 0: auc_gap = (auc_p - auc_pre) / auc_pre * 100
-    except: pass
+    # auc_gap 已在否决预检阶段拉取, 此处复用; 若为None则降级为0
+    if auc_gap is None:
+        auc_gap = 0
     if 1 <= auc_gap <= 5:
         vol_score += 5; vol_reasons.append(f"竞价高开{auc_gap:.1f}%+5")
     elif 0 < auc_gap < 1:
         vol_score += 2; vol_reasons.append(f"竞价平开{auc_gap:.1f}%+2")
     elif -2 <= auc_gap < 0:
         vol_score -= 2; vol_reasons.append(f"竞价低开{auc_gap:.1f}%-2")
-    elif auc_gap < -2:
-        vol_score -= 4; vol_reasons.append(f"竞价大幅低开{auc_gap:.1f}%-4")
+    elif -5 <= auc_gap < -2:
+        vol_score -= 8; vol_reasons.append(f"竞价大幅低开{auc_gap:.1f}%-8")
+    elif auc_gap < -5:
+        vol_score -= 15; vol_reasons.append(f"竞价暴跌{auc_gap:.1f}%-15")
 
     # 5.1d 振幅因子 (0-6pts, d=-0.39: 低振幅蓄力>高振幅出货)
     if amplitude and amplitude < 8:

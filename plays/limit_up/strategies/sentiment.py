@@ -368,8 +368,8 @@ def score_sentiment(code: str) -> tuple[int | float, str]:
             theme_reasons.append(f"题材第{theme_rank}+2")
 
         # [发酵强度] 相比前日涨停数
+        prev_ul_cnt = 0  # 初始化为0, 防止 UnboundLocalError
         if best_ul_cnt >= 3:
-            prev_ul_cnt = 0
             try:
                 resp_prev = call_tushare("limit_cpt_list",
                                          {"trade_date": yesterday_str},
