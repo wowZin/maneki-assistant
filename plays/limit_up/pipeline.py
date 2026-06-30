@@ -553,7 +553,7 @@ def _compute_new_total_v2_batch(results: list[dict]):
         if trailing_10 > 30:
             score -= (trailing_10 - 30) * 0.5
 
-        score = max(0, min(100, score))
+        score = max(0, score)
 
         r["new_total_v2"] = round(score, 1)
         r["_nv2_trailing_10"] = round(trailing_10, 1)
@@ -624,7 +624,7 @@ def push_feishu(results):
         return False
 
     max_nv2 = sorted_results[0].get("new_total_v2", sorted_results[0].get("total", 0))
-    gap_threshold = max_nv2 * 0.95 if max_nv2 > 0 else 0
+    gap_threshold = max_nv2 * 0.98 if max_nv2 > 0 else 0
 
     push_list = []
     for r in sorted_results:
@@ -642,17 +642,6 @@ def push_feishu(results):
         push_list.append(r)
         if len(push_list) >= 5:
             break
-
-    # 最少 2 只保底（如果 gap 阈值不够，补排名靠前的）
-    if len(push_list) < 2:
-        for r in sorted_results:
-            if r["code"] not in {p["code"] for p in push_list} and r["code"] not in pushed_codes_today:
-                s = r.get("scores", {})
-                if is_afternoon and s.get("sentiment", 0) < 25:
-                    continue
-                push_list.append(r)
-                if len(push_list) >= 2:
-                    break
 
     print(f"  ScoreGap: max_nv2={max_nv2:.1f} threshold={gap_threshold:.1f} → {len(push_list)}只推送")
 
