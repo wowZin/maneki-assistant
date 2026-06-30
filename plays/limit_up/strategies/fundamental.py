@@ -304,29 +304,8 @@ def score_fundamental(code: str) -> tuple[int | float, str]:
         except Exception:
             pass
 
-    # 连板基因: 近60日有过连板 → 资金记忆
-    try:
-        end_dt = datetime.now()
-        start_dt = end_dt - timedelta(days=65)
-        resp = call_tushare("limit_step", {
-            "ts_code": code,
-            "start_date": start_dt.strftime("%Y%m%d"),
-            "end_date": end_dt.strftime("%Y%m%d")
-        }, "trade_date,ts_code,nums")
-        gene_items = resp.get("data", {}).get("items", [])
-        if gene_items:
-            max_nums = max(
-                (safe_int_none(x[2]) or 0 for x in gene_items),
-                default=0,
-            )
-            if max_nums >= 3:
-                chip_score += 0.15
-                chip_reasons.append(f"涨停基因{max_nums}连板")
-            elif max_nums >= 2:
-                chip_score += 0.10
-                chip_reasons.append(f"涨停基因{max_nums}连板")
-    except Exception:
-        pass
+    # 涨停基因已移至短线博弈维度，基本面不重复加分
+    # (limit_step API 调用移除，减少重复信号)
 
     factors["chip"] = max(0.0, min(1.0, chip_score))
     reasons.extend(chip_reasons)
@@ -377,10 +356,10 @@ def score_fundamental(code: str) -> tuple[int | float, str]:
         bonus += 12
         reasons.append("共振A:小盘+业绩爆发+12")
 
-    # 共振B: 小盘 + 筹码集中 → 吸筹信号
+    # 共振B: 小盘 + 筹码集中 → 吸筹信号 (降权: 股东数据季度滞后, 与实时资金流矛盾时不应压倒)
     elif factors.get("cap", 0) >= 0.7 and factors.get("chip", 0) >= 0.7:
-        bonus += 8
-        reasons.append("共振B:小盘+吸筹+8")
+        bonus += 4
+        reasons.append("共振B:小盘+吸筹+4")
 
     # 共振C: 业绩突变 + 概念丰富 → 事件驱动
     elif factors.get("earnings", 0) >= 0.7 and factors.get("concept", 0) >= 0.6:
