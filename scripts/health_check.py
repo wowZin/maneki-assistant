@@ -514,7 +514,7 @@ def _start_daemon() -> tuple[bool, str]:
             cwd=str(PROJECT_DIR),
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
-        time.sleep(3)  # 等待进程初始化和 PID 文件写入
+        time.sleep(15)  # 等守护进程初始化（L2连接可能慢，3s不够）
         alive = _daemon_alive()
         if alive:
             return True, f"已自动启动(PID={L2_DAEMON_PID.read_text().strip()})"
@@ -728,6 +728,12 @@ def preflight_check() -> bool:
 
     # 2. 关键检查
     critical_failures = []
+
+    # L2 守护进程（优先拉起，后续 pipeline 要用）
+    l2_results = check_l2_connection()
+    l2_warnings = [c for c in l2_results if c.severity == Severity.WARNING]
+    if l2_warnings:
+        critical_failures.append(f"l2:connection: {l2_warnings[0].message}")
 
     # Tushare CRITICAL API
     for api in TUSHARE_CRITICAL:
