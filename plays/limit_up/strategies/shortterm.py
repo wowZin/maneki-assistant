@@ -274,6 +274,13 @@ def _score_momentum(code: str, daily_data, limit_history) -> tuple:
             score += 3
             reasons.append(f"近5日微涨(均涨{avg_pct:.1f}%)+3")
 
+    # 高位连板折扣: ≥4连板打9折, ≥5连板打85折, ≥7连板打7折
+    if is_current_limit_up and limit_times >= 4:
+        discount = 0.90 if limit_times == 4 else (0.85 if limit_times <= 6 else 0.7)
+        score_before = score
+        score = score * discount
+        reasons.append(f"[折扣]{int(limit_times)}连板×{discount}")
+
     total = min(score, 100)
     reason_str = "; ".join(reasons) if reasons else "无数据"
     return max(total, 0), f"[连板] {reason_str}"
@@ -763,9 +770,9 @@ def score_shortterm(code: str, fundflow_data: dict = None) -> tuple:
 
     # ── 3. 加权汇总 ──
     weights = {
-        "momentum": 0.30,
-        "aggression": 0.25,
-        "seal": 0.15,
+        "momentum": 0.40,
+        "aggression": 0.20,
+        "seal": 0.05,
         "open": 0.15,
         "resonance": 0.15,
     }

@@ -449,6 +449,28 @@ def score_sentiment(code: str) -> tuple[int | float, str]:
                     f"动量接力:昨+{yesterday_pct:.1f}%+{best_concept}升温+3"
                 )
 
+    
+    # THS精准概念共振 (50-400只成分股的概念, d=+0.21)
+    ths_niche_bonus = 0
+    try:
+        from scripts.tu_share import call_tushare as _call_ts, clear_tushare_cache as _clear_ts
+        import json, os
+        _cpt_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'backtest', 'ths_concept_map.json')
+        if os.path.exists(_cpt_file):
+            with open(_cpt_file) as _f:
+                _ths = json.load(_f)
+            _stock_cpts = _ths.get("stock_concepts", {}).get(code.split('.')[0], [])
+            _daily_heat = _ths.get("daily_cpt_heat", {}).get(today_str, {})
+            if _stock_cpts and _daily_heat:
+                _max_heat = max((_daily_heat.get(c, 0) for c in _stock_cpts), default=0)
+                if _max_heat >= 8: ths_niche_bonus = 15
+                elif _max_heat >= 5: ths_niche_bonus = 10
+                elif _max_heat >= 3: ths_niche_bonus = 5
+    except: pass
+    if ths_niche_bonus > 0:
+        theme_score += ths_niche_bonus
+        theme_reasons.append(f"概念共振(+{ths_niche_bonus})")
+
     score += max(0, min(30, theme_score))
     reasons.extend(theme_reasons)
 
@@ -710,8 +732,8 @@ def score_sentiment(code: str) -> tuple[int | float, str]:
     except Exception:
         pass
 
-    if stock_continuity >= 5:
-        discount = 0.85 if stock_continuity <= 6 else 0.7
+    if stock_continuity >= 4:
+        discount = 0.90 if stock_continuity == 4 else (0.85 if stock_continuity <= 6 else 0.7)
         score_before = score
         score = round(score * discount)
         reasons.append(

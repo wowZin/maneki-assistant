@@ -85,6 +85,17 @@ def score_technical(code: str) -> tuple[int | float, str]:
     boll_mid = safe_float(today.get("boll_mid_bfq"))
     total_mv = safe_float(today.get("total_mv"))  # 万元
     today_vol = safe_float(today.get("vol"))
+    pre_close = safe_float(today.get("pre_close"))
+    # 日内振幅 = (最高-最低)/前收*100
+    amplitude = ((high - low) / pre_close * 100) if high and low and pre_close else None
+    # T-1 量比 (用于量比加速检测)
+    prev_vol_ratio = safe_float(factors[1].get("vol_ratio")) if len(factors) > 1 else None
+    # 上/下影线比
+    body = abs(close - open_price) if close and open_price else 0
+    upper_shadow = (high - max(close, open_price)) if high and close and open_price else 0
+    lower_shadow = (min(close, open_price) - low) if low and close and open_price else 0
+    upper_ratio = (upper_shadow / body) if body > 0 else 0
+    lower_ratio = (lower_shadow / body) if body > 0 else 0
 
     # 盘中优先使用东财实时量比（替代 T-1 vol_ratio）
     if is_trading_time():
@@ -94,9 +105,25 @@ def score_technical(code: str) -> tuple[int | float, str]:
         if rt.get("vol_ratio", 0) > 0:
             vol_ratio = rt["vol_ratio"]
 
-    # 核心字段校验
-    if close is None or vol_ratio is None:
-        return 50, "核心数据缺失(close/vol_ratio)"
+    # vol_ratio 可能为 None (stk_factor_pro 不返回此字段)
+    # 优先从实时缓存取, 降级从 daily_basic 取
+    if vol_ratio is None:
+        try:
+            resp_db = call_tushare("daily_basic", {"ts_code": code}, "volume_ratio,turnover_rate")
+            db_items = resp_db.get("data", {}).get("items", [])
+            if db_items:
+                db_fields = resp_db.get("data", {}).get("fields", [])
+                db_d = dict(zip(db_fields, db_items[0]))
+                vol_ratio = safe_float(db_d.get("volume_ratio"))
+                if turnover is None:
+                    turnover = safe_float(db_d.get("turnover_rate"))
+        except: pass
+    # 核心字段校验 (放宽: close必须有, vol_ratio允许降级后仍为None)
+    if close is None:
+        return 50, "核心数据缺失(close)"
+    # 量比最终降级: 仍为None时默认中性值1.0
+    if vol_ratio is None:
+        vol_ratio = 1.0
 
     # ── 3. 历史动态统计（用于百分位计算） ─────────────────
     vol_ratios_hist = []
@@ -201,7 +228,44 @@ def score_technical(code: str) -> tuple[int | float, str]:
             vol_score -= 5
             vol_reasons.append(f"换手过热({turnover:.1f}%)-5")
 
-    # 5.1c 洗盘起爆检测 (0-10pts)
+    # 5.1c 竞价跳空因子 (0-5pts, d=+0.15~0.17)
+    auc_gap = 0
+    try:
+        resp_auc = call_tushare("stk_auction", {"ts_code": code}, "price,pre_close")
+        auc_items = resp_auc.get("data", {}).get("items", [])
+        if auc_items:
+            auc_f = resp_auc.get("data", {}).get("fields", [])
+            auc_d = dict(zip(auc_f, auc_items[0]))
+            auc_p = safe_float(auc_d.get("price"))
+            auc_pre = safe_float(auc_d.get("pre_close"))
+            if auc_pre > 0: auc_gap = (auc_p - auc_pre) / auc_pre * 100
+    except: pass
+    if 1 <= auc_gap <= 5:
+        vol_score += 5; vol_reasons.append(f"竞价高开{auc_gap:.1f}%+5")
+    elif 0 < auc_gap < 1:
+        vol_score += 2; vol_reasons.append(f"竞价平开{auc_gap:.1f}%+2")
+    elif -2 <= auc_gap < 0:
+        vol_score -= 2; vol_reasons.append(f"竞价低开{auc_gap:.1f}%-2")
+    elif auc_gap < -2:
+        vol_score -= 4; vol_reasons.append(f"竞价大幅低开{auc_gap:.1f}%-4")
+
+    # 5.1d 振幅因子 (0-6pts, d=-0.39: 低振幅蓄力>高振幅出货)
+    if amplitude and amplitude < 8:
+        vol_score += 6; vol_reasons.append(f"振幅温和{amplitude:.1f}%+6")
+    elif amplitude and amplitude > 15:
+        vol_score -= 5; vol_reasons.append(f"振幅过大{amplitude:.1f}%-5")
+
+    # 5.1e 洗盘起爆检测 (0-10pts)
+    # 5.1e 量比加速过滤 (假阳性杀手: vol_accel>2.5=出货)
+    if vol_ratio and prev_vol_ratio and prev_vol_ratio > 0:
+        vol_accel = vol_ratio / prev_vol_ratio
+        if vol_accel > 2.5:
+            vol_score -= 15; vol_reasons.append(f"量比暴涨{vol_accel:.1f}x-15")
+        elif vol_accel > 1.8:
+            vol_score -= 8; vol_reasons.append(f"量比急升{vol_accel:.1f}x-8")
+        elif 0.7 <= vol_accel <= 1.3:
+            vol_score += 5; vol_reasons.append(f"量比稳健{vol_accel:.1f}x+5")
+
     # 前 N 日缩量 + 当日量比 1.0-2.5 → 洗盘充分后起爆
     if vol_ratio and len(factors) >= 4:
         low_vol_days = 0

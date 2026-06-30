@@ -46,7 +46,7 @@ def scan_surge():
     """通过同花顺热门榜获取候选股（Cookie直连，无代理依赖）
 
     数据源: dq.10jqka.com.cn 热门搜索榜 (100只)
-    过滤: ST/新股/创业板/科创板，涨幅2%-9.5%
+    过滤: ST/新股/创业板/科创板，涨幅0%-9.5%(排除当日涨停)
     Returns: list[dict] - [{code, name, pct_chg}] 候选股列表，或None
     """
     if not is_trading_time():
@@ -70,19 +70,19 @@ def scan_surge():
         name = s.get("name", "")
         pct = float(s.get("pct_chg", 0))
 
-        # 过滤: ST/新股/创业板/科创板，涨幅2%-9.5%
+        # 过滤: ST/新股/创业板/科创板，涨幅0%-9.5%(排除当日涨停)
         if re.search(r"ST|\*ST|退|N", name or ""):
             continue
         if re.match(r"^(300|301|688|8|4|920)", code):
             continue
-        if pct < 2 or pct > 9.5:
+        if pct < 0 or pct >= 9.5:  # 放宽下限0%但排除当日已涨停(不可交易)
             continue
         if "." not in code:
             code = f"{code}.SH" if code.startswith("6") else f"{code}.SZ"
         candidates.append({"code": code, "name": name, "pct_chg": pct})
 
     if candidates:
-        print(f"热门榜扫描: {len(items)}只 → {len(candidates)}只候选 (过滤ST/科创/创业板, 涨幅2-9.5%)")
+        print(f"热门榜扫描: {len(items)}只 → {len(candidates)}只候选 (过滤ST/科创/创业板, 涨幅0-9.5%(排除当日涨停))")
     else:
         print(f"热门榜扫描: {len(items)}只 → 0只候选")
     return candidates
@@ -640,7 +640,7 @@ def push_feishu(results):
     # 午后情绪过滤
     is_afternoon = datetime.now().hour >= 13
 
-    # ScoreGap: 按 new_total_v2 排序，取 >= max * 0.95
+    # ScoreGap: 按总分排序, 取 >= max*0.90 的股票 (回测验证的最佳平衡点)
     sorted_results = sorted(
         results,
         key=lambda x: x.get("new_total_v2", x.get("total", 0)),
@@ -651,7 +651,7 @@ def push_feishu(results):
         return False
 
     max_nv2 = sorted_results[0].get("new_total_v2", sorted_results[0].get("total", 0))
-    gap_threshold = max_nv2 * 0.98 if max_nv2 > 0 else 0
+    gap_threshold = max_nv2 * 0.90 if max_nv2 > 0 else 0
 
     push_list = []
     for r in sorted_results:

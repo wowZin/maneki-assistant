@@ -332,8 +332,8 @@ def score_fundflow(code: str, trade_date: str = None,
     # ═══════════════════════════════════════════════════════════
     veto_reason = None
 
-    # 否决1: 龙虎榜机构净卖出 > 5000万（极端撤离信号）
-    # 仅在 jvQuant 不可用时检查（jvQuant 路径依赖 top_inst 降级）
+    # 否决1: 龙虎榜机构净卖出 > 流通市值0.3% 或 > 3亿（极端撤离信号）
+    # 修复: 大盘股绝对金额高但占比小，改为相对+绝对双阈值
     if not jv_data:
         inst_rows = _get_top_inst(code, trade_date)
         if inst_rows:
@@ -342,8 +342,21 @@ def score_fundflow(code: str, trade_date: str = None,
                 nb = safe_float(inst.get("net_buy", 0))
                 if nb < 0:
                     net_sell += abs(nb)
-            if net_sell > 50000000:  # 5000万元
-                veto_reason = f"龙虎榜净卖出{net_sell/10000:.0f}万（极端撤离）"
+            # 获取流通市值用于比例判断
+            circ_mv_yuan = 0
+            try:
+                from scripts.tu_share import call_tushare
+                resp_d = call_tushare("daily_basic", {"ts_code": code}, "circ_mv")
+                db_items = resp_d.get("data",{}).get("items",[])
+                if db_items:
+                    db_f = resp_d.get("data",{}).get("fields",[])
+                    d_d = dict(zip(db_f, db_items[0]))
+                    circ_mv_yuan = safe_float(d_d.get("circ_mv", 0)) * 10000  # 万元→元
+            except: pass
+            sell_pct = (net_sell / circ_mv_yuan * 100) if circ_mv_yuan > 0 else 999
+            # 双阈值: 占比>1% 且 绝对额>1亿 → 否决（大盘股容错）
+            if sell_pct > 1.0 and net_sell > 100000000:
+                veto_reason = f"龙虎榜净卖出{net_sell/10000:.0f}万({sell_pct:.2f}%流通市值)（极端撤离）"
 
     if veto_reason:
         return 0.0, f"否决: {veto_reason}"
