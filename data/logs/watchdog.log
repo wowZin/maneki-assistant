@@ -13,3 +13,5 @@
 2026-06-30 15:01:38 [INFO] __main__: 盯盘上限: 5 只
 2026-06-30 15:01:38 [INFO] __main__: ==================================================
 2026-06-30 15:01:38 [INFO] __main__: 通过飞书发送指令: 盯/停/盯盘列表/清盯盘
+2026-06-30 16:01:38 [ERROR] websocket_client: Connection to remote host was lost.
+2026-06-30 16:01:38 [ERROR] websocket: Connection to remote host was lost. - goodbye
