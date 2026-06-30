@@ -108,12 +108,87 @@ def score_all_stocks(daily_codes, trade_date):
 # Phase 2: 逐轮 ScoreGap 模拟
 # ═══════════════════════════════════════════════════════════
 
-def simulate_push(scan_codes, score_cache, gap=0.90):
-    """对一轮扫描的候选股做 ScoreGap 推送决策"""
+def enrich_intraday(score_cache, scan_data, trade_date):
+    """用 jvQuant 分钟数据为高分股补充日内指标 (按扫描时间截断)"""
+    from scripts.jvquant_client import JvQuantClient
+    client = JvQuantClient()
+    date_fmt = f"{trade_date[:4]}-{trade_date[4:6]}-{trade_date[6:8]}"
+
+    # 收集候选: 所有扫描中总分前10的唯一股票
+    all_codes = set()
+    for fn, time_str, codes in scan_data:
+        all_codes.update(codes)
+    ranked = sorted(all_codes, key=lambda c: score_cache.get(c, {}).get("total", 0), reverse=True)
+    to_enrich = [c for c in ranked[:15] if score_cache.get(c, {}).get("total", 0) > 35]
+
+    if not to_enrich: return
+    intraday = {}  # {code: {scan_time: metrics}}
+
+    for code in to_enrich:
+        try:
+            md = client.get_minute_data(code, date_fmt, 1)
+            if not md.get("series"): continue
+            bars = md["series"][0]["bars"]
+            if not bars: continue
+
+            intraday[code] = {}
+            for fn, time_str, codes in scan_data:
+                if code not in codes: continue
+                # 截断到扫描时刻
+                scan_time = f"{time_str[:2]}:{time_str[2:]}"
+                filtered = [b for b in bars if b[0] <= scan_time]
+                if len(filtered) < 3: continue
+
+                prices = [b[1] for b in filtered]
+                volumes = [b[3] for b in filtered]
+                total_vol = sum(volumes)
+                total_amt = sum(p * v for p, v in zip(prices, volumes))
+                vwap = total_amt / total_vol if total_vol > 0 else prices[-1]
+
+                # 日内指标
+                intraday[code][time_str] = {
+                    "price": prices[-1],
+                    "open": prices[0],
+                    "high": max(prices),
+                    "low": min(prices),
+                    "vwap": round(vwap, 2),
+                    "return_since_open": round((prices[-1] / prices[0] - 1) * 100, 2),
+                    "vwap_position": round((prices[-1] / vwap - 1) * 100, 2) if vwap > 0 else 0,
+                    "vol": total_vol,
+                }
+                # 尾盘检测 (14:30后扫描)
+                if scan_time >= "14:30":
+                    tail = [b for b in filtered if b[0] >= "14:30"]
+                    tail_vol = sum(b[3] for b in tail)
+                    intraday[code][time_str]["tail_vol_ratio"] = (
+                        round(tail_vol / total_vol, 3) if total_vol > 0 else 0)
+        except Exception:
+            pass
+
+    # 将日内指标注入 score_cache
+    for code, metrics_by_time in intraday.items():
+        if code in score_cache:
+            score_cache[code]["intraday"] = metrics_by_time
+
+
+def simulate_push(scan_codes, score_cache, scan_time_str=None, gap=0.90):
+    """对一轮扫描的候选股做 ScoreGap 推送决策, 含日内调整"""
     results = []
     for c in scan_codes:
-        if c in score_cache:
-            results.append({"code": c, "total": score_cache[c]["total"]})
+        if c not in score_cache: continue
+        sc = score_cache[c]
+        total = sc["total"]
+        # 日内调整: 有 jvQuant 分钟数据时, 根据盘中走势微调
+        intra = sc.get("intraday", {}).get(scan_time_str, {}) if scan_time_str else {}
+        if intra:
+            # 价格在VWAP上方→加分, 下方→扣分
+            vwap_pos = intra.get("vwap_position", 0)
+            if vwap_pos > 1: total += 3
+            elif vwap_pos < -2: total -= 5
+            # 尾盘放量下跌→扣分
+            if intra.get("tail_vol_ratio", 0) > 0.25 and vwap_pos < 0:
+                total -= 8
+        results.append({"code": c, "total": total})
     if not results: return []
     results.sort(key=lambda x: x["total"], reverse=True)
     threshold = results[0]["total"] * gap
@@ -166,6 +241,9 @@ def run(days=5):
         score_cache = score_all_stocks(daily_codes, date)
         elapsed = time.time() - t0
 
+        # — jvQuant 日内数据补充 (高分股+按扫描时间截断) —
+        enrich_intraday(score_cache, scan_data, date)
+
         # — 逐轮模拟 —
         nd = (datetime.strptime(date, "%Y%m%d") + timedelta(days=1)).strftime("%Y%m%d")
         next_lu = lu.get(nd, set())
@@ -177,7 +255,7 @@ def run(days=5):
         push_total = 0
 
         for fn, time_str, codes in scan_data:
-            pushed = simulate_push(codes, score_cache)
+            pushed = simulate_push(codes, score_cache, time_str)
             push_total += len(pushed)
             for r in pushed:
                 code = r["code"]
