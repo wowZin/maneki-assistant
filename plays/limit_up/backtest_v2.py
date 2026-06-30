@@ -51,20 +51,22 @@ def load_scans(days=20):
 
 
 def load_labels(dates):
-    """拉取次日涨停和涨跌幅"""
+    """拉取当天涨停(命中率) + 次日涨跌幅(胜率)"""
     from scripts.tu_share import call_tushare, clear_tushare_cache
-    lu, pct = {}, {}
+    same_day_lu, next_day_pct = {}, {}
     for d in dates:
         nd = (datetime.strptime(d, "%Y%m%d") + timedelta(days=1)).strftime("%Y%m%d")
-        if nd not in lu:
+        # 当天涨停 = 命中率
+        if d not in same_day_lu:
             clear_tushare_cache()
-            r = call_tushare("limit_list_d", {"trade_date": nd, "limit_type": "U"}, "ts_code")
-            lu[nd] = set(it[0] for it in r.get("data", {}).get("items", []) if it)
-        if nd not in pct:
+            r = call_tushare("limit_list_d", {"trade_date": d, "limit_type": "U"}, "ts_code")
+            same_day_lu[d] = set(it[0] for it in r.get("data", {}).get("items", []) if it)
+        # 次日涨幅 = 胜率 (T+1才能卖出)
+        if nd not in next_day_pct:
             clear_tushare_cache()
             r = call_tushare("daily", {"trade_date": nd}, "ts_code,pct_chg")
-            pct[nd] = {it[0]: float(it[1]) for it in r.get("data", {}).get("items", [])}
-    return lu, pct
+            next_day_pct[nd] = {it[0]: float(it[1]) for it in r.get("data", {}).get("items", [])}
+    return same_day_lu, next_day_pct
 
 
 # ═══════════════════════════════════════════════════════════
@@ -201,7 +203,7 @@ def simulate_push(scan_codes, score_cache, scan_time_str=None, gap=0.90):
 
 def run(days=5):
     dates, by_date = load_scans(days)
-    lu, pct = load_labels(dates)
+    same_day_lu, next_day_pct = load_labels(dates)
 
     total_scans = sum(len(by_date[d]) for d in dates)
     total_stocks = 0
@@ -216,7 +218,7 @@ def run(days=5):
         total_stocks += len(codes)
     print(f"回测: {len(dates)}天 [{dates[0]}->{dates[-1]}], "
           f"{total_scans}轮扫描, ~{total_stocks}只次待评分")
-    print(f"标签: {len(lu)}天涨停 + {len(pct)}天涨跌幅\n")
+    print(f"标签: {len(same_day_lu)}天涨停(命中) + {len(next_day_pct)}天涨跌幅(胜率)\n")
 
     day_results = []
     all_push_details = []
@@ -246,8 +248,8 @@ def run(days=5):
 
         # — 逐轮模拟 —
         nd = (datetime.strptime(date, "%Y%m%d") + timedelta(days=1)).strftime("%Y%m%d")
-        next_lu = lu.get(nd, set())
-        next_pct = pct.get(nd, {})
+        today_lu = same_day_lu.get(date, set())    # 当天涨停=命中
+        next_pct = next_day_pct.get(nd, {})        # 次日涨幅=胜率
 
         day_pushes = set()
         day_hits = set()
@@ -261,14 +263,14 @@ def run(days=5):
                 code = r["code"]
                 if code not in day_pushes:
                     day_pushes.add(code)
-                    if code in next_lu:
+                    if code in today_lu:
                         day_hits.add(code)
                     if next_pct.get(code, 0) > 2:
                         day_wins.add(code)
                     all_push_details.append({
                         "date": date, "scan": fn,
                         "code": code, "total": round(r["total"], 1),
-                        "is_hit": code in next_lu,
+                        "is_hit": code in today_lu,
                         "next_pct": round(next_pct.get(code, 0), 2),
                     })
 
@@ -293,6 +295,12 @@ def run(days=5):
     total_unique = sum(d["push_unique"] for d in day_results)
     total_hits = sum(d["hits"] for d in day_results)
     total_wins = sum(d["wins"] for d in day_results)
+    total_pool = sum(d["unique_stocks"] for d in day_results)
+    # 池中当天涨停数 (基线命中率)
+    pool_hits = 0
+    for d in day_results:
+        today_lu = same_day_lu.get(d["date"], set())
+        pool_hits += len(today_lu)  # 当天全市场涨停数
     denom = max(1, total_unique)
 
     hrs = [d["hits"] / max(1, d["push_unique"]) for d in day_results if d["push_unique"] > 0]
@@ -300,6 +308,7 @@ def run(days=5):
 
     summary = {
         "days": len(day_results), "total_scans": total_scans,
+        "total_pool": total_pool,
         "total_pushes": total_unique, "total_hits": total_hits, "total_wins": total_wins,
         "hit_rate": round(total_hits / denom, 4),
         "win_rate": round(total_wins / denom, 4),
@@ -309,9 +318,9 @@ def run(days=5):
     }
 
     print(f"\n{'='*55}")
-    print(f"汇总: 推送{total_unique}只 涨停{total_hits}({summary['hit_rate']:.1%}) "
-          f"涨>2%{total_wins}({summary['win_rate']:.1%})")
-    print(f"日均: {summary['avg_daily_pushes']}只 "
+    print(f"命中率(当天涨停): {total_hits}/{total_unique} = {summary['hit_rate']:.1%}")
+    print(f"胜率  (次日涨>2%): {total_wins}/{total_unique} = {summary['win_rate']:.1%}")
+    print(f"日均: {summary['avg_daily_pushes']}只推送 "
           f"命中率{summary['avg_hit_rate']:.1%} 胜率{summary['avg_win_rate']:.1%}")
 
     # — 维度贡献分析 —

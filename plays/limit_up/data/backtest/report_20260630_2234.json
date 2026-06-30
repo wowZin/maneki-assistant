@@ -1,0 +1,728 @@
+{
+  "config": {
+    "days": 20,
+    "weights": {
+      "f": 0.5,
+      "t": 0.5,
+      "fl": 1.5,
+      "s": 1.0,
+      "st": 0.5
+    },
+    "scoregap": 0.9
+  },
+  "summary": {
+    "days": 17,
+    "total_scans": 41,
+    "total_pool": 404,
+    "total_pushes": 66,
+    "total_hits": 3,
+    "total_wins": 19,
+    "hit_rate": 0.0455,
+    "win_rate": 0.2879,
+    "avg_hit_rate": 0.0289,
+    "avg_win_rate": 0.3116,
+    "avg_daily_pushes": 3.9
+  },
+  "daily": [
+    {
+      "date": "20260602",
+      "scans": 2,
+      "unique_stocks": 25,
+      "push_total": 6,
+      "push_unique": 6,
+      "hits": 0,
+      "wins": 1,
+      "score_time_s": 59.0
+    },
+    {
+      "date": "20260603",
+      "scans": 2,
+      "unique_stocks": 16,
+      "push_total": 5,
+      "push_unique": 5,
+      "hits": 1,
+      "wins": 1,
+      "score_time_s": 33.0
+    },
+    {
+      "date": "20260604",
+      "scans": 3,
+      "unique_stocks": 13,
+      "push_total": 4,
+      "push_unique": 4,
+      "hits": 0,
+      "wins": 4,
+      "score_time_s": 25.0
+    },
+    {
+      "date": "20260605",
+      "scans": 2,
+      "unique_stocks": 22,
+      "push_total": 8,
+      "push_unique": 8,
+      "hits": 0,
+      "wins": 0,
+      "score_time_s": 46.0
+    },
+    {
+      "date": "20260608",
+      "scans": 2,
+      "unique_stocks": 19,
+      "push_total": 3,
+      "push_unique": 2,
+      "hits": 0,
+      "wins": 2,
+      "score_time_s": 40.0
+    },
+    {
+      "date": "20260610",
+      "scans": 2,
+      "unique_stocks": 20,
+      "push_total": 11,
+      "push_unique": 11,
+      "hits": 1,
+      "wins": 4,
+      "score_time_s": 42.0
+    },
+    {
+      "date": "20260611",
+      "scans": 2,
+      "unique_stocks": 22,
+      "push_total": 3,
+      "push_unique": 3,
+      "hits": 0,
+      "wins": 0,
+      "score_time_s": 34.0
+    },
+    {
+      "date": "20260612",
+      "scans": 2,
+      "unique_stocks": 22,
+      "push_total": 7,
+      "push_unique": 6,
+      "hits": 0,
+      "wins": 0,
+      "score_time_s": 41.0
+    },
+    {
+      "date": "20260617",
+      "scans": 2,
+      "unique_stocks": 31,
+      "push_total": 2,
+      "push_unique": 1,
+      "hits": 0,
+      "wins": 1,
+      "score_time_s": 66.0
+    },
+    {
+      "date": "20260618",
+      "scans": 2,
+      "unique_stocks": 25,
+      "push_total": 2,
+      "push_unique": 1,
+      "hits": 0,
+      "wins": 0,
+      "score_time_s": 34.0
+    },
+    {
+      "date": "20260619",
+      "scans": 2,
+      "unique_stocks": 24,
+      "push_total": 2,
+      "push_unique": 1,
+      "hits": 0,
+      "wins": 0,
+      "score_time_s": 11.0
+    },
+    {
+      "date": "20260622",
+      "scans": 2,
+      "unique_stocks": 38,
+      "push_total": 2,
+      "push_unique": 1,
+      "hits": 0,
+      "wins": 0,
+      "score_time_s": 44.0
+    },
+    {
+      "date": "20260623",
+      "scans": 2,
+      "unique_stocks": 17,
+      "push_total": 7,
+      "push_unique": 4,
+      "hits": 0,
+      "wins": 2,
+      "score_time_s": 27.0
+    },
+    {
+      "date": "20260624",
+      "scans": 2,
+      "unique_stocks": 34,
+      "push_total": 6,
+      "push_unique": 3,
+      "hits": 0,
+      "wins": 2,
+      "score_time_s": 31.0
+    },
+    {
+      "date": "20260625",
+      "scans": 2,
+      "unique_stocks": 35,
+      "push_total": 2,
+      "push_unique": 1,
+      "hits": 0,
+      "wins": 0,
+      "score_time_s": 20.0
+    },
+    {
+      "date": "20260626",
+      "scans": 2,
+      "unique_stocks": 19,
+      "push_total": 8,
+      "push_unique": 4,
+      "hits": 0,
+      "wins": 0,
+      "score_time_s": 14.0
+    },
+    {
+      "date": "20260629",
+      "scans": 2,
+      "unique_stocks": 22,
+      "push_total": 8,
+      "push_unique": 5,
+      "hits": 1,
+      "wins": 2,
+      "score_time_s": 22.0
+    }
+  ],
+  "push_details": [
+    {
+      "date": "20260602",
+      "scan": "20260602_1453.json",
+      "code": "600378.SH",
+      "total": 54.5,
+      "is_hit": false,
+      "next_pct": -4.05
+    },
+    {
+      "date": "20260602",
+      "scan": "20260602_1458.json",
+      "code": "001223.SZ",
+      "total": 42.5,
+      "is_hit": false,
+      "next_pct": 10.0
+    },
+    {
+      "date": "20260602",
+      "scan": "20260602_1458.json",
+      "code": "003019.SZ",
+      "total": 41.8,
+      "is_hit": false,
+      "next_pct": -3.59
+    },
+    {
+      "date": "20260602",
+      "scan": "20260602_1458.json",
+      "code": "603773.SH",
+      "total": 41.7,
+      "is_hit": false,
+      "next_pct": -2.61
+    },
+    {
+      "date": "20260602",
+      "scan": "20260602_1458.json",
+      "code": "002080.SZ",
+      "total": 41.3,
+      "is_hit": false,
+      "next_pct": -2.77
+    },
+    {
+      "date": "20260602",
+      "scan": "20260602_1458.json",
+      "code": "601991.SH",
+      "total": 39.3,
+      "is_hit": false,
+      "next_pct": -0.87
+    },
+    {
+      "date": "20260603",
+      "scan": "20260603_1453.json",
+      "code": "000571.SZ",
+      "total": 40.8,
+      "is_hit": false,
+      "next_pct": -1.2
+    },
+    {
+      "date": "20260603",
+      "scan": "20260603_1453.json",
+      "code": "002149.SZ",
+      "total": 40.0,
+      "is_hit": false,
+      "next_pct": 1.31
+    },
+    {
+      "date": "20260603",
+      "scan": "20260603_1453.json",
+      "code": "603800.SH",
+      "total": 39.6,
+      "is_hit": false,
+      "next_pct": 1.49
+    },
+    {
+      "date": "20260603",
+      "scan": "20260603_1453.json",
+      "code": "002796.SZ",
+      "total": 39.3,
+      "is_hit": false,
+      "next_pct": -6.93
+    },
+    {
+      "date": "20260603",
+      "scan": "20260603_1453.json",
+      "code": "603109.SH",
+      "total": 37.8,
+      "is_hit": true,
+      "next_pct": 2.97
+    },
+    {
+      "date": "20260604",
+      "scan": "20260604_1452.json",
+      "code": "603065.SH",
+      "total": 46.8,
+      "is_hit": false,
+      "next_pct": 10.02
+    },
+    {
+      "date": "20260604",
+      "scan": "20260604_1452.json",
+      "code": "603158.SH",
+      "total": 43.3,
+      "is_hit": false,
+      "next_pct": 3.56
+    },
+    {
+      "date": "20260604",
+      "scan": "20260604_1452.json",
+      "code": "002993.SZ",
+      "total": 43.0,
+      "is_hit": false,
+      "next_pct": 4.21
+    },
+    {
+      "date": "20260604",
+      "scan": "20260604_1457.json",
+      "code": "002132.SZ",
+      "total": 42.2,
+      "is_hit": false,
+      "next_pct": 4.46
+    },
+    {
+      "date": "20260605",
+      "scan": "20260605_1452.json",
+      "code": "603045.SH",
+      "total": 43.2,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260605",
+      "scan": "20260605_1452.json",
+      "code": "603773.SH",
+      "total": 41.7,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260605",
+      "scan": "20260605_1452.json",
+      "code": "600828.SH",
+      "total": 41.5,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260605",
+      "scan": "20260605_1452.json",
+      "code": "603929.SH",
+      "total": 40.0,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260605",
+      "scan": "20260605_1452.json",
+      "code": "001228.SZ",
+      "total": 39.7,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260605",
+      "scan": "20260605_1456.json",
+      "code": "603722.SH",
+      "total": 45.1,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260605",
+      "scan": "20260605_1456.json",
+      "code": "002915.SZ",
+      "total": 43.5,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260605",
+      "scan": "20260605_1456.json",
+      "code": "605208.SH",
+      "total": 42.4,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260608",
+      "scan": "20260608_1451.json",
+      "code": "600378.SH",
+      "total": 54.5,
+      "is_hit": false,
+      "next_pct": 5.14
+    },
+    {
+      "date": "20260608",
+      "scan": "20260608_1451.json",
+      "code": "600522.SH",
+      "total": 51.1,
+      "is_hit": false,
+      "next_pct": 9.99
+    },
+    {
+      "date": "20260610",
+      "scan": "20260610_1452.json",
+      "code": "603203.SH",
+      "total": 43.5,
+      "is_hit": false,
+      "next_pct": 6.87
+    },
+    {
+      "date": "20260610",
+      "scan": "20260610_1452.json",
+      "code": "002181.SZ",
+      "total": 40.8,
+      "is_hit": false,
+      "next_pct": -10.01
+    },
+    {
+      "date": "20260610",
+      "scan": "20260610_1452.json",
+      "code": "002963.SZ",
+      "total": 40.4,
+      "is_hit": false,
+      "next_pct": 0.48
+    },
+    {
+      "date": "20260610",
+      "scan": "20260610_1452.json",
+      "code": "002870.SZ",
+      "total": 40.4,
+      "is_hit": false,
+      "next_pct": -2.51
+    },
+    {
+      "date": "20260610",
+      "scan": "20260610_1452.json",
+      "code": "603687.SH",
+      "total": 40.2,
+      "is_hit": true,
+      "next_pct": -0.94
+    },
+    {
+      "date": "20260610",
+      "scan": "20260610_1452.json",
+      "code": "603826.SH",
+      "total": 39.6,
+      "is_hit": false,
+      "next_pct": 0.0
+    },
+    {
+      "date": "20260610",
+      "scan": "20260610_1452.json",
+      "code": "000802.SZ",
+      "total": 39.4,
+      "is_hit": false,
+      "next_pct": -9.94
+    },
+    {
+      "date": "20260610",
+      "scan": "20260610_1457.json",
+      "code": "600481.SH",
+      "total": 42.0,
+      "is_hit": false,
+      "next_pct": 4.03
+    },
+    {
+      "date": "20260610",
+      "scan": "20260610_1457.json",
+      "code": "002203.SZ",
+      "total": 40.7,
+      "is_hit": false,
+      "next_pct": 10.02
+    },
+    {
+      "date": "20260610",
+      "scan": "20260610_1457.json",
+      "code": "603186.SH",
+      "total": 40.0,
+      "is_hit": false,
+      "next_pct": 4.32
+    },
+    {
+      "date": "20260610",
+      "scan": "20260610_1457.json",
+      "code": "603800.SH",
+      "total": 39.6,
+      "is_hit": false,
+      "next_pct": -5.95
+    },
+    {
+      "date": "20260611",
+      "scan": "20260611_1451.json",
+      "code": "605566.SH",
+      "total": 45.8,
+      "is_hit": false,
+      "next_pct": -3.68
+    },
+    {
+      "date": "20260611",
+      "scan": "20260611_1457.json",
+      "code": "601133.SH",
+      "total": 48.2,
+      "is_hit": false,
+      "next_pct": -4.66
+    },
+    {
+      "date": "20260611",
+      "scan": "20260611_1457.json",
+      "code": "603203.SH",
+      "total": 43.5,
+      "is_hit": false,
+      "next_pct": -8.46
+    },
+    {
+      "date": "20260612",
+      "scan": "20260612_1450.json",
+      "code": "002490.SZ",
+      "total": 43.0,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260612",
+      "scan": "20260612_1450.json",
+      "code": "603608.SH",
+      "total": 41.4,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260612",
+      "scan": "20260612_1450.json",
+      "code": "603039.SH",
+      "total": 39.8,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260612",
+      "scan": "20260612_1450.json",
+      "code": "600869.SH",
+      "total": 39.4,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260612",
+      "scan": "20260612_1456.json",
+      "code": "002428.SZ",
+      "total": 44.7,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260612",
+      "scan": "20260612_1456.json",
+      "code": "002146.SZ",
+      "total": 43.1,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260617",
+      "scan": "20260617_1450.json",
+      "code": "000021.SZ",
+      "total": 65.6,
+      "is_hit": false,
+      "next_pct": 2.63
+    },
+    {
+      "date": "20260618",
+      "scan": "20260618_1450.json",
+      "code": "000021.SZ",
+      "total": 65.6,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260619",
+      "scan": "20260619_1450.json",
+      "code": "000021.SZ",
+      "total": 65.6,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260622",
+      "scan": "20260622_1451.json",
+      "code": "000021.SZ",
+      "total": 65.6,
+      "is_hit": false,
+      "next_pct": -2.1
+    },
+    {
+      "date": "20260623",
+      "scan": "20260623_1451.json",
+      "code": "600522.SH",
+      "total": 51.1,
+      "is_hit": false,
+      "next_pct": 0.29
+    },
+    {
+      "date": "20260623",
+      "scan": "20260623_1451.json",
+      "code": "600703.SH",
+      "total": 48.0,
+      "is_hit": false,
+      "next_pct": 9.98
+    },
+    {
+      "date": "20260623",
+      "scan": "20260623_1451.json",
+      "code": "002747.SZ",
+      "total": 46.8,
+      "is_hit": false,
+      "next_pct": -1.65
+    },
+    {
+      "date": "20260623",
+      "scan": "20260623_1455.json",
+      "code": "001309.SZ",
+      "total": 49.6,
+      "is_hit": false,
+      "next_pct": 7.28
+    },
+    {
+      "date": "20260624",
+      "scan": "20260624_1451.json",
+      "code": "000636.SZ",
+      "total": 57.9,
+      "is_hit": false,
+      "next_pct": 10.0
+    },
+    {
+      "date": "20260624",
+      "scan": "20260624_1451.json",
+      "code": "002407.SZ",
+      "total": 56.4,
+      "is_hit": false,
+      "next_pct": -1.04
+    },
+    {
+      "date": "20260624",
+      "scan": "20260624_1451.json",
+      "code": "000988.SZ",
+      "total": 53.2,
+      "is_hit": false,
+      "next_pct": 3.39
+    },
+    {
+      "date": "20260625",
+      "scan": "20260625_1431.json",
+      "code": "000021.SZ",
+      "total": 65.6,
+      "is_hit": false,
+      "next_pct": 0.58
+    },
+    {
+      "date": "20260626",
+      "scan": "20260626_1450.json",
+      "code": "002579.SZ",
+      "total": 52.3,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260626",
+      "scan": "20260626_1450.json",
+      "code": "001309.SZ",
+      "total": 49.6,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260626",
+      "scan": "20260626_1450.json",
+      "code": "002202.SZ",
+      "total": 49.5,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260626",
+      "scan": "20260626_1450.json",
+      "code": "002617.SZ",
+      "total": 49.3,
+      "is_hit": false,
+      "next_pct": 0
+    },
+    {
+      "date": "20260629",
+      "scan": "20260629_1450.json",
+      "code": "000636.SZ",
+      "total": 57.9,
+      "is_hit": false,
+      "next_pct": -10.0
+    },
+    {
+      "date": "20260629",
+      "scan": "20260629_1450.json",
+      "code": "600552.SH",
+      "total": 54.7,
+      "is_hit": false,
+      "next_pct": 3.49
+    },
+    {
+      "date": "20260629",
+      "scan": "20260629_1450.json",
+      "code": "603650.SH",
+      "total": 54.0,
+      "is_hit": true,
+      "next_pct": 3.78
+    },
+    {
+      "date": "20260629",
+      "scan": "20260629_1450.json",
+      "code": "600667.SH",
+      "total": 53.7,
+      "is_hit": false,
+      "next_pct": 0.83
+    },
+    {
+      "date": "20260629",
+      "scan": "20260629_1455.json",
+      "code": "600584.SH",
+      "total": 53.4,
+      "is_hit": false,
+      "next_pct": 0.29
+    }
+  ]
+}
