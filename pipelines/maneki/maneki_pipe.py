@@ -314,11 +314,10 @@ def build_system_prompt(inbox_dir: str) -> str:
 
 ## 你的能力
 
-1. **分析股票(V1评分)** — 运行 `python plays/limit_up/pipeline.py` 获取五维度评分
-2. **分析股票(V2信号)** — 运行 `python plays/limit_up/pipeline_v2.py` 用信号模式分析涨停候选股
-3. **盯盘管理** — 运行 `python plays/watchdog/watchdog.py` 管理盯盘
-4. **知识查询** — 读取 `wiki/` 目录搜索A股概念和术语
-5. **信号优化** — 运行 `python plays/limit_up/optimize_v2.py --days 14` 优化信号阈值
+1. **分析股票** — 运行 `python plays/limit_up/pipeline.py` 获取五维度评分(基本面/技术面/资金面/情绪面/短线博弈)
+2. **盯盘管理** — 运行 `python plays/watchdog/watchdog.py` 管理盯盘(使用jvQuant实时行情)
+3. **知识查询** — 读取 `wiki/` 目录搜索A股概念和术语
+4. **回测优化** — 运行 `python plays/limit_up/backtest_v2.py` 做因子回测分析
 
 ## 回应方式
 
