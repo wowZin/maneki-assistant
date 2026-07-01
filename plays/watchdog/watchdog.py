@@ -637,14 +637,8 @@ def main():
     if env_file.exists():
         load_dotenv(env_file)
 
-    account = os.getenv("L2API_ACCOUNT", "")
-    password = os.getenv("L2API_PASSWORD", "")
-
-    if not account or not password:
-        logger.error("未配置 L2API_ACCOUNT / L2API_PASSWORD，无法启动盯盘")
-        sys.exit(1)
-
-    # 等待 L2 守护进程就绪
+    # 盯盘使用 jvQuant WebSocket（不再需要旧 L2API 凭证）
+    # 等待 jvQuant WebSocket 就绪
     logger.info("正在连接 L2 守护进程...")
     for _ in range(30):  # 最多等30秒
         if daemon_alive():

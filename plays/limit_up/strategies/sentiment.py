@@ -101,7 +101,7 @@ def score_sentiment(code: str) -> tuple[int | float, str]:
                 tags = s.get('tag', {}).get('concept_tag', [])
                 for tag in tags:
                     if tag not in concept_ul_cnt:
-                        concept_ul_cnt[tag] = 0
+                        concept_ul_cnt[tag] = concept_ul_cnt.get(tag, 0) + 1
 
     def _get_ul_cnt(concept_name):
         return concept_ul_cnt.get(concept_name, 0)

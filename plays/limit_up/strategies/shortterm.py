@@ -200,6 +200,8 @@ def _score_momentum(code: str, daily_data, limit_history) -> tuple:
     reasons = []
     score = 0
     has_limit_history = limit_history is not None and not limit_history.empty
+    is_current_limit_up = False
+    limit_times = 0
 
     if has_limit_history:
         # 涨停日期列表（降序）

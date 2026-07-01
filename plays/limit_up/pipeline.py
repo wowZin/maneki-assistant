@@ -606,13 +606,13 @@ def _get_feishu_token():
 def push_feishu(results):
     """发送飞书卡片
 
-    推送规则（V2 ScoreGap）：
+    推送规则（ScoreGap）：
     - 按 new_total_v2 排序
     - 取 >= max_score * 0.95 的股票（ScoreGap）
-    - 最少 2 只，最多 5 只
-    - 同日已推送的股票不再重复推送
+    - 最多 5 只
     - 午后情绪面<25过滤
-    - 推送记录保存到 data/pushed/ 目录
+    - 推送记录保存到 data/pushed/ 目录（复盘/回测去重用）
+    - 不按日去重：持续高分说明强势延续，应持续推送提醒
     """
     import requests
 
@@ -623,19 +623,6 @@ def push_feishu(results):
         if total >= 35: return "⭐ ⭐ ⭐"  # noqa: E701
         if total >= 30: return "⭐ ⭐"  # noqa: E701
         return ""
-
-    # 同日去重
-    pushed_codes_today = set()
-    pushed_dir = DATA_DIR / "pushed"
-    today_prefix = datetime.now().strftime("%Y%m%d")
-    if pushed_dir.exists():
-        for pf in pushed_dir.glob(f"{today_prefix}_*.json"):
-            try:
-                for item in json.loads(pf.read_text()):
-                    if isinstance(item, dict) and "code" in item:
-                        pushed_codes_today.add(item["code"])
-            except Exception:
-                pass
 
     # 午后情绪过滤
     is_afternoon = datetime.now().hour >= 13
@@ -659,8 +646,6 @@ def push_feishu(results):
         nv2 = r.get("new_total_v2", r.get("total", 0))
         s = r.get("scores", {})
 
-        if code in pushed_codes_today:
-            continue
         if nv2 < gap_threshold:
             continue
         if is_afternoon and s.get("sentiment", 0) < 25:
@@ -1052,6 +1037,9 @@ def _run_pipeline(args):
         from scripts.jvquant_ws_client import daemon_unsubscribe as jv_unsub
         all_codes = [c["code"] for c in candidates]
         jv_unsub(all_codes)
+
+    # 计算 new_total_v2 用于 ScoreGap 排序和卡片展示
+    _compute_new_total_v2_batch(all_results)
 
     push_feishu(all_results)
 
