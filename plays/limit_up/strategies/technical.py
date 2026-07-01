@@ -36,7 +36,7 @@ from plays.limit_up.utils import safe_float_none, is_trading_time  # noqa: E402
 from plays.limit_up.pipeline import _get_realtime_fund_cache  # noqa: E402
 
 
-def score_technical(code: str) -> tuple[int | float, str]:
+def score_technical(code: str, trade_date: str | None = None) -> tuple[int | float, str]:
     """
     技术面 : 数据驱动的涨停潜力预判 (0-100)
 
@@ -400,13 +400,13 @@ def score_technical(code: str) -> tuple[int | float, str]:
         if mv_yi < 30:
             chip_score += 10
             chip_reasons.append(f"微型市值({mv_yi:.0f}亿)+10")
-        elif mv_yi < 50:
-            chip_score += 8
-            chip_reasons.append(f"小市值({mv_yi:.0f}亿)+8")
         elif mv_yi < 100:
+            chip_score += 8
+            chip_reasons.append(f"小中市值({mv_yi:.0f}亿)+8")
+        elif mv_yi < 300:
             chip_score += 5
             chip_reasons.append(f"中市值({mv_yi:.0f}亿)+5")
-        elif mv_yi < 200:
+        elif mv_yi < 500:
             chip_score += 2
             chip_reasons.append(f"大市值({mv_yi:.0f}亿)+2")
         else:

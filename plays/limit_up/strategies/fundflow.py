@@ -375,10 +375,10 @@ def score_fundflow(code: str, trade_date: str = None,
         center=0.40,       # 中单净占比 0.40% 为中枢（典型活跃股中单流入水平）
         scale=0.35,        # 0.35% 标准差 → 0.05%~0.75% 区间覆盖过渡区
         pos_max=35.0,
-        neg_max=-12.0,     # 负向最多扣 12 分（中单流出弱于流入的预测力）
+        neg_max=-3.0,      # 负向最多扣 3 分（放宽：涨停日中单流出是常态非异常）
     )
     dim1 = round(dim1, 1)
-    dim1 = max(-12.0, min(35.0, dim1))
+    dim1 = max(-3.0, min(35.0, dim1))
 
     # 构造中单净额描述（有成交额则附百分比，否则仅绝对值）
     if amount_yuan > 0:

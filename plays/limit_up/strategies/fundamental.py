@@ -83,7 +83,7 @@ def _get_concept_count(code: str) -> int:
     return 0
 
 
-def score_fundamental(code: str) -> tuple[int | float, str]:
+def score_fundamental(code: str, trade_date: str | None = None) -> tuple[int | float, str]:
     """基本面评分：催化剂导向 (0-100)
 
     从"选好公司"转向"选爆发力"——不奖励稳定高质量的公司，
@@ -143,7 +143,7 @@ def score_fundamental(code: str) -> tuple[int | float, str]:
     unlock_ratio_max = 0.0
     unlock_date_str = ""
     try:
-        start_dt = datetime.now()
+        start_dt = trade_date if trade_date else datetime.now()
         end_dt = start_dt + timedelta(days=60)
         resp = call_tushare("share_float", {
             "ts_code": code,

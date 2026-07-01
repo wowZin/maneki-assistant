@@ -1,302 +1,302 @@
 [
   {
     "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
+      "fundamental": 0.7,
+      "technical": 1.0,
       "fundflow": 0.1,
-      "sentiment": 0.1,
+      "sentiment": 2.5,
       "shortterm": 1.0
     },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 27.24,
-    "score": 99.0
+    "gap": 0.85,
+    "hit_rate": 0.2105,
+    "captured": 60,
+    "total_stocks": 285,
+    "avg_total": 45.5,
+    "score": 18.05
   },
   {
     "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
-      "fundflow": 0.1,
-      "sentiment": 0.1,
-      "shortterm": 1.5
+      "fundamental": 0.7,
+      "technical": 1.0,
+      "fundflow": 0.3,
+      "sentiment": 2.5,
+      "shortterm": 1.0
     },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 25.98,
-    "score": 99.0
+    "gap": 0.85,
+    "hit_rate": 0.2105,
+    "captured": 60,
+    "total_stocks": 285,
+    "avg_total": 45.5,
+    "score": 18.05
   },
   {
     "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
-      "fundflow": 0.1,
-      "sentiment": 0.1,
-      "shortterm": 2.0
+      "fundamental": 0.7,
+      "technical": 1.0,
+      "fundflow": 0.5,
+      "sentiment": 2.5,
+      "shortterm": 1.0
     },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 25.3,
-    "score": 99.0
+    "gap": 0.85,
+    "hit_rate": 0.2105,
+    "captured": 60,
+    "total_stocks": 285,
+    "avg_total": 45.5,
+    "score": 18.05
   },
   {
     "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
+      "fundamental": 0.5,
+      "technical": 0.7,
       "fundflow": 0.1,
-      "sentiment": 0.1,
-      "shortterm": 2.5
-    },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 24.87,
-    "score": 99.0
-  },
-  {
-    "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
-      "fundflow": 0.1,
-      "sentiment": 0.1,
-      "shortterm": 3.0
-    },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 24.57,
-    "score": 99.0
-  },
-  {
-    "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
-      "fundflow": 0.1,
-      "sentiment": 0.3,
-      "shortterm": 0.3
-    },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 32.87,
-    "score": 99.0
-  },
-  {
-    "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
-      "fundflow": 0.1,
-      "sentiment": 0.3,
-      "shortterm": 0.5
-    },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 30.67,
-    "score": 99.0
-  },
-  {
-    "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
-      "fundflow": 0.1,
-      "sentiment": 0.3,
+      "sentiment": 1.5,
       "shortterm": 0.7
     },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 29.27,
-    "score": 99.0
+    "gap": 0.85,
+    "hit_rate": 0.207,
+    "captured": 59,
+    "total_stocks": 285,
+    "avg_total": 45.56,
+    "score": 17.7
   },
   {
     "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
-      "fundflow": 0.1,
-      "sentiment": 0.3,
-      "shortterm": 1.0
-    },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 27.92,
-    "score": 99.0
-  },
-  {
-    "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
-      "fundflow": 0.1,
-      "sentiment": 0.3,
-      "shortterm": 1.5
-    },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 26.62,
-    "score": 99.0
-  },
-  {
-    "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
-      "fundflow": 0.1,
-      "sentiment": 0.3,
-      "shortterm": 2.0
-    },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 25.86,
-    "score": 99.0
-  },
-  {
-    "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
-      "fundflow": 0.1,
-      "sentiment": 0.3,
-      "shortterm": 2.5
-    },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 25.36,
-    "score": 99.0
-  },
-  {
-    "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
-      "fundflow": 0.1,
-      "sentiment": 0.3,
-      "shortterm": 3.0
-    },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 25.01,
-    "score": 99.0
-  },
-  {
-    "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
-      "fundflow": 0.1,
-      "sentiment": 0.5,
-      "shortterm": 0.3
-    },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 33.64,
-    "score": 99.0
-  },
-  {
-    "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
-      "fundflow": 0.1,
-      "sentiment": 0.5,
-      "shortterm": 0.5
-    },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 31.7,
-    "score": 99.0
-  },
-  {
-    "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
-      "fundflow": 0.1,
-      "sentiment": 0.5,
+      "fundamental": 0.5,
+      "technical": 0.7,
+      "fundflow": 0.3,
+      "sentiment": 1.5,
       "shortterm": 0.7
     },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 30.36,
-    "score": 99.0
+    "gap": 0.85,
+    "hit_rate": 0.207,
+    "captured": 59,
+    "total_stocks": 285,
+    "avg_total": 45.56,
+    "score": 17.7
   },
   {
     "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
+      "fundamental": 0.7,
+      "technical": 1.0,
       "fundflow": 0.1,
-      "sentiment": 0.5,
+      "sentiment": 2.0,
       "shortterm": 1.0
     },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 28.97,
-    "score": 99.0
+    "gap": 0.85,
+    "hit_rate": 0.193,
+    "captured": 55,
+    "total_stocks": 285,
+    "avg_total": 45.44,
+    "score": 16.3
   },
   {
     "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
-      "fundflow": 0.1,
-      "sentiment": 0.5,
-      "shortterm": 1.5
+      "fundamental": 0.7,
+      "technical": 1.0,
+      "fundflow": 0.3,
+      "sentiment": 2.0,
+      "shortterm": 1.0
     },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 27.54,
-    "score": 99.0
+    "gap": 0.85,
+    "hit_rate": 0.193,
+    "captured": 55,
+    "total_stocks": 285,
+    "avg_total": 45.44,
+    "score": 16.3
   },
   {
     "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
-      "fundflow": 0.1,
-      "sentiment": 0.5,
-      "shortterm": 2.0
+      "fundamental": 0.7,
+      "technical": 1.0,
+      "fundflow": 0.5,
+      "sentiment": 2.0,
+      "shortterm": 1.0
     },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 26.66,
-    "score": 99.0
+    "gap": 0.85,
+    "hit_rate": 0.193,
+    "captured": 55,
+    "total_stocks": 285,
+    "avg_total": 45.44,
+    "score": 16.3
   },
   {
     "weights": {
-      "fundamental": 0.1,
-      "technical": 0.1,
+      "fundamental": 0.5,
+      "technical": 0.7,
       "fundflow": 0.1,
-      "sentiment": 0.5,
-      "shortterm": 2.5
+      "sentiment": 2.0,
+      "shortterm": 0.7
     },
-    "gap": 0.95,
-    "hit_rate": 1.0,
-    "captured": 3,
-    "total_stocks": 3,
-    "avg_total": 26.07,
-    "score": 99.0
+    "gap": 0.85,
+    "hit_rate": 0.186,
+    "captured": 53,
+    "total_stocks": 285,
+    "avg_total": 45.62,
+    "score": 15.6
+  },
+  {
+    "weights": {
+      "fundamental": 0.5,
+      "technical": 0.7,
+      "fundflow": 0.3,
+      "sentiment": 2.0,
+      "shortterm": 0.7
+    },
+    "gap": 0.85,
+    "hit_rate": 0.186,
+    "captured": 53,
+    "total_stocks": 285,
+    "avg_total": 45.62,
+    "score": 15.6
+  },
+  {
+    "weights": {
+      "fundamental": 0.5,
+      "technical": 2.0,
+      "fundflow": 0.1,
+      "sentiment": 2.0,
+      "shortterm": 0.7
+    },
+    "gap": 0.85,
+    "hit_rate": 0.186,
+    "captured": 53,
+    "total_stocks": 285,
+    "avg_total": 41.16,
+    "score": 15.6
+  },
+  {
+    "weights": {
+      "fundamental": 0.5,
+      "technical": 2.0,
+      "fundflow": 0.3,
+      "sentiment": 2.0,
+      "shortterm": 0.7
+    },
+    "gap": 0.85,
+    "hit_rate": 0.186,
+    "captured": 53,
+    "total_stocks": 285,
+    "avg_total": 41.16,
+    "score": 15.6
+  },
+  {
+    "weights": {
+      "fundamental": 1.5,
+      "technical": 2.0,
+      "fundflow": 1.0,
+      "sentiment": 2.5,
+      "shortterm": 1.0
+    },
+    "gap": 0.85,
+    "hit_rate": 0.186,
+    "captured": 53,
+    "total_stocks": 285,
+    "avg_total": 44.68,
+    "score": 15.6
+  },
+  {
+    "weights": {
+      "fundamental": 0.5,
+      "technical": 0.5,
+      "fundflow": 0.3,
+      "sentiment": 1.0,
+      "shortterm": 0.5
+    },
+    "gap": 0.85,
+    "hit_rate": 0.1825,
+    "captured": 52,
+    "total_stocks": 285,
+    "avg_total": 46.64,
+    "score": 15.25
+  },
+  {
+    "weights": {
+      "fundamental": 0.5,
+      "technical": 2.5,
+      "fundflow": 0.1,
+      "sentiment": 2.0,
+      "shortterm": 0.7
+    },
+    "gap": 0.85,
+    "hit_rate": 0.1825,
+    "captured": 52,
+    "total_stocks": 285,
+    "avg_total": 40.33,
+    "score": 15.25
+  },
+  {
+    "weights": {
+      "fundamental": 0.5,
+      "technical": 2.5,
+      "fundflow": 0.3,
+      "sentiment": 2.0,
+      "shortterm": 0.7
+    },
+    "gap": 0.85,
+    "hit_rate": 0.1825,
+    "captured": 52,
+    "total_stocks": 285,
+    "avg_total": 40.33,
+    "score": 15.25
+  },
+  {
+    "weights": {
+      "fundamental": 0.7,
+      "technical": 0.7,
+      "fundflow": 0.5,
+      "sentiment": 1.5,
+      "shortterm": 0.5
+    },
+    "gap": 0.85,
+    "hit_rate": 0.1825,
+    "captured": 52,
+    "total_stocks": 285,
+    "avg_total": 46.39,
+    "score": 15.25
+  },
+  {
+    "weights": {
+      "fundamental": 0.7,
+      "technical": 3.0,
+      "fundflow": 0.1,
+      "sentiment": 3.0,
+      "shortterm": 1.0
+    },
+    "gap": 0.85,
+    "hit_rate": 0.1825,
+    "captured": 52,
+    "total_stocks": 285,
+    "avg_total": 41.04,
+    "score": 15.25
+  },
+  {
+    "weights": {
+      "fundamental": 0.7,
+      "technical": 3.0,
+      "fundflow": 0.3,
+      "sentiment": 3.0,
+      "shortterm": 1.0
+    },
+    "gap": 0.85,
+    "hit_rate": 0.1825,
+    "captured": 52,
+    "total_stocks": 285,
+    "avg_total": 41.04,
+    "score": 15.25
+  },
+  {
+    "weights": {
+      "fundamental": 0.7,
+      "technical": 3.0,
+      "fundflow": 0.5,
+      "sentiment": 3.0,
+      "shortterm": 1.0
+    },
+    "gap": 0.85,
+    "hit_rate": 0.1825,
+    "captured": 52,
+    "total_stocks": 285,
+    "avg_total": 41.04,
+    "score": 15.25
   }
 ]

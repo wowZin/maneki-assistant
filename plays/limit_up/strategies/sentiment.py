@@ -35,7 +35,7 @@ from plays.limit_up.pipeline import (  # noqa: E402
 )
 
 
-def score_sentiment(code: str) -> tuple[int | float, str]:
+def score_sentiment(code: str, trade_date: str | None = None) -> tuple[int | float, str]:
     """
     情绪面  评分（0-100）
 
@@ -52,8 +52,8 @@ def score_sentiment(code: str) -> tuple[int | float, str]:
     # ═══════════════════════════════════════════════════════════
     # 0. 基础参数
     # ═══════════════════════════════════════════════════════════
-    today_str = datetime.now().strftime('%Y%m%d')
-    yesterday_str = (datetime.now() - timedelta(days=1)).strftime('%Y%m%d')
+    today_str = trade_date or datetime.now().strftime('%Y%m%d')
+    yesterday_str = (datetime.strptime(today_str, '%Y%m%d') - timedelta(days=1)).strftime('%Y%m%d') if trade_date else (datetime.now() - timedelta(days=1)).strftime('%Y%m%d')
     code_short = code.split('.')[0]
 
     # ═══════════════════════════════════════════════════════════
@@ -219,7 +219,7 @@ def score_sentiment(code: str) -> tuple[int | float, str]:
                 market_state_multiplier = 1.3
             elif mkt_advance_decline_ratio < 0.8 or amount_ratio < 0.7:
                 market_state = "熊市"
-                market_state_multiplier = 0.7  # : 熊市保底 0.7x（原 0.6）
+                market_state_multiplier = 0.9  # 熊市保底 0.9x（原 0.7，放宽）
             else:
                 market_state = "震荡"
                 market_state_multiplier = 1.0

@@ -13,7 +13,7 @@
     "signal_at": "",
     "avg_vol_20": 0.0,
     "last_alert_at": "",
-    "last_daily_update": "20260630"
+    "last_daily_update": "20260701"
   },
   "002484.SZ": {
     "code": "002484.SZ",
@@ -29,6 +29,14 @@
     "signal_at": "",
     "avg_vol_20": 0.0,
     "last_alert_at": "",
-    "last_daily_update": "20260630"
-  }
+    "last_daily_update": "20260701"
+  },
+  "watchlist": [
+    {
+      "code": "002119.SZ",
+      "name": "康强电子",
+      "price": 13.9476,
+      "added_at": "2026-07-01T13:43:39.815523"
+    }
+  ]
 }
