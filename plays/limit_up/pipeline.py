@@ -93,10 +93,10 @@ def load_from_file(filepath):
     path = Path(filepath)
     if not path.is_absolute():
         path = PROJECT_DIR / filepath
-    
+
     with open(path) as f:
         raw = json.load(f)
-    
+
     # 兼容两种格式：直接list 或 dict包含stocks
     if isinstance(raw, dict) and "stocks" in raw:
         stocks = raw["stocks"]
@@ -105,7 +105,7 @@ def load_from_file(filepath):
     else:
         print(f"无法解析信号文件格式: {type(raw)}")
         return None
-    
+
     # 统一转换为标准格式 {code, name}
     candidates = []
     for s in stocks:
@@ -118,7 +118,7 @@ def load_from_file(filepath):
             else:
                 code = f"{code}.SZ"
         candidates.append({"code": code, "name": name})
-    
+
     print(f"从文件加载: {len(candidates)} 只候选股")
     return candidates
 
@@ -385,7 +385,7 @@ def score_sentiment(code):
     return _score_sentiment(code)
 
 
-# ===== new_total_v2 计算 =====
+# ===== 面板数据预取（供 total_score 使用）=====
 # 缓存当日 Tushare daily 和 limit_list 数据（避免重复请求）
 _NV2_DAILY_CACHE: dict[str, list[dict]] = {}  # code → [{trade_date, close, high, low, ...}]
 _NV2_DAILY_BASIC_CACHE: dict[str, dict[str, dict]] = {}  # code → {trade_date: {pe, pb, circ_mv, ...}}
@@ -395,11 +395,11 @@ _NV2_DATE = ""
 
 
 def _fetch_nv2_data(codes: list[str]):
-    """批量拉取 new_total_v2 / balanced_total_pit 所需的 Tushare 数据
+    """批量拉取 total_score 所需的 Tushare 面板数据
 
     数据源:
       - daily: 前收盘价(pre_close) → 计算 trailing_10/5, position_20d, std10, max_pct_chg_5d
-      - daily_basic: PE/PB/市值/换手/量比 → PIT 综合评分
+      - daily_basic: PE/PB/市值/换手/量比 → PIT 面板列
       - limit_list_d: 近60日涨停次数 → 涨停基因(20d/60d)
     """
     global _NV2_DAILY_CACHE, _NV2_DAILY_BASIC_CACHE, _NV2_LIMIT_CACHE, _NV2_LIMIT_60D_CACHE, _NV2_DATE
@@ -536,137 +536,6 @@ def _send_jvquant_error(msg: str):
         pass
 
 
-def _compute_new_total_v2_batch(results: list[dict], pit_mode: bool | None = None):
-    """为批次结果计算 new_total_v2 评分。
-
-    new_total_v2 = shortterm * 1.8
-                  + fundamental * 0.6
-                  + technical * 0.5
-                  + limit_up_gene * 1.0
-                  + pullback_quality * 0.8
-                  - chasing_penalty
-
-    其中 trailing_10/position_20d/pullback_10d 从 Tushare daily 计算。
-
-    Args:
-        pit_mode: True 表示盘中模式，用 T-1 收盘作为最新可用日线；
-                  None 则自动根据 is_trading_time() 判断。
-    """
-    if not results:
-        return
-
-    if pit_mode is None:
-        pit_mode = is_trading_time()
-
-    codes = [r["code"] for r in results]
-    _fetch_nv2_data(codes)
-
-    for r in results:
-        code = r["code"]
-        code_short = code.replace(".SH", "").replace(".SZ", "")
-        s = r.get("scores", {})
-        st = s.get("shortterm", 0)
-        fund = s.get("fundamental", 0)
-        tech = s.get("technical", 0)
-        pct = r.get("pct_chg", 0)
-
-        # --- trailing_10: 近10日涨幅 ---
-        daily_rows = _NV2_DAILY_CACHE.get(code, [])
-        daily_rows.sort(key=lambda x: x.get("trade_date", ""), reverse=True)
-        idx = 1 if pit_mode else 0  # 盘中用 T-1 作为当前 bar
-
-        trailing_10 = None
-        if len(daily_rows) >= 10 + idx:
-            close_current = daily_rows[idx].get("close")
-            close_10ago = daily_rows[idx + 9].get("close")
-            if close_current and close_10ago:
-                try:
-                    trailing_10 = (float(close_current) / float(close_10ago) - 1) * 100
-                except (ValueError, TypeError):
-                    pass
-        if trailing_10 is None:
-            trailing_10 = pct  # 降级：用当日涨幅
-
-        # --- trailing_5: 近5日涨幅 ---
-        trailing_5 = None
-        if len(daily_rows) >= 5 + idx:
-            close_current = daily_rows[idx].get("close")
-            close_5ago = daily_rows[idx + 4].get("close")
-            if close_current and close_5ago:
-                try:
-                    trailing_5 = (float(close_current) / float(close_5ago) - 1) * 100
-                except (ValueError, TypeError):
-                    pass
-        if trailing_5 is None:
-            trailing_5 = pct
-
-        # --- position_20d: 现价处于20日区间位置 (0~1) ---
-        position_20d = 0.5
-        if len(daily_rows) >= 5 + idx:
-            try:
-                rows = daily_rows[idx:idx + 20]
-                highs = [float(rr.get("high", 0)) for rr in rows if rr.get("high")]
-                lows = [float(rr.get("low", 0)) for rr in rows if rr.get("low")]
-                closes = [float(rr.get("close", 0)) for rr in rows if rr.get("close")]
-                if highs and lows and closes:
-                    h20 = max(highs)
-                    l20 = min(lows)
-                    c0 = closes[0]
-                    if h20 > l20:
-                        position_20d = (c0 - l20) / (h20 - l20)
-            except (ValueError, TypeError):
-                pass
-
-        # --- pullback_10d: 距10日高点回撤幅度 (0~1)---
-        pullback_10d = 0.1
-        if len(daily_rows) >= 2 + idx:
-            try:
-                rows = daily_rows[idx:idx + 10]
-                highs_10 = [float(rr.get("high", 0)) for rr in rows if rr.get("high")]
-                closes = [float(rr.get("close", 0)) for rr in rows if rr.get("close")]
-                if highs_10 and closes:
-                    h10 = max(highs_10)
-                    c0 = closes[0]
-                    if h10 > 0:
-                        pullback_10d = max(0.0, (h10 - c0) / h10)
-            except (ValueError, TypeError):
-                pass
-
-        # --- limit_up_gene: 近20日涨停次数 → 归一化到 0-25 ---
-        limit_gene = min(_NV2_LIMIT_CACHE.get(code, 0) * 5, 25)
-
-        # --- 追高惩罚: position_20d > 0.85 时降权 ---
-        chasing_penalty = 0.0
-        if position_20d > 0.85:
-            chasing_penalty = (position_20d - 0.85) * 30
-
-        # --- new_total_v2 计算 ---
-        score = st * 1.8             # 短线博弈为核心 (0-50 → 0-90)
-        score += fund * 0.6          # 基本面提胜率
-        score += tech * 0.5          # 技术面确认
-
-        # 涨停基因
-        score += limit_gene          # 0-25
-
-        # 回调质量: 有回撤时加分（回调越深质量分越高）
-        pb_score = pullback_10d * 12  # 0-12
-        score += pb_score
-
-        # 追高惩罚
-        score -= chasing_penalty
-
-        # 短线热度修正: trailing_10 过高的降权 (防追涨过头)
-        if trailing_10 > 30:
-            score -= (trailing_10 - 30) * 0.5
-
-        score = max(0, score)
-
-        r["new_total_v2"] = round(score, 1)
-        r["_nv2_trailing_10"] = round(trailing_10, 1)
-        r["_nv2_position_20d"] = round(position_20d, 3)
-        r["_nv2_limit_gene"] = limit_gene
-
-
 def _safe_float(val, default: float = 0.0) -> float:
     if val is None:
         return default
@@ -677,7 +546,7 @@ def _safe_float(val, default: float = 0.0) -> float:
 
 
 def _extract_pit_features(code: str, pit_mode: bool) -> dict:
-    """从 _NV2_*_CACHE 提取 PIT 特征，供 balanced_total_pit 子因子使用。"""
+    """从 _NV2_*_CACHE 提取 PIT 面板行，供 total_score 与 factors/ 使用。"""
     daily_rows = _NV2_DAILY_CACHE.get(code, [])
     daily_rows.sort(key=lambda x: x.get("trade_date", ""), reverse=True)
     idx = 1 if pit_mode else 0
@@ -800,456 +669,6 @@ def _extract_pit_features(code: str, pit_mode: bool) -> dict:
     return feats
 
 
-def _factor_large_cap_limit_gene_pit(feats: dict, tech: float) -> float:
-    circ_mv = feats["circ_mv"]
-    gene20 = feats["limit_up_count_20d"]
-    gene60 = feats["limit_up_count_60d"]
-
-    score = 0.0
-    if circ_mv >= 500_0000:
-        score += 12.0
-    elif circ_mv >= 200_0000:
-        score += 9.0
-    elif circ_mv >= 100_0000:
-        score += 6.0
-    elif circ_mv >= 50_0000:
-        score += 3.0
-
-    if gene20 >= 2:
-        score += 10.0
-    elif gene20 >= 1:
-        score += 5.0
-    if gene60 >= 3:
-        score += 6.0
-    elif gene60 >= 1:
-        score += 3.0
-
-    if tech >= 40:
-        score += 6.0
-    elif tech >= 25:
-        score += 3.0
-
-    return score
-
-
-def _factor_volatility_activation_pit(feats: dict) -> float:
-    std10 = feats["pct_chg_std_10d"]
-    std5 = feats["pct_chg_std_5d"]
-    position = feats["position_20d"]
-    max5 = feats["max_pct_chg_5d"]
-
-    score = 0.0
-    if std10 > 4.5 and 0.30 <= position <= 0.70 and max5 > 5.0:
-        score += 20.0
-    elif std10 > 3.5 and 0.25 <= position <= 0.75 and max5 > 3.5:
-        score += 12.0
-    elif std5 > 3.0 and position > 0.20:
-        score += 6.0
-
-    if std10 < 2.0:
-        score -= 4.0
-    return score
-
-
-def _factor_turnover_momentum_pit(feats: dict) -> float:
-    turnover = feats["turnover_rate"]
-    vol_ratio = feats["volume_ratio"]
-    std5 = feats["pct_chg_std_5d"]
-    position = feats["position_20d"]
-
-    score = 0.0
-    if turnover >= 15 and vol_ratio >= 1.5 and std5 >= 3.0 and 0.30 <= position <= 0.80:
-        score += 18.0
-    elif turnover >= 10 and vol_ratio >= 1.2 and std5 >= 2.5 and position >= 0.25:
-        score += 12.0
-    elif turnover >= 5 and vol_ratio >= 1.0 and std5 >= 2.0:
-        score += 5.0
-
-    if turnover < 2:
-        score -= 5.0
-    return score
-
-
-def _factor_limit_gene_momentum_pit(feats: dict, tech: float) -> float:
-    gene20 = feats["limit_up_count_20d"]
-    gene60 = feats["limit_up_count_60d"]
-    t10 = feats["trailing_10"]
-    position = feats["position_20d"]
-
-    score = 0.0
-    if gene20 >= 3:
-        score += 15.0
-    elif gene20 >= 2:
-        score += 10.0
-    elif gene20 >= 1:
-        score += 5.0
-
-    if gene60 >= 4:
-        score += 8.0
-    elif gene60 >= 2:
-        score += 4.0
-
-    if tech >= 40:
-        score += 8.0
-    elif tech >= 25:
-        score += 4.0
-
-    if t10 > 0.35:
-        score *= 0.60
-    elif t10 > 0.25:
-        score *= 0.80
-    if position > 0.85:
-        score *= 0.70
-
-    return round(score, 2)
-
-
-def _factor_growth_momentum_pit(feats: dict, st: float, tech: float) -> float:
-    pe = feats["pe"]
-    pb = feats["pb"]
-    std10 = feats["pct_chg_std_10d"]
-
-    score = 0.0
-    if pe > 50 or pe <= 0:
-        score += 6.0
-    elif pe > 30:
-        score += 3.0
-
-    if pb > 5:
-        score += 4.0
-    elif pb > 3:
-        score += 2.0
-
-    if st >= 45 and tech >= 35 and std10 >= 3.5:
-        score += 12.0
-    elif st >= 35 and tech >= 25 and std10 >= 2.5:
-        score += 6.0
-
-    return score
-
-
-def _factor_concept_momentum(cm: dict) -> float:
-    """概念动量：使用 factor_ctx.get_concept_momentum 返回的字典。"""
-    ret1 = cm.get("ret1_max", 0.0)
-    ret3 = cm.get("ret3_max", 0.0)
-    ret5 = cm.get("ret5_max", 0.0)
-    ret1_avg = cm.get("ret1_avg", 0.0)
-    ret3_avg = cm.get("ret3_avg", 0.0)
-    n_cpt = cm.get("n_concepts", 0.0)
-    up_ratio = cm.get("up_ratio", 0.5)
-
-    score = ret3 * 2.5
-    if ret1 > 2.0:
-        score += ret1 * 0.8
-    elif ret1 < -2.0:
-        if ret3 > 3.0:
-            score += ret3 * 0.3
-    if ret5 > 5.0:
-        score += 5.0
-    elif ret5 < -5.0:
-        score -= 8.0
-    if ret3_avg > 2.0 and ret1_avg > 0:
-        score += ret3_avg * 1.0
-    if n_cpt >= 5:
-        if up_ratio > 0.6:
-            score += 8.0
-        elif up_ratio > 0.4:
-            score += 4.0
-    elif n_cpt >= 3:
-        if up_ratio > 0.6:
-            score += 5.0
-    return round(score, 2)
-
-
-def _factor_concept_up_streak(cm: dict) -> float:
-    streak = cm.get("up_streak_max", 0.0)
-    ret1 = cm.get("ret1_max", 0.0)
-    if streak >= 3 and ret1 > 0:
-        return 12.0
-    elif streak >= 2 and ret1 > 0:
-        return 7.0
-    elif streak >= 2:
-        return 3.0
-    return 0.0
-
-
-def _factor_concept_turnover(cm: dict) -> float:
-    turn = cm.get("turn_5d_max", 0.0)
-    ret3 = cm.get("ret3_max", 0.0)
-    if turn > 15 and ret3 > 2:
-        return 10.0
-    elif turn > 10 and ret3 > 0:
-        return 5.0
-    elif turn > 20:
-        return -5.0
-    return 0.0
-
-
-def _compute_balanced_total_batch(results: list[dict], pit_mode: bool | None = None):
-    """为批次结果计算 balanced_total 评分（五维度聚合 + 反追高惩罚）。
-
-    balanced_total = (sentiment * 0.40
-                    + shortterm * 0.30
-                    + technical * 0.20
-                    + fundflow * 0.05
-                    + fundamental * 0.05)
-                    × chasing_penalty
-
-    Args:
-        pit_mode: True 表示盘中模式，用 T-1 收盘作为最新可用日线；
-                  None 则自动根据 is_trading_time() 判断。
-    """
-    if not results:
-        return
-
-    if pit_mode is None:
-        pit_mode = is_trading_time()
-
-    codes = [r["code"] for r in results]
-    _fetch_nv2_data(codes)
-
-    for r in results:
-        code = r["code"]
-        s = r.get("scores", {})
-        st = s.get("shortterm", 0)
-        tech = s.get("technical", 0)
-        sent = s.get("sentiment", 0)
-        fund = s.get("fundflow", 0)
-        funda = s.get("fundamental", 0)
-
-        # 仅保留追高惩罚所需的 PIT 特征
-        feats = _extract_pit_features(code, pit_mode)
-        t10 = feats["trailing_10"]
-        t5 = feats["trailing_5"]
-        position_20d = feats["position_20d"]
-        pullback_10d = feats["pullback_10d"]
-
-        score = sent * 0.40
-        score += st * 0.30
-        score += tech * 0.20
-        score += fund * 0.05
-        score += funda * 0.05
-
-        # 追高惩罚（乘法）
-        penalty = 1.0
-        if t10 > 0.30:
-            penalty *= 0.75
-        elif t10 > 0.20:
-            penalty *= 0.85
-        elif t10 > 0.10:
-            penalty *= 0.93
-        if t5 > 0.15:
-            penalty *= 0.90
-        if position_20d > 0.85 and pullback_10d < 0.03:
-            penalty *= 0.80
-        if sent > 60 and t10 > 0.15:
-            penalty *= 0.85
-
-        score *= penalty
-        score = max(0, score)
-
-        r["balanced_total"] = round(score, 1)
-        r["_bt_trailing_10"] = round(t10 * 100, 1)
-        r["_bt_position_20d"] = round(position_20d, 3)
-
-
-def _compute_sentiment_adaptive_total_batch(results: list[dict], pit_mode: bool | None = None):
-    """为批次结果计算 sentiment_adaptive_total 评分（PIT）。
-
-    基于因子挖掘结果：sentiment 是主导中轴，不同 sentiment 区间使用不同子因子组合。
-    具体规则见 plays/limit_up/backtest/factor_lib.py::factor_sentiment_adaptive_total_pit。
-    """
-    if not results:
-        return
-
-    if pit_mode is None:
-        pit_mode = is_trading_time()
-
-    from plays.limit_up.backtest.factor_lib import factor_sentiment_adaptive_total_pit
-
-    codes = [r["code"] for r in results]
-    _fetch_nv2_data(codes)
-
-    for r in results:
-        code = r["code"]
-        s = r.get("scores", {})
-
-        # 组装 factor_lib 所需的特征行
-        feats = _extract_pit_features(code, pit_mode)
-
-        # 计算 5 日均额与 amount_ratio（PIT，用 T-1 及之前）
-        daily_rows = _NV2_DAILY_CACHE.get(code, [])
-        daily_rows_sorted = sorted(daily_rows, key=lambda x: x.get("trade_date", ""), reverse=True)
-        idx = 1 if pit_mode else 0
-        avg_amount_5d = 0.0
-        amount_ratio = 1.0
-        if len(daily_rows_sorted) >= 5 + idx:
-            try:
-                amounts = [float(rr.get("amount", 0)) for rr in daily_rows_sorted[idx:idx + 5]]
-                if amounts and all(a >= 0 for a in amounts):
-                    avg_amount_5d = sum(amounts) / len(amounts)
-                    today_amount = float(daily_rows_sorted[idx].get("amount", 0))
-                    if avg_amount_5d > 0:
-                        amount_ratio = today_amount / avg_amount_5d
-            except (ValueError, TypeError):
-                pass
-
-        row = {
-            "sentiment": s.get("sentiment", 0.0),
-            "shortterm": s.get("shortterm", 0.0),
-            "technical": s.get("technical", 0.0),
-            "fundamental": s.get("fundamental", 0.0),
-            "fundflow": s.get("fundflow", 0.0),
-            "position_20d": feats["position_20d"],
-            "trailing_10_pit": feats["trailing_10"],
-            "trailing_5_pit": feats["trailing_5"],
-            "pullback_20d": feats["pullback_20d"],
-            "pullback_10d": feats["pullback_10d"],
-            "pct_chg_std_5d": feats["pct_chg_std_5d"],
-            "pct_chg_std_10d": feats["pct_chg_std_10d"],
-            "limit_up_count_20d": feats["limit_up_count_20d"],
-            "limit_up_count_60d": feats["limit_up_count_60d"],
-            "amount_ratio": amount_ratio,
-            "avg_amount_5d": avg_amount_5d,
-            "circ_mv": feats["circ_mv"],
-        }
-        import pandas as pd
-        score = factor_sentiment_adaptive_total_pit(pd.Series(row))
-        r["sentiment_adaptive_total"] = round(score, 1)
-
-
-def _compute_balanced_total_v2_batch(results: list[dict], pit_mode: bool | None = None):
-    """为批次结果计算 balanced_total_v2 评分（PIT）。
-
-    真实扫描验证显示权重 shortterm=0.6, sentiment=0.2, technical=0.2
-    的 hit@3 显著优于原 balanced_total_pit。
-    具体规则见 plays/limit_up/backtest/factor_lib.py::factor_balanced_total_pit_v2。
-    """
-    if not results:
-        return
-
-    if pit_mode is None:
-        pit_mode = is_trading_time()
-
-    from plays.limit_up.backtest.factor_lib import factor_balanced_total_pit_v2
-
-    codes = [r["code"] for r in results]
-    _fetch_nv2_data(codes)
-
-    for r in results:
-        code = r["code"]
-        s = r.get("scores", {})
-        feats = _extract_pit_features(code, pit_mode)
-        row = {
-            "sentiment": s.get("sentiment", 0.0),
-            "shortterm": s.get("shortterm", 0.0),
-            "technical": s.get("technical", 0.0),
-            "fundamental": s.get("fundamental", 0.0),
-            "fundflow": s.get("fundflow", 0.0),
-            **feats,
-        }
-        import pandas as pd
-        score = factor_balanced_total_pit_v2(pd.Series(row))
-        r["balanced_total_v2"] = round(score, 1)
-
-
-def _compute_ultimate_total_batch(results: list[dict], pit_mode: bool | None = None, trade_date: str | None = None):
-    """为批次结果计算 ultimate_total_v1/v2 评分。
-
-    基于数据挖掘结果：concept_turn_5d_max + activity_combo + limit_up_gene_composite
-    是预测 hit_limit_3 的最强组合。
-
-    Args:
-        trade_date: 交易日 YYYYMMDD，传入时用于 PIT 概念数据查询；不传时使用最新数据。
-    """
-    if not results:
-        return
-
-    if pit_mode is None:
-        pit_mode = is_trading_time()
-
-    from plays.limit_up.backtest.factor_lib import (
-        factor_ultimate_total_v1,
-        factor_ultimate_total_v2,
-    )
-    from plays.limit_up.strategies import factor_ctx
-
-    codes = [r["code"] for r in results]
-    _fetch_nv2_data(codes)
-
-    for r in results:
-        code = r["code"]
-        feats = _extract_pit_features(code, pit_mode)
-
-        # 概念换手热度（PIT）
-        cm = factor_ctx.get_concept_momentum(code.split(".")[0], trade_date=trade_date)
-        feats["cpt_turn_5d_max"] = cm.get("turn_5d_max", 0.0)
-
-        # trailing_pit 后缀兼容
-        feats["trailing_10_pit"] = feats.get("trailing_10", 0.0)
-        feats["trailing_5_pit"] = feats.get("trailing_5", 0.0)
-
-        import pandas as pd
-        row = pd.Series(feats)
-        r["ultimate_total_v1"] = round(factor_ultimate_total_v1(row), 1)
-        r["ultimate_total_v2"] = round(factor_ultimate_total_v2(row), 1)
-
-
-def _compute_deep_total_batch(results: list[dict], pit_mode: bool | None = None, trade_date: str | None = None):
-    """为批次结果计算深度挖掘综合评分（v3/v4 / balanced_ensemble / cpt_amount_percentile）。
-
-    基于第二轮因子挖掘的最优组合：
-    - cpt_amount_percentile: 概念换手 + 成交额百分位阈值（IC=+0.336）
-    - balanced_ensemble: 平衡高 IC 与低追涨
-    - ultimate_total_v3: 新版终极综合分
-    - ultimate_total_v4: 极低追涨版本
-
-    Args:
-        trade_date: 交易日 YYYYMMDD，传入时用于 PIT 概念数据查询；不传时使用最新数据。
-    """
-    if not results:
-        return
-
-    if pit_mode is None:
-        pit_mode = is_trading_time()
-
-    from plays.limit_up.backtest.factor_lib import (
-        factor_cpt_amount_percentile,
-        factor_balanced_ensemble,
-        factor_ultimate_total_v3,
-        factor_ultimate_total_v4,
-    )
-    from plays.limit_up.strategies import factor_ctx
-
-    codes = [r["code"] for r in results]
-    _fetch_nv2_data(codes)
-
-    for r in results:
-        code = r["code"]
-        feats = _extract_pit_features(code, pit_mode)
-
-        # 概念动量（PIT）
-        cm = factor_ctx.get_concept_momentum(code.split(".")[0], trade_date=trade_date)
-        feats["cpt_turn_5d_max"] = cm.get("turn_5d_max", 0.0)
-        feats["cpt_up_streak_max"] = cm.get("up_streak_max", 0)
-
-        # trailing_pit 后缀兼容
-        feats["trailing_10_pit"] = feats.get("trailing_10", 0.0)
-        feats["trailing_5_pit"] = feats.get("trailing_5", 0.0)
-
-        # 补充维度分（来自 _score_one 的结果）
-        s = r.get("scores", {})
-        feats["shortterm"] = s.get("shortterm", 0.0)
-        feats["technical"] = s.get("technical", 0.0)
-
-        import pandas as pd
-        row = pd.Series(feats)
-        r["cpt_amount_percentile"] = round(factor_cpt_amount_percentile(row), 1)
-        r["balanced_ensemble"] = round(factor_balanced_ensemble(row), 1)
-        r["ultimate_total_v3"] = round(factor_ultimate_total_v3(row), 1)
-        r["ultimate_total_v4"] = round(factor_ultimate_total_v4(row), 1)
-
-
 # ===== 6. 飞书推送 =====
 def _get_feishu_token():
     """获取飞书 tenant_access_token"""
@@ -1266,76 +685,44 @@ def _get_feishu_token():
 
 
 def push_feishu(results):
-    """发送飞书卡片
-
-    推送规则（Ultimate Total Top-3）：
-    - 按 ultimate_total_v3 排序（fallback 到 ultimate_total_v2 / ultimate_total_v1 / balanced_total_v2 / balanced_total / sentiment_adaptive_total / new_total_v2 / total）
-    - 默认取前 3 只
-    - 最高分低于 ULTIMATE_PUSH_THRESHOLD 时不推送（避免低置信度噪音）
-    - 午后情绪面 < 25 过滤
-    - 推送记录保存到 data/pushed/ 目录（复盘/回测去重用）
-    - 不按日去重：持续高分说明强势延续，应持续推送提醒
-    """
+    """飞书推送：按 total_score 降序 Top-3，午后 sentiment<25 过滤，阈值默认 25。"""
     import requests
 
-    # 最低推送阈值：基于 panel 分布，>=25 约覆盖 top 18%，hit_rate ~35%
-    ULTIMATE_PUSH_THRESHOLD = float(CONFIG.get("ULTIMATE_PUSH_THRESHOLD", "25"))
-
-    def _score_for_sort(r):
-        return r.get(
-            "ultimate_total_v3",
-            r.get("ultimate_total_v2",
-                 r.get("ultimate_total_v1",
-                      r.get("balanced_total_v2",
-                            r.get("balanced_total",
-                                  r.get("sentiment_adaptive_total",
-                                        r.get("new_total_v2", r.get("total", 0))))))),
-        )
+    threshold = float(CONFIG.get("ULTIMATE_PUSH_THRESHOLD", "25"))
 
     def _stars(total):
-        """综合评级: >=55 ⭐⭐⭐⭐⭐  >=45 ⭐⭐⭐⭐  >=35 ⭐⭐⭐  >=30 ⭐⭐"""
-        if total >= 55: return "⭐ ⭐ ⭐ ⭐ ⭐"  # noqa: E701
-        if total >= 45: return "⭐ ⭐ ⭐ ⭐"  # noqa: E701
-        if total >= 35: return "⭐ ⭐ ⭐"  # noqa: E701
-        if total >= 30: return "⭐ ⭐"  # noqa: E701
+        if total >= 55: return "⭐ ⭐ ⭐ ⭐ ⭐"
+        if total >= 45: return "⭐ ⭐ ⭐ ⭐"
+        if total >= 35: return "⭐ ⭐ ⭐"
+        if total >= 30: return "⭐ ⭐"
         return ""
 
-    # 午后情绪过滤
     is_afternoon = datetime.now().hour >= 13
 
-    # 按 ultimate_total_v2 排序，默认取 Top-3
-    sorted_results = sorted(results, key=_score_for_sort, reverse=True)
+    sorted_results = sorted(results, key=lambda r: r.get("total_score", 0), reverse=True)
     if not sorted_results:
         print("  无可推送股票")
         return False
 
-    max_ut = _score_for_sort(sorted_results[0])
-
-    # 绝对阈值过滤
-    if max_ut < ULTIMATE_PUSH_THRESHOLD:
-        print(f"  最高 UT2={max_ut:.1f} 低于阈值 {ULTIMATE_PUSH_THRESHOLD}，不推送")
+    max_ts = sorted_results[0].get("total_score", 0)
+    if max_ts < threshold:
+        print(f"  最高 total_score={max_ts:.1f} 低于阈值 {threshold}，不推送")
         return False
 
     push_list = []
     for r in sorted_results:
-        code = r["code"]
         s = r.get("scores", {})
-
-        # 午后情绪过滤
         if is_afternoon and s.get("sentiment", 0) < 25:
             continue
-
         push_list.append(r)
         if len(push_list) >= 3:
             break
 
-    print(f"  Top-3: max_ut2={max_ut:.1f} → {len(push_list)}只推送")
-
+    print(f"  Top-3: max_ts={max_ts:.1f} → {len(push_list)}只推送")
     if not push_list:
         print("  无可推送股票")
         return False
 
-    # 保存推送记录（供复盘使用）
     pushed_dir = DATA_DIR / "pushed"
     pushed_dir.mkdir(parents=True, exist_ok=True)
     pushed_file = pushed_dir / f"{datetime.now().strftime('%Y%m%d_%H%M')}.json"
@@ -1344,46 +731,45 @@ def push_feishu(results):
     print(f"  推送记录已保存: {pushed_file}")
 
     token = _get_feishu_token()
-
     if not token:
         print("飞书token获取失败")
         return False
 
-    # 构建卡片
     card = {
         "config": {"wide_screen_mode": True},
         "header": {
             "title": {"tag": "plain_text", "content": f"{feishu_title_prefix()}涨停预测 ({datetime.now().strftime('%H:%M')})"},
-            "template": "blue"
+            "template": "blue",
         },
-        "elements": []
+        "elements": [],
     }
 
     for r in push_list:
-        s = r.get('scores', {})
-        ut = _score_for_sort(r)
-        stars = _stars(ut)
-        pct = r.get('pct_chg', 0)
-        element = {
+        s = r.get("scores", {})
+        ts = r.get("total_score", 0)
+        stars = _stars(ts)
+        pct = r.get("pct_chg", 0)
+        card["elements"].append({
             "tag": "div",
             "text": {
                 "tag": "lark_md",
-                "content": f"**{r['code']} {r['name']}** {stars} 涨幅{pct:.1f}%\n"
-                          f"UT2:{ut:.0f} 情绪:{s.get('sentiment',0):.0f} 资金:{s.get('fundflow',0):.0f} 短线:{s.get('shortterm',0):.0f}"
-            }
-        }
-        card["elements"].append(element)
+                "content": (
+                    f"**{r['code']} {r['name']}** {stars} 涨幅{pct:.1f}%\n"
+                    f"总分:{ts:.0f} 情绪:{s.get('sentiment',0):.0f} 资金:{s.get('fundflow',0):.0f} 短线:{s.get('shortterm',0):.0f}"
+                ),
+            },
+        })
 
-    # 发送
     resp = requests.post(
         "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id",
         headers={"Authorization": f"Bearer {token}"},
         json={
             "receive_id": CONFIG["FEISHU_CHAT_ID_SIGNAL"],
             "msg_type": "interactive",
-            "content": json.dumps(card)
-        }
+            "content": json.dumps(card),
+        },
     )
+    return True
 
 
 def _write_empty_result(reason=""):
@@ -1583,7 +969,6 @@ def _run_pipeline(args):
     clear_tushare_cache()
     from scripts.audit import reset; reset()
 
-    # 数据源预检：关键源异常时阻塞执行，避免基于错误数据决策
     from scripts.health_check import preflight_check, _send_alert_sync  # noqa: E402
     if not preflight_check():
         print("[预检] 关键数据源异常，阻塞执行。详情见 data/health_state.json")
@@ -1606,7 +991,7 @@ def _run_pipeline(args):
         _write_empty_result("扫描无候选股")
         return
 
-    # 1.5 全系统过滤
+    # 1.5 过滤
     print("\n[1.5/5] 全系统过滤...")
     candidates = filter_candidates(candidates)
     if not candidates:
@@ -1614,15 +999,18 @@ def _run_pipeline(args):
         _write_empty_result("过滤后无候选股")
         return
 
-    # 加载权重（从 .env 通过 tu_share.CONFIG 统一读取）
     weights = dict(AGENT_WEIGHTS)
 
-    # 今日缓存
+    # 今日缓存：先 wiki/raw/limit-up/analysis，再 data/analysis
     today_str = datetime.now().strftime("%Y%m%d")
     scored_cache = {}
-    analysis_dir = DATA_DIR / "analysis"
-    if analysis_dir.exists():
-        for f in sorted(analysis_dir.glob(f"{today_str}*.json")):
+    for base in (
+        PROJECT_DIR / "wiki" / "raw" / "limit-up" / "analysis",
+        DATA_DIR / "analysis",
+    ):
+        if not base.exists():
+            continue
+        for f in sorted(base.glob(f"{today_str}*.json")):
             try:
                 items = json.loads(f.read_text())
                 if isinstance(items, list):
@@ -1630,11 +1018,13 @@ def _run_pipeline(args):
                         if "code" in item and "scores" in item:
                             scored_cache[item["code"]] = {
                                 dim: (item["scores"][dim], item.get("reasons", {}).get(dim, ""))
-                                for dim in item["scores"]}
+                                for dim in item["scores"]
+                            }
             except Exception:
                 pass
     print(f"  scored_cache: {len(scored_cache)} 只缓存" if scored_cache else "  scored_cache: 无缓存")
-    # 1.6 检查 jvQuant WebSocket 行情数据源
+
+    # 1.6 jvQuant WS 检查
     l2_available = False
     if not args.no_l2:
         try:
@@ -1652,25 +1042,29 @@ def _run_pipeline(args):
     else:
         print("  [行情] 已跳过 (--no-l2 模式)")
 
-    # 1.7 涨停相关性预排
+    # 1.7 预排 + 概念
     print("\n[1.7/5] 涨停相关性预排...")
-    _fetch_ths_hot_list()  # 同花顺热门榜（人气排名 + 概念标签）
+    _fetch_ths_hot_list()
     from scripts.tu_share import build_concept_map
-    build_concept_map(_HOT_CONCEPT_CACHE)  # 构建同花顺概念映射（替代 stock_basic 行业）
+    build_concept_map(_HOT_CONCEPT_CACHE)
     candidates = _pre_rank(candidates, top_n=args.top)
 
-    # 1.8 同花顺实时行情预取
+    # 1.8 THS 实时行情
     print("\n[1.8/5] 同花顺实时行情预取...")
     _batch_fetch_ths_for_candidates(candidates)
 
-    # 2. jvQuant 分层订阅 → 深度评分 → 推送
+    # 1.9 预取 total_score 所需的历史面板数据
+    print("\n[1.9/5] Tushare 面板数据预取（daily/daily_basic/limit_list_d）...")
+    _fetch_nv2_data([c["code"] for c in candidates])
+
+    # 2. 深度评分
     if l2_available:
         print(f"\n[2/5] 深度分析: {len(candidates)}只 (jvQuant 分层订阅, 无等待)")
-        from scripts.jvquant_ws_client import subscribe_tiered, daemon_unsubscribe as jv_unsub
+        from scripts.jvquant_ws_client import subscribe_tiered
         subscribe_tiered(candidates, top_n_l1=min(15, len(candidates)),
                          top_n_l10=min(6, len(candidates)),
                          top_n_l2=min(2, len(candidates)))
-        time.sleep(3)  # 等待首批数据到达
+        time.sleep(3)
     else:
         print(f"\n[2/5] 深度分析: {len(candidates)}只 (无实时行情)")
 
@@ -1686,10 +1080,10 @@ def _run_pipeline(args):
         except Exception as e:
             print(f"  {code} 评分失败: {e}")
 
-    # 推送前对 Top 高分股升到 L2 做最终确认
-    all_results.sort(key=lambda x: x["total"], reverse=True)
+    # Top-3 升 L2 深度
+    all_results.sort(key=lambda x: x.get("total", 0), reverse=True)
     if l2_available:
-        top_codes = [r["code"] for r in all_results[:3] if r["total"] >= 35]
+        top_codes = [r["code"] for r in all_results[:3] if r.get("total", 0) >= 35]
         if top_codes:
             from scripts.jvquant_ws_client import daemon_subscribe_l2
             daemon_subscribe_l2(top_codes)
@@ -1707,28 +1101,37 @@ def _run_pipeline(args):
                                           "kline_bars": len(kb)}
                     except Exception:
                         pass
-        # 退订所有
         from scripts.jvquant_ws_client import daemon_unsubscribe as jv_unsub
         all_codes = [c["code"] for c in candidates]
         jv_unsub(all_codes)
 
-    # 计算 new_total_v2、balanced_total、balanced_total_v2 与 ultimate_total 用于排序和卡片展示
-    _compute_new_total_v2_batch(all_results)
-    _compute_balanced_total_batch(all_results)
-    _compute_sentiment_adaptive_total_batch(all_results)
-    _compute_balanced_total_v2_batch(all_results)
-    _compute_ultimate_total_batch(all_results)
-    _compute_deep_total_batch(all_results)
+    # 3. 唯一总分：total_score(row) - PIT 语义（使用 T-1 数据）
+    from plays.limit_up.total import total_score
+    from plays.limit_up.factors import REGISTRY, TOTAL_SCORE_COMPONENTS
+    for r in all_results:
+        code = r["code"]
+        feats = _extract_pit_features(code, pit_mode=True)
+        feats["sentiment"] = r["scores"].get("sentiment", 0)
+        feats["shortterm"] = r["scores"].get("shortterm", 0)
+        feats["technical"] = r["scores"].get("technical", 0)
+        feats["fundflow"] = r["scores"].get("fundflow", 0)
+        feats["fundamental"] = r["scores"].get("fundamental", 0)
+        # 记录 total_score 与三个组件因子（供 review/审计）
+        r["factors"] = {
+            name: round(REGISTRY[name](feats), 2)
+            for name in TOTAL_SCORE_COMPONENTS
+        }
+        r["total_score"] = total_score(feats)
 
+    # 4. 推送
     push_feishu(all_results)
 
-    # 全量排序 + 保存
-    all_results.sort(key=lambda x: x.get("ultimate_total_v2", x.get("total", 0)), reverse=True)
+    # 5. 排序 + 落盘
+    all_results.sort(key=lambda x: x.get("total_score", 0), reverse=True)
     print("\n[排序结果]")
     for i, r in enumerate(all_results, 1):
         tag = " [共振]" if r.get("resonance", {}).get("is_resonance") else ""
-        ut = r.get("ultimate_total_v2", r.get("total", 0))
-        print(f"  {i}. {r['code']} {r['name']} - 总分:{r['total']:.1f} 终极:{ut:.1f}{tag}")
+        print(f"  {i}. {r['code']} {r['name']} - total_score:{r.get('total_score', 0):.1f}{tag}")
 
     output_dir = DATA_DIR / "analysis"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -1737,10 +1140,16 @@ def _run_pipeline(args):
         json.dump(all_results, f, ensure_ascii=False, indent=2)
     print(f"\n结果已保存: {output_file}")
 
-    # L2 订阅清理：已随批次循环结束时自动退订
-
-    from scripts.audit import summary, reset
+    from scripts.audit import summary, dump
     print("\n" + summary())
+    logs_dir = DATA_DIR / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    audit_log = logs_dir / f"audit_{today_str}.log"
+    try:
+        dump(audit_log)
+        print(f"审计日志: {audit_log}")
+    except Exception as e:
+        print(f"审计日志写入失败（audit.dump 可能未实现）: {e}")
 
     print("\n" + "=" * 50)
     print("流程完成!")
