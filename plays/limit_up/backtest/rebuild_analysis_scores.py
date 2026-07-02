@@ -38,6 +38,9 @@ sys.path.insert(0, str(PROJECT_DIR))
 from plays.limit_up.pipeline import (
     _score_one,
     _compute_balanced_total_batch,
+    _compute_balanced_total_v2_batch,
+    _compute_sentiment_adaptive_total_batch,
+    _compute_ultimate_total_batch,
     _fetch_nv2_data,
 )
 from plays.limit_up.strategies import factor_ctx
@@ -107,8 +110,11 @@ def rescore_date(date: str, recs: list[dict], max_workers: int = 1) -> list[dict
                 print(f"  {r.get('code')} 打分失败: {e}")
                 results.append(r)
 
-    # 计算 balanced_total
+    # 计算各类综合评分
     _compute_balanced_total_batch(results, pit_mode=False)
+    _compute_balanced_total_v2_batch(results, pit_mode=False)
+    _compute_sentiment_adaptive_total_batch(results, pit_mode=False)
+    _compute_ultimate_total_batch(results, pit_mode=False)
     return results
 
 

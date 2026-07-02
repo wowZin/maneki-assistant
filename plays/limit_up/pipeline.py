@@ -698,6 +698,7 @@ def _extract_pit_features(code: str, pit_mode: bool) -> dict:
         "pb": 999.0,
         "turnover_rate": 5.0,
         "volume_ratio": 1.0,
+        "avg_amount_5d": 0.0,
     }
 
     if not daily_rows or len(daily_rows) < 2 + idx:
@@ -754,7 +755,7 @@ def _extract_pit_features(code: str, pit_mode: bool) -> dict:
     feats["pullback_10d"] = _pullback(10)
     feats["pullback_20d"] = _pullback(20)
 
-    # pct_chg std / max
+    # pct_chg std / max / avg_amount
     try:
         pcts = [_safe_float(rr.get("pct_chg"), 0.0) for rr in daily_rows[idx:idx + 10]]
         if len(pcts) >= 5:
@@ -763,6 +764,11 @@ def _extract_pit_features(code: str, pit_mode: bool) -> dict:
         pcts5 = [_safe_float(rr.get("pct_chg"), 0.0) for rr in daily_rows[idx:idx + 5]]
         if len(pcts5) >= 2:
             feats["pct_chg_std_5d"] = float(np.std(pcts5, ddof=0))
+
+        # avg_amount_5d: amount 字段为千元，转为元
+        amounts = [_safe_float(rr.get("amount"), 0.0) * 1000 for rr in daily_rows[idx:idx + 5]]
+        if amounts:
+            feats["avg_amount_5d"] = float(np.mean(amounts))
     except Exception:
         pass
 
@@ -1147,6 +1153,45 @@ def _compute_balanced_total_v2_batch(results: list[dict], pit_mode: bool | None 
         r["balanced_total_v2"] = round(score, 1)
 
 
+def _compute_ultimate_total_batch(results: list[dict], pit_mode: bool | None = None):
+    """为批次结果计算 ultimate_total_v1/v2 评分。
+
+    基于数据挖掘结果：concept_turn_5d_max + activity_combo + limit_up_gene_composite
+    是预测 hit_limit_3 的最强组合。
+    """
+    if not results:
+        return
+
+    if pit_mode is None:
+        pit_mode = is_trading_time()
+
+    from plays.limit_up.backtest.factor_lib import (
+        factor_ultimate_total_v1,
+        factor_ultimate_total_v2,
+    )
+    from plays.limit_up.strategies import factor_ctx
+
+    codes = [r["code"] for r in results]
+    _fetch_nv2_data(codes)
+
+    for r in results:
+        code = r["code"]
+        feats = _extract_pit_features(code, pit_mode)
+
+        # 概念换手热度
+        cm = factor_ctx.get_concept_momentum(code.split(".")[0])
+        feats["cpt_turn_5d_max"] = cm.get("turn_5d_max", 0.0)
+
+        # trailing_pit 后缀兼容
+        feats["trailing_10_pit"] = feats.get("trailing_10", 0.0)
+        feats["trailing_5_pit"] = feats.get("trailing_5", 0.0)
+
+        import pandas as pd
+        row = pd.Series(feats)
+        r["ultimate_total_v1"] = round(factor_ultimate_total_v1(row), 1)
+        r["ultimate_total_v2"] = round(factor_ultimate_total_v2(row), 1)
+
+
 # ===== 6. 飞书推送 =====
 def _get_feishu_token():
     """获取飞书 tenant_access_token"""
@@ -1165,21 +1210,27 @@ def _get_feishu_token():
 def push_feishu(results):
     """发送飞书卡片
 
-    推送规则（Balanced-v2 Top-3）：
-    - 按 balanced_total_v2 排序（fallback 到 balanced_total / sentiment_adaptive_total / new_total_v2 / total）
+    推送规则（Ultimate Total Top-3）：
+    - 按 ultimate_total_v2 排序（fallback 到 ultimate_total_v1 / balanced_total_v2 / balanced_total / sentiment_adaptive_total / new_total_v2 / total）
     - 默认取前 3 只
+    - 最高分低于 ULTIMATE_PUSH_THRESHOLD 时不推送（避免低置信度噪音）
     - 午后情绪面 < 25 过滤
     - 推送记录保存到 data/pushed/ 目录（复盘/回测去重用）
     - 不按日去重：持续高分说明强势延续，应持续推送提醒
     """
     import requests
 
+    # 最低推送阈值：基于 panel 分布，>=25 约覆盖 top 18%，hit_rate ~35%
+    ULTIMATE_PUSH_THRESHOLD = float(CONFIG.get("ULTIMATE_PUSH_THRESHOLD", "25"))
+
     def _score_for_sort(r):
         return r.get(
-            "balanced_total_v2",
-            r.get("balanced_total",
-                 r.get("sentiment_adaptive_total",
-                       r.get("new_total_v2", r.get("total", 0)))),
+            "ultimate_total_v2",
+            r.get("ultimate_total_v1",
+                 r.get("balanced_total_v2",
+                       r.get("balanced_total",
+                             r.get("sentiment_adaptive_total",
+                                   r.get("new_total_v2", r.get("total", 0)))))),
         )
 
     def _stars(total):
@@ -1193,13 +1244,18 @@ def push_feishu(results):
     # 午后情绪过滤
     is_afternoon = datetime.now().hour >= 13
 
-    # 按 balanced_total_v2 排序，默认取 Top-3
+    # 按 ultimate_total_v2 排序，默认取 Top-3
     sorted_results = sorted(results, key=_score_for_sort, reverse=True)
     if not sorted_results:
         print("  无可推送股票")
         return False
 
-    max_bt = _score_for_sort(sorted_results[0])
+    max_ut = _score_for_sort(sorted_results[0])
+
+    # 绝对阈值过滤
+    if max_ut < ULTIMATE_PUSH_THRESHOLD:
+        print(f"  最高 UT2={max_ut:.1f} 低于阈值 {ULTIMATE_PUSH_THRESHOLD}，不推送")
+        return False
 
     push_list = []
     for r in sorted_results:
@@ -1214,7 +1270,7 @@ def push_feishu(results):
         if len(push_list) >= 3:
             break
 
-    print(f"  Top-3: max_btv2={max_bt:.1f} → {len(push_list)}只推送")
+    print(f"  Top-3: max_ut2={max_ut:.1f} → {len(push_list)}只推送")
 
     if not push_list:
         print("  无可推送股票")
@@ -1246,15 +1302,15 @@ def push_feishu(results):
 
     for r in push_list:
         s = r.get('scores', {})
-        bt = r.get('balanced_total_v2', r.get('balanced_total', r.get('sentiment_adaptive_total', r.get('new_total_v2', r['total']))))
-        stars = _stars(bt)
+        ut = _score_for_sort(r)
+        stars = _stars(ut)
         pct = r.get('pct_chg', 0)
         element = {
             "tag": "div",
             "text": {
                 "tag": "lark_md",
                 "content": f"**{r['code']} {r['name']}** {stars} 涨幅{pct:.1f}%\n"
-                          f"BTv2:{bt:.0f} 情绪:{s.get('sentiment',0):.0f} 资金:{s.get('fundflow',0):.0f} 短线:{s.get('shortterm',0):.0f}"
+                          f"UT2:{ut:.0f} 情绪:{s.get('sentiment',0):.0f} 资金:{s.get('fundflow',0):.0f} 短线:{s.get('shortterm',0):.0f}"
             }
         }
         card["elements"].append(element)
@@ -1597,20 +1653,22 @@ def _run_pipeline(args):
         all_codes = [c["code"] for c in candidates]
         jv_unsub(all_codes)
 
-    # 计算 new_total_v2、balanced_total 与 balanced_total_v2 用于排序和卡片展示
+    # 计算 new_total_v2、balanced_total、balanced_total_v2 与 ultimate_total 用于排序和卡片展示
     _compute_new_total_v2_batch(all_results)
     _compute_balanced_total_batch(all_results)
     _compute_sentiment_adaptive_total_batch(all_results)
     _compute_balanced_total_v2_batch(all_results)
+    _compute_ultimate_total_batch(all_results)
 
     push_feishu(all_results)
 
     # 全量排序 + 保存
-    all_results.sort(key=lambda x: x["total"], reverse=True)
+    all_results.sort(key=lambda x: x.get("ultimate_total_v2", x.get("total", 0)), reverse=True)
     print("\n[排序结果]")
     for i, r in enumerate(all_results, 1):
         tag = " [共振]" if r.get("resonance", {}).get("is_resonance") else ""
-        print(f"  {i}. {r['code']} {r['name']} - 总分:{r['total']:.1f}{tag}")
+        ut = r.get("ultimate_total_v2", r.get("total", 0))
+        print(f"  {i}. {r['code']} {r['name']} - 总分:{r['total']:.1f} 终极:{ut:.1f}{tag}")
 
     output_dir = DATA_DIR / "analysis"
     output_dir.mkdir(parents=True, exist_ok=True)

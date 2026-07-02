@@ -496,30 +496,46 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
     chip_score = 0
     chip_reasons = []
 
-    # 5.3a 流通市值加成 (0-10pts, Cohen's d = +0.47)
-    # 小市值弹性是涨停的核心条件之一
+    # 5.3a 流通市值加成 (0-10pts)
+    # 数据挖掘修正：大盘股 IC 为正，小盘股不再是唯一优势
     # total_mv 单位: 万元 (Tushare stk_factor_pro)
     if total_mv and total_mv > 0:
         mv_yi = total_mv / 10000  # 万元 → 亿
-        if mv_yi < 30:
+        if mv_yi >= 500:
             chip_score += 10
-            chip_reasons.append(f"微型市值({mv_yi:.0f}亿)+10")
-        elif mv_yi < 100:
+            chip_reasons.append(f"大市值({mv_yi:.0f}亿)+10")
+        elif mv_yi >= 200:
             chip_score += 8
-            chip_reasons.append(f"小中市值({mv_yi:.0f}亿)+8")
-        elif mv_yi < 300:
-            chip_score += 5
-            chip_reasons.append(f"中市值({mv_yi:.0f}亿)+5")
-        elif mv_yi < 500:
-            chip_score += 2
-            chip_reasons.append(f"大市值({mv_yi:.0f}亿)+2")
+            chip_reasons.append(f"中大盘({mv_yi:.0f}亿)+8")
+        elif mv_yi >= 100:
+            chip_score += 6
+            chip_reasons.append(f"中市值({mv_yi:.0f}亿)+6")
+        elif mv_yi >= 50:
+            chip_score += 3
+            chip_reasons.append(f"中小市值({mv_yi:.0f}亿)+3")
         else:
-            chip_reasons.append(f"超大市值({mv_yi:.0f}亿)+0")
+            chip_reasons.append(f"小市值({mv_yi:.0f}亿)+0")
     else:
         # total_mv 缺失时不扣分也不加分
         chip_reasons.append("市值数据缺失+0")
 
-    # 5.3b 换手衰减检测 (0-5pts)
+    # 5.3b 换手活跃度加成 (0-8pts)
+    # 数据挖掘：turnover_rate IC=+0.23，是技术面最强信号之一
+    if turnover:
+        if turnover >= 15:
+            chip_score += 8
+            chip_reasons.append(f"高换手活跃{turnover:.1f}%+8")
+        elif turnover >= 10:
+            chip_score += 6
+            chip_reasons.append(f"换手中高{turnover:.1f}%+6")
+        elif turnover >= 5:
+            chip_score += 3
+            chip_reasons.append(f"换手中度{turnover:.1f}%+3")
+        elif turnover < 1.5:
+            chip_score -= 3
+            chip_reasons.append(f"换手过低{turnover:.1f}%-3")
+
+    # 5.3c 换手衰减检测 (0-3pts)
     # 换手逐日递减 = 筹码锁定良好
     if len(factors) >= 5:
         tr_5d = [safe_float(factors[i].get("turnover_rate")) for i in range(5)]
@@ -528,10 +544,10 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
             latest_tr = valid_tr[0]
             avg_rest = sum(valid_tr[1:]) / (len(valid_tr) - 1) if len(valid_tr) > 1 else valid_tr[0]
             if avg_rest > 0 and latest_tr < avg_rest:
-                chip_score += 5
-                chip_reasons.append("换手递减锁定+5")
+                chip_score += 3
+                chip_reasons.append("换手递减锁定+3")
 
-    # 5.3c 布林带宽收敛 (0-5pts)
+    # 5.3d 布林带宽收敛 (0-3pts)
     # 波动收敛 = 变盘前兆，筹码充分沉淀
     if len(factors) >= 20:
         bw_list = []
@@ -545,8 +561,8 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
             bw_cur = bw_list[0]
             bw_p30 = pctile(bw_list, 30)
             if bw_cur > 0 and bw_p30 > 0 and bw_cur <= bw_p30:
-                chip_score += 5
-                chip_reasons.append(f"布林收敛(bw{bw_cur:.1f}%)+5")
+                chip_score += 3
+                chip_reasons.append(f"布林收敛(bw{bw_cur:.1f}%)+3")
 
     # PIT 大市值涨停基因 / 成长动量融合
     large_cap = int(_large_cap_limit_gene_score())
@@ -558,7 +574,7 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
         chip_score += growth
         chip_reasons.append(f"PIT成长动量{growth:+.0f}")
 
-    score += max(0, min(20, chip_score))
+    score += max(0, min(25, chip_score))
     reasons.extend(chip_reasons)
 
     # ── 5.4 形态确认 (15pts) — 平台突破 + 下影支撑 ──
@@ -629,6 +645,24 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
     # ═══════════════════════════════════════════════════════
     # 6. 综合评定
     # ═══════════════════════════════════════════════════════
+
+    # v2.1 追涨惩罚：技术面评分与 trailing_10 高相关，高位需降权
+    try:
+        pf = factor_ctx.get_price_features(code)
+        t10 = pf.get("trailing_10", 0.0)
+        pos = pf.get("position_20d", 0.5)
+        pb10 = pf.get("pullback_10d", 0.0)
+        if t10 > 0.30:
+            score *= 0.80
+        elif t10 > 0.20:
+            score *= 0.88
+        elif t10 > 0.10:
+            score *= 0.95
+        if pos > 0.85 and pb10 < 0.03:
+            score *= 0.80
+    except Exception:
+        pass
+
     final_score = max(0, min(100, score))
 
     if final_score >= 75:

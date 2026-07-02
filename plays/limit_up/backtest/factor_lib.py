@@ -1716,6 +1716,534 @@ def factor_balanced_total_pit_v2(row: pd.Series) -> float:
 
 
 # ═══════════════════════════════════════════════════════════
+# 第十七类：数据挖掘新因子（2026-07）
+# ═══════════════════════════════════════════════════════════
+
+def factor_concept_turn_5d_max(row: pd.Series) -> float:
+    """概念换手热度：最强概念近5日平均换手率。
+
+    子因子挖掘 IC(hit_limit_3)=+0.33, chasing_score=+0.15，是情绪面最强单因子。
+    """
+    return _safe(row.get("cpt_turn_5d_max"), 0.0)
+
+
+def factor_concept_heat_combo(row: pd.Series) -> float:
+    """概念热度复合：最强概念换手 + 3日涨幅 + 概念数量。
+
+    IC(hit_limit_3)=+0.33, 比单概念动量更稳健。
+    """
+    turn = _safe(row.get("cpt_turn_5d_max"), 0.0)
+    ret3 = _safe(row.get("cpt_ret_3d_max"), 0.0)
+    n_cpt = _safe(row.get("n_concepts"), 0.0)
+    return turn * 0.5 + ret3 * 1.0 + n_cpt * 1.0
+
+
+def factor_concept_activity_combo(row: pd.Series) -> float:
+    """概念活跃度共振：概念动量 + 个股换手。
+
+    hit@10=0.6, hit@20=0.65，短线爆发力最强。
+    """
+    ret3 = _safe(row.get("cpt_ret_3d_max"), 0.0)
+    turn = _safe(row.get("cpt_turn_5d_max"), 0.0)
+    turnover = _safe(row.get("turnover_rate"), 0.0)
+    return ret3 * 0.8 + turn * 0.4 + turnover * 0.3
+
+
+def factor_activity_combo(row: pd.Series) -> float:
+    """个股活跃度复合：换手率 + 10日波动 + 5日均成交额。
+
+    捕捉高活跃、高波动、有资金关注的标的。
+    """
+    turnover = _safe(row.get("turnover_rate"), 0.0)
+    std10 = _safe(row.get("pct_chg_std_10d"), 0.0)
+    avg_amount = _safe(row.get("avg_amount_5d"), 0.0)
+    return turnover * 0.5 + std10 * 1.0 + (avg_amount / 200000.0)
+
+
+def factor_large_cap_growth_combo(row: pd.Series) -> float:
+    """大盘成长复合：流通市值 + PB + PE。
+
+    基本面维度反转信号：大盘、高 PB/PE 成长股更易涨停。
+    IC(hit_limit_3)=+0.14, IC(fwd_ret_3)=+0.13，胜率端贡献稳定。
+    """
+    circ_mv = _safe(row.get("circ_mv"), 0.0)
+    pb = _safe(row.get("pb"), 0.0)
+    pe = _safe(row.get("pe"), 0.0)
+
+    score = 0.0
+    mv_yi = circ_mv / 10000
+    if mv_yi >= 500:
+        score += 15
+    elif mv_yi >= 200:
+        score += 12
+    elif mv_yi >= 100:
+        score += 9
+    elif mv_yi >= 50:
+        score += 6
+    elif mv_yi >= 20:
+        score += 3
+
+    if pb > 10:
+        score += 8
+    elif pb > 5:
+        score += 5
+    elif pb > 3:
+        score += 2
+
+    if pe > 50 or pe <= 0:
+        score += 6
+    elif pe > 30:
+        score += 3
+
+    return score
+
+
+def factor_fundamental_rebuilt(row: pd.Series) -> float:
+    """基本面重构评分：纠正原 fundamental 的方向错误。
+
+    原策略奖励小盘+低估值，数据证明应奖励大盘+成长+概念丰富。
+    """
+    circ_mv = _safe(row.get("circ_mv"), 0.0)
+    pb = _safe(row.get("pb"), 0.0)
+    pe = _safe(row.get("pe"), 0.0)
+    n_cpt = _safe(row.get("n_concepts"), 0.0)
+
+    score = 0.0
+    mv_yi = circ_mv / 10000
+    if mv_yi >= 200:
+        score += 20
+    elif mv_yi >= 100:
+        score += 15
+    elif mv_yi >= 50:
+        score += 10
+    elif mv_yi >= 20:
+        score += 5
+
+    if pb > 8:
+        score += 10
+    elif pb > 5:
+        score += 7
+    elif pb > 3:
+        score += 3
+
+    if pe > 50 or pe <= 0:
+        score += 8
+    elif pe > 30:
+        score += 4
+
+    if n_cpt >= 5:
+        score += 10
+    elif n_cpt >= 3:
+        score += 5
+
+    return min(80.0, score)
+
+
+def factor_fundflow_rebuilt(row: pd.Series) -> float:
+    """资金面重构评分：纠正原 fundflow 的方向错误。
+
+    原策略过度关注中单/小单净流入并惩罚主力，数据证明换手率+绝对成交额才是核心。
+    """
+    turnover = _safe(row.get("turnover_rate"), 0.0)
+    turnover_f = _safe(row.get("turnover_rate_f"), 0.0)
+    amount = _safe(row.get("avg_amount_5d"), 0.0)
+    net_mf_ratio = _safe(row.get("net_mf_ratio"), 0.0)
+
+    score = 0.0
+    if turnover >= 15:
+        score += 25
+    elif turnover >= 10:
+        score += 18
+    elif turnover >= 5:
+        score += 10
+    elif turnover >= 2:
+        score += 4
+
+    if turnover_f >= 15:
+        score += 10
+    elif turnover_f >= 8:
+        score += 5
+
+    if amount >= 2_000_000:
+        score += 10
+    elif amount >= 500_000:
+        score += 5
+
+    if net_mf_ratio > 0.3:
+        score += 5
+    elif net_mf_ratio > 0.1:
+        score += 2
+
+    return min(80.0, score)
+
+
+def factor_technical_rebuilt(row: pd.Series) -> float:
+    """技术面重构评分：强化强信号，弱化负向信号。
+
+    强化：换手率、波动率、位置、涨停基因、成交额。
+    弱化：深度回调、连阴、长上影。
+    """
+    turnover = _safe(row.get("turnover_rate"), 0.0)
+    std10 = _safe(row.get("pct_chg_std_10d"), 0.0)
+    pos = _safe(row.get("position_20d"), 0.5)
+    gene60 = _safe(row.get("limit_up_count_60d"), 0.0)
+    gene20 = _safe(row.get("limit_up_count_20d"), 0.0)
+    avg_amount = _safe(row.get("avg_amount_5d"), 0.0)
+    pb10 = _safe(row.get("pullback_10d"), 0.0)
+    upper_shadow = _safe(row.get("upper_shadow_pct"), 0.0)
+
+    score = 0.0
+    if turnover >= 10:
+        score += 15
+    elif turnover >= 5:
+        score += 8
+
+    if std10 >= 5:
+        score += 15
+    elif std10 >= 3.5:
+        score += 8
+
+    if 0.40 <= pos <= 0.80:
+        score += 15
+    elif 0.25 <= pos <= 0.90:
+        score += 8
+
+    score += min(gene60, 6) * 3.0
+    score += min(gene20, 4) * 2.5
+
+    if avg_amount >= 1_000_000:
+        score += 10
+    elif avg_amount >= 300_000:
+        score += 5
+
+    if pb10 > 0.15:
+        score -= 10
+    elif pb10 > 0.10:
+        score -= 5
+    if upper_shadow > 50:
+        score -= 8
+
+    return max(0.0, min(80.0, score))
+
+
+def factor_fundflow_rebuilt_v2(row: pd.Series) -> float:
+    """资金面重构评分 v2：弱化资金流向方向，强化换手+成交额+大市值共振。
+
+    子因子 IC 显示 turnover_rate(0.23)、turnover_rate_f(0.23)、avg_amount_5d(0.20)
+    是资金端最强信号；而 net_mf_ratio 仅 0.02。买卖各档金额均正相关，说明
+    "大资金参与"本身才是核心，方向不重要。
+    """
+    turnover = _safe(row.get("turnover_rate"), 0.0)
+    turnover_f = _safe(row.get("turnover_rate_f"), 0.0)
+    amount = _safe(row.get("avg_amount_5d"), 0.0)
+    net_mf_ratio = _safe(row.get("net_mf_ratio"), 0.0)
+    circ_mv = _safe(row.get("circ_mv"), 0.0)
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")), 0.0)
+
+    score = 0.0
+    # 换手率（30分）
+    if turnover >= 15:
+        score += 30
+    elif turnover >= 10:
+        score += 24
+    elif turnover >= 6:
+        score += 16
+    elif turnover >= 3:
+        score += 8
+    elif turnover >= 1:
+        score += 2
+
+    # 自由流通换手（10分）
+    if turnover_f >= 15:
+        score += 10
+    elif turnover_f >= 8:
+        score += 5
+
+    # 成交额（25分）
+    if amount >= 2_000_000:
+        score += 25
+    elif amount >= 1_000_000:
+        score += 18
+    elif amount >= 500_000:
+        score += 10
+    elif amount >= 200_000:
+        score += 4
+
+    # 大市值+高换手共振（10分）：大盘活跃股更容易连板
+    mv_yi = circ_mv / 10000
+    if mv_yi >= 100 and turnover >= 8:
+        score += 10
+    elif mv_yi >= 50 and turnover >= 6:
+        score += 6
+    elif mv_yi >= 20 and turnover >= 5:
+        score += 3
+
+    # 资金流向方向轻权重（5分）
+    if net_mf_ratio > 0.3:
+        score += 5
+    elif net_mf_ratio > 0.1:
+        score += 2
+    elif net_mf_ratio < -0.3:
+        score -= 3
+
+    # 追涨惩罚
+    if t10 > 0.30:
+        score *= 0.85
+    elif t10 > 0.20:
+        score *= 0.92
+
+    return round(max(0.0, min(80.0, score)), 2)
+
+
+def factor_fundamental_rebuilt_v2(row: pd.Series) -> float:
+    """基本面重构评分 v2：进一步弱化业绩，强化市值+成长估值+概念数量。
+
+    子因子 IC 显示 circ_mv(0.12)/pb(0.14)/pe(0.13)/n_concepts(0.25) 正向，
+    而 earnings_yield(-0.10)/book_yield(-0.14) 负向。业绩增速噪音大，降权。
+    """
+    circ_mv = _safe(row.get("circ_mv"), 0.0)
+    pb = _safe(row.get("pb"), 0.0)
+    pe = _safe(row.get("pe"), 0.0)
+    n_cpt = _safe(row.get("n_concepts"), 0.0)
+
+    score = 0.0
+    mv_yi = circ_mv / 10000
+
+    # 市值（35分）
+    if mv_yi >= 200:
+        score += 35
+    elif mv_yi >= 100:
+        score += 28
+    elif mv_yi >= 50:
+        score += 20
+    elif mv_yi >= 20:
+        score += 10
+    elif mv_yi >= 10:
+        score += 4
+
+    # 成长估值（30分）：高 PB/PE 作为成长/题材溢价
+    growth = 0.0
+    if pb > 8:
+        growth += 18
+    elif pb > 5:
+        growth += 12
+    elif pb > 3:
+        growth += 5
+
+    if pe > 50 or pe <= 0:
+        growth += 12
+    elif pe > 30:
+        growth += 6
+    score += min(30.0, growth)
+
+    # 概念广度（25分）
+    if n_cpt >= 8:
+        score += 25
+    elif n_cpt >= 5:
+        score += 18
+    elif n_cpt >= 3:
+        score += 10
+    elif n_cpt >= 1:
+        score += 3
+
+    # 自由流通股（5分）：流通盘小弹性大
+    free_share = _safe(row.get("free_share"), 0.0)
+    if 0 < free_share < 5_0000:  # 5亿股以下
+        score += 5
+    elif 0 < free_share < 10_0000:
+        score += 2
+
+    return round(min(80.0, score), 2)
+
+
+def factor_technical_rebuilt_v2(row: pd.Series) -> float:
+    """技术面重构评分 v2：在 technical_rebuilt 基础上降低追涨，加入位置/回调过滤。
+
+    technical_rebuilt IC=0.25 但 chasing_score=0.64，主因过度奖励 5 日动量和均线。
+    子因子 IC 显示 position_20d(0.21) 强正、pullback_10d(-0.11)/pullback_20d(-0.15)
+    负向，应奖励中等位置+有回调蓄力，惩罚高位追高。
+
+    v2.1 调整：降低 position 权重（position 与 trailing_10 高相关导致追涨），
+    把权重挪给换手/波动/涨停基因/成交额等低追涨因子。
+    """
+    turnover = _safe(row.get("turnover_rate"), 0.0)
+    std10 = _safe(row.get("pct_chg_std_10d"), 0.0)
+    pos = _safe(row.get("position_20d"), 0.5)
+    gene60 = _safe(row.get("limit_up_count_60d"), 0.0)
+    gene20 = _safe(row.get("limit_up_count_20d"), 0.0)
+    avg_amount = _safe(row.get("avg_amount_5d"), 0.0)
+    pb10 = _safe(row.get("pullback_10d"), 0.0)
+    pb20 = _safe(row.get("pullback_20d"), 0.0)
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")), 0.0)
+    upper_shadow = _safe(row.get("upper_shadow_pct"), 0.0)
+
+    score = 0.0
+
+    # 换手（22分）
+    if turnover >= 15:
+        score += 22
+    elif turnover >= 10:
+        score += 17
+    elif turnover >= 6:
+        score += 11
+    elif turnover >= 3:
+        score += 5
+    elif turnover >= 1.5:
+        score += 2
+
+    # 波动率（18分）
+    if std10 >= 5:
+        score += 18
+    elif std10 >= 3.5:
+        score += 12
+    elif std10 >= 2.5:
+        score += 5
+
+    # 涨停基因（22分）
+    score += min(gene60, 6) * 3.0
+    score += min(gene20, 4) * 2.5
+
+    # 成交额（12分）
+    if avg_amount >= 1_000_000:
+        score += 12
+    elif avg_amount >= 500_000:
+        score += 7
+    elif avg_amount >= 300_000:
+        score += 3
+
+    # 位置（6分）：仅在中等位置区间给分，避免高位追涨
+    if 0.35 <= pos <= 0.65:
+        score += 6
+    elif 0.25 <= pos <= 0.75:
+        score += 2
+
+    # 回调蓄力（8分）：低 pullback 说明有调整、不是纯追高
+    if pb10 > 0.10:
+        score += 6
+    elif pb10 > 0.05:
+        score += 3
+    elif pb20 > 0.12:
+        score += 3
+
+    # 上影线惩罚
+    if upper_shadow > 60:
+        score -= 10
+    elif upper_shadow > 40:
+        score -= 5
+
+    # 追高惩罚（乘法）：比 v1 更克制
+    penalty = 1.0
+    if t10 > 0.35:
+        penalty *= 0.75
+    elif t10 > 0.25:
+        penalty *= 0.85
+    elif t10 > 0.15:
+        penalty *= 0.93
+    if pos > 0.85 and pb10 < 0.03:
+        penalty *= 0.80
+
+    return round(max(0.0, min(80.0, score * penalty)), 2)
+
+
+def factor_new_total_mined_v2(row: pd.Series) -> float:
+    """数据挖掘综合评分 v2：概念热度 + 个股活跃度 + 涨停基因 + 追高惩罚。
+
+    在挖掘结果中 IC(hit_limit_3)=+0.27, chasing_score=+0.40，比原 total 大幅提升。
+    """
+    sent = _safe(row.get("sentiment"), 0.0)
+    st = _safe(row.get("shortterm"), 0.0)
+
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")), 0.0)
+    t5 = _safe(row.get("trailing_5_pit", row.get("trailing_5")), 0.0)
+    pos = _safe(row.get("position_20d"), 0.5)
+    pb10 = _safe(row.get("pullback_10d"), 0.1)
+
+    score = sent * 0.40
+    score += st * 0.40
+    score += factor_concept_heat_combo(row) * 0.8
+    score += factor_activity_combo(row) * 0.5
+    score += factor_limit_up_gene_composite(row) * 0.4
+
+    penalty = 1.0
+    if t10 > 0.30:
+        penalty *= 0.75
+    elif t10 > 0.20:
+        penalty *= 0.85
+    elif t10 > 0.10:
+        penalty *= 0.93
+    if t5 > 0.15:
+        penalty *= 0.90
+    if pos > 0.85 and pb10 < 0.03:
+        penalty *= 0.80
+
+    return round(max(0.0, score * penalty), 2)
+
+
+def factor_ultimate_total_v1(row: pd.Series) -> float:
+    """终极综合评分 v1：网格搜索最优权重。
+
+    权重: concept_turn_5d_max=1.0, activity_combo=0.3, limit_up_gene_composite=0.8
+    IC(hit_limit_3)=+0.306, chasing_score=+0.234
+    """
+    score = (
+        factor_concept_turn_5d_max(row) * 1.0 +
+        factor_activity_combo(row) * 0.3 +
+        factor_limit_up_gene_composite(row) * 0.8
+    )
+
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")), 0.0)
+    t5 = _safe(row.get("trailing_5_pit", row.get("trailing_5")), 0.0)
+    pos = _safe(row.get("position_20d"), 0.5)
+    pb10 = _safe(row.get("pullback_10d"), 0.1)
+
+    penalty = 1.0
+    if t10 > 0.30:
+        penalty *= 0.75
+    elif t10 > 0.20:
+        penalty *= 0.85
+    elif t10 > 0.10:
+        penalty *= 0.93
+    if t5 > 0.15:
+        penalty *= 0.90
+    if pos > 0.85 and pb10 < 0.03:
+        penalty *= 0.80
+
+    return round(max(0.0, score * penalty), 2)
+
+
+def factor_ultimate_total_v2(row: pd.Series) -> float:
+    """终极综合评分 v2：兼顾 IC 与 chasing_score 的稳健版本。
+
+    权重: concept_turn_5d_max=1.0, activity_combo=0.3, limit_up_gene_composite=0.4
+    IC(hit_limit_3)=+0.305, chasing_score=+0.194
+    """
+    score = (
+        factor_concept_turn_5d_max(row) * 1.0 +
+        factor_activity_combo(row) * 0.3 +
+        factor_limit_up_gene_composite(row) * 0.4
+    )
+
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")), 0.0)
+    t5 = _safe(row.get("trailing_5_pit", row.get("trailing_5")), 0.0)
+    pos = _safe(row.get("position_20d"), 0.5)
+    pb10 = _safe(row.get("pullback_10d"), 0.1)
+
+    penalty = 1.0
+    if t10 > 0.30:
+        penalty *= 0.75
+    elif t10 > 0.20:
+        penalty *= 0.85
+    elif t10 > 0.10:
+        penalty *= 0.93
+    if t5 > 0.15:
+        penalty *= 0.90
+    if pos > 0.85 and pb10 < 0.03:
+        penalty *= 0.80
+
+    return round(max(0.0, score * penalty), 2)
+
+
+# ═══════════════════════════════════════════════════════════
 # 因子注册表
 # ═══════════════════════════════════════════════════════════
 
@@ -1774,6 +2302,18 @@ STANDALONE_FACTORS = {
     "sentiment_conditional_pit": factor_sentiment_conditional_pit,
     "balanced_adaptive_total_pit": factor_balanced_adaptive_total_pit,
     "balanced_total_pit_v2": factor_balanced_total_pit_v2,
+    # 第十七类：数据挖掘新因子（2026-07）
+    "concept_turn_5d_max": factor_concept_turn_5d_max,
+    "concept_heat_combo": factor_concept_heat_combo,
+    "concept_activity_combo": factor_concept_activity_combo,
+    "activity_combo": factor_activity_combo,
+    "large_cap_growth_combo": factor_large_cap_growth_combo,
+    "fundamental_rebuilt": factor_fundamental_rebuilt,
+    "fundflow_rebuilt": factor_fundflow_rebuilt,
+    "technical_rebuilt": factor_technical_rebuilt,
+    "new_total_mined_v2": factor_new_total_mined_v2,
+    "ultimate_total_v1": factor_ultimate_total_v1,
+    "ultimate_total_v2": factor_ultimate_total_v2,
 }
 
 # 调整因子（加到现有维度分上）

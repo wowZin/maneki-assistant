@@ -375,169 +375,112 @@ def score_fundflow(code: str, trade_date: str = None,
         return 0.0, f"否决: {veto_reason}"
 
     # ═══════════════════════════════════════════════════════════
-    # 2. 维度评分
+    # 2. 维度评分 v2.1：以换手率+成交额为核心，弱化资金流向方向
+    #
+    # 子因子 IC 发现：turnover_rate(0.23)、turnover_rate_f(0.23)、
+    # avg_amount_5d(0.20) 是资金端最强信号；买卖各档金额均正相关，
+    # 说明"大资金参与"本身才是核心，方向不重要。
     # ═══════════════════════════════════════════════════════════
     score = 0.0
     reasons: list[str] = []
 
-    # ─── 维度1: 中单净流入 (35分) ───
-    # f_mid_net Cohen's d = +0.26 → 最强正向预测因子
-    # 使用 sigmoid 平滑评分，中心 ≈ 成交额的0.15%
-    dim1 = _score_bidirectional(
-        mid_pct,
-        center=0.40,       # 中单净占比 0.40% 为中枢（典型活跃股中单流入水平）
-        scale=0.35,        # 0.35% 标准差 → 0.05%~0.75% 区间覆盖过渡区
-        pos_max=35.0,
-        neg_max=-3.0,      # 负向最多扣 3 分（放宽：涨停日中单流出是常态非异常）
-    )
-    dim1 = round(dim1, 1)
-    dim1 = max(-3.0, min(35.0, dim1))
-
-    # 构造中单净额描述（有成交额则附百分比，否则仅绝对值）
-    if amount_yuan > 0:
-        mid_desc = f"中单净{mid_net:+.0f}万({mid_pct:+.2f}%)"
+    # ─── 维度1: 换手率活跃度 (35分) ───
+    dim1 = 0.0
+    if turnover >= 20:
+        dim1 = 35
+        reasons.append(f"换手极度活跃{turnover:.1f}%+35")
+    elif turnover >= 15:
+        dim1 = 28
+        reasons.append(f"换手非常活跃{turnover:.1f}%+28")
+    elif turnover >= 10:
+        dim1 = 21
+        reasons.append(f"换手活跃{turnover:.1f}%+21")
+    elif turnover >= 6:
+        dim1 = 14
+        reasons.append(f"换手中度活跃{turnover:.1f}%+14")
+    elif turnover >= 3:
+        dim1 = 7
+        reasons.append(f"换手温和{turnover:.1f}%+7")
+    elif turnover >= 1:
+        dim1 = 2
+        reasons.append(f"换手偏低{turnover:.1f}%+2")
     else:
-        mid_desc = f"中单净{mid_net:+.0f}万"
-
-    if dim1 >= 20:
-        reasons.append(f"[中单{dim1:.0f}]{mid_desc}→强力吸筹")
-    elif dim1 >= 10:
-        reasons.append(f"[中单{dim1:.0f}]{mid_desc}→偏积极")
-    elif dim1 >= 0:
-        reasons.append(f"[中单{dim1:.0f}]{mid_desc}→中性")
-    else:
-        reasons.append(f"[中单{dim1:.0f}]{mid_desc}→偏弱")
-
+        reasons.append(f"换手极低{turnover:.1f}%+0")
     score += dim1
 
-    # ─── 维度2: 中小单共振 (25分) ───
-    # 核心模式：中单+小单流入但主力流出 → 隐形吸筹（对倒洗盘）
-    # 主力砸盘制造恐慌 → 中小资金悄悄接筹 → 后续拉升概率高
+    # ─── 维度2: 成交额规模 (25分) ───
     dim2 = 0.0
-
-    if jv_data:
-        # jvQuant 有完整四维数据，可做精确共振判断
-        mid_pos = mid_net > 0
-        small_pos = small_net > 0
-        main_neg = main_net < 0
-        big_neg = big_net < 0
-        price_rising = pct_chg > 2
-
-        # 加分档位（取最高匹配）
-        if mid_pos and small_pos and main_neg and price_rising:
-            # 经典隐形吸筹：中单+小单流入，主力流出，股价上涨
-            dim2 += 25
-            reasons.append(f"[共振{dim2:.0f}]主力{main_net:+.0f}万但中单{mid_net:+.0f}万+小单{small_net:+.0f}万→隐形吸筹")
-        elif mid_pos and small_pos and main_neg:
-            # 中单+小单共振流入，主力在卖（无需涨幅条件）
-            dim2 += 18
-            reasons.append(f"[共振{dim2:.0f}]中单{mid_net:+.0f}万+小单{small_net:+.0f}万 vs 主力{main_net:+.0f}万→吸筹")
-        elif mid_pos and small_pos:
-            # 中单+小单同步流入（主力不一定在卖）
-            dim2 += 12
-            reasons.append(f"[共振{dim2:.0f}]中小单同步流入{mid_net+small_net:+.0f}万")
-        elif mid_pos and main_neg and big_neg:
-            # 中单独立承接，大单+主力都在卖（中单对抗抛压）
-            dim2 += 10
-            reasons.append(f"[共振{dim2:.0f}]中单独抗抛压{mid_net:+.0f}万(主力{main_net:+.0f})")
-        elif mid_pos:
-            # 仅中单流入
-            dim2 += 5
-            reasons.append(f"[共振{dim2:.0f}]中单净{mid_net:+.0f}万→单边支撑")
-
-        # 扣分档位
-        if mid_net < 0 and small_net < 0 and main_net < 0:
-            # 全资金流出 → 真正弱势
-            dim2 -= 15
-            reasons.append(f"[共振{dim2:.0f}]全员流出→真弱势")
-        elif mid_net < 0 and small_net < 0:
-            dim2 -= 8
-            reasons.append(f"[共振{dim2:.0f}]中小单同步流出{mid_net+small_net:+.0f}万")
+    amount_wan = amount_yuan / 10000  # 元→万元
+    if amount_wan >= 500_0000:  # 5000万
+        dim2 = 25
+        reasons.append(f"成交巨额{amount_wan/10000:.1f}亿+25")
+    elif amount_wan >= 200_0000:
+        dim2 = 20
+        reasons.append(f"成交充沛{amount_wan/10000:.1f}亿+20")
+    elif amount_wan >= 100_0000:
+        dim2 = 15
+        reasons.append(f"成交充足{amount_wan/10000:.1f}亿+15")
+    elif amount_wan >= 50_0000:
+        dim2 = 10
+        reasons.append(f"成交尚可{amount_wan/10000:.1f}亿+10")
+    elif amount_wan >= 20_0000:
+        dim2 = 5
+        reasons.append(f"成交一般{amount_wan/10000:.1f}亿+5")
     else:
-        # Tushare 降级：中单 = 总净额 - 主力净额（粗粒度代理）
-        if mid_net > 0 and main_net < 0:
-            # 总净流入正但主力净流出 → 散户/中单承接（粗粒度共振）
-            dim2 += 12
-            reasons.append(f"[共振{dim2:.0f}]中单代理{mid_net:+.0f}万 vs 主力{main_net:+.0f}万→疑似吸筹")
-        elif mid_net > 0 and main_net > 0:
-            dim2 += 5
-            reasons.append(f"[共振{dim2:.0f}]主力+中单代理同步流入[Tushare粗粒]")
-        elif mid_net < 0 and main_net < 0:
-            dim2 -= 10
-            reasons.append(f"[共振{dim2:.0f}]主力+中单代理双流出→弱势")
-
-    dim2 = max(-20.0, min(25.0, dim2))
+        reasons.append(f"成交不足{amount_wan/10000:.1f}亿+0")
     score += dim2
 
-    # ─── 维度3: 主力真实意图 (15分) ───
-    # 反转逻辑：主力净占比过高 → 可能对倒出货（负向信号）
-    # f_main_pct d = -0.25, f_main_net d = -0.21
+    # ─── 维度3: 大市值+高换手共振 (10分) ───
     dim3 = 0.0
-
-    if jv_data:
-        # 有完整四维数据 → 精确判断主力与中单关系
-        if main_net > 0 and mid_net > 0:
-            # 主力+中单共振上扬（最健康）
-            main_mid_ratio = main_net / mid_net if mid_net > 0 else 999
-            if main_mid_ratio < 2.0:
-                # 主力不过度主导，中单配合良好
-                dim3 += 12
-                reasons.append(f"[主力{dim3:.0f}]主力{main_net:+.0f}万+中单{mid_net:+.0f}万→共振上扬")
-            elif main_mid_ratio < 3.0:
-                dim3 += 6
-                reasons.append(f"[主力{dim3:.0f}]主力{main_net:+.0f}万→适度主导")
-            else:
-                # 主力过分主导 → 可能对倒
-                dim3 -= 8
-                reasons.append(f"[主力{dim3:.0f}]主力{main_net:+.0f}万远超中单{main_mid_ratio:.1f}x→疑似对倒")
-        elif main_net > 0 and mid_net <= 0:
-            # 主力独大，中单不跟 → 谨慎偏负
-            dim3 -= 5
-            reasons.append(f"[主力{dim3:.0f}]主力{main_net:+.0f}万独大无中单跟→偏虚")
-        elif main_net < 0 and mid_net > 0:
-            # 主力流出但中单承接（已在dim2覆盖，dim3轻度加分）
-            dim3 += 8
-            reasons.append(f"[主力{dim3:.0f}]主力{main_net:+.0f}万但中单承接→逆势信号")
-        elif main_net < 0 and mid_net < 0:
-            # 主力+中单双流出
-            dim3 -= 12
-            reasons.append(f"[主力{dim3:.0f}]主力{main_net:+.0f}万+中单{mid_net:+.0f}万→双流出")
-    else:
-        # Tushare 降级：仅有主力净额
-        # 使用主力净额/流通市值作为判断依据
-        if main_vs_circ > 0.3:
-            # 主力净流入 > 0.3‰流通市值，但无法验证中单是否跟随
-            dim3 += 5
-            reasons.append(f"[主力{dim3:.0f}]主力流入{main_vs_circ:.2f}‰流通市值[Tushare粗粒]")
-        elif main_vs_circ < -0.3:
-            dim3 -= 10
-            reasons.append(f"[主力{dim3:.0f}]主力流出{main_vs_circ:.2f}‰流通市值")
-        elif main_net > 0:
-            dim3 += 3
-            reasons.append(f"[主力{dim3:.0f}]主力{main_net:+.0f}万→微弱流入")
-        elif main_net < 0:
-            dim3 -= 3
-            reasons.append(f"[主力{dim3:.0f}]主力{main_net:+.0f}万→微弱流出")
-
-    # 主力净占比过大时的额外惩罚（f_main_pct d = -0.25）
-    if main_pct > 5 and amount_yuan > 0:
-        # 主力净占比 > 5% → 过度集中信号
-        dim3 -= 5
-        reasons.append(f"[主力{dim3:.0f}]主力占比{main_pct:.1f}%过高→疑似对倒")
-
-    dim3 = max(-20.0, min(15.0, dim3))
+    circ_mv_yi = circ_mv_yuan / 10000 / 10000  # 元 → 亿元
+    if circ_mv_yi >= 100 and turnover >= 8:
+        dim3 = 10
+        reasons.append(f"大盘活跃(流通{circ_mv_yi:.0f}亿换手{turnover:.1f}%)+10")
+    elif circ_mv_yi >= 50 and turnover >= 6:
+        dim3 = 6
+        reasons.append(f"中大盘活跃(流通{circ_mv_yi:.0f}亿换手{turnover:.1f}%)+6")
+    elif circ_mv_yi >= 20 and turnover >= 5:
+        dim3 = 3
+        reasons.append(f"中盘活跃(流通{circ_mv_yi:.0f}亿换手{turnover:.1f}%)+3")
     score += dim3
 
-    # ─── 维度4: 龙虎榜机构游资 (15分) ───
+    # ─── 维度4: 资金流向健康度 (10分) ───
+    # 数据证明绝对金额流全正，方向只给轻权重
     dim4 = 0.0
+    total_net = main_net + mid_net + small_net  # 万元
 
-    # 4.1 龙虎榜机构交易明细
+    if amount_yuan > 0:
+        total_net_pct = total_net * 10000 / amount_yuan * 100
+        if total_net_pct >= 1.0:
+            dim4 += 5
+            reasons.append(f"资金净流入{total_net_pct:.2f}%+5")
+        elif total_net_pct >= 0.3:
+            dim4 += 3
+            reasons.append(f"资金净流入{total_net_pct:.2f}%+3")
+        elif total_net_pct <= -1.0:
+            dim4 -= 3
+            reasons.append(f"资金净流出{total_net_pct:.2f}%-3")
+
+    if main_vs_circ >= 0.5:
+        dim4 += 5
+        reasons.append(f"主力流入{main_vs_circ:.2f}‰+5")
+    elif main_vs_circ >= 0.2:
+        dim4 += 2
+        reasons.append(f"主力流入{main_vs_circ:.2f}‰+2")
+    elif main_vs_circ <= -0.3:
+        dim4 -= 3
+        reasons.append(f"主力流出{main_vs_circ:.2f}‰-3")
+
+    dim4 = max(-5.0, min(10.0, dim4))
+    score += dim4
+
+    # ─── 维度5: 龙虎榜与封板质量 (15分) ───
+    dim5 = 0.0
+
     inst_rows = _get_top_inst(code, trade_date)
     if inst_rows:
         inst_net_buy = 0.0
         hot_net_buy = 0.0
-        seat_net_values: list[float] = []
-
         for inst in inst_rows:
             nb = safe_float(inst.get("net_buy", 0))
             exalter = inst.get("exalter", "")
@@ -545,140 +488,73 @@ def score_fundflow(code: str, trade_date: str = None,
                 inst_net_buy += nb
             else:
                 hot_net_buy += nb
-            seat_net_values.append(abs(nb))
+        total_net_lhb = inst_net_buy + hot_net_buy
+        if total_net_lhb > 50000000:
+            dim5 += 6
+            reasons.append(f"龙虎榜净买{total_net_lhb/1e8:.1f}亿+6")
+        elif total_net_lhb > 10000000:
+            dim5 += 3
+            reasons.append(f"龙虎榜净买{total_net_lhb/10000:.0f}万+3")
+        elif total_net_lhb < -50000000:
+            dim5 -= 5
+            reasons.append(f"龙虎榜净卖{abs(total_net_lhb)/1e8:.1f}亿-5")
 
-        total_net = inst_net_buy + hot_net_buy
-
-        # 席位合力：机构+游资净买入
-        if total_net > 50000000:  # 5000万元
-            dim4 += 8
-            reasons.append(f"[龙虎{dim4:.0f}]机构+游资净买{total_net/1e8:.1f}亿")
-        elif total_net > 10000000:  # 1000万元
-            dim4 += 4
-            reasons.append(f"[龙虎{dim4:.0f}]机构+游资净买{total_net/10000:.0f}万")
-
-        # 席位主导：最大席位净买入占比 > 30%
-        if total_net > 0 and seat_net_values:
-            max_seat = max(seat_net_values)
-            if max_seat / total_net > 0.3:
-                dim4 += 5
-                reasons.append(f"[龙虎{dim4:.0f}]席位主导{max_seat/10000:.0f}万")
-
-        # 机构>游资：机构主导优于游资主导
-        if total_net > 0 and inst_net_buy > hot_net_buy * 2:
-            dim4 += 2
-            reasons.append(f"[龙虎{dim4:.0f}]机构主导")
-
-    # 4.2 龙虎榜上榜净买率
     top_rows = _get_top_list(code, trade_date)
     if top_rows:
-        top = top_rows[0]
-        net_rate = safe_float(top.get("net_rate", 0))
+        net_rate = safe_float(top_rows[0].get("net_rate", 0))
         if net_rate > 0:
-            dim4 += 3
-            reasons.append(f"[龙虎{dim4:.0f}]净买率{net_rate:.1f}%")
+            dim5 += 3
+            reasons.append(f"上榜净买率{net_rate:.1f}%+3")
         elif net_rate < -5:
-            dim4 -= 5
-            reasons.append(f"[龙虎{dim4:.0f}]净卖率{abs(net_rate):.1f}%→撤离")
+            dim5 -= 3
+            reasons.append(f"上榜净卖率{abs(net_rate):.1f}%-3")
 
-    # 4.3 涨停封板质量（limit_list）
     limit_rows = _get_limit_list(code, trade_date)
     if limit_rows:
         ll = limit_rows[0]
         limit_type = str(ll.get("limit", "")).upper()
         open_times = safe_float(ll.get("open_times", 1))
-        fd_amount = safe_float(ll.get("fd_amount", 0))  # 万
+        fd_amount = safe_float(ll.get("fd_amount", 0))
         first_time = ll.get("first_time", "")
 
         if limit_type == "U":
-            # 开板次数
             if open_times == 0:
-                dim4 += 4
-                reasons.append(f"[龙虎{dim4:.0f}]秒封/一字板")
-            elif open_times == 1:
-                dim4 += 2
-                reasons.append(f"[龙虎{dim4:.0f}]开板1次")
+                dim5 += 3
+                reasons.append("秒封/一字板+3")
             elif open_times >= 4:
-                dim4 -= 4
-                reasons.append(f"[龙虎{dim4:.0f}]炸板{int(open_times)}次→分歧")
+                dim5 -= 3
+                reasons.append(f"炸板{int(open_times)}次-3")
 
-            # 封单规模
             if fd_amount > 0 and circ_mv_yuan > 0:
-                fd_ratio = fd_amount / (circ_mv_yuan / 10000) * 100  # 封单/流通市值(%)
+                fd_ratio = fd_amount / (circ_mv_yuan / 10000) * 100
                 if fd_ratio > 1.0:
-                    dim4 += 3
-                    reasons.append(f"[龙虎{dim4:.0f}]封单{fd_ratio:.1f}%流通")
-                elif fd_ratio < 0.2:
-                    dim4 -= 3
-                    reasons.append(f"[龙虎{dim4:.0f}]封单弱{fd_ratio:.2f}%")
+                    dim5 += 3
+                    reasons.append(f"封单{fd_ratio:.1f}%流通+3")
 
-            # 首封时间
             if first_time:
                 try:
                     hhmm = first_time.replace(":", "")
                     if hhmm < "103000":
-                        dim4 += 3
-                        reasons.append(f"[龙虎{dim4:.0f}]早封{first_time}")
-                    elif hhmm > "140000":
-                        dim4 -= 3
-                        reasons.append(f"[龙虎{dim4:.0f}]尾板{first_time}")
+                        dim5 += 2
+                        reasons.append(f"早封{first_time}+2")
                 except Exception:
                     pass
 
-    dim4 = max(-20.0, min(15.0, dim4))
-    score += dim4
-
-    # ─── 维度5: 融资与北向资金 (10分) ───
-    dim5 = 0.0
-
-    # 5.1 融资融券
-    margin_rows = _get_margin_detail(code, trade_date)
-    if margin_rows and len(margin_rows) >= 3:
-        rzye_list = sorted(
-            [(safe_float(r.get("rzye", 0)), r.get("trade_date", ""))
-             for r in margin_rows],
-            key=lambda x: x[1], reverse=True
-        )
-        rzye_vals = [v for v, _ in rzye_list]
-
-        if len(rzye_vals) >= 3:
-            # 融资连续3日增长
-            if rzye_vals[0] > rzye_vals[1] > rzye_vals[2]:
-                dim5 += 5
-                reasons.append(f"[融资{dim5:.0f}]融资3日连增")
-            elif rzye_vals[0] < rzye_vals[1] < rzye_vals[2]:
-                dim5 -= 5
-                reasons.append(f"[融资{dim5:.0f}]融资3日连降→杠杆撤离")
-
-            # 融资活跃度：融资买入额/成交额
-            rzmre = safe_float(margin_rows[0].get("rzmre", 0))
-            if rzmre > 0 and amount_yuan > 0:
-                rz_ratio = rzmre / amount_yuan * 100
-                if rz_ratio > 8:
-                    dim5 += 3
-                    reasons.append(f"[融资{dim5:.0f}]买入占比{rz_ratio:.1f}%→活跃")
-    elif margin_rows:
-        reasons.append(f"[融资{dim5:.0f}]数据不足")
-
-    # 5.2 北向资金（hk_hold）
-    hk_rows = _get_hk_hold(code)
-    if hk_rows:
-        hk = hk_rows[0]
-        hk_vol = safe_float(hk.get("vol", 0))
-        hk_ratio = safe_float(hk.get("ratio", 0))
-
-        if len(hk_rows) >= 5:
-            vol_5d = safe_float(hk_rows[4].get("vol", 0))
-            if vol_5d > 0 and hk_vol > vol_5d:
-                chg_pct = (hk_vol - vol_5d) / vol_5d * 100
-                dim5 += 2
-                reasons.append(f"[融资{dim5:.0f}]北向5日+{chg_pct:.1f}%")
-        elif hk_vol > 0:
-            dim5 += 1
-            reasons.append(f"[融资{dim5:.0f}]北向持仓{hk_vol/10000:.0f}万股")
-
-    dim5 = max(-10.0, min(10.0, dim5))
+    dim5 = max(-10.0, min(15.0, dim5))
     score += dim5
+
+    # ─── 维度6: 追涨惩罚 ───
+    # 近 10 日涨幅过大时，资金面的放量可能是出货而非接力
+    try:
+        from plays.limit_up.strategies import factor_ctx
+        pf = factor_ctx.get_price_features(code)
+        t10 = pf.get("trailing_10", 0.0)
+        if t10 > 0.30:
+            score *= 0.85
+        elif t10 > 0.20:
+            score *= 0.92
+    except Exception:
+        pass
 
     # ═══════════════════════════════════════════════════════════
     # 3. 汇总输出
@@ -686,7 +562,6 @@ def score_fundflow(code: str, trade_date: str = None,
     final_score = max(0.0, min(100.0, score))
     final_score = round(final_score, 1)
 
-    # 潜力等级
     if final_score >= 75:
         level = "高"
     elif final_score >= 55:
@@ -699,5 +574,5 @@ def score_fundflow(code: str, trade_date: str = None,
     if not reasons:
         reasons.append("[无]无明显资金信号")
 
-    reason_str = f"[{level}][{data_src}] {'; '.join(reasons)}"
+    reason_str = f"[{level}][{data_src}] {'; '.join(reasons[:6])}"
     return final_score, reason_str
