@@ -85,6 +85,16 @@ ScoreGap 推送筛选
 查下一交易日收盘价 → 算胜率（T+1）
 ```
 
+## 三件套（2026-07-02 重构后）
+
+原 20+ 回测脚本（validate*.py, optimize*.py, mine*.py, enrich*.py, evaluate*.py, topk_backtest.py, train_walkforward.py, ...）合并为三件：
+
+- `plays/limit_up/backtest/mine.py` — 因子挖掘（单/双/三因子组合）
+- `plays/limit_up/backtest/validate.py` — 单因子 / total_score 的 IC & hit 报告
+- `plays/limit_up/backtest/optimize.py` — 权重优化（total_score 组件权重 + AGENT_WEIGHTS）
+
+原 `factor_lib.py`（2900 行）已废弃；有效因子下沉到 `plays/limit_up/factors/<dim>/`，负 IC 与冗余组合直接删除。详见 [[../../plays/limit_up/docs/backtest.md]] 与 [[../../plays/limit_up/docs/factors.md]]。
+
 ## 因子修正记录
 
 ### 短线博弈 (shortterm) V2 → V3

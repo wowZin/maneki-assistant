@@ -1,5 +1,9 @@
 # 复盘机制
 
+> **2026-07-02 重构后**：读取顺序 `wiki/raw/limit-up/analysis/{today}*` → `plays/limit_up/data/analysis/{today}*`。总分统一使用 `total_score`，历史版本字段（`ultimate_total_v*` / `balanced_total*` 等）在数据文件中不再出现。以下内容涉及历史总分名的部分保留供历史数据回读兼容。
+
+
+
 ## 概述
 
 每日 15:00 收盘后自动触发复盘流程。

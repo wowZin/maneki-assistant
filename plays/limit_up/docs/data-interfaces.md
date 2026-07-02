@@ -1,6 +1,18 @@
 # 数据接口审计
 
-> 所有接口清单、已知坑、权限/时序要求。更新于 2026-05-22。
+> 所有接口清单、已知坑、权限/时序要求。更新于 2026-07-02。
+
+## 审计红线（2026-07-02 起）
+
+- **每次 API 调用必须 `scripts.audit.record(source, api, ok=..., items=..., latency_ms=..., extra=...)`**
+- 错误路径 `extra` 结构化为 `ERR:<异常类>|<msg60>|params:<关键入参>`
+- `pipeline.main()` 结束时 `scripts.audit.dump(data/logs/audit_{trade_date}.log)`；`summary()` 按 api 拆分
+- 客户端覆盖：
+  - ✅ `scripts/tu_share.py::call_tushare`
+  - ✅ `scripts/ths_client.py`（quote/batch/hot；补 `get_concept_tags / get_hot_rank_map` 首触发路径）
+  - ✅ `scripts/jvquant_client.py`（所有 public 方法，用 `_call_with_audit` 装饰）
+  - ✅ `scripts/jvquant_ws_client.py`（connect/subscribe/unsubscribe/reconnect 事件级）
+
 
 ## Tushare 接口 (23个)
 

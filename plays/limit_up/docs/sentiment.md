@@ -1,5 +1,9 @@
 # 情绪面评分
 
+> **2026-07-02 重构后**：情绪面 baseline `sentiment` 是当前**最强单变量**（IC=0.338）。`total_score` 的三个组件（`sentiment_amount_boosted / sentiment_position_combo / sentiment_volatility_combo`）全部来自本维度，见 [`factors.md`](./factors.md#维度sentiment)。
+
+
+
 ## 策略定位
 
 专注A股T+1~T+3情绪周期博弈。五维度量化评分，含一票否决规则（核按钮检测、情绪熔断）、高位情绪折扣。

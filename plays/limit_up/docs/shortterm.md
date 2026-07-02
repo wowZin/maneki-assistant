@@ -1,5 +1,9 @@
 # 短线博弈评分
 
+> **2026-07-02 重构后**：短线博弈维度提供 `limit_up_gene_*`、`trailing_momentum`、`turnover_momentum`、`chasing_guardrail` 等因子。具体清单见 [`factors.md`](./factors.md#维度shortterm)。短线不直接入 `total_score`，但其子因子被 total_score 组件间接引用。
+
+
+
 ## 策略定位
 
 专注首板/连板博弈的短线维度。不与资金、情绪维度重复，只保留涨停基因、开盘动能、位置波动、连板溢价四类因子。
