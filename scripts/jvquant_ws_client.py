@@ -27,7 +27,13 @@ from typing import Any, Callable
 
 import jvQuant
 
+from scripts.audit import record as _audit_record, format_error as _audit_format_error
+
 PROJECT_DIR = Path(__file__).resolve().parent.parent
+
+# 消息接收抽样计数器（每 100 条 record 一次，避免刷屏）
+_msg_counters = defaultdict(int)
+_MSG_SAMPLE_INTERVAL = 100
 
 
 def _load_env() -> dict:
@@ -186,6 +192,7 @@ class JvQuantWSClient:
         self._check_day_reset()
 
         ws = jvQuant.websocket_client
+        t0 = time.perf_counter()
         try:
             self._ws = ws.Construct(
                 market="ab",
@@ -196,9 +203,14 @@ class JvQuantWSClient:
                 ab_lv10_handle=self._on_l10,
             )
             self._running = True
+            latency = (time.perf_counter() - t0) * 1000
+            _audit_record("jvquant_ws", "connect", ok=True, items=1, latency_ms=latency)
             print(f"[jvQuant WS] 已连接")
             return True
         except Exception as e:
+            latency = (time.perf_counter() - t0) * 1000
+            _audit_record("jvquant_ws", "connect", ok=False, items=0,
+                          latency_ms=latency, extra=_audit_format_error(e))
             print(f"[jvQuant WS] 连接失败: {e}")
             return False
 
@@ -206,8 +218,10 @@ class JvQuantWSClient:
         if self._ws and self._running:
             try:
                 self._ws.disconnect()
-            except Exception:
-                pass
+                _audit_record("jvquant_ws", "disconnect", ok=True, items=1)
+            except Exception as e:
+                _audit_record("jvquant_ws", "disconnect", ok=False,
+                              extra=_audit_format_error(e))
             self._running = False
 
     def is_connected(self) -> bool:
@@ -241,6 +255,8 @@ class JvQuantWSClient:
         if not self._running:
             self.connect()
         if not self._running:
+            _audit_record("jvquant_ws", "subscribe", ok=False, items=0,
+                          extra=f"ERR:NotConnected|level={level}")
             return 0
 
         attr_map = {"l1": "_l1_codes", "l10": "_l10_codes", "l2": "_l2_codes"}
@@ -250,12 +266,26 @@ class JvQuantWSClient:
 
         new_codes = [c for c in codes if c not in code_set and len(c) == 6]
         if not new_codes:
+            _audit_record("jvquant_ws", "subscribe", ok=True, items=0,
+                          extra=f"level={level} skip=dup")
             return 0
 
-        with self._lock:
-            method_map[level](new_codes)
-            code_set.update(new_codes)
-            self._all_subscribed_today.update(new_codes)
+        t0 = time.perf_counter()
+        try:
+            with self._lock:
+                method_map[level](new_codes)
+                code_set.update(new_codes)
+                self._all_subscribed_today.update(new_codes)
+            latency = (time.perf_counter() - t0) * 1000
+            _audit_record("jvquant_ws", "subscribe", ok=True,
+                          items=len(new_codes), latency_ms=latency,
+                          extra=f"level={level}")
+        except Exception as e:
+            latency = (time.perf_counter() - t0) * 1000
+            _audit_record("jvquant_ws", "subscribe", ok=False, items=0,
+                          latency_ms=latency,
+                          extra=_audit_format_error(e, {"level": level}))
+            raise
 
         self._check_budget()
         return len(new_codes)
@@ -270,11 +300,19 @@ class JvQuantWSClient:
         if not remove:
             return
 
+        t0 = time.perf_counter()
         with self._lock:
             try:
                 method_map[level](remove)
-            except Exception:
-                pass
+                latency = (time.perf_counter() - t0) * 1000
+                _audit_record("jvquant_ws", "unsubscribe", ok=True,
+                              items=len(remove), latency_ms=latency,
+                              extra=f"level={level}")
+            except Exception as e:
+                latency = (time.perf_counter() - t0) * 1000
+                _audit_record("jvquant_ws", "unsubscribe", ok=False,
+                              items=0, latency_ms=latency,
+                              extra=_audit_format_error(e, {"level": level}))
             code_set.difference_update(remove)
 
     # ── 数据回调 ──
@@ -283,11 +321,21 @@ class JvQuantWSClient:
         code = lv1.code if hasattr(lv1, 'code') else ""
         if code:
             self._cache[code].update_l1(lv1)
+            _msg_counters["l1"] += 1
+            if _msg_counters["l1"] % _MSG_SAMPLE_INTERVAL == 0:
+                _audit_record("jvquant_ws", "msg_l1", ok=True,
+                              items=_MSG_SAMPLE_INTERVAL,
+                              extra=f"total={_msg_counters['l1']}")
 
     def _on_l10(self, lv10) -> None:
         code = lv10.code if hasattr(lv10, 'code') else ""
         if code:
             self._cache[code].update_l10(lv10)
+            _msg_counters["l10"] += 1
+            if _msg_counters["l10"] % _MSG_SAMPLE_INTERVAL == 0:
+                _audit_record("jvquant_ws", "msg_l10", ok=True,
+                              items=_MSG_SAMPLE_INTERVAL,
+                              extra=f"total={_msg_counters['l10']}")
 
     def _on_l2(self, lv2) -> None:
         code = lv2.code if hasattr(lv2, 'code') else ""
@@ -296,6 +344,11 @@ class JvQuantWSClient:
         deals = lv2.deal_list if hasattr(lv2, 'deal_list') else []
         for deal in deals:
             self._cache[code].add_tick(deal)
+        _msg_counters["l2"] += 1
+        if _msg_counters["l2"] % _MSG_SAMPLE_INTERVAL == 0:
+            _audit_record("jvquant_ws", "msg_l2", ok=True,
+                          items=_MSG_SAMPLE_INTERVAL,
+                          extra=f"total={_msg_counters['l2']} deals={len(deals)}")
 
     # ── 数据查询（兼容 l2_daemon_client API） ──
 

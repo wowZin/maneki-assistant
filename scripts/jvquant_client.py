@@ -12,12 +12,57 @@ Token 从 .env 的 JVQUANT_TOKEN 读取
 """
 
 import logging
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
 import jvQuant
 
+from scripts.audit import record as _audit_record, format_error as _audit_format_error
+
 PROJECT_DIR = Path(__file__).resolve().parent.parent
+
+
+def _audit(api: str):
+    """装饰器：为 JvQuantClient 方法自动记录审计。
+
+    - 成功路径：ok=True，items 由返回值长度决定，latency 计时
+    - 失败路径：ok=False，extra 结构化 ERR:...|params:...
+    - 异常向外抛出（保持原语义）
+    """
+    def deco(fn):
+        def wrapper(self, *args, **kwargs):
+            t0 = time.perf_counter()
+            key_param = args[0] if args else kwargs.get("code") or kwargs.get("date") or ""
+            try:
+                result = fn(self, *args, **kwargs)
+                latency = (time.perf_counter() - t0) * 1000
+                items = _count(result)
+                _audit_record("jvquant", api, ok=True, items=items,
+                              latency_ms=latency, extra=f"key={key_param}")
+                return result
+            except Exception as e:
+                latency = (time.perf_counter() - t0) * 1000
+                _audit_record("jvquant", api, ok=False, items=0,
+                              latency_ms=latency,
+                              extra=_audit_format_error(e, {"key": key_param}))
+                raise
+        wrapper.__name__ = fn.__name__
+        wrapper.__doc__ = fn.__doc__
+        return wrapper
+    return deco
+
+
+def _count(result) -> int:
+    if isinstance(result, list):
+        return len(result)
+    if isinstance(result, dict):
+        for k in ("series", "list", "bars", "items"):
+            v = result.get(k)
+            if isinstance(v, list):
+                return len(v)
+        return 1 if result else 0
+    return 1 if result else 0
 
 
 def _load_token() -> str:
@@ -47,6 +92,7 @@ class JvQuantClient:
     # 资金流向查询
     # ═══════════════════════════════════════════════════════════
 
+    @_audit("fundflow_single")
     def get_fundflow_single(self, code: str, date: str | None = None) -> dict:
         """获取单只股票单日资金流向
 
@@ -74,6 +120,7 @@ class JvQuantClient:
         self._fundflow_cache[cache_key] = result
         return result
 
+    @_audit("fundflow_batch")
     def get_fundflow_batch(self, date: str, filters: str = "主板,非ST") -> list[dict]:
         """获取某日全市场资金流向（最多100条）
 
@@ -101,6 +148,7 @@ class JvQuantClient:
             results.append(self._normalize_fundflow_row(d))
         return results
 
+    @_audit("fundflow_multiday")
     def get_fundflow_multiday(self, code: str, days: int = 5,
                                end_date: str | None = None) -> dict:
         """获取单只股票近N日累计资金流向
@@ -142,6 +190,7 @@ class JvQuantClient:
     # 分时数据查询
     # ═══════════════════════════════════════════════════════════
 
+    @_audit("minute")
     def get_minute_data(self, code: str, date: str, count: int = 1) -> dict:
         """获取历史分钟数据
 
@@ -241,6 +290,7 @@ class JvQuantClient:
     # K线数据查询
     # ═══════════════════════════════════════════════════════════
 
+    @_audit("kline")
     def get_kline(self, code: str, freq: str = "day", count: int = 5,
                   fq: str = "前复权") -> list[dict]:
         """获取K线数据
@@ -284,6 +334,7 @@ class JvQuantClient:
     # Level2 数据查询
     # ═══════════════════════════════════════════════════════════
 
+    @_audit("order_book")
     def get_order_book(self, code: str, offset: int = 0) -> list[dict]:
         """获取Level2逐笔委托队列
 
@@ -307,6 +358,7 @@ class JvQuantClient:
             })
         return results
 
+    @_audit("level_queue")
     def get_level_queue(self, code: str) -> dict:
         """获取Level2千档盘口
 
