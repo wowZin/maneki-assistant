@@ -31,6 +31,12 @@ DIM_COLS = ["fundamental", "technical", "fundflow", "sentiment", "shortterm"]
 # 由 pipeline._compute_balanced_total_batch 生成的 PIT 特征列（仅追高惩罚相关）
 BT_COLS = ["balanced_total", "_bt_trailing_10", "_bt_position_20d"]
 
+# 新增综合评分列（由 rebuild_analysis_scores 调用各 batch 计算生成）
+TOTAL_COLS = [
+    "balanced_total_v2", "sentiment_adaptive_total",
+    "ultimate_total_v1", "ultimate_total_v2",
+    "cpt_amount_percentile", "balanced_ensemble", "ultimate_total_v3", "ultimate_total_v4",
+]
 
 # ===== 1. 评分记录 =====
 def load_analysis_records(dedup: str = "last", analysis_dir: Path | str | None = None) -> pd.DataFrame:
@@ -75,6 +81,8 @@ def load_analysis_records(dedup: str = "last", analysis_dir: Path | str | None =
             }
             for col in BT_COLS:
                 row[col] = _f(r.get(col))
+            for col in TOTAL_COLS:
+                row[col] = _f(r.get(col))
             rows.append(row)
     df = pd.DataFrame(rows).dropna(subset=["code", "date"])
     if df.empty:
@@ -85,7 +93,7 @@ def load_analysis_records(dedup: str = "last", analysis_dir: Path | str | None =
         df = df.sort_values("total").groupby(["code", "date"], as_index=False).last()
     elif dedup == "mean":
         df = df.groupby(["code", "date"], as_index=False)[
-            DIM_COLS + BT_COLS + ["total", "pct_chg_score_day", "resonance_count", "is_resonance"]
+            DIM_COLS + BT_COLS + TOTAL_COLS + ["total", "pct_chg_score_day", "resonance_count", "is_resonance"]
         ].mean()
     return df.drop(columns=["ts"], errors="ignore").reset_index(drop=True)
 

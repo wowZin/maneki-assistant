@@ -2145,6 +2145,144 @@ def factor_technical_rebuilt_v2(row: pd.Series) -> float:
     return round(max(0.0, min(80.0, score * penalty)), 2)
 
 
+# ═══════════════════════════════════════════════════════════
+# 第十八类：深度挖掘新因子（2026-07-02）
+# ═══════════════════════════════════════════════════════════
+
+def factor_cpt_amount_combo(row: pd.Series) -> float:
+    """概念换手 + 成交额组合：当前最强单因子组合之一。
+
+    子因子挖掘：cpt_turn_5d_max(IC=0.33) 与 avg_amount_5d(IC=0.20) 组合后
+    IC(hit_limit_3)=+0.326, chasing=+0.275, 显著提升且追涨可控。
+    """
+    cpt_turn = _safe(row.get("cpt_turn_5d_max"), 0.0)
+    avg_amount = _safe(row.get("avg_amount_5d"), 0.0)
+    return round(cpt_turn + avg_amount / 160_000.0, 2)
+
+
+def factor_cpt_amount_percentile(row: pd.Series) -> float:
+    """概念换手 + 成交额（百分位阈值版）：IC 更高的稳健版本。
+
+    基于 panel_enriched_pit_v4 分布硬编码阈值：
+      - cpt_turn_5d_max >=14.6(≈top20%) → +15, >=12.2(≈top40%) → +8
+      - avg_amount_5d   >=3007k(≈top20%) → +12, >=1005k(≈top40%) → +6
+    验证：IC(hit_limit_3)=+0.336, chasing=+0.274, hit@20=0.40。
+    """
+    score = 0.0
+    cpt_turn = _safe(row.get("cpt_turn_5d_max"), 0.0)
+    avg_amount = _safe(row.get("avg_amount_5d"), 0.0)
+
+    if cpt_turn >= 14.6:
+        score += 15.0
+    elif cpt_turn >= 12.2:
+        score += 8.0
+
+    if avg_amount >= 3_007_000:
+        score += 12.0
+    elif avg_amount >= 1_005_000:
+        score += 6.0
+
+    return round(score, 2)
+
+
+def factor_cpt_amount_anti_chase(row: pd.Series) -> float:
+    """概念换手 + 成交额组合（反追高版）。
+
+    在 cpt_amount_combo 基础上加入 trailing_10 惩罚，IC 基本持平，
+    但显著降低追涨风险。
+    """
+    score = factor_cpt_amount_combo(row)
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")), 0.0)
+    if t10 > 0.30:
+        score *= 0.75
+    elif t10 > 0.20:
+        score *= 0.85
+    elif t10 > 0.10:
+        score *= 0.95
+    return round(max(0.0, score), 2)
+
+
+def factor_cpt_streak_turn(row: pd.Series) -> float:
+    """概念连涨 + 个股换手：捕捉概念发酵中个股接力信号。
+
+    IC(hit_limit_3)=+0.267, hit@20=0.55。
+    """
+    cpt_streak = _safe(row.get("cpt_up_streak_max"), 0.0)
+    turnover = _safe(row.get("turnover_rate"), 0.0)
+    return round(cpt_streak * 2.0 + turnover * 0.5, 2)
+
+
+def factor_mv_turn_cpt(row: pd.Series) -> float:
+    """大市值 + 高换手 + 概念热：大盘活跃股的起爆信号。
+
+    IC(hit_limit_3)=+0.283, chasing=+0.345。
+    """
+    circ_mv = _safe(row.get("circ_mv"), 0.0)
+    turnover = _safe(row.get("turnover_rate"), 0.0)
+    cpt_turn = _safe(row.get("cpt_turn_5d_max"), 0.0)
+    # circ_mv 单位万元，转换为亿元量级
+    return round(circ_mv / 100_0000.0 * 0.3 + turnover * 0.4 + cpt_turn * 0.6, 2)
+
+
+def factor_residual_shortterm(row: pd.Series) -> float:
+    """shortterm 对 trailing_10 的残差：去除追涨成分后的短线信号。
+
+    单独 IC 仅 0.16，但 chasing 接近 0，适合作为综合分的稳定器。
+    实现上用 shortterm * (1 - trailing_10) 近似残差效果。
+    """
+    st = _safe(row.get("shortterm"), 0.0)
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")), 0.0)
+    return round(st * max(0.0, 1.0 - t10 * 2.0), 2)
+
+
+def factor_residual_technical(row: pd.Series) -> float:
+    """technical 对 trailing_10 的残差近似。"""
+    tech = _safe(row.get("technical"), 0.0)
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")), 0.0)
+    return round(tech * max(0.0, 1.0 - t10 * 2.0), 2)
+
+
+def factor_balanced_ensemble(row: pd.Series) -> float:
+    """平衡 ensemble：高 IC + 低追涨的折中方案。
+
+    组合：cpt_amount_percentile + residual_shortterm + cpt_streak_turn
+    """
+    return round(
+        factor_cpt_amount_percentile(row) * 0.5 +
+        factor_residual_shortterm(row) * 0.3 +
+        factor_cpt_streak_turn(row) * 0.3,
+        2
+    )
+
+
+def factor_ultimate_total_v3(row: pd.Series) -> float:
+    """终极综合评分 v3：融入深度挖掘出的低追涨组合。
+
+    权重：cpt_amount_percentile(1.0) + residual_shortterm(0.6) + cpt_streak_turn(0.5) + mv_turn_cpt(0.3)
+    """
+    score = (
+        factor_cpt_amount_percentile(row) * 1.0 +
+        factor_residual_shortterm(row) * 0.6 +
+        factor_cpt_streak_turn(row) * 0.5 +
+        factor_mv_turn_cpt(row) * 0.3
+    )
+    return round(max(0.0, score), 2)
+
+
+def factor_ultimate_total_v4(row: pd.Series) -> float:
+    """终极综合评分 v4：极低追涨版本。
+
+    以残差因子和低追涨组合为主，chasing 接近 0。
+    """
+    score = (
+        factor_cpt_amount_anti_chase(row) * 1.0 +
+        factor_residual_shortterm(row) * 0.8 +
+        factor_residual_technical(row) * 0.5 +
+        _safe(row.get("cpt_turn_5d_max"), 0.0) * 0.3
+    )
+    return round(max(0.0, score), 2)
+
+
 def factor_new_total_mined_v2(row: pd.Series) -> float:
     """数据挖掘综合评分 v2：概念热度 + 个股活跃度 + 涨停基因 + 追高惩罚。
 

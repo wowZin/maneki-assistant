@@ -41,6 +41,7 @@ from plays.limit_up.pipeline import (
     _compute_balanced_total_v2_batch,
     _compute_sentiment_adaptive_total_batch,
     _compute_ultimate_total_batch,
+    _compute_deep_total_batch,
     _fetch_nv2_data,
 )
 from plays.limit_up.strategies import factor_ctx
@@ -115,6 +116,7 @@ def rescore_date(date: str, recs: list[dict], max_workers: int = 1) -> list[dict
     _compute_balanced_total_v2_batch(results, pit_mode=False)
     _compute_sentiment_adaptive_total_batch(results, pit_mode=False)
     _compute_ultimate_total_batch(results, pit_mode=False)
+    _compute_deep_total_batch(results, pit_mode=False)
     return results
 
 

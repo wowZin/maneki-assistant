@@ -1192,6 +1192,58 @@ def _compute_ultimate_total_batch(results: list[dict], pit_mode: bool | None = N
         r["ultimate_total_v2"] = round(factor_ultimate_total_v2(row), 1)
 
 
+def _compute_deep_total_batch(results: list[dict], pit_mode: bool | None = None):
+    """为批次结果计算深度挖掘综合评分（v3/v4 / balanced_ensemble / cpt_amount_percentile）。
+
+    基于第二轮因子挖掘的最优组合：
+    - cpt_amount_percentile: 概念换手 + 成交额百分位阈值（IC=+0.336）
+    - balanced_ensemble: 平衡高 IC 与低追涨
+    - ultimate_total_v3: 新版终极综合分
+    - ultimate_total_v4: 极低追涨版本
+    """
+    if not results:
+        return
+
+    if pit_mode is None:
+        pit_mode = is_trading_time()
+
+    from plays.limit_up.backtest.factor_lib import (
+        factor_cpt_amount_percentile,
+        factor_balanced_ensemble,
+        factor_ultimate_total_v3,
+        factor_ultimate_total_v4,
+    )
+    from plays.limit_up.strategies import factor_ctx
+
+    codes = [r["code"] for r in results]
+    _fetch_nv2_data(codes)
+
+    for r in results:
+        code = r["code"]
+        feats = _extract_pit_features(code, pit_mode)
+
+        # 概念动量
+        cm = factor_ctx.get_concept_momentum(code.split(".")[0])
+        feats["cpt_turn_5d_max"] = cm.get("turn_5d_max", 0.0)
+        feats["cpt_up_streak_max"] = cm.get("up_streak_max", 0)
+
+        # trailing_pit 后缀兼容
+        feats["trailing_10_pit"] = feats.get("trailing_10", 0.0)
+        feats["trailing_5_pit"] = feats.get("trailing_5", 0.0)
+
+        # 补充维度分（来自 _score_one 的结果）
+        s = r.get("scores", {})
+        feats["shortterm"] = s.get("shortterm", 0.0)
+        feats["technical"] = s.get("technical", 0.0)
+
+        import pandas as pd
+        row = pd.Series(feats)
+        r["cpt_amount_percentile"] = round(factor_cpt_amount_percentile(row), 1)
+        r["balanced_ensemble"] = round(factor_balanced_ensemble(row), 1)
+        r["ultimate_total_v3"] = round(factor_ultimate_total_v3(row), 1)
+        r["ultimate_total_v4"] = round(factor_ultimate_total_v4(row), 1)
+
+
 # ===== 6. 飞书推送 =====
 def _get_feishu_token():
     """获取飞书 tenant_access_token"""
@@ -1211,7 +1263,7 @@ def push_feishu(results):
     """发送飞书卡片
 
     推送规则（Ultimate Total Top-3）：
-    - 按 ultimate_total_v2 排序（fallback 到 ultimate_total_v1 / balanced_total_v2 / balanced_total / sentiment_adaptive_total / new_total_v2 / total）
+    - 按 ultimate_total_v3 排序（fallback 到 ultimate_total_v2 / ultimate_total_v1 / balanced_total_v2 / balanced_total / sentiment_adaptive_total / new_total_v2 / total）
     - 默认取前 3 只
     - 最高分低于 ULTIMATE_PUSH_THRESHOLD 时不推送（避免低置信度噪音）
     - 午后情绪面 < 25 过滤
@@ -1225,12 +1277,13 @@ def push_feishu(results):
 
     def _score_for_sort(r):
         return r.get(
-            "ultimate_total_v2",
-            r.get("ultimate_total_v1",
-                 r.get("balanced_total_v2",
-                       r.get("balanced_total",
-                             r.get("sentiment_adaptive_total",
-                                   r.get("new_total_v2", r.get("total", 0)))))),
+            "ultimate_total_v3",
+            r.get("ultimate_total_v2",
+                 r.get("ultimate_total_v1",
+                      r.get("balanced_total_v2",
+                            r.get("balanced_total",
+                                  r.get("sentiment_adaptive_total",
+                                        r.get("new_total_v2", r.get("total", 0))))))),
         )
 
     def _stars(total):
@@ -1659,6 +1712,7 @@ def _run_pipeline(args):
     _compute_sentiment_adaptive_total_batch(all_results)
     _compute_balanced_total_v2_batch(all_results)
     _compute_ultimate_total_batch(all_results)
+    _compute_deep_total_batch(all_results)
 
     push_feishu(all_results)
 
