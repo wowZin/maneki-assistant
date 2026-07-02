@@ -153,7 +153,7 @@ tags: [daily, scan]
         content += "\n\n" + signal_section
 
     # 同步原始数据到 raw/
-    _sync_raw_data(trade_date)
+    _relocate_raw_data(trade_date)
 
     # 写入文件
     page_name = f"{trade_date}-扫描汇总.md"
@@ -170,31 +170,48 @@ tags: [daily, scan]
     return True
 
 
-def _sync_raw_data(trade_date: str):
-    """将当日原始数据文件同步到 wiki/raw/，供 grep 搜索"""
+def _relocate_raw_data(trade_date: str, play: str = "limit_up",
+                        play_slug: str = "limit-up"):
+    """搬迁玩法当日原始数据到 wiki/raw/<play_slug>/，删除玩法侧原文件。
+
+    - 语义：move（copy + delete original）
+    - 幂等：目标已存在则先 unlink 再 move
+    - 并发保护：如玩法 data/pipeline.lock 存在（有活跃 pipeline），跳过等待下轮
+    - 覆盖：signals / analysis / reports / pushed / weights 全量同步
+    """
     import shutil
-    RAW_DIR = WIKI_DIR / "raw"
 
-    # data/signals/ → raw/signals/
-    src_signals = PROJECT_DIR / "plays" / "limit_up" / "data" / "signals"
-    dst_signals = RAW_DIR / "signals"
-    dst_signals.mkdir(parents=True, exist_ok=True)
-    for f in sorted(src_signals.glob(f"{trade_date}*.json"))[-5:]:  # 取最近5次
-        shutil.copy2(f, dst_signals / f.name)
+    play_data = PROJECT_DIR / "plays" / play / "data"
+    if (play_data / "pipeline.lock").exists():
+        print(f"  [wiki relocate] {play} pipeline 运行中，跳过搬迁")
+        return
 
-    # data/reports/ → raw/reports/
-    src_reports = PROJECT_DIR / "plays" / "limit_up" / "data" / "reports"
-    dst_reports = RAW_DIR / "reports"
-    dst_reports.mkdir(parents=True, exist_ok=True)
-    for f in src_reports.glob(f"{trade_date}*"):
-        shutil.copy2(f, dst_reports / f.name)
+    raw_play_root = WIKI_DIR / "raw" / play_slug
 
-    # data/analysis/ → raw/analysis/（取最近2次）
-    src_analysis = PROJECT_DIR / "plays" / "limit_up" / "data" / "analysis"
-    dst_analysis = RAW_DIR / "analysis"
-    dst_analysis.mkdir(parents=True, exist_ok=True)
-    for f in sorted(src_analysis.glob(f"{trade_date}*.json"))[-2:]:
-        shutil.copy2(f, dst_analysis / f.name)
+    KINDS = ("signals", "analysis", "reports", "pushed", "weights")
+    total_moved = 0
+    for kind in KINDS:
+        src_dir = play_data / kind
+        if not src_dir.exists():
+            continue
+        dst_dir = raw_play_root / kind
+        dst_dir.mkdir(parents=True, exist_ok=True)
+
+        # glob 支持 json 与 md 后缀（reports 目录有 .md 文件）
+        for f in sorted(list(src_dir.glob(f"{trade_date}*.json"))
+                        + list(src_dir.glob(f"{trade_date}*.md"))):
+            dst = dst_dir / f.name
+            if dst.exists():
+                dst.unlink()
+            shutil.move(str(f), str(dst))
+            total_moved += 1
+
+    if total_moved:
+        print(f"  [wiki relocate] {play_slug}: 搬迁 {total_moved} 个文件到 wiki/raw/{play_slug}/")
+
+
+# 向后兼容别名（用旧名调用会 fallback 到新语义）
+_sync_raw_data = _relocate_raw_data
 
 
 def _compile_signal_analysis(trade_date: str) -> str:
