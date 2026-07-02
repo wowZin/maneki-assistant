@@ -115,8 +115,8 @@ def rescore_date(date: str, recs: list[dict], max_workers: int = 1) -> list[dict
     _compute_balanced_total_batch(results, pit_mode=False)
     _compute_balanced_total_v2_batch(results, pit_mode=False)
     _compute_sentiment_adaptive_total_batch(results, pit_mode=False)
-    _compute_ultimate_total_batch(results, pit_mode=False)
-    _compute_deep_total_batch(results, pit_mode=False)
+    _compute_ultimate_total_batch(results, pit_mode=False, trade_date=date)
+    _compute_deep_total_batch(results, pit_mode=False, trade_date=date)
     return results
 
 

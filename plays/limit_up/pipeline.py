@@ -1153,11 +1153,14 @@ def _compute_balanced_total_v2_batch(results: list[dict], pit_mode: bool | None 
         r["balanced_total_v2"] = round(score, 1)
 
 
-def _compute_ultimate_total_batch(results: list[dict], pit_mode: bool | None = None):
+def _compute_ultimate_total_batch(results: list[dict], pit_mode: bool | None = None, trade_date: str | None = None):
     """为批次结果计算 ultimate_total_v1/v2 评分。
 
     基于数据挖掘结果：concept_turn_5d_max + activity_combo + limit_up_gene_composite
     是预测 hit_limit_3 的最强组合。
+
+    Args:
+        trade_date: 交易日 YYYYMMDD，传入时用于 PIT 概念数据查询；不传时使用最新数据。
     """
     if not results:
         return
@@ -1178,8 +1181,8 @@ def _compute_ultimate_total_batch(results: list[dict], pit_mode: bool | None = N
         code = r["code"]
         feats = _extract_pit_features(code, pit_mode)
 
-        # 概念换手热度
-        cm = factor_ctx.get_concept_momentum(code.split(".")[0])
+        # 概念换手热度（PIT）
+        cm = factor_ctx.get_concept_momentum(code.split(".")[0], trade_date=trade_date)
         feats["cpt_turn_5d_max"] = cm.get("turn_5d_max", 0.0)
 
         # trailing_pit 后缀兼容
@@ -1192,7 +1195,7 @@ def _compute_ultimate_total_batch(results: list[dict], pit_mode: bool | None = N
         r["ultimate_total_v2"] = round(factor_ultimate_total_v2(row), 1)
 
 
-def _compute_deep_total_batch(results: list[dict], pit_mode: bool | None = None):
+def _compute_deep_total_batch(results: list[dict], pit_mode: bool | None = None, trade_date: str | None = None):
     """为批次结果计算深度挖掘综合评分（v3/v4 / balanced_ensemble / cpt_amount_percentile）。
 
     基于第二轮因子挖掘的最优组合：
@@ -1200,6 +1203,9 @@ def _compute_deep_total_batch(results: list[dict], pit_mode: bool | None = None)
     - balanced_ensemble: 平衡高 IC 与低追涨
     - ultimate_total_v3: 新版终极综合分
     - ultimate_total_v4: 极低追涨版本
+
+    Args:
+        trade_date: 交易日 YYYYMMDD，传入时用于 PIT 概念数据查询；不传时使用最新数据。
     """
     if not results:
         return
@@ -1222,8 +1228,8 @@ def _compute_deep_total_batch(results: list[dict], pit_mode: bool | None = None)
         code = r["code"]
         feats = _extract_pit_features(code, pit_mode)
 
-        # 概念动量
-        cm = factor_ctx.get_concept_momentum(code.split(".")[0])
+        # 概念动量（PIT）
+        cm = factor_ctx.get_concept_momentum(code.split(".")[0], trade_date=trade_date)
         feats["cpt_turn_5d_max"] = cm.get("turn_5d_max", 0.0)
         feats["cpt_up_streak_max"] = cm.get("up_streak_max", 0)
 

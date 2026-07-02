@@ -25,9 +25,14 @@ import sys
 sys.path.insert(0, str(PROJECT_DIR))
 
 from plays.limit_up.pipeline import _compute_deep_total_batch
+from plays.limit_up.strategies import factor_ctx
 
 
 def main():
+    # 加载概念缓存（PIT 概念数据必需）
+    cache_dir = Path(__file__).resolve().parent / "cache"
+    factor_ctx.load_concept_data_from_cache(cache_dir)
+
     files = sorted(glob.glob(str(ANALYSIS_DIR / "*.json")))
     print(f"读取 {len(files)} 个 rebuilt 分析文件")
 
@@ -40,8 +45,11 @@ def main():
         if not isinstance(recs, list) or not recs or recs[0].get("_empty"):
             continue
 
-        # 计算深度综合分
-        _compute_deep_total_batch(recs, pit_mode=False)
+        # date 来自文件名 YYYYMMDD_HHMM
+        date = fname.split("_")[0]
+
+        # 计算深度综合分（PIT）
+        _compute_deep_total_batch(recs, pit_mode=False, trade_date=date)
 
         with open(f, "w") as out:
             json.dump(recs, out, ensure_ascii=False, indent=2)

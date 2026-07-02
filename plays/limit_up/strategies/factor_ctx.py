@@ -155,8 +155,13 @@ def get_price_features(code: str) -> dict:
     return feats
 
 
-def get_concept_momentum(code_short: str) -> dict:
+def get_concept_momentum(code_short: str, trade_date: str | None = None) -> dict:
     """获取股票所属概念的最新动量（使用 concept_daily 最近日期）。
+
+    Args:
+        code_short: 股票短代码，如 "000001"
+        trade_date: 指定交易日 YYYYMMDD。传入时仅使用该日期及之前的数据，
+                    用于 PIT 回测；不传时使用缓存中最新日期，用于实时评分。
 
     返回 {"ret3_max", "ret1_max", "ret5_max", "ret3_avg", "ret1_avg", "up_ratio",
           "up_streak_max", "turn_5d_max", "turn_5d_avg", "n_concepts"}
@@ -184,11 +189,19 @@ def get_concept_momentum(code_short: str) -> dict:
         return result
     cpt_codes = members["cpt_code"].unique().tolist()
 
-    # 最新日期
+    # 概念日线数据
     cd = _CONCEPT_DAILY_CACHE[_CONCEPT_DAILY_CACHE["cpt_code"].isin(cpt_codes)].copy()
     if cd.empty:
         return result
     cd["trade_date"] = cd["trade_date"].astype(str)
+
+    # PIT：过滤到指定日期及之前
+    if trade_date:
+        cd = cd[cd["trade_date"] <= str(trade_date)]
+        if cd.empty:
+            return result
+
+    # 最新可用日期
     latest_date = cd["trade_date"].max()
     latest = cd[cd["trade_date"] == latest_date]
     if latest.empty:
@@ -203,7 +216,7 @@ def get_concept_momentum(code_short: str) -> dict:
     result["turn_5d_max"] = turns.max()
     result["turn_5d_avg"] = turns.mean()
 
-    # 近5日累计 / 连续上涨 / 5日换手
+    # 近5日累计 / 连续上涨 / 5日换手（使用 latest_date 及之前的数据）
     streaks = []
     ret3s = []
     ret5s = []
