@@ -22,10 +22,12 @@ def test_total_score_formula(synthetic_row):
     assert total_score(synthetic_row) == expected
 
 
-def test_total_score_equivalent_to_v5():
-    """确认 total_score 与原 factor_ultimate_total_v5 在多组随机 row 上完全等价。"""
-    from plays.limit_up.backtest.factor_lib import factor_ultimate_total_v5
+def test_total_score_formula_stability():
+    """确认 total_score 的公式在多组随机 row 上稳定（本地手工计算等价）。
 
+    公式：0.4*sentiment_amount_boosted + 0.5*sentiment_position_combo
+        + 0.7*sentiment_volatility_combo，取 max(0, ...) 后 round(2)。
+    """
     random.seed(42)
     for _ in range(50):
         row = pd.Series({
@@ -36,7 +38,12 @@ def test_total_score_equivalent_to_v5():
             "limit_up_count_20d": random.randint(0, 6),
             "avg_amount_5d": random.uniform(0, 5_000_000),
         })
-        assert abs(total_score(row) - round(max(0.0, factor_ultimate_total_v5(row)), 2)) < 0.01
+        expected = round(max(0.0,
+            REGISTRY["sentiment_amount_boosted"](row) * 0.4
+            + REGISTRY["sentiment_position_combo"](row) * 0.5
+            + REGISTRY["sentiment_volatility_combo"](row) * 0.7,
+        ), 2)
+        assert abs(total_score(row) - expected) < 0.01
 
 
 def test_total_score_low_sentiment_zero():

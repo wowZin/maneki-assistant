@@ -127,14 +127,9 @@ def main():
 
     if args.train:
         records = load_training_data(args.train)
-    elif args.start and args.end:
-        # 自动跑 analyze
-        from plays.limit_up.backtest.analyze import analyze
-        analyze(args.start, args.end, sample=args.sample)
-        train_file = Path(__file__).resolve().parent / "data" / f"train_{args.start}_{args.end}.json"
-        records = load_training_data(train_file)
     else:
-        print("需要 --train 或 --start/--end")
+        # analyze.py 已在 2026-07-02 重构中删除；只支持 --train
+        print("需要 --train <path>；先在生产 pipeline 或 wiki/raw/limit-up/analysis/ 收集面板")
         return
 
     print(f"加载 {len(records)} 条训练记录")

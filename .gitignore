@@ -15,9 +15,22 @@ plays/limit_up/data/pipeline.lock
 # 运行时数据
 plays/limit_up/data/analysis/
 plays/limit_up/data/pushed/
+plays/limit_up/data/signals/
+plays/limit_up/data/reports/
+plays/limit_up/data/weights/
+plays/limit_up/data/logs/
 plays/limit_up/data/.l2_daemon.pid
-plays/limit_up/data/backtest/bulk_cache.json
+
+# 回测生成物（重构后集中在 backtest/cache 与 out）
 plays/limit_up/backtest/cache/
+plays/limit_up/backtest/data/
+plays/limit_up/backtest/out/
+
+# 弃用/中间产物
+plays/limit_up/data/analysis_rebuilt/
+plays/limit_up/data/backtest/
+
+# 共享
 data/logs/
 data/health_state.json
 plays/watchdog/data/state.json
