@@ -20,56 +20,35 @@ plays/limit_up/backtest/
 
 ### mine.py
 
-发现新因子候选。输入面板 + 目标标签，遍历单/双/三因子组合，输出 Top-K 按 IC 排序的候选到 `out/mined_factors.json` + `out/mined_factors.md`。
-
-```bash
-python plays/limit_up/backtest/mine.py \
-  --panel out/panel_enriched.csv \
-  --label hit_limit_3 \
-  --topk 30
-```
+因子挖掘：在训练集上遍历单/双/三因子组合，输出 Top-K 按 IC 排序的候选。
 
 ### validate.py
 
-给定一个已注册的因子名（`factors/__init__.py` 注册表中的 key），计算面板上的 RankIC / hit@10 / hit@20 / chasing_score，与基线对比。
-
-```bash
-python plays/limit_up/backtest/validate.py --factor total_score
-python plays/limit_up/backtest/validate.py --factor sentiment_amount_boosted
-```
-
-输出：`out/validate_{factor}.json`。
+给定一个已注册的因子名（`factors/__init__.py::REGISTRY` 中的 key），在训练集上计算 RankIC / hit@10 / hit@20 / chasing_score。
 
 ### optimize.py
 
-网格 / 贝叶斯搜索：
-
-- `total_score` 三个组件的权重（A/B/C）
-- `AGENT_WEIGHTS`（维度权重）
-
-```bash
-python plays/limit_up/backtest/optimize.py --target total_score --method grid
-```
-
-输出：`out/optimize_{target}.json`。
+网格 / 贝叶斯搜索 `total_score` 三个组件的权重（A/B/C）与维度权重 `AGENT_WEIGHTS`。
 
 ## 面板生成
 
-`data.py` 提供 `build_panel(start, end)` 一站式：读 Tushare 日线 + daily_basic + limit_list_d + jvQuant fundflow，拼接为 wide-format DataFrame，落 `cache/panel_{start}_{end}.parquet`。
+`dataset.py::build_panel(dates=[...])` 一站式：读 wiki/raw/limit-up/analysis 里的评分记录 + 拉 Tushare daily/daily_basic + join 未来标签 + 重算 `total_score`。
 
 面板列的详细定义见 `factors.md` 的每个因子"依赖列"字段。
 
-## 面板搬迁
-
-历史面板 CSV（`panel_enriched_v3/v4/v5.csv`, `panel_enriched_pit.csv`, `panel_rebuilt.csv` 等）在重构中删除。新面板统一由 `data.py::build_panel` 生成到 `cache/`（`.gitignore` 托管）。
-
-## 一次性执行的验证
-
-重构完成后应通过：
+## 每日回测
 
 ```bash
-python plays/limit_up/backtest/validate.py --factor total_score
-# 期望：IC hit_limit_3 ≥ 0.33
+python plays/limit_up/backtest/backtest.py --days 20        # 最近 20 天
+python plays/limit_up/backtest/backtest.py --start 20260601 --end 20260630
+python plays/limit_up/backtest/backtest.py --dates 20260615,20260618
 ```
 
-若低于基线，说明因子迁移过程中语义漂移，需要回滚上一个 commit 排查。
+输出 Top-K 命中率、胜率、平均收益，以及阈值推送模式的数据。
+
+## 数据资产
+
+面板按天沉淀到 `wiki/raw/limit-up/panel/<api>/<YYYYMMDD>.parquet`：
+- **行增量**（新日期）：只拉未缓存的交易日
+- **列增量**（新字段）：只拉缺失的字段列，合并到已有 parquet
+- **git 跟踪**：跨会话持久，是宝贵的回测资产

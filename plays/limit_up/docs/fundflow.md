@@ -1,6 +1,6 @@
 # 资金面评分
 
-> **2026-07-02 重构后**：资金面维度 baseline IC=-0.11，被 `fundflow_rebuilt`（IC=0.201）替代作为维度默认打分。具体因子见 [`factors.md`](./factors.md#维度fundflow)。资金面不入 `total_score`，仅作为观察指标输出。
+> **2026-07-02 重构后**：资金面维度使用 `fundflow_rebuilt` 作为默认打分。具体因子见 [`factors.md`](./factors.md#维度fundflow)。资金面不入 `total_score`，仅作为观察指标输出。
 
 
 

@@ -1,6 +1,6 @@
 # 情绪面评分
 
-> **2026-07-02 重构后**：情绪面 baseline `sentiment` 是当前**最强单变量**（IC=0.338）。`total_score` 的三个组件（`sentiment_amount_boosted / sentiment_position_combo / sentiment_volatility_combo`）全部来自本维度，见 [`factors.md`](./factors.md#维度sentiment)。
+> **2026-07-02 重构后**：`total_score` 的三个组件（`sentiment_amount_boosted / sentiment_position_combo / sentiment_volatility_combo`）全部来自本维度，见 [`factors.md`](./factors.md#维度sentiment)。
 
 
 

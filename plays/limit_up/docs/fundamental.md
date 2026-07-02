@@ -1,6 +1,6 @@
 # 基本面评分
 
-> **2026-07-02 重构后**：本文件为基本面维度的评分规则说明；具体因子（含 `fundamental_rebuilt`）见 [`factors.md`](./factors.md#维度fundamental)。基本面维度的 baseline IC=-0.08，不入 `total_score`，仅作为观察指标输出。
+> **2026-07-02 重构后**：本文件为基本面维度的评分规则说明；具体因子（含 `fundamental_rebuilt`）见 [`factors.md`](./factors.md#维度fundamental)。基本面维度不入 `total_score`，仅作为观察指标输出。
 
 
 

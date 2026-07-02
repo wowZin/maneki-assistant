@@ -1,8 +1,6 @@
 """打板玩法唯一总分聚合。
 
-对外唯一入口 `total_score(row)`。所有历史版本（`new_total_v2 / balanced_total /
-balanced_total_v2 / sentiment_adaptive_total / ultimate_total_v1~v5 / cpt_* /
-balanced_ensemble` 等）已废弃。
+对外唯一入口 `total_score(row)`。
 
 公式：
   total_score = round(max(0.0,
@@ -11,8 +9,7 @@ balanced_ensemble` 等）已废弃。
     + 0.7 * factor_sentiment_volatility_combo(row)
   ), 2)
 
-权重来源：回测集 `plays/limit_up/backtest/out/all_factors_report.md` 上的网格
-搜索，IC hit_limit_3 = 0.338，chasing_score = 0.185。
+三个组件的权重待通过 backtest/optimize.py 在训练集上重新优化。
 """
 
 from __future__ import annotations

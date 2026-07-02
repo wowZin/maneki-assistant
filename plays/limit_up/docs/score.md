@@ -25,17 +25,17 @@ total_score = round(max(0.0,
   ), 2)
 ```
 
-**权重来源**：回测集 `plays/limit_up/backtest/out/all_factors_report.md` 上的网格搜索，取 IC hit_limit_3 最优组合（=0.3384，chasing_score=0.19）。
+**权重**：三个组件的权重（0.4 / 0.5 / 0.7）为初始值，待通过训练集在 `backtest/optimize.py` 上重新搜索。
 
 **三个组件因子**：
 
-| 组件 | 模块 | 单变量 IC hit_limit_3 |
-|------|------|:--:|
-| `factor_sentiment_amount_boosted` | `factors/sentiment/amount_boosted.py` | 0.333 |
-| `factor_sentiment_position_combo` | `factors/sentiment/position_combo.py` | 0.271 |
-| `factor_sentiment_volatility_combo` | `factors/sentiment/volatility_combo.py` | 0.279 |
+| 组件 | 模块 |
+|------|------|
+| `factor_sentiment_amount_boosted` | `factors/sentiment/amount_boosted.py` |
+| `factor_sentiment_position_combo` | `factors/sentiment/position_combo.py` |
+| `factor_sentiment_volatility_combo` | `factors/sentiment/volatility_combo.py` |
 
-组件因子的定义见 [`factors.md`](./factors.md)。
+组件因子的定义见 [`factors.md`](./factors.md)。因子有效性以最新训练集的评估为准，不引用历史回测数据。
 
 ## 三、维度权重（供其他用途，非 total）
 

@@ -1,6 +1,6 @@
 # 技术面评分
 
-> **2026-07-02 重构后**：技术面维度 baseline IC=0.085，被 `technical_rebuilt`（IC=0.240）替代作为维度默认打分。具体因子见 [`factors.md`](./factors.md#维度technical)。技术面不入 `total_score`，仅作为观察指标输出。
+> **2026-07-02 重构后**：技术面维度使用 `technical_rebuilt` 作为默认打分。具体因子见 [`factors.md`](./factors.md#维度technical)。技术面不入 `total_score`，仅作为观察指标输出。
 
 
 
