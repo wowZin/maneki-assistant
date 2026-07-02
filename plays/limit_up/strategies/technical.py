@@ -34,6 +34,7 @@ sys.path.insert(0, str(PROJECT_DIR / "scripts"))
 from scripts.tu_share import call_tushare  # noqa: E402
 from plays.limit_up.utils import safe_float_none, is_trading_time  # noqa: E402
 from plays.limit_up.pipeline import _get_realtime_fund_cache  # noqa: E402
+from plays.limit_up.strategies import factor_ctx  # noqa: E402
 
 
 def score_technical(code: str, trade_date: str | None = None) -> tuple[int | float, str]:
@@ -106,17 +107,25 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
             vol_ratio = rt["vol_ratio"]
 
     # vol_ratio 可能为 None (stk_factor_pro 不返回此字段)
-    # 优先从实时缓存取, 降级从 daily_basic 取
+    # 优先从实时缓存取, 降级从 factor_ctx / daily_basic 取
     if vol_ratio is None:
         try:
-            resp_db = call_tushare("daily_basic", {"ts_code": code}, "volume_ratio,turnover_rate")
-            db_items = resp_db.get("data", {}).get("items", [])
-            if db_items:
-                db_fields = resp_db.get("data", {}).get("fields", [])
-                db_d = dict(zip(db_fields, db_items[0]))
-                vol_ratio = safe_float(db_d.get("volume_ratio"))
+            # 优先从 pipeline 预取缓存读取
+            from plays.limit_up.strategies import factor_ctx
+            basic = factor_ctx.get_daily_basic(code)
+            if basic:
+                vol_ratio = safe_float(basic.get("volume_ratio"))
                 if turnover is None:
-                    turnover = safe_float(db_d.get("turnover_rate"))
+                    turnover = safe_float(basic.get("turnover_rate"))
+            else:
+                resp_db = call_tushare("daily_basic", {"ts_code": code}, "volume_ratio,turnover_rate")
+                db_items = resp_db.get("data", {}).get("items", [])
+                if db_items:
+                    db_fields = resp_db.get("data", {}).get("fields", [])
+                    db_d = dict(zip(db_fields, db_items[0]))
+                    vol_ratio = safe_float(db_d.get("volume_ratio"))
+                    if turnover is None:
+                        turnover = safe_float(db_d.get("turnover_rate"))
         except: pass
     # 核心字段校验 (放宽: close必须有, vol_ratio允许降级后仍为None)
     if close is None:
@@ -185,6 +194,89 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
     except: pass
     if auc_gap is not None and auc_gap < -9:
         return 0, f"竞价跌停开盘:竞价{auc_gap:.1f}%"
+
+    # ── PIT 特征提取（用于新增因子融合） ─────────────────
+    pit_feats = factor_ctx.get_price_features(code)
+    basic = factor_ctx.get_daily_basic(code)
+    if basic:
+        pit_feats["circ_mv"] = basic.get("circ_mv", 0.0)
+        pit_feats["pe"] = basic.get("pe", 999.0)
+        pit_feats["pb"] = basic.get("pb", 999.0)
+        pit_feats["turnover_rate"] = basic.get("turnover_rate", pit_feats.get("turnover_rate", 5.0))
+        pit_feats["volume_ratio"] = basic.get("volume_ratio", pit_feats.get("volume_ratio", 1.0))
+
+    gene20 = factor_ctx.get_limit_up_count(code, 20)
+    gene60 = factor_ctx.get_limit_up_count(code, 60)
+
+    def _large_cap_limit_gene_score():
+        circ_mv = pit_feats.get("circ_mv", 0.0)
+        s = 0.0
+        if circ_mv >= 500_0000: s += 12
+        elif circ_mv >= 200_0000: s += 9
+        elif circ_mv >= 100_0000: s += 6
+        elif circ_mv >= 50_0000: s += 3
+        if gene20 >= 2: s += 10
+        elif gene20 >= 1: s += 5
+        if gene60 >= 3: s += 6
+        elif gene60 >= 1: s += 3
+        # tech 将在后面计算，此处用 technical 维度当前已有得分趋势的近似：收盘>MA20+MA20上倾 ~ tech>=25
+        tech_proxy = 1 if close and ma20 and close > ma20 else 0
+        if tech_proxy:
+            s += 3
+        return s
+
+    def _volatility_activation_score():
+        std10 = pit_feats.get("pct_chg_std_10d", 0.0)
+        std5 = pit_feats.get("pct_chg_std_5d", 0.0)
+        position = pit_feats.get("position_20d", 0.5)
+        max5 = pit_feats.get("max_pct_chg_5d", 0.0)
+        s = 0.0
+        if std10 > 4.5 and 0.30 <= position <= 0.70 and max5 > 5.0: s += 20
+        elif std10 > 3.5 and 0.25 <= position <= 0.75 and max5 > 3.5: s += 12
+        elif std5 > 3.0 and position > 0.20: s += 6
+        if std10 < 2.0: s -= 4
+        return s
+
+    def _turnover_momentum_score():
+        turnover_pit = pit_feats.get("turnover_rate", 5.0)
+        vol_ratio_pit = pit_feats.get("volume_ratio", 1.0)
+        std5 = pit_feats.get("pct_chg_std_5d", 0.0)
+        position = pit_feats.get("position_20d", 0.5)
+        s = 0.0
+        if turnover_pit >= 15 and vol_ratio_pit >= 1.5 and std5 >= 3.0 and 0.30 <= position <= 0.80: s += 18
+        elif turnover_pit >= 10 and vol_ratio_pit >= 1.2 and std5 >= 2.5 and position >= 0.25: s += 12
+        elif turnover_pit >= 5 and vol_ratio_pit >= 1.0 and std5 >= 2.0: s += 5
+        if turnover_pit < 2: s -= 5
+        return s
+
+    def _limit_gene_momentum_score():
+        t10 = pit_feats.get("trailing_10", 0.0)
+        position = pit_feats.get("position_20d", 0.5)
+        tech_proxy = 1 if close and ma20 and close > ma20 else 0
+        s = 0.0
+        if gene20 >= 3: s += 15
+        elif gene20 >= 2: s += 10
+        elif gene20 >= 1: s += 5
+        if gene60 >= 4: s += 8
+        elif gene60 >= 2: s += 4
+        if tech_proxy: s += 4
+        if t10 > 0.35: s *= 0.60
+        elif t10 > 0.25: s *= 0.80
+        if position > 0.85: s *= 0.70
+        return round(s, 2)
+
+    def _growth_momentum_score():
+        pe = pit_feats.get("pe", 999.0)
+        pb = pit_feats.get("pb", 999.0)
+        std10 = pit_feats.get("pct_chg_std_10d", 0.0)
+        tech_proxy = 1 if close and ma20 and close > ma20 else 0
+        s = 0.0
+        if pe > 50 or pe <= 0: s += 6
+        elif pe > 30: s += 3
+        if pb > 5: s += 4
+        elif pb > 3: s += 2
+        if tech_proxy and std10 >= 2.5: s += 6
+        return s
 
     # 5. 四维度评分
     # ═══════════════════════════════════════════════════════
@@ -319,6 +411,12 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
                 vol_score -= 5
                 vol_reasons.append(f"上影过长({us_ratio:.1f}:1)-5")
 
+    # PIT 换手动量融合
+    turnover_momentum = int(_turnover_momentum_score())
+    if turnover_momentum != 0:
+        vol_score += turnover_momentum
+        vol_reasons.append(f"PIT换手动量{turnover_momentum:+.0f}")
+
     score += max(0, min(40, vol_score))
     reasons.extend(vol_reasons)
 
@@ -385,6 +483,12 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
             trend_score += positive_days
             trend_reasons.append(f"5日{positive_days}阳+{positive_days}")
 
+    # PIT 波动激活融合
+    volatility_activation = int(_volatility_activation_score())
+    if volatility_activation != 0:
+        trend_score += volatility_activation
+        trend_reasons.append(f"PIT波动激活{volatility_activation:+.0f}")
+
     score += max(0, min(25, trend_score))
     reasons.extend(trend_reasons)
 
@@ -444,6 +548,16 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
                 chip_score += 5
                 chip_reasons.append(f"布林收敛(bw{bw_cur:.1f}%)+5")
 
+    # PIT 大市值涨停基因 / 成长动量融合
+    large_cap = int(_large_cap_limit_gene_score())
+    growth = int(_growth_momentum_score())
+    if large_cap != 0:
+        chip_score += large_cap
+        chip_reasons.append(f"PIT大市值涨停基因{large_cap:+.0f}")
+    if growth != 0:
+        chip_score += growth
+        chip_reasons.append(f"PIT成长动量{growth:+.0f}")
+
     score += max(0, min(20, chip_score))
     reasons.extend(chip_reasons)
 
@@ -502,6 +616,12 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
         if us_count >= 2:
             pattern_score -= 5
             pattern_reasons.append(f"假突破({us_count}日长上影)-5")
+
+    # PIT 涨停基因动量融合
+    limit_gene_momentum = int(_limit_gene_momentum_score())
+    if limit_gene_momentum != 0:
+        pattern_score += limit_gene_momentum
+        pattern_reasons.append(f"PIT涨停基因动量{limit_gene_momentum:+.0f}")
 
     score += max(0, min(15, pattern_score))
     reasons.extend(pattern_reasons)

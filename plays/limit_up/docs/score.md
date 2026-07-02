@@ -92,11 +92,123 @@ total = Σ(raw_i × weight_i for i in top3) / Σ(weight_i for i in top3)
 
 权重从 `.env` 统一读取，支持复盘 AB 对比。
 
+## 综合评分方案
+
+目前系统同时保留五种综合分，用于不同目标：
+
+| 方案 | 目标 | 核心权重 | 适用场景 |
+|------|------|---------|----------|
+| `total` | 原加权 Top3 择优 | 情绪/短线/基本面 | 兼容旧复盘 |
+| `new_total_v2` | 命中率优先 | 短线*1.8 + 涨停基因 + 反追高 | 需要覆盖更多涨停 |
+| `balanced_total` | **命中率+胜率均衡（PIT 版）** | 五维聚合 + 反追高 | **实战推送首选** |
+| `sentiment_adaptive_total` | Sentiment-自适应综合分 | sentiment 中轴 + 区间条件子因子 | 实验性因子 |
+| `balanced_total_v2` | **权重优化后的均衡分** | shortterm=0.5 + sentiment=0.2 + technical=0.4 + 反追高 | **实战推送首选** |
+
+## 均衡综合分 `balanced_total_v2`（PIT 版）
+
+基于重建数据 `panel_rebuilt.csv` / `analysis_rebuilt` 权重搜索得到：
+**shortterm=0.5, sentiment=0.2, technical=0.4**。
+
+在真实扫描验证（2026-06，22 个交易日）中表现优于原 `balanced_total`：
+
+| 方案 | hit@3 | hit@5 | win@3 | win@5 |
+|------|:--:|:--:|:--:|:--:|
+| `balanced_total` | 37.88% | 34.55% | 56.06% | 51.82% |
+| `sentiment_adaptive_total` | 31.82% | 35.45% | 56.06% | 51.82% |
+| `balanced_total_v2` | **40.91%** | **37.27%** | **56.06%** | 51.82% |
+
+公式：
+
+```
+balanced_total_v2 = (shortterm * 0.50
+                   + sentiment * 0.20
+                   + technical * 0.40)
+                   × chasing_penalty
+```
+
+追高惩罚与 v1 保持一致。
+
+## Sentiment-自适应综合分 `sentiment_adaptive_total`（PIT 版）
+
+因子挖掘显示 `sentiment` 是预测未来 3 日涨停的最强单变量（RankIC ~0.34），但简单线性加权会稀释其信息（`balanced_total` 的 RankIC 仅 ~0.09）。进一步的条件挖掘发现，`sentiment` 是主导中轴变量，不同 sentiment 区间有效子因子的方向不同：
+
+- **高情绪区**（sentiment ≥ 55）：`position_20d`、`trailing_10_pit`、`pullback_20d` 是二次精选关键；`fundamental` 呈负向。
+- **中情绪区**（35 ≤ sentiment < 55）：`technical` 是陷阱（负 IC），`shortterm + limit_up_count_20d` 更有效。
+- **低情绪区**（sentiment < 35）：整体命中率仅 ~5%，整体降权，仅保留波动率 + 涨停基因。
+
+因此 `sentiment_adaptive_total` 按 sentiment 区间切换子因子组合，在保留 sentiment 核心信息的同时，对各区间做差异化增强。
+
+面板评估显示 `sentiment_adaptive_total` 的 Top-K 命中率优于 `sentiment`，但在真实扫描验证中不及 `balanced_total_v2`，因此作为实验性因子保留，不用于默认推送。
+
+公式（伪代码）：
+
+```
+if sentiment < 25:
+    score = sentiment * 0.7 + volatility_bonus + limit_gene_bonus
+elif sentiment < 32:
+    score = sentiment * 0.4 + shortterm_bonus - technical_penalty + limit_gene_bonus
+else:
+    score = sentiment * 0.45 + position_bonus + amount_bonus + limit_gene_bonus
+
+score = max(0, score)
+```
+
+其中子因子具体规则见 `plays/limit_up/backtest/factor_lib.py::factor_sentiment_adaptive_total_pit`。
+
+### 效果对比（基于 `backtest/out/panel_enriched_pit.csv`）
+
+| 因子 | hit_limit_3 RankIC | hit@5 | hit@10 | hit@20 |
+|------|:--:|:--:|:--:|:--:|
+| `sentiment` | **0.338** | 33.7% | 37.4% | 37.6% |
+| `balanced_total_pit` | 0.094 | 29.5% | 25.8% | 26.3% |
+| `sentiment_adaptive_total_pit` | 0.255 | **41.1%** | **39.5%** | **40.8%** |
+
+说明：`sentiment` 全样本排序能力最强；`sentiment_adaptive_total_pit` 在面板 **Top-K 头部精选** 上优于 `sentiment` 和 `balanced_total`，但在真实扫描验证中不及 `balanced_total_v2`。
+
+## 均衡综合分 `balanced_total`（PIT 版）
+
+`balanced_total` 保留作为 AB 对比基线，计算方式不变：
+
+```
+balanced_total = (sentiment * 0.40
+                + shortterm * 0.30
+                + technical * 0.20
+                + fundflow * 0.05
+                + fundamental * 0.05)
+                × chasing_penalty
+```
+
+追高惩罚（乘法）：
+
+| 条件 | 惩罚 |
+|------|------|
+| trailing_10 > 30% | ×0.75 |
+| trailing_10 > 20% | ×0.85 |
+| trailing_10 > 10% | ×0.93 |
+| trailing_5 > 15% | ×0.90 |
+| position_20d > 0.85 且 pullback_10d < 3% | ×0.80 |
+| sentiment > 60 且 trailing_10 > 15% | ×0.85 |
+
+各维度分的具体计算见对应策略文件与 docs：
+
+| 维度 | 文件 | 说明 |
+|------|------|------|
+| `sentiment` | `strategies/sentiment.py` | 市场情绪、题材、竞价 |
+| `shortterm` | `strategies/shortterm.py` | 涨停基因、开盘博弈、位置波动、连板溢价 |
+| `technical` | `strategies/technical.py` | 量能、趋势、筹码、形态 |
+| `fundflow` | `strategies/fundflow.py` | 中单/主力/龙虎榜/融资 |
+| `fundamental` | `strategies/fundamental.py` | 小市值、业绩、筹码、题材 |
+
 ## 推送规则
 
-- 综合分 ≥ 35 取前 3 只推送（飞书卡片）
-- 无 ≥ 35 不推送
+- 按 `balanced_total_v2` 降序排序（fallback: `balanced_total` → `sentiment_adaptive_total` → `new_total_v2` → `total`）
+- 取前 **3 只** 推送（默认 Top-3，兼顾命中率与胜率）
+- 午后情绪面 < 25 过滤（14:00 后）
 - 推送记录保存到 `data/pushed/`
+
+## 旧推送规则（保留用于 AB 对比）
+
+原规则：总分≥30 + 情绪≥35 + 资金≥35 + 总分≥40
 
 ### 评级显示
 

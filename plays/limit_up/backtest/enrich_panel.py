@@ -198,39 +198,39 @@ def compute_features_for_code(
     return df
 
 
-def enrich_panel(panel_path: str | None = None, output_path: str | None = None) -> pd.DataFrame:
-    """加载 panel，join 衍生特征，输出 enriched panel。
+def _build_prev_date_map(bars: pd.DataFrame, offset: int = 1) -> dict[str, str | None]:
+    """构建每个交易日向前 offset 个交易日的映射。"""
+    all_dates = sorted(bars["trade_date"].dropna().unique().tolist())
+    prev_map: dict[str, str | None] = {d: None for d in all_dates}
+    for i, d in enumerate(all_dates):
+        if i - offset >= 0:
+            prev_map[d] = all_dates[i - offset]
+    return prev_map
 
-    Args:
-        panel_path: 原 panel 路径，默认 out/panel.csv
-        output_path: 输出路径，默认 out/panel_enriched.csv
 
-    Returns:
-        增强后的 DataFrame
-    """
-    panel_path = Path(panel_path) if panel_path else OUT_DIR / "panel.csv"
-    output_path = Path(output_path) if output_path else OUT_DIR / "panel_enriched.csv"
-
-    print(f"加载 panel: {panel_path}")
-    panel = pd.read_csv(panel_path)
-    panel["date"] = panel["date"].astype(str)
-    panel["code"] = panel["code"].astype(str)
-    print(f"  {len(panel)} rows, {panel.code.nunique()} codes, {panel.date.nunique()} dates")
-
-    print("加载 daily bars...")
-    bars = load_daily_bars()
-    print(f"  {len(bars)} rows")
-
-    print("计算衍生特征 (按 code 分组)...")
+def compute_features_pit(
+    panel: pd.DataFrame,
+    bars: pd.DataFrame,
+    as_of_offset: int = 1,
+    use_today_open: bool = True,
+) -> pd.DataFrame:
+    """计算早盘 PIT 特征：所有 trailing/位置/量能/涨停基因截止到 T-offset；gap 可选用当日开盘。"""
+    # 1. 计算全量特征序列
     feature_dfs = []
     for code, g in bars.groupby("ts_code"):
         feat = compute_features_for_code(g)
         feature_dfs.append(feat)
     bars_with_feat = pd.concat(feature_dfs, ignore_index=True)
-    print(f"  完成，{len(bars_with_feat)} rows, {len(bars_with_feat.columns)} columns")
 
-    # 选择要 join 的特征列
-    feature_cols = [
+    # 2. 交易日历映射
+    prev_date_map = _build_prev_date_map(bars, as_of_offset)
+
+    # 3. 面板行映射到 PIT 日期
+    merged = panel.copy()
+    merged["_pit_date"] = merged["date"].map(prev_date_map)
+
+    # 4. 从 PIT 日期取基础特征（不含 gap_up，会单独重算）
+    base_feature_cols = [
         "ts_code", "trade_date",
         # 位置/回调
         "high_10d", "high_20d", "low_10d", "low_20d",
@@ -243,35 +243,180 @@ def enrich_panel(panel_path: str | None = None, output_path: str | None = None) 
         "vol_ratio_proxy", "amount_ratio", "amount_3d_increasing",
         # 形态
         "consecutive_up", "consecutive_down",
-        "gap_up", "gap_up_bool", "reversal_signal",
+        "reversal_signal",
         # 涨停基因
         "limit_up_count_5d", "limit_up_count_10d",
         "limit_up_count_20d", "limit_up_count_60d",
-        # 量价背离
+        # 量价背离/振幅/影线
         "vol_price_divergence",
-        # 振幅/影线
         "amplitude", "upper_shadow_pct",
     ]
+    pit_features = bars_with_feat[base_feature_cols].rename(
+        columns={"ts_code": "code", "trade_date": "_pit_date"}
+    )
 
-    feat_subset = bars_with_feat[feature_cols].copy()
-    feat_subset = feat_subset.rename(columns={"ts_code": "code", "trade_date": "date"})
+    # 5. 左连接 PIT 特征
+    merged = merged.merge(pit_features, on=["code", "_pit_date"], how="left")
 
-    # Join
-    enriched = panel.merge(feat_subset, on=["code", "date"], how="left")
+    # 5.1 计算 PIT trailing 收益（close[T-offset] / close[T-offset-5/10] - 1）
+    trailing_frames = []
+    for code, g in bars.groupby("ts_code"):
+        g = g.sort_values("trade_date").reset_index(drop=True)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            g["trailing_5_pit"] = np.where(
+                g["close"].shift(5) > 0,
+                g["close"] / g["close"].shift(5) - 1.0,
+                np.nan,
+            )
+            g["trailing_10_pit"] = np.where(
+                g["close"].shift(10) > 0,
+                g["close"] / g["close"].shift(10) - 1.0,
+                np.nan,
+            )
+        trailing_frames.append(g[["ts_code", "trade_date", "trailing_5_pit", "trailing_10_pit"]])
+    trailing_df = pd.concat(trailing_frames, ignore_index=True).rename(
+        columns={"ts_code": "code", "trade_date": "_pit_date"}
+    )
+    merged = merged.merge(trailing_df, on=["code", "_pit_date"], how="left")
+
+    # 6. 单独计算当日开盘缺口（若扫描时间 >= 09:30）
+    if use_today_open and "scan_time" in merged.columns:
+        merged["_scan_time_int"] = (
+            pd.to_numeric(merged["scan_time"], errors="coerce").fillna(0).astype(int)
+        )
+        today_bars = bars[["ts_code", "trade_date", "open", "pre_close"]].rename(
+            columns={"ts_code": "code", "trade_date": "date"}
+        )
+        merged = merged.merge(today_bars, on=["code", "date"], how="left")
+
+        with np.errstate(divide="ignore", invalid="ignore"):
+            can_use_open = merged["_scan_time_int"] >= 930
+            merged["gap_up_pit"] = np.where(
+                can_use_open & (merged["pre_close"] > 0),
+                (merged["open"] / merged["pre_close"] - 1.0) * 100,
+                np.nan,
+            )
+            merged["gap_up_bool_pit"] = (merged["gap_up_pit"] > 2.0).astype(int)
+        merged = merged.drop(
+            columns=["open", "pre_close", "_scan_time_int"], errors="ignore"
+        )
+    else:
+        merged["gap_up_pit"] = np.nan
+        merged["gap_up_bool_pit"] = 0
+
+    # 7. 删除原始 labels.py 中的 trailing_10/trailing_5（基于 T 收盘，盘中不可用）
+    merged = merged.drop(columns=["trailing_10", "trailing_5"], errors="ignore")
+    merged = merged.drop(columns=["_pit_date"], errors="ignore")
+    return merged
+
+def enrich_panel(
+    panel_path: str | None = None,
+    output_path: str | None = None,
+    pit_mode: bool = False,
+    as_of_offset: int = 1,
+    use_today_open: bool = True,
+) -> pd.DataFrame:
+    """加载 panel，join 衍生特征，输出 enriched panel。
+
+    Args:
+        panel_path: 原 panel 路径，默认 out/panel.csv
+        output_path: 输出路径，默认 out/panel_enriched.csv（pit_mode 下默认 out/panel_enriched_pit.csv）
+        pit_mode: 是否启用早盘 point-in-time 特征截断
+        as_of_offset: PIT 向前偏移交易日数，默认 1（即 T-1）
+        use_today_open: PIT 模式下是否允许用当日开盘计算 gap_up
+
+    Returns:
+        增强后的 DataFrame
+    """
+    panel_path = Path(panel_path) if panel_path else OUT_DIR / "panel.csv"
+    if output_path:
+        output_path = Path(output_path)
+    else:
+        output_path = OUT_DIR / ("panel_enriched_pit.csv" if pit_mode else "panel_enriched.csv")
+
+    print(f"加载 panel: {panel_path}")
+    panel = pd.read_csv(panel_path)
+    panel["date"] = panel["date"].astype(str)
+    panel["code"] = panel["code"].astype(str)
+    print(f"  {len(panel)} rows, {panel.code.nunique()} codes, {panel.date.nunique()} dates")
+
+    print("加载 daily bars...")
+    bars = load_daily_bars()
+    print(f"  {len(bars)} rows")
+
+    if pit_mode:
+        print(f"计算 PIT 衍生特征 (as_of_offset={as_of_offset}, use_today_open={use_today_open})...")
+        enriched = compute_features_pit(
+            panel, bars, as_of_offset=as_of_offset, use_today_open=use_today_open
+        )
+        feature_cols = [c for c in enriched.columns if c not in panel.columns]
+    else:
+        print("计算衍生特征 (按 code 分组)...")
+        feature_dfs = []
+        for code, g in bars.groupby("ts_code"):
+            feat = compute_features_for_code(g)
+            feature_dfs.append(feat)
+        bars_with_feat = pd.concat(feature_dfs, ignore_index=True)
+        print(f"  完成，{len(bars_with_feat)} rows, {len(bars_with_feat.columns)} columns")
+
+        # 选择要 join 的特征列
+        feature_cols = [
+            "ts_code", "trade_date",
+            # 位置/回调
+            "high_10d", "high_20d", "low_10d", "low_20d",
+            "pullback_10d", "pullback_20d", "position_20d",
+            # 涨跌幅统计
+            "max_pct_chg_5d", "max_pct_chg_10d", "min_pct_chg_5d",
+            "avg_pct_chg_5d", "pct_chg_std_5d", "pct_chg_std_10d",
+            # 量能
+            "avg_vol_5d", "avg_vol_10d", "avg_amount_5d",
+            "vol_ratio_proxy", "amount_ratio", "amount_3d_increasing",
+            # 形态
+            "consecutive_up", "consecutive_down",
+            "gap_up", "gap_up_bool", "reversal_signal",
+            # 涨停基因
+            "limit_up_count_5d", "limit_up_count_10d",
+            "limit_up_count_20d", "limit_up_count_60d",
+            # 量价背离
+            "vol_price_divergence",
+            # 振幅/影线
+            "amplitude", "upper_shadow_pct",
+        ]
+
+        feat_subset = bars_with_feat[feature_cols].copy()
+        feat_subset = feat_subset.rename(columns={"ts_code": "code", "trade_date": "date"})
+
+        # Join
+        enriched = panel.merge(feat_subset, on=["code", "date"], how="left")
+
     enriched.to_csv(output_path, index=False)
 
-    # 统计缺失率
-    miss = enriched[feature_cols[2:]].isnull().mean().sort_values(ascending=False)
+    # 统计缺失率（跳过原始标识列）
+    miss_cols = [c for c in feature_cols if c not in ("ts_code", "trade_date")]
+    miss = enriched[miss_cols].isnull().mean().sort_values(ascending=False)
     print(f"\n特征缺失率 (top 10):")
     print(miss.head(10))
     print(f"\n输出: {output_path}")
     print(f"  {len(enriched)} rows, {len(enriched.columns)} columns")
-    print(f"  新增特征: {len(feature_cols) - 2}")
+    print(f"  新增特征: {len(miss_cols)}")
 
     return enriched
 
 
 if __name__ == "__main__":
+    import argparse
     import sys
+
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
-    enrich_panel()
+
+    parser = argparse.ArgumentParser(description="面板特征增强")
+    parser.add_argument("--pit", action="store_true", help="启用早盘 point-in-time 特征截断")
+    parser.add_argument("--offset", type=int, default=1, help="PIT 向前偏移交易日数")
+    parser.add_argument("--no-today-open", action="store_true", help="PIT 模式下不使用当日开盘")
+    args = parser.parse_args()
+
+    enrich_panel(
+        pit_mode=args.pit,
+        as_of_offset=args.offset,
+        use_today_open=not args.no_today_open,
+    )

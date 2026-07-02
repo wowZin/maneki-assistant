@@ -42,6 +42,16 @@
 | `limit_step` | 连板天梯 | 基础 | T日盘后 | - |
 | `limit_cpt_list` | 涨停概念板块(同花顺) | 基础 | T日盘后 | - |
 
+### 概念数据
+
+| 接口 | 用途 | 权限 | 时序 | 已知坑 |
+|------|------|:--:|:--:|------|
+| `ths_daily` | 同花顺概念板块日线行情 | 基础 | T日盘后 | 概念代码格式为 `.TI`，如 `700402.TI` |
+| `ths_member` | 同花顺概念成分股映射 | 基础 | 静态 | `ts_code` 必须传完整概念码（`.TI`），传裸数字前缀会返回空 |
+
+> 概念动量 PIT 用法：T 日评分使用 T-1 日概念行情与成分股映射。
+> 缓存路径：`plays/limit_up/backtest/cache/concept_daily.parquet`、`plays/limit_up/backtest/cache/concept_members.parquet`。
+
 ### 股本/股东
 
 | 接口 | 用途 | 权限 | 时序 | 已知坑 |

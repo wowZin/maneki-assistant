@@ -450,23 +450,19 @@ def score_sentiment(code: str, trade_date: str | None = None) -> tuple[int | flo
                 )
 
     
-    # THS精准概念共振 (50-400只成分股的概念, d=+0.21)
+    # THS 精准概念共振：使用 factor_ctx 真实概念动量（替代已损坏的 ths_concept_map.json）
     ths_niche_bonus = 0
     try:
-        from scripts.tu_share import call_tushare as _call_ts, clear_tushare_cache as _clear_ts
-        import json, os
-        _cpt_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'backtest', 'ths_concept_map.json')
-        if os.path.exists(_cpt_file):
-            with open(_cpt_file) as _f:
-                _ths = json.load(_f)
-            _stock_cpts = _ths.get("stock_concepts", {}).get(code.split('.')[0], [])
-            _daily_heat = _ths.get("daily_cpt_heat", {}).get(today_str, {})
-            if _stock_cpts and _daily_heat:
-                _max_heat = max((_daily_heat.get(c, 0) for c in _stock_cpts), default=0)
-                if _max_heat >= 8: ths_niche_bonus = 15
-                elif _max_heat >= 5: ths_niche_bonus = 10
-                elif _max_heat >= 3: ths_niche_bonus = 5
-    except: pass
+        from plays.limit_up.strategies import factor_ctx
+        cm = factor_ctx.get_concept_momentum(code.split('.')[0])
+        if cm.get("ret3_max", 0) > 5:
+            ths_niche_bonus = 15
+        elif cm.get("ret3_max", 0) > 3:
+            ths_niche_bonus = 10
+        elif cm.get("ret3_max", 0) > 1.5 and cm.get("up_ratio", 0) > 0.5:
+            ths_niche_bonus = 5
+    except Exception:
+        pass
     if ths_niche_bonus > 0:
         theme_score += ths_niche_bonus
         theme_reasons.append(f"概念共振(+{ths_niche_bonus})")
@@ -511,11 +507,17 @@ def score_sentiment(code: str, trade_date: str | None = None) -> tuple[int | flo
         if rt_turnover and rt_turnover > 0:
             turnover = rt_turnover
         else:
-            resp = call_tushare("daily_basic", {"ts_code": code},
-                                "turnover_rate,volume_ratio")
-            daily_basic = resp.get("data", {}).get("items", [])
-            if daily_basic and daily_basic[0]:
-                turnover = safe_float(daily_basic[0][0])
+            # 优先从 pipeline 预取缓存读取，避免重复调 daily_basic
+            from plays.limit_up.strategies import factor_ctx
+            basic = factor_ctx.get_daily_basic(code)
+            if basic:
+                turnover = safe_float(basic.get("turnover_rate", 0))
+            else:
+                resp = call_tushare("daily_basic", {"ts_code": code},
+                                    "turnover_rate,volume_ratio")
+                daily_basic = resp.get("data", {}).get("items", [])
+                if daily_basic and daily_basic[0]:
+                    turnover = safe_float(daily_basic[0][0])
     except Exception:
         pass
 

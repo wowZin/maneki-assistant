@@ -229,7 +229,7 @@ def factor_gap_up_quality(row: pd.Series) -> float:
 
     预期 IC: 正（hit_limit_3），跳空高开是强势信号。
     """
-    gap = _safe(row.get("gap_up"))
+    gap = _safe(row.get("gap_up_pit", row.get("gap_up")))
     vol_r = _safe(row.get("vol_ratio_proxy"), 1.0)
     pos = _safe(row.get("position_20d"), 0.5)
     pb = _safe(row.get("pullback_10d"), 0.0)
@@ -559,8 +559,8 @@ def factor_return_optimized_total(row: pd.Series) -> float:
     st = _safe(row.get("shortterm"))
     tech = _safe(row.get("technical"))
     fund = _safe(row.get("fundamental"))
-    t10 = _safe(row.get("trailing_10"))
-    t5 = _safe(row.get("trailing_5"))
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")))
+    t5 = _safe(row.get("trailing_5_pit", row.get("trailing_5")))
     pos = _safe(row.get("position_20d"), 0.5)
     pb = _safe(row.get("pullback_10d"), 0.1)
     sent = _safe(row.get("sentiment"))
@@ -618,8 +618,8 @@ def factor_quality_value_total(row: pd.Series) -> float:
     tech = _safe(row.get("technical"))
     fund = _safe(row.get("fundamental"))
     fundflow = _safe(row.get("fundflow"))
-    t10 = _safe(row.get("trailing_10"))
-    t5 = _safe(row.get("trailing_5"))
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")))
+    t5 = _safe(row.get("trailing_5_pit", row.get("trailing_5")))
     pos = _safe(row.get("position_20d"), 0.5)
 
     score = 0.0
@@ -722,7 +722,7 @@ def factor_new_total_v2(row: pd.Series) -> float:
     st = _safe(row.get("shortterm"))
     tech = _safe(row.get("technical"))
     fund = _safe(row.get("fundamental"))
-    t10 = _safe(row.get("trailing_10"))
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")))
     pos = _safe(row.get("position_20d"), 0.5)
     pb = _safe(row.get("pullback_10d"), 0.1)
 
@@ -771,8 +771,8 @@ def factor_balanced_total(row: pd.Series) -> float:
     tech = _safe(row.get("technical"))
     fund = _safe(row.get("fundamental"))
     sent = _safe(row.get("sentiment"))
-    t10 = _safe(row.get("trailing_10"))
-    t5 = _safe(row.get("trailing_5"))
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")))
+    t5 = _safe(row.get("trailing_5_pit", row.get("trailing_5")))
     pos = _safe(row.get("position_20d"), 0.5)
     pb = _safe(row.get("pullback_10d"), 0.1)
 
@@ -821,7 +821,7 @@ def factor_aggressive_total(row: pd.Series) -> float:
     """
     st = _safe(row.get("shortterm"))
     tech = _safe(row.get("technical"))
-    t10 = _safe(row.get("trailing_10"))
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")))
     pos = _safe(row.get("position_20d"), 0.5)
 
     score = st * 2.0                 # 0-50 → 0-100
@@ -852,7 +852,7 @@ def factor_technical_anti_chasing(row: pd.Series) -> float:
 
     根据 trailing_10 + position_20d 综合判断惩罚力度。
     """
-    t10 = _safe(row.get("trailing_10"))
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")))
     pos = _safe(row.get("position_20d"), 0.5)
     pb = _safe(row.get("pullback_10d"), 0.1)
 
@@ -869,8 +869,8 @@ def factor_technical_anti_chasing(row: pd.Series) -> float:
 
 def factor_shortterm_anti_chasing(row: pd.Series) -> float:
     """短线维度反追高调整（比 technical 轻）。"""
-    t10 = _safe(row.get("trailing_10"))
-    t5 = _safe(row.get("trailing_5"))
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")))
+    t5 = _safe(row.get("trailing_5_pit", row.get("trailing_5")))
 
     if t10 > 0.30 and t5 > 0.15:
         return -15.0
@@ -883,7 +883,7 @@ def factor_shortterm_anti_chasing(row: pd.Series) -> float:
 
 def factor_sentiment_anti_chasing(row: pd.Series) -> float:
     """情绪维度反追高：高情绪+高位置=最危险。"""
-    t10 = _safe(row.get("trailing_10"))
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")))
     sent = _safe(row.get("sentiment"))
 
     if sent > 60 and t10 > 0.15:
@@ -1055,6 +1055,666 @@ def factor_inst_consistency(row: pd.Series) -> float:
     return score
 
 
+def factor_amount_power_pit(row: pd.Series) -> float:
+    """量能爆发力（PIT）：成交额相对5日均值显著放大，且绝对成交额充足、位置不过高。
+
+    因子挖掘发现 avg_amount_5d（IC ~0.20）比 amount_ratio 更有预测力，
+    说明涨停股需要绝对活跃度。本因子结合相对放量+绝对水平。
+    """
+    amount_ratio = _safe(row.get("amount_ratio"), 1.0)
+    avg_amount = _safe(row.get("avg_amount_5d"), 0.0)
+    position = _safe(row.get("position_20d"), 0.5)
+    pct_std10 = _safe(row.get("pct_chg_std_10d"), 0.0)
+
+    score = 0.0
+    # 高绝对成交额 + 明显放量 + 位置合理
+    if avg_amount >= 2_000_000 and amount_ratio > 1.5 and 0.25 <= position <= 0.80:
+        score += 18.0
+    elif avg_amount >= 1_000_000 and amount_ratio > 1.3 and 0.20 <= position <= 0.85:
+        score += 12.0
+    elif avg_amount >= 500_000 and amount_ratio > 1.2 and pct_std10 > 3.5:
+        score += 6.0
+
+    # 极度缩量或无活跃度惩罚
+    if amount_ratio < 0.6 or avg_amount < 100_000:
+        score -= 5.0
+    return score
+
+
+def factor_volatility_activation_pit(row: pd.Series) -> float:
+    """波动激活（PIT）：高波动+适中位置，预示启动。
+
+    pct_chg_std_10d / position_20d 均为 Top-5 单变量 IC 特征。
+    """
+    std10 = _safe(row.get("pct_chg_std_10d"), 0.0)
+    std5 = _safe(row.get("pct_chg_std_5d"), 0.0)
+    position = _safe(row.get("position_20d"), 0.5)
+    max5 = _safe(row.get("max_pct_chg_5d"), 0.0)
+
+    score = 0.0
+    if std10 > 4.5 and 0.30 <= position <= 0.70 and max5 > 5.0:
+        score += 20.0
+    elif std10 > 3.5 and 0.25 <= position <= 0.75 and max5 > 3.5:
+        score += 12.0
+    elif std5 > 3.0 and position > 0.20:
+        score += 6.0
+
+    # 极低波动通常没行情
+    if std10 < 2.0:
+        score -= 4.0
+    return score
+
+
+def factor_limit_gene_momentum_pit(row: pd.Series) -> float:
+    """涨停基因共振（PIT）：有涨停基因 + 技术确认 + 未过度追涨。
+
+    limit_up_count_20d/60d 是强预测特征，但需配合技术分和位置过滤追高。
+    """
+    gene20 = _safe(row.get("limit_up_count_20d"), 0.0)
+    gene60 = _safe(row.get("limit_up_count_60d"), 0.0)
+    tech = _safe(row.get("technical"), 0.0)
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")), 0.0)
+    position = _safe(row.get("position_20d"), 0.5)
+
+    score = 0.0
+    # 涨停基因加分
+    if gene20 >= 3:
+        score += 15.0
+    elif gene20 >= 2:
+        score += 10.0
+    elif gene20 >= 1:
+        score += 5.0
+
+    # 长周期基因平滑加分
+    if gene60 >= 4:
+        score += 8.0
+    elif gene60 >= 2:
+        score += 4.0
+
+    # 技术确认
+    if tech >= 40:
+        score += 8.0
+    elif tech >= 25:
+        score += 4.0
+
+    # 反追高：已大涨或位置过高则削弱
+    if t10 > 0.35:
+        score *= 0.60
+    elif t10 > 0.25:
+        score *= 0.80
+    if position > 0.85:
+        score *= 0.70
+
+    return round(score, 2)
+
+
+def factor_breakout_quality_pit(row: pd.Series) -> float:
+    """突破质量（PIT）：接近10日高点、但20日维度仍有空间，且放量。
+
+    因子挖掘显示 high_10d/20d 与涨停强相关，说明股价处于相对高位是强势股特征；
+    但需避免已在20日最高点附近（无空间）。
+    """
+    pb10 = _safe(row.get("pullback_10d"), 0.0)
+    pb20 = _safe(row.get("pullback_20d"), 0.0)
+    position = _safe(row.get("position_20d"), 0.5)
+    vol_ratio = _safe(row.get("vol_ratio_proxy"), 1.0)
+    amount_ratio = _safe(row.get("amount_ratio"), 1.0)
+
+    score = 0.0
+    # 接近10日高点（pullback 小）+ 20日维度未超买 + 放量
+    if pb10 < 0.05 and 0.03 <= pb20 <= 0.15 and position >= 0.60 and vol_ratio > 1.2:
+        score += 18.0
+    elif pb10 < 0.08 and 0.02 <= pb20 <= 0.20 and position >= 0.50 and (vol_ratio > 1.0 or amount_ratio > 1.2):
+        score += 10.0
+    elif pb10 < 0.15 and position >= 0.40:
+        score += 4.0
+
+    # 已在20日最高点附近且无回调 → 追高风险
+    if pb20 < 0.02 and position > 0.85:
+        score -= 8.0
+
+    return score
+
+
+def factor_trailing_momentum_pit(row: pd.Series) -> float:
+    """趋势动量质量（PIT）：有上涨趋势但不过热，且位置有空间。
+
+    因子挖掘显示 trailing_10_pit IC ~0.20，但单纯追高会亏。
+    本因子奖励温和上涨趋势（5%-25%）+ 位置未超买。
+    """
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")), 0.0)
+    t5 = _safe(row.get("trailing_5_pit", row.get("trailing_5")), 0.0)
+    position = _safe(row.get("position_20d"), 0.5)
+    pb10 = _safe(row.get("pullback_10d"), 0.0)
+
+    score = 0.0
+    # 温和上涨趋势 + 位置有空间 + 未从10日高点深跌
+    if 0.05 <= t10 <= 0.25 and position <= 0.75 and pb10 <= 0.10:
+        score += 16.0
+    elif 0.03 <= t10 <= 0.30 and position <= 0.80 and pb10 <= 0.15:
+        score += 10.0
+    elif t10 > 0.0 and t5 > 0.0 and position > 0.30:
+        score += 4.0
+
+    # 过热惩罚
+    if t10 > 0.35:
+        score -= 8.0
+    elif t10 > 0.25 and position > 0.85:
+        score -= 5.0
+
+    return score
+
+
+def factor_intraday_strength_pit(row: pd.Series) -> float:
+    """盘中强度（PIT）：扫描时涨幅 + 开盘缺口 + 放量共振。
+
+    使用扫描记录里的 pct_chg_score_day（盘中已知）和 PIT gap_up_pit / vol_ratio。
+    """
+    pct = _safe(row.get("pct_chg_score_day"), 0.0)
+    gap = _safe(row.get("gap_up_pit", row.get("gap_up")), 0.0)
+    vol_ratio = _safe(row.get("vol_ratio_proxy"), 1.0)
+    position = _safe(row.get("position_20d"), 0.5)
+
+    score = 0.0
+    # 温和高开 + 盘中已涨 + 放量 + 位置合理
+    if 1.5 <= gap <= 5.0 and 2.0 <= pct <= 7.0 and vol_ratio > 1.3 and 0.30 <= position <= 0.75:
+        score += 18.0
+    elif 0.5 <= gap <= 3.0 and 1.5 <= pct <= 5.0 and vol_ratio > 1.0 and position <= 0.80:
+        score += 10.0
+    elif pct > 0 and vol_ratio > 1.2 and position > 0.25:
+        score += 4.0
+
+    # 开盘过高或已涨太多 → 追高风险
+    if gap > 7.0 or pct > 8.0:
+        score -= 8.0
+
+    return score
+
+
+def factor_large_cap_limit_gene_pit(row: pd.Series) -> float:
+    """大市值涨停基因（PIT）：流通市值大 + 有涨停基因 + 技术确认。
+
+    PIT V4 评估显示 circ_mv_tier IC=0.10，说明大市值股涨停概率更高；
+    结合涨停基因可进一步提纯。
+    """
+    circ_mv = _safe(row.get("circ_mv"), 0.0)
+    gene20 = _safe(row.get("limit_up_count_20d"), 0.0)
+    gene60 = _safe(row.get("limit_up_count_60d"), 0.0)
+    tech = _safe(row.get("technical"), 0.0)
+
+    score = 0.0
+    # 大市值加分
+    if circ_mv >= 500_0000:      # 500亿+
+        score += 12.0
+    elif circ_mv >= 200_0000:    # 200亿+
+        score += 9.0
+    elif circ_mv >= 100_0000:    # 100亿+
+        score += 6.0
+    elif circ_mv >= 50_0000:     # 50亿+
+        score += 3.0
+
+    # 涨停基因加分
+    if gene20 >= 2:
+        score += 10.0
+    elif gene20 >= 1:
+        score += 5.0
+    if gene60 >= 3:
+        score += 6.0
+    elif gene60 >= 1:
+        score += 3.0
+
+    # 技术确认
+    if tech >= 40:
+        score += 6.0
+    elif tech >= 25:
+        score += 3.0
+
+    return score
+
+
+def factor_turnover_momentum_pit(row: pd.Series) -> float:
+    """换手动量（PIT）：高换手+高量比+有波动，说明资金活跃。
+
+    PIT V4 评估显示 turnover_penalty 是负 IC（-0.14），
+    说明高换手反而利好涨停。本因子把高换手当作正向信号。
+    """
+    turnover = _safe(row.get("turnover_rate"), 5.0)
+    vol_ratio = _safe(row.get("volume_ratio"), 1.0)
+    std5 = _safe(row.get("pct_chg_std_5d"), 0.0)
+    position = _safe(row.get("position_20d"), 0.5)
+
+    score = 0.0
+    if turnover >= 15 and vol_ratio >= 1.5 and std5 >= 3.0 and 0.30 <= position <= 0.80:
+        score += 18.0
+    elif turnover >= 10 and vol_ratio >= 1.2 and std5 >= 2.5 and position >= 0.25:
+        score += 12.0
+    elif turnover >= 5 and vol_ratio >= 1.0 and std5 >= 2.0:
+        score += 5.0
+
+    # 换手过低惩罚
+    if turnover < 2:
+        score -= 5.0
+
+    return score
+
+
+def factor_growth_momentum_pit(row: pd.Series) -> float:
+    """成长动量（PIT）：高估值（偏成长）+ 短线技术强 + 高波动。
+
+    PIT V4 评估显示 fundamental_quality 是强负 IC（-0.14），
+    说明低 PE/PB 的价值股反而不易涨停。本因子奖励高 PE/高成长属性。
+    """
+    pe = _safe(row.get("pe"), 999.0)
+    pb = _safe(row.get("pb"), 999.0)
+    st = _safe(row.get("shortterm"), 0.0)
+    tech = _safe(row.get("technical"), 0.0)
+    std10 = _safe(row.get("pct_chg_std_10d"), 0.0)
+
+    score = 0.0
+    # 偏成长估值
+    if pe > 50 or pe <= 0:   # 亏损或高估值成长股
+        score += 6.0
+    elif pe > 30:
+        score += 3.0
+
+    if pb > 5:
+        score += 4.0
+    elif pb > 3:
+        score += 2.0
+
+    # 动量确认
+    if st >= 45 and tech >= 35 and std10 >= 3.5:
+        score += 12.0
+    elif st >= 35 and tech >= 25 and std10 >= 2.5:
+        score += 6.0
+
+    return score
+
+
+def factor_balanced_total_pit(row: pd.Series) -> float:
+    """均衡型 PIT 综合评分（替代原 balanced_total）。
+
+    基于 PIT 数据挖掘结果，组合最有效的方向：
+    - shortterm / technical 维度分
+    - 大市值 + 涨停基因
+    - 波动激活 + 换手动量
+    - 成长动量
+    - 概念动量 / 概念连涨 / 概念换手
+    - 反追高惩罚
+
+    权重来自 2026-06 panel grid search（overall RankIC 最大化）：
+    shortterm=0.6, technical=0.2, large_cap=0.3, volatility=0.3,
+    turnover=0.7, limit_gene=0.2, growth=0.3,
+    concept_momentum=0.7, concept_up_streak=0.5, concept_turnover=0.7
+    """
+    st = _safe(row.get("shortterm"), 0.0)
+    tech = _safe(row.get("technical"), 0.0)
+    sent = _safe(row.get("sentiment"), 0.0)
+
+    score = 0.0
+    score += st * 0.6
+    score += tech * 0.2
+
+    score += factor_large_cap_limit_gene_pit(row) * 0.3
+    score += factor_volatility_activation_pit(row) * 0.3
+    score += factor_turnover_momentum_pit(row) * 0.7
+    score += factor_limit_gene_momentum_pit(row) * 0.2
+    score += factor_growth_momentum_pit(row) * 0.3
+
+    score += factor_concept_momentum(row) * 0.7
+    score += factor_concept_up_streak(row) * 0.5
+    score += factor_concept_turnover(row) * 0.7
+
+    # 追高惩罚（乘法）
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")), 0.0)
+    t5 = _safe(row.get("trailing_5_pit", row.get("trailing_5")), 0.0)
+    position = _safe(row.get("position_20d"), 0.5)
+    pb10 = _safe(row.get("pullback_10d"), 0.0)
+
+    penalty = 1.0
+    if t10 > 0.30:
+        penalty *= 0.75
+    elif t10 > 0.20:
+        penalty *= 0.85
+    elif t10 > 0.10:
+        penalty *= 0.93
+    if t5 > 0.15:
+        penalty *= 0.90
+    if position > 0.85 and pb10 < 0.03:
+        penalty *= 0.80
+    if sent > 60 and t10 > 0.15:
+        penalty *= 0.85
+
+    score *= penalty
+    return round(max(0.0, score), 1)
+
+
+def factor_sentiment_adaptive_total_pit(row: pd.Series) -> float:
+    """Sentiment-自适应综合评分（PIT）。
+
+    条件挖掘显示 sentiment 是中轴变量，不同 sentiment 区间有效子因子方向不同：
+    - 高情绪 (sentiment>=55): position_20d / trailing_10_pit / pullback_20d 有效，
+      fundamental 呈负向。
+    - 中情绪 (35<=sentiment<55): technical 是负向陷阱，shortterm+涨停基因更有效。
+    - 低情绪 (sentiment<35): 整体命中率低，仅保留波动率+涨停基因，整体降权。
+    """
+    sent = _safe(row.get("sentiment"), 0.0)
+    st = _safe(row.get("shortterm"), 0.0)
+    tech = _safe(row.get("technical"), 0.0)
+    fund = _safe(row.get("fundamental"), 0.0)
+    fundflow = _safe(row.get("fundflow"), 0.0)
+
+    pos = _safe(row.get("position_20d"), 0.5)
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")), 0.0)
+    pb20 = _safe(row.get("pullback_20d"), 0.0)
+    pb10 = _safe(row.get("pullback_10d"), 0.0)
+    std5 = _safe(row.get("pct_chg_std_5d"), 0.0)
+    std10 = _safe(row.get("pct_chg_std_10d"), 0.0)
+    gene20 = _safe(row.get("limit_up_count_20d"), 0.0)
+    gene60 = _safe(row.get("limit_up_count_60d"), 0.0)
+    amount_ratio = _safe(row.get("amount_ratio"), 1.0)
+    circ_mv = _safe(row.get("circ_mv"), 0.0)
+
+    # 基础：sentiment 本身是最强单变量
+    score = sent * 0.45
+
+    if sent >= 55:
+        # 高情绪区：位置/趋势/回调/量能/涨停基因
+        if 0.40 <= pos <= 0.75:
+            score += 12.0
+        elif 0.25 <= pos <= 0.85:
+            score += 6.0
+        elif pos > 0.92:
+            score -= 10.0
+
+        if 0.05 <= t10 <= 0.25:
+            score += 10.0
+        elif 0.25 < t10 <= 0.40:
+            score += 4.0
+        elif t10 > 0.50:
+            score -= 10.0
+
+        if 0.03 <= pb20 <= 0.15:
+            score += 8.0
+        elif pb20 < 0.02:
+            score -= 6.0
+
+        score += min(gene20, 5) * 3.0 + min(max(gene60 - gene20, 0), 5) * 1.5
+
+        if amount_ratio > 1.5:
+            score += 6.0
+        elif amount_ratio < 0.6:
+            score -= 4.0
+
+        # 高情绪区 fundamental 偏负：高基本面分反而抑制涨停
+        if fund > 55:
+            score -= 7.0
+        elif fund < 30:
+            score += 3.0
+
+        # 大市值加分（与涨停基因共振）
+        if circ_mv >= 100_0000 and gene20 >= 1:
+            score += 5.0
+
+    elif sent >= 35:
+        # 中情绪区：shortterm + 涨停基因，technical 是陷阱
+        score += st * 0.35
+        score += min(gene20, 5) * 2.5
+
+        if tech > 45:
+            score -= 10.0
+        elif tech > 35:
+            score -= 5.0
+        elif tech < 25:
+            score += 4.0
+
+        if fundflow > 50:
+            score -= 5.0
+        elif fundflow < 30:
+            score += 3.0
+
+        if 0.03 <= t10 <= 0.20:
+            score += 5.0
+        elif t10 > 0.35:
+            score -= 6.0
+
+        if 0.30 <= pos <= 0.70:
+            score += 4.0
+
+    else:
+        # 低情绪区：整体低命中，轻参与，只留高波动+涨停基因
+        score = score * 0.4
+        if std5 > 3.5:
+            score += 5.0
+        if std10 > 4.0:
+            score += 4.0
+        if gene20 >= 2:
+            score += 5.0
+        if pb10 > 0.05:
+            score += 3.0
+
+    return round(max(0.0, score), 2)
+
+
+def factor_sentiment_conditional_pit(row: pd.Series) -> float:
+    """Sentiment-条件互补因子（PIT）：不含 sentiment 自身，按 sentiment 区间选择子因子。
+
+    条件挖掘显示：
+    - 高情绪 (sentiment>=55): position_20d / trailing_10_pit / pullback_20d 有效
+    - 中情绪 (35<=sentiment<55): shortterm 正向，technical 是陷阱（负向）
+    - 低情绪 (sentiment<35): pct_chg_std_5d/10d 等波动率因子略有效
+
+    本因子与 sentiment 正交互补，推荐组合方式：score = sentiment + 0.5 * sentiment_conditional_pit
+    """
+    sent = _safe(row.get("sentiment"), 0.0)
+    st = _safe(row.get("shortterm"), 0.0)
+    tech = _safe(row.get("technical"), 0.0)
+    fundflow = _safe(row.get("fundflow"), 0.0)
+
+    pos = _safe(row.get("position_20d"), 0.5)
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")), 0.0)
+    pb20 = _safe(row.get("pullback_20d"), 0.0)
+    pb10 = _safe(row.get("pullback_10d"), 0.0)
+    std5 = _safe(row.get("pct_chg_std_5d"), 0.0)
+    std10 = _safe(row.get("pct_chg_std_10d"), 0.0)
+    gene20 = _safe(row.get("limit_up_count_20d"), 0.0)
+    gene60 = _safe(row.get("limit_up_count_60d"), 0.0)
+    amount_ratio = _safe(row.get("amount_ratio"), 1.0)
+    avg_amount = _safe(row.get("avg_amount_5d"), 0.0)
+    circ_mv = _safe(row.get("circ_mv"), 0.0)
+
+    score = 0.0
+
+    if sent >= 55:
+        # 高情绪区：位置/趋势/回调/量能是主要矛盾
+        if 0.40 <= pos <= 0.75:
+            score += 16.0
+        elif 0.25 <= pos <= 0.85:
+            score += 8.0
+        elif pos > 0.92:
+            score -= 12.0
+
+        if 0.05 <= t10 <= 0.25:
+            score += 12.0
+        elif 0.25 < t10 <= 0.40:
+            score += 5.0
+        elif t10 > 0.50:
+            score -= 12.0
+
+        if 0.03 <= pb20 <= 0.15:
+            score += 10.0
+        elif pb20 < 0.02:
+            score -= 8.0
+
+        score += min(gene20, 5) * 3.5 + min(max(gene60 - gene20, 0), 5) * 1.5
+
+        if amount_ratio > 1.5 and avg_amount > 200_000:
+            score += 7.0
+        elif amount_ratio > 1.2 and avg_amount > 100_000:
+            score += 4.0
+
+        # 大市值+基因共振
+        if circ_mv >= 100_0000 and gene20 >= 1:
+            score += 6.0
+
+    elif sent >= 35:
+        # 中情绪区：shortterm 是正向，technical/fundflow 是陷阱
+        score += min(st / 5.0, 12.0)  # shortterm 越高越好，上限 12
+
+        score += min(gene20, 4) * 3.0
+
+        if tech > 45:
+            score -= 14.0
+        elif tech > 35:
+            score -= 7.0
+        elif tech < 25:
+            score += 5.0
+
+        if fundflow > 50:
+            score -= 6.0
+        elif fundflow < 30:
+            score += 3.0
+
+        if 0.03 <= t10 <= 0.20:
+            score += 6.0
+        elif t10 > 0.35:
+            score -= 7.0
+
+        if 0.30 <= pos <= 0.70:
+            score += 5.0
+
+    else:
+        # 低情绪区：整体难涨停，只保留高波动+涨停基因+回调
+        if std5 > 3.5:
+            score += 7.0
+        if std10 > 4.0:
+            score += 5.0
+        if gene20 >= 2:
+            score += 6.0
+        if pb10 > 0.05:
+            score += 4.0
+        # 低情绪区涨停基因也很珍贵
+        score += min(gene20, 3) * 2.0
+
+    return round(max(0.0, score), 2)
+
+
+def factor_balanced_adaptive_total_pit(row: pd.Series) -> float:
+    """Balanced-自适应综合评分（PIT）：以 balanced_total_pit 为稳健基础，按 sentiment 区间做条件增强。
+
+    真实扫描验证显示 balanced_total_pit 的 hit@3 优于纯 sentiment-adaptive，
+    说明五维聚合 + 反追高惩罚是稳健基础。本因子保留该基础，只在不同 sentiment 区间做差异化增强：
+    - 高情绪 (sentiment >= 55): 用 position_20d / amount_ratio 做二次精选。
+    - 中情绪 (35 <= sentiment < 55): technical 高时减分，shortterm+涨停基因加分。
+    - 低情绪 (sentiment < 35): 整体降权，仅保留高波动/涨停基因。
+    """
+    st = _safe(row.get("shortterm"), 0.0)
+    tech = _safe(row.get("technical"), 0.0)
+    sent = _safe(row.get("sentiment"), 0.0)
+    fund = _safe(row.get("fundflow"), 0.0)
+    funda = _safe(row.get("fundamental"), 0.0)
+
+    pos = _safe(row.get("position_20d"), 0.5)
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")), 0.0)
+    t5 = _safe(row.get("trailing_5_pit", row.get("trailing_5")), 0.0)
+    pb10 = _safe(row.get("pullback_10d"), 0.0)
+    std5 = _safe(row.get("pct_chg_std_5d"), 0.0)
+    std10 = _safe(row.get("pct_chg_std_10d"), 0.0)
+    gene20 = _safe(row.get("limit_up_count_20d"), 0.0)
+    amount_ratio = _safe(row.get("amount_ratio"), 1.0)
+
+    # 稳健基础：balanced_total_pit 公式
+    score = sent * 0.40
+    score += st * 0.30
+    score += tech * 0.20
+    score += fund * 0.05
+    score += funda * 0.05
+
+    # 按 sentiment 区间的条件增强
+    if sent >= 55:
+        # 高情绪区：position / amount 二次精选
+        if 0.40 <= pos <= 0.75:
+            score += 4.0
+        elif pos > 0.92:
+            score -= 4.0
+        if amount_ratio > 1.5:
+            score += 3.0
+        if gene20 >= 2:
+            score += 2.0
+    elif sent >= 35:
+        # 中情绪区：technical 是陷阱，shortterm/基因增强
+        if tech > 45:
+            score -= 4.0
+        elif tech < 25:
+            score += 2.0
+        score += min(gene20, 3) * 1.5
+    else:
+        # 低情绪区：整体降权，仅保留波动/基因
+        score *= 0.85
+        if std5 > 3.5:
+            score += 2.0
+        if gene20 >= 2:
+            score += 2.0
+
+    # 追高惩罚（乘法，与 balanced_total_pit 保持一致）
+    penalty = 1.0
+    if t10 > 0.30:
+        penalty *= 0.75
+    elif t10 > 0.20:
+        penalty *= 0.85
+    elif t10 > 0.10:
+        penalty *= 0.93
+    if t5 > 0.15:
+        penalty *= 0.90
+    if pos > 0.85 and pb10 < 0.03:
+        penalty *= 0.80
+    if sent > 60 and t10 > 0.15:
+        penalty *= 0.85
+
+    return round(max(0.0, score * penalty), 2)
+
+
+def factor_balanced_total_pit_v2(row: pd.Series) -> float:
+    """均衡型 PIT 综合评分 v2：基于真实扫描验证的权重优化。
+
+    真实扫描验证（2026-06）显示，shortterm 权重 0.6 + sentiment 0.2 + technical 0.2
+    的 hit@3（43.9%）显著优于原 balanced_total_pit（37.9%）。
+    追高惩罚与 v1 保持一致。
+    """
+    st = _safe(row.get("shortterm"), 0.0)
+    tech = _safe(row.get("technical"), 0.0)
+    sent = _safe(row.get("sentiment"), 0.0)
+    fund = _safe(row.get("fundflow"), 0.0)
+    funda = _safe(row.get("fundamental"), 0.0)
+
+    t10 = _safe(row.get("trailing_10_pit", row.get("trailing_10")), 0.0)
+    t5 = _safe(row.get("trailing_5_pit", row.get("trailing_5")), 0.0)
+    pos = _safe(row.get("position_20d"), 0.5)
+    pb10 = _safe(row.get("pullback_10d"), 0.0)
+
+    score = st * 0.50
+    score += sent * 0.20
+    score += tech * 0.40
+    score += fund * 0.0
+    score += funda * 0.0
+
+    penalty = 1.0
+    if t10 > 0.30:
+        penalty *= 0.75
+    elif t10 > 0.20:
+        penalty *= 0.85
+    elif t10 > 0.10:
+        penalty *= 0.93
+    if t5 > 0.15:
+        penalty *= 0.90
+    if pos > 0.85 and pb10 < 0.03:
+        penalty *= 0.80
+    if sent > 60 and t10 > 0.15:
+        penalty *= 0.85
+
+    return round(max(0.0, score * penalty), 2)
+
+
 # ═══════════════════════════════════════════════════════════
 # 因子注册表
 # ═══════════════════════════════════════════════════════════
@@ -1082,6 +1742,7 @@ STANDALONE_FACTORS = {
     "total_quality_bonus": factor_total_quality_bonus,
     "new_total_v2": factor_new_total_v2,
     "balanced_total": factor_balanced_total,
+    "balanced_total_pit": factor_balanced_total_pit,
     "aggressive_total": factor_aggressive_total,
     "return_optimized_total": factor_return_optimized_total,
     "quality_value_total": factor_quality_value_total,
@@ -1098,6 +1759,21 @@ STANDALONE_FACTORS = {
     "inst_following": factor_inst_following,
     "top_list_quality": factor_top_list_quality,
     "inst_consistency": factor_inst_consistency,
+    # 第十五类：PIT 数据挖掘新因子
+    "amount_power_pit": factor_amount_power_pit,
+    "volatility_activation_pit": factor_volatility_activation_pit,
+    "limit_gene_momentum_pit": factor_limit_gene_momentum_pit,
+    "breakout_quality_pit": factor_breakout_quality_pit,
+    "trailing_momentum_pit": factor_trailing_momentum_pit,
+    "intraday_strength_pit": factor_intraday_strength_pit,
+    "large_cap_limit_gene_pit": factor_large_cap_limit_gene_pit,
+    "turnover_momentum_pit": factor_turnover_momentum_pit,
+    "growth_momentum_pit": factor_growth_momentum_pit,
+    # 第十六类：sentiment-自适应综合评分
+    "sentiment_adaptive_total_pit": factor_sentiment_adaptive_total_pit,
+    "sentiment_conditional_pit": factor_sentiment_conditional_pit,
+    "balanced_adaptive_total_pit": factor_balanced_adaptive_total_pit,
+    "balanced_total_pit_v2": factor_balanced_total_pit_v2,
 }
 
 # 调整因子（加到现有维度分上）

@@ -100,15 +100,20 @@ def score_fundamental(code: str, trade_date: str | None = None) -> tuple[int | f
     # ═══════════════════════════════════════════════════════════
 
     # 1.1 daily_basic: 流通市值
+    circ_mv = 0
     try:
-        resp = call_tushare("daily_basic", {"ts_code": code}, "circ_mv")
-        items = resp.get("data", {}).get("items", [])
-        if items:
-            flds = resp.get("data", {}).get("fields", [])
-            d = dict(zip(flds, items[0]))
-            circ_mv = safe_float(d.get("circ_mv"))  # 万元
+        # 优先从 pipeline 预取缓存读取
+        from plays.limit_up.strategies import factor_ctx
+        basic = factor_ctx.get_daily_basic(code)
+        if basic:
+            circ_mv = safe_float(basic.get("circ_mv", 0))  # 万元
         else:
-            circ_mv = 0
+            resp = call_tushare("daily_basic", {"ts_code": code}, "circ_mv")
+            items = resp.get("data", {}).get("items", [])
+            if items:
+                flds = resp.get("data", {}).get("fields", [])
+                d = dict(zip(flds, items[0]))
+                circ_mv = safe_float(d.get("circ_mv"))  # 万元
     except Exception:
         circ_mv = 0
 

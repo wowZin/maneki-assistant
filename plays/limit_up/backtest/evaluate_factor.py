@@ -87,10 +87,12 @@ def evaluate_factor(
         for lab in labels
     }
 
-    # Chasing diagnostics: score vs trailing returns
+    # Chasing diagnostics: score vs trailing returns (PIT first)
+    t5_col = "trailing_5_pit" if "trailing_5_pit" in df.columns else "trailing_5"
+    t10_col = "trailing_10_pit" if "trailing_10_pit" in df.columns else "trailing_10"
     result["chasing_ic"] = {
-        "trailing_5": M.rank_ic(df[score_col], df["trailing_5"]),
-        "trailing_10": M.rank_ic(df[score_col], df["trailing_10"]),
+        "trailing_5": M.rank_ic(df[score_col], df[t5_col]),
+        "trailing_10": M.rank_ic(df[score_col], df[t10_col]),
     }
     result["chasing_score"] = (
         (result["chasing_ic"].get("trailing_10") or 0)

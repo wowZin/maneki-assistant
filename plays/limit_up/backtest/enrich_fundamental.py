@@ -55,27 +55,66 @@ def pull_moneyflow_by_date(trade_date: str) -> pd.DataFrame:
     return df
 
 
-def enrich_with_fundamental(panel_path: str | None = None, output_path: str | None = None) -> pd.DataFrame:
+def _load_daily_bars_for_calendar() -> list[str]:
+    """从 daily parquet 缓存读取交易日历。"""
+    parquets = sorted(CACHE_DIR.glob("daily_*.parquet"))
+    if not parquets:
+        return []
+    df = pd.read_parquet(parquets[-1])
+    return sorted(df["trade_date"].dropna().astype(str).unique().tolist())
+
+
+def _build_prev_date_map(dates: list[str], calendar: list[str]) -> dict[str, str | None]:
+    """把每个日期映射到上一交易日。"""
+    cal_set = set(calendar)
+    sorted_cal = sorted(cal_set | set(dates))
+    prev_map: dict[str, str | None] = {d: None for d in dates}
+    for i, d in enumerate(sorted_cal):
+        if d in prev_map and i > 0:
+            prev_map[d] = sorted_cal[i - 1]
+    return prev_map
+
+
+def enrich_with_fundamental(
+    panel_path: str | None = None,
+    output_path: str | None = None,
+    pit_mode: bool = False,
+) -> pd.DataFrame:
     """拉取 daily_basic + moneyflow，join 到 panel，输出 enriched panel。
 
     Args:
         panel_path: 输入 panel 路径，默认使用已增强的 panel_enriched.csv
         output_path: 输出路径
+        pit_mode: 是否把特征平移到 T-1（早盘 PIT）
     """
     panel_path = Path(panel_path) if panel_path else OUT_DIR / "panel_enriched.csv"
-    output_path = Path(output_path) if output_path else OUT_DIR / "panel_enriched_v3.csv"
+    if output_path:
+        output_path = Path(output_path)
+    else:
+        output_path = OUT_DIR / ("panel_enriched_pit_v3.csv" if pit_mode else "panel_enriched_v3.csv")
 
     print(f"加载 panel: {panel_path}")
     panel = pd.read_csv(panel_path)
     panel["date"] = panel["date"].astype(str)
     panel["code"] = panel["code"].astype(str)
-    dates = sorted(panel["date"].unique())
-    print(f"  {len(panel)} rows, {len(dates)} dates: {dates[0]} - {dates[-1]}")
+
+    if pit_mode:
+        calendar = _load_daily_bars_for_calendar()
+        if not calendar:
+            raise RuntimeError("PIT 模式需要 daily parquet 缓存，先运行 enrich_panel")
+        prev_map = _build_prev_date_map(panel["date"].unique().tolist(), calendar)
+        panel["_join_date"] = panel["date"].map(prev_map)
+        join_dates = sorted(panel["_join_date"].dropna().unique().tolist())
+        print(f"  PIT 模式: {len(panel)} rows, join dates {join_dates[0]} - {join_dates[-1]}")
+    else:
+        join_dates = sorted(panel["date"].unique().tolist())
+        panel["_join_date"] = panel["date"]
+        print(f"  {len(panel)} rows, {len(join_dates)} dates: {join_dates[0]} - {join_dates[-1]}")
 
     # ── 1. Pull daily_basic ──
     print("\n[1/2] Pulling daily_basic...")
     basic_frames = []
-    for d in dates:
+    for d in join_dates:
         print(f"  {d}...", end=" ", flush=True)
         try:
             df = pull_daily_basic_by_date(d)
@@ -86,12 +125,12 @@ def enrich_with_fundamental(panel_path: str | None = None, output_path: str | No
         time.sleep(0.3)  # rate limit
     basic_all = pd.concat(basic_frames, ignore_index=True) if basic_frames else pd.DataFrame()
     if not basic_all.empty:
-        basic_all = basic_all.rename(columns={"ts_code": "code", "trade_date": "date"})
+        basic_all = basic_all.rename(columns={"ts_code": "code", "trade_date": "_join_date"})
 
     # ── 2. Pull moneyflow ──
     print("\n[2/2] Pulling moneyflow...")
     mf_frames = []
-    for d in dates:
+    for d in join_dates:
         print(f"  {d}...", end=" ", flush=True)
         try:
             df = pull_moneyflow_by_date(d)
@@ -102,21 +141,23 @@ def enrich_with_fundamental(panel_path: str | None = None, output_path: str | No
         time.sleep(0.3)
     mf_all = pd.concat(mf_frames, ignore_index=True) if mf_frames else pd.DataFrame()
     if not mf_all.empty:
-        mf_all = mf_all.rename(columns={"ts_code": "code", "trade_date": "date"})
+        mf_all = mf_all.rename(columns={"ts_code": "code", "trade_date": "_join_date"})
 
     # ── 3. Join ──
     print("\n[3/3] Joining...")
     enriched = panel.copy()
 
     if not basic_all.empty:
-        basic_cols = ["code", "date"] + [c for c in basic_all.columns if c not in ("code", "date")]
-        enriched = enriched.merge(basic_all[basic_cols], on=["code", "date"], how="left")
+        basic_cols = ["code", "_join_date"] + [c for c in basic_all.columns if c not in ("code", "_join_date")]
+        enriched = enriched.merge(basic_all[basic_cols], on=["code", "_join_date"], how="left")
         print(f"  daily_basic: {len(basic_cols)-2} new cols")
 
     if not mf_all.empty:
-        mf_cols = ["code", "date"] + [c for c in mf_all.columns if c not in ("code", "date")]
-        enriched = enriched.merge(mf_all[mf_cols], on=["code", "date"], how="left")
+        mf_cols = ["code", "_join_date"] + [c for c in mf_all.columns if c not in ("code", "_join_date")]
+        enriched = enriched.merge(mf_all[mf_cols], on=["code", "_join_date"], how="left")
         print(f"  moneyflow: {len(mf_cols)-2} new cols")
+
+    enriched = enriched.drop(columns=["_join_date"], errors="ignore")
 
     # 计算衍生基本面因子
     enriched = _compute_derived_fundamental(enriched)
@@ -188,6 +229,18 @@ def _compute_derived_fundamental(df: pd.DataFrame) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
+    import argparse
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
-    enrich_with_fundamental()
+
+    parser = argparse.ArgumentParser(description="基本面+资金流特征增强")
+    parser.add_argument("--panel", default=None, help="输入 panel 路径")
+    parser.add_argument("--output", default=None, help="输出路径")
+    parser.add_argument("--pit", action="store_true", help="PIT 模式：特征平移到 T-1")
+    args = parser.parse_args()
+
+    enrich_with_fundamental(
+        panel_path=args.panel,
+        output_path=args.output,
+        pit_mode=args.pit,
+    )

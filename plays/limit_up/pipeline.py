@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 import argparse
 import requests
+import numpy as np
 
 # 项目根目录
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
@@ -140,9 +141,26 @@ def score_technical(code):
 _FUND_FLOW_CACHE = None
 _FUND_FLOW_DATE = None
 
-def score_fundflow(code):
+# jvQuant 数据客户端（用于盘后/回测资金流，避免 Tushare moneyflow 超限）
+_JV_CLIENT = None
+
+def _get_jv_client():
+    """懒加载 jvQuant 数据客户端。"""
+    global _JV_CLIENT
+    if _JV_CLIENT is None:
+        try:
+            from scripts.jvquant_client import get_jvquant_client
+            _JV_CLIENT = get_jvquant_client()
+        except Exception as e:
+            print(f"  [jvQuant] 数据客户端初始化失败: {e}")
+            _JV_CLIENT = False
+    return _JV_CLIENT if _JV_CLIENT is not False else None
+
+
+def score_fundflow(code, trade_date: str | None = None):
     from plays.limit_up.strategies.fundflow import score_fundflow as _score_fundflow
-    return _score_fundflow(code)
+    jv = _get_jv_client()
+    return _score_fundflow(code, trade_date=trade_date, jv_client=jv)
 
 # 实时行情缓存（同花顺 Cookie 直连）
 _REALTIME_PCT_CACHE = {}   # {code_short: pct_chg}  兼容旧接口
@@ -370,18 +388,21 @@ def score_sentiment(code):
 # ===== new_total_v2 计算 =====
 # 缓存当日 Tushare daily 和 limit_list 数据（避免重复请求）
 _NV2_DAILY_CACHE: dict[str, list[dict]] = {}  # code → [{trade_date, close, high, low, ...}]
+_NV2_DAILY_BASIC_CACHE: dict[str, dict[str, dict]] = {}  # code → {trade_date: {pe, pb, circ_mv, ...}}
 _NV2_LIMIT_CACHE: dict[str, int] = {}         # code → 近20日涨停次数
+_NV2_LIMIT_60D_CACHE: dict[str, int] = {}     # code → 近60日涨停次数
 _NV2_DATE = ""
 
 
 def _fetch_nv2_data(codes: list[str]):
-    """批量拉取 new_total_v2 所需的 Tushare 数据
+    """批量拉取 new_total_v2 / balanced_total_pit 所需的 Tushare 数据
 
     数据源:
-      - daily: 前收盘价(pre_close) → 计算 trailing_10/5
-      - limit_list_d: 近20日涨停次数 → 涨停基因
+      - daily: 前收盘价(pre_close) → 计算 trailing_10/5, position_20d, std10, max_pct_chg_5d
+      - daily_basic: PE/PB/市值/换手/量比 → PIT 综合评分
+      - limit_list_d: 近60日涨停次数 → 涨停基因(20d/60d)
     """
-    global _NV2_DAILY_CACHE, _NV2_LIMIT_CACHE, _NV2_DATE
+    global _NV2_DAILY_CACHE, _NV2_DAILY_BASIC_CACHE, _NV2_LIMIT_CACHE, _NV2_LIMIT_60D_CACHE, _NV2_DATE
     today = datetime.now().strftime("%Y%m%d")
     if _NV2_DATE == today and _NV2_DAILY_CACHE:
         return
@@ -389,15 +410,15 @@ def _fetch_nv2_data(codes: list[str]):
     from scripts.tu_share import call_tushare
     from datetime import timedelta
 
-    # 1. 日线数据 (近30天)
-    start30 = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
+    # 1. 日线数据 (近70天，满足60日涨停基因 + 20日波动/位置计算)
+    start70 = (datetime.now() - timedelta(days=70)).strftime("%Y%m%d")
     ts_codes = [c for c in codes if c not in _NV2_DAILY_CACHE]
     if ts_codes:
         try:
             resp = call_tushare("daily", {
                 "ts_code": ",".join(ts_codes),
-                "start_date": start30, "end_date": today,
-            }, "ts_code,trade_date,pre_close,close,high,low,vol,amount")
+                "start_date": start70, "end_date": today,
+            }, "ts_code,trade_date,open,pre_close,close,high,low,vol,amount,pct_chg")
             items = resp.get("data", {}).get("items", [])
             flds = resp.get("data", {}).get("fields", [])
             for row in items:
@@ -411,30 +432,79 @@ def _fetch_nv2_data(codes: list[str]):
         except Exception as e:
             print(f"  [NV2] daily拉取失败: {e}")
 
-    # 2. 涨停基因 (近20日)
+    # 2. daily_basic (近70天，PIT 综合评分需要 pe/pb/circ_mv/turnover/volume_ratio 历史)
+    ts_codes_db = [c for c in codes if c not in _NV2_DAILY_BASIC_CACHE]
+    if ts_codes_db:
+        try:
+            resp = call_tushare("daily_basic", {
+                "ts_code": ",".join(ts_codes_db),
+                "start_date": start70, "end_date": today,
+            }, "ts_code,trade_date,pe,pb,circ_mv,turnover_rate,volume_ratio")
+            items = resp.get("data", {}).get("items", [])
+            flds = resp.get("data", {}).get("fields", [])
+            for row in items:
+                d = dict(zip(flds, row))
+                code = d.get("ts_code", "")
+                trade_date = str(d.get("trade_date", ""))
+                if code and trade_date:
+                    if code not in _NV2_DAILY_BASIC_CACHE:
+                        _NV2_DAILY_BASIC_CACHE[code] = {}
+                    _NV2_DAILY_BASIC_CACHE[code][trade_date] = d
+            print(f"  [NV2] daily_basic: {len(items)}条, {len(ts_codes_db)}只")
+        except Exception as e:
+            print(f"  [NV2] daily_basic拉取失败: {e}")
+
+    # 3. 涨停基因 (近60日，同时产出 20d/60d 计数)
     ts_codes_l = [c for c in codes if c not in _NV2_LIMIT_CACHE]
     if ts_codes_l:
         try:
-            start20 = (datetime.now() - timedelta(days=20)).strftime("%Y%m%d")
+            start60 = (datetime.now() - timedelta(days=60)).strftime("%Y%m%d")
             resp = call_tushare("limit_list_d", {
                 "ts_code": ",".join(ts_codes_l),
-                "start_date": start20, "end_date": today,
+                "start_date": start60, "end_date": today,
                 "limit_type": "U",
             }, "ts_code,trade_date")
             items = resp.get("data", {}).get("items", [])
             flds = resp.get("data", {}).get("fields", [])
-            from collections import Counter
-            counts = Counter()
+            from collections import defaultdict
+            dates_by_code: dict[str, list[str]] = defaultdict(list)
             for row in items:
                 d = dict(zip(flds, row))
-                counts[d.get("ts_code", "")] += 1
+                code = d.get("ts_code", "")
+                trade_date = str(d.get("trade_date", ""))
+                if code and trade_date:
+                    dates_by_code[code].append(trade_date)
+            cutoff20 = (datetime.now() - timedelta(days=20)).strftime("%Y%m%d")
             for code in ts_codes_l:
-                _NV2_LIMIT_CACHE[code] = counts.get(code, 0)
+                dates = sorted(dates_by_code.get(code, []))
+                count20 = sum(1 for d in dates if d >= cutoff20)
+                count60 = len(dates)
+                _NV2_LIMIT_CACHE[code] = count20
+                _NV2_LIMIT_60D_CACHE[code] = count60
             print(f"  [NV2] limit_list: {len(items)}条涨停记录")
         except Exception as e:
             print(f"  [NV2] limit_list拉取失败: {e}")
             for code in ts_codes_l:
                 _NV2_LIMIT_CACHE.setdefault(code, 0)
+                _NV2_LIMIT_60D_CACHE.setdefault(code, 0)
+
+    # 同步到 strategies/factor_ctx，供策略打分使用
+    try:
+        from plays.limit_up.strategies import factor_ctx
+        for code in codes:
+            factor_ctx.set_daily(code, _NV2_DAILY_CACHE.get(code, []))
+            factor_ctx.set_daily_basic(code, _NV2_DAILY_BASIC_CACHE.get(code, {}))
+            factor_ctx.set_limit_counts(
+                code,
+                _NV2_LIMIT_CACHE.get(code, 0),
+                _NV2_LIMIT_60D_CACHE.get(code, 0),
+            )
+        # 概念数据按需加载一次
+        if factor_ctx._CONCEPT_DAILY_CACHE is None:
+            cache_dir = Path(__file__).resolve().parent / "backtest" / "cache"
+            factor_ctx.load_concept_data_from_cache(cache_dir)
+    except Exception as e:
+        print(f"  [NV2] factor_ctx 同步失败: {e}")
 
     _NV2_DATE = today
 
@@ -466,7 +536,7 @@ def _send_jvquant_error(msg: str):
         pass
 
 
-def _compute_new_total_v2_batch(results: list[dict]):
+def _compute_new_total_v2_batch(results: list[dict], pit_mode: bool | None = None):
     """为批次结果计算 new_total_v2 评分。
 
     new_total_v2 = shortterm * 1.8
@@ -477,14 +547,19 @@ def _compute_new_total_v2_batch(results: list[dict]):
                   - chasing_penalty
 
     其中 trailing_10/position_20d/pullback_10d 从 Tushare daily 计算。
+
+    Args:
+        pit_mode: True 表示盘中模式，用 T-1 收盘作为最新可用日线；
+                  None 则自动根据 is_trading_time() 判断。
     """
     if not results:
         return
 
+    if pit_mode is None:
+        pit_mode = is_trading_time()
+
     codes = [r["code"] for r in results]
     _fetch_nv2_data(codes)
-
-    today = datetime.now().strftime("%Y%m%d")
 
     for r in results:
         code = r["code"]
@@ -498,13 +573,15 @@ def _compute_new_total_v2_batch(results: list[dict]):
         # --- trailing_10: 近10日涨幅 ---
         daily_rows = _NV2_DAILY_CACHE.get(code, [])
         daily_rows.sort(key=lambda x: x.get("trade_date", ""), reverse=True)
+        idx = 1 if pit_mode else 0  # 盘中用 T-1 作为当前 bar
+
         trailing_10 = None
-        if len(daily_rows) >= 10:
-            close_today = daily_rows[0].get("close")
-            close_10ago = daily_rows[min(9, len(daily_rows)-1)].get("close")
-            if close_today and close_10ago:
+        if len(daily_rows) >= 10 + idx:
+            close_current = daily_rows[idx].get("close")
+            close_10ago = daily_rows[idx + 9].get("close")
+            if close_current and close_10ago:
                 try:
-                    trailing_10 = (float(close_today) / float(close_10ago) - 1) * 100
+                    trailing_10 = (float(close_current) / float(close_10ago) - 1) * 100
                 except (ValueError, TypeError):
                     pass
         if trailing_10 is None:
@@ -512,12 +589,12 @@ def _compute_new_total_v2_batch(results: list[dict]):
 
         # --- trailing_5: 近5日涨幅 ---
         trailing_5 = None
-        if len(daily_rows) >= 5:
-            close_today = daily_rows[0].get("close")
-            close_5ago = daily_rows[min(4, len(daily_rows)-1)].get("close")
-            if close_today and close_5ago:
+        if len(daily_rows) >= 5 + idx:
+            close_current = daily_rows[idx].get("close")
+            close_5ago = daily_rows[idx + 4].get("close")
+            if close_current and close_5ago:
                 try:
-                    trailing_5 = (float(close_today) / float(close_5ago) - 1) * 100
+                    trailing_5 = (float(close_current) / float(close_5ago) - 1) * 100
                 except (ValueError, TypeError):
                     pass
         if trailing_5 is None:
@@ -525,11 +602,12 @@ def _compute_new_total_v2_batch(results: list[dict]):
 
         # --- position_20d: 现价处于20日区间位置 (0~1) ---
         position_20d = 0.5
-        if len(daily_rows) >= 5:
+        if len(daily_rows) >= 5 + idx:
             try:
-                highs = [float(rr.get("high", 0)) for rr in daily_rows[:20] if rr.get("high")]
-                lows = [float(rr.get("low", 0)) for rr in daily_rows[:20] if rr.get("low")]
-                closes = [float(rr.get("close", 0)) for rr in daily_rows[:20] if rr.get("close")]
+                rows = daily_rows[idx:idx + 20]
+                highs = [float(rr.get("high", 0)) for rr in rows if rr.get("high")]
+                lows = [float(rr.get("low", 0)) for rr in rows if rr.get("low")]
+                closes = [float(rr.get("close", 0)) for rr in rows if rr.get("close")]
                 if highs and lows and closes:
                     h20 = max(highs)
                     l20 = min(lows)
@@ -541,10 +619,11 @@ def _compute_new_total_v2_batch(results: list[dict]):
 
         # --- pullback_10d: 距10日高点回撤幅度 (0~1)---
         pullback_10d = 0.1
-        if len(daily_rows) >= 2:
+        if len(daily_rows) >= 2 + idx:
             try:
-                highs_10 = [float(rr.get("high", 0)) for rr in daily_rows[:10] if rr.get("high")]
-                closes = [float(rr.get("close", 0)) for rr in daily_rows[:10] if rr.get("close")]
+                rows = daily_rows[idx:idx + 10]
+                highs_10 = [float(rr.get("high", 0)) for rr in rows if rr.get("high")]
+                closes = [float(rr.get("close", 0)) for rr in rows if rr.get("close")]
                 if highs_10 and closes:
                     h10 = max(highs_10)
                     c0 = closes[0]
@@ -588,6 +667,486 @@ def _compute_new_total_v2_batch(results: list[dict]):
         r["_nv2_limit_gene"] = limit_gene
 
 
+def _safe_float(val, default: float = 0.0) -> float:
+    if val is None:
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
+
+def _extract_pit_features(code: str, pit_mode: bool) -> dict:
+    """从 _NV2_*_CACHE 提取 PIT 特征，供 balanced_total_pit 子因子使用。"""
+    daily_rows = _NV2_DAILY_CACHE.get(code, [])
+    daily_rows.sort(key=lambda x: x.get("trade_date", ""), reverse=True)
+    idx = 1 if pit_mode else 0
+
+    feats = {
+        "trailing_10": 0.0,
+        "trailing_5": 0.0,
+        "position_20d": 0.5,
+        "pullback_10d": 0.1,
+        "pullback_20d": 0.1,
+        "pct_chg_std_10d": 0.0,
+        "pct_chg_std_5d": 0.0,
+        "max_pct_chg_5d": 0.0,
+        "limit_up_count_20d": 0.0,
+        "limit_up_count_60d": 0.0,
+        "circ_mv": 0.0,
+        "pe": 999.0,
+        "pb": 999.0,
+        "turnover_rate": 5.0,
+        "volume_ratio": 1.0,
+    }
+
+    if not daily_rows or len(daily_rows) < 2 + idx:
+        return feats
+
+    # trailing_10 / trailing_5 (percent -> decimal)
+    def _trailing(days: int) -> float:
+        if len(daily_rows) < days + idx:
+            return 0.0
+        close_current = daily_rows[idx].get("close")
+        close_ago = daily_rows[idx + days - 1].get("close")
+        if close_current and close_ago:
+            try:
+                return float(close_current) / float(close_ago) - 1.0
+            except (ValueError, TypeError):
+                pass
+        return 0.0
+
+    feats["trailing_10"] = _trailing(10)
+    feats["trailing_5"] = _trailing(5)
+
+    # position_20d
+    try:
+        rows = daily_rows[idx:idx + 20]
+        highs = [float(rr.get("high", 0)) for rr in rows if rr.get("high")]
+        lows = [float(rr.get("low", 0)) for rr in rows if rr.get("low")]
+        closes = [float(rr.get("close", 0)) for rr in rows if rr.get("close")]
+        if highs and lows and closes:
+            h20 = max(highs)
+            l20 = min(lows)
+            c0 = closes[0]
+            if h20 > l20:
+                feats["position_20d"] = (c0 - l20) / (h20 - l20)
+    except (ValueError, TypeError):
+        pass
+
+    # pullback_10d / pullback_20d
+    def _pullback(days: int) -> float:
+        if len(daily_rows) < 2 + idx:
+            return 0.1
+        try:
+            rows = daily_rows[idx:idx + days]
+            highs = [float(rr.get("high", 0)) for rr in rows if rr.get("high")]
+            closes = [float(rr.get("close", 0)) for rr in rows if rr.get("close")]
+            if highs and closes:
+                h = max(highs)
+                c0 = closes[0]
+                if h > 0:
+                    return max(0.0, (h - c0) / h)
+        except (ValueError, TypeError):
+            pass
+        return 0.1
+
+    feats["pullback_10d"] = _pullback(10)
+    feats["pullback_20d"] = _pullback(20)
+
+    # pct_chg std / max
+    try:
+        pcts = [_safe_float(rr.get("pct_chg"), 0.0) for rr in daily_rows[idx:idx + 10]]
+        if len(pcts) >= 5:
+            feats["pct_chg_std_10d"] = float(np.std(pcts, ddof=0)) if len(pcts) >= 2 else 0.0
+            feats["max_pct_chg_5d"] = max(pcts[:5])
+        pcts5 = [_safe_float(rr.get("pct_chg"), 0.0) for rr in daily_rows[idx:idx + 5]]
+        if len(pcts5) >= 2:
+            feats["pct_chg_std_5d"] = float(np.std(pcts5, ddof=0))
+    except Exception:
+        pass
+
+    # daily_basic: pe/pb/circ_mv/turnover/volume_ratio for current bar (T-1 in pit_mode)
+    basic_by_date = _NV2_DAILY_BASIC_CACHE.get(code, {})
+    if basic_by_date:
+        current_row = daily_rows[idx]
+        trade_date = str(current_row.get("trade_date", ""))
+        # fallback: 取最近一个有 daily_basic 的日期
+        basic = basic_by_date.get(trade_date)
+        if basic is None:
+            for d in sorted(basic_by_date.keys(), reverse=True):
+                if d <= trade_date:
+                    basic = basic_by_date[d]
+                    break
+        if basic is None:
+            basic = list(basic_by_date.values())[0]
+        if basic:
+            feats["circ_mv"] = _safe_float(basic.get("circ_mv"), 0.0)
+            feats["pe"] = _safe_float(basic.get("pe"), 999.0)
+            feats["pb"] = _safe_float(basic.get("pb"), 999.0)
+            feats["turnover_rate"] = _safe_float(basic.get("turnover_rate"), 5.0)
+            feats["volume_ratio"] = _safe_float(basic.get("volume_ratio"), 1.0)
+
+    # limit up counts
+    feats["limit_up_count_20d"] = float(_NV2_LIMIT_CACHE.get(code, 0))
+    feats["limit_up_count_60d"] = float(_NV2_LIMIT_60D_CACHE.get(code, 0))
+
+    return feats
+
+
+def _factor_large_cap_limit_gene_pit(feats: dict, tech: float) -> float:
+    circ_mv = feats["circ_mv"]
+    gene20 = feats["limit_up_count_20d"]
+    gene60 = feats["limit_up_count_60d"]
+
+    score = 0.0
+    if circ_mv >= 500_0000:
+        score += 12.0
+    elif circ_mv >= 200_0000:
+        score += 9.0
+    elif circ_mv >= 100_0000:
+        score += 6.0
+    elif circ_mv >= 50_0000:
+        score += 3.0
+
+    if gene20 >= 2:
+        score += 10.0
+    elif gene20 >= 1:
+        score += 5.0
+    if gene60 >= 3:
+        score += 6.0
+    elif gene60 >= 1:
+        score += 3.0
+
+    if tech >= 40:
+        score += 6.0
+    elif tech >= 25:
+        score += 3.0
+
+    return score
+
+
+def _factor_volatility_activation_pit(feats: dict) -> float:
+    std10 = feats["pct_chg_std_10d"]
+    std5 = feats["pct_chg_std_5d"]
+    position = feats["position_20d"]
+    max5 = feats["max_pct_chg_5d"]
+
+    score = 0.0
+    if std10 > 4.5 and 0.30 <= position <= 0.70 and max5 > 5.0:
+        score += 20.0
+    elif std10 > 3.5 and 0.25 <= position <= 0.75 and max5 > 3.5:
+        score += 12.0
+    elif std5 > 3.0 and position > 0.20:
+        score += 6.0
+
+    if std10 < 2.0:
+        score -= 4.0
+    return score
+
+
+def _factor_turnover_momentum_pit(feats: dict) -> float:
+    turnover = feats["turnover_rate"]
+    vol_ratio = feats["volume_ratio"]
+    std5 = feats["pct_chg_std_5d"]
+    position = feats["position_20d"]
+
+    score = 0.0
+    if turnover >= 15 and vol_ratio >= 1.5 and std5 >= 3.0 and 0.30 <= position <= 0.80:
+        score += 18.0
+    elif turnover >= 10 and vol_ratio >= 1.2 and std5 >= 2.5 and position >= 0.25:
+        score += 12.0
+    elif turnover >= 5 and vol_ratio >= 1.0 and std5 >= 2.0:
+        score += 5.0
+
+    if turnover < 2:
+        score -= 5.0
+    return score
+
+
+def _factor_limit_gene_momentum_pit(feats: dict, tech: float) -> float:
+    gene20 = feats["limit_up_count_20d"]
+    gene60 = feats["limit_up_count_60d"]
+    t10 = feats["trailing_10"]
+    position = feats["position_20d"]
+
+    score = 0.0
+    if gene20 >= 3:
+        score += 15.0
+    elif gene20 >= 2:
+        score += 10.0
+    elif gene20 >= 1:
+        score += 5.0
+
+    if gene60 >= 4:
+        score += 8.0
+    elif gene60 >= 2:
+        score += 4.0
+
+    if tech >= 40:
+        score += 8.0
+    elif tech >= 25:
+        score += 4.0
+
+    if t10 > 0.35:
+        score *= 0.60
+    elif t10 > 0.25:
+        score *= 0.80
+    if position > 0.85:
+        score *= 0.70
+
+    return round(score, 2)
+
+
+def _factor_growth_momentum_pit(feats: dict, st: float, tech: float) -> float:
+    pe = feats["pe"]
+    pb = feats["pb"]
+    std10 = feats["pct_chg_std_10d"]
+
+    score = 0.0
+    if pe > 50 or pe <= 0:
+        score += 6.0
+    elif pe > 30:
+        score += 3.0
+
+    if pb > 5:
+        score += 4.0
+    elif pb > 3:
+        score += 2.0
+
+    if st >= 45 and tech >= 35 and std10 >= 3.5:
+        score += 12.0
+    elif st >= 35 and tech >= 25 and std10 >= 2.5:
+        score += 6.0
+
+    return score
+
+
+def _factor_concept_momentum(cm: dict) -> float:
+    """概念动量：使用 factor_ctx.get_concept_momentum 返回的字典。"""
+    ret1 = cm.get("ret1_max", 0.0)
+    ret3 = cm.get("ret3_max", 0.0)
+    ret5 = cm.get("ret5_max", 0.0)
+    ret1_avg = cm.get("ret1_avg", 0.0)
+    ret3_avg = cm.get("ret3_avg", 0.0)
+    n_cpt = cm.get("n_concepts", 0.0)
+    up_ratio = cm.get("up_ratio", 0.5)
+
+    score = ret3 * 2.5
+    if ret1 > 2.0:
+        score += ret1 * 0.8
+    elif ret1 < -2.0:
+        if ret3 > 3.0:
+            score += ret3 * 0.3
+    if ret5 > 5.0:
+        score += 5.0
+    elif ret5 < -5.0:
+        score -= 8.0
+    if ret3_avg > 2.0 and ret1_avg > 0:
+        score += ret3_avg * 1.0
+    if n_cpt >= 5:
+        if up_ratio > 0.6:
+            score += 8.0
+        elif up_ratio > 0.4:
+            score += 4.0
+    elif n_cpt >= 3:
+        if up_ratio > 0.6:
+            score += 5.0
+    return round(score, 2)
+
+
+def _factor_concept_up_streak(cm: dict) -> float:
+    streak = cm.get("up_streak_max", 0.0)
+    ret1 = cm.get("ret1_max", 0.0)
+    if streak >= 3 and ret1 > 0:
+        return 12.0
+    elif streak >= 2 and ret1 > 0:
+        return 7.0
+    elif streak >= 2:
+        return 3.0
+    return 0.0
+
+
+def _factor_concept_turnover(cm: dict) -> float:
+    turn = cm.get("turn_5d_max", 0.0)
+    ret3 = cm.get("ret3_max", 0.0)
+    if turn > 15 and ret3 > 2:
+        return 10.0
+    elif turn > 10 and ret3 > 0:
+        return 5.0
+    elif turn > 20:
+        return -5.0
+    return 0.0
+
+
+def _compute_balanced_total_batch(results: list[dict], pit_mode: bool | None = None):
+    """为批次结果计算 balanced_total 评分（五维度聚合 + 反追高惩罚）。
+
+    balanced_total = (sentiment * 0.40
+                    + shortterm * 0.30
+                    + technical * 0.20
+                    + fundflow * 0.05
+                    + fundamental * 0.05)
+                    × chasing_penalty
+
+    Args:
+        pit_mode: True 表示盘中模式，用 T-1 收盘作为最新可用日线；
+                  None 则自动根据 is_trading_time() 判断。
+    """
+    if not results:
+        return
+
+    if pit_mode is None:
+        pit_mode = is_trading_time()
+
+    codes = [r["code"] for r in results]
+    _fetch_nv2_data(codes)
+
+    for r in results:
+        code = r["code"]
+        s = r.get("scores", {})
+        st = s.get("shortterm", 0)
+        tech = s.get("technical", 0)
+        sent = s.get("sentiment", 0)
+        fund = s.get("fundflow", 0)
+        funda = s.get("fundamental", 0)
+
+        # 仅保留追高惩罚所需的 PIT 特征
+        feats = _extract_pit_features(code, pit_mode)
+        t10 = feats["trailing_10"]
+        t5 = feats["trailing_5"]
+        position_20d = feats["position_20d"]
+        pullback_10d = feats["pullback_10d"]
+
+        score = sent * 0.40
+        score += st * 0.30
+        score += tech * 0.20
+        score += fund * 0.05
+        score += funda * 0.05
+
+        # 追高惩罚（乘法）
+        penalty = 1.0
+        if t10 > 0.30:
+            penalty *= 0.75
+        elif t10 > 0.20:
+            penalty *= 0.85
+        elif t10 > 0.10:
+            penalty *= 0.93
+        if t5 > 0.15:
+            penalty *= 0.90
+        if position_20d > 0.85 and pullback_10d < 0.03:
+            penalty *= 0.80
+        if sent > 60 and t10 > 0.15:
+            penalty *= 0.85
+
+        score *= penalty
+        score = max(0, score)
+
+        r["balanced_total"] = round(score, 1)
+        r["_bt_trailing_10"] = round(t10 * 100, 1)
+        r["_bt_position_20d"] = round(position_20d, 3)
+
+
+def _compute_sentiment_adaptive_total_batch(results: list[dict], pit_mode: bool | None = None):
+    """为批次结果计算 sentiment_adaptive_total 评分（PIT）。
+
+    基于因子挖掘结果：sentiment 是主导中轴，不同 sentiment 区间使用不同子因子组合。
+    具体规则见 plays/limit_up/backtest/factor_lib.py::factor_sentiment_adaptive_total_pit。
+    """
+    if not results:
+        return
+
+    if pit_mode is None:
+        pit_mode = is_trading_time()
+
+    from plays.limit_up.backtest.factor_lib import factor_sentiment_adaptive_total_pit
+
+    codes = [r["code"] for r in results]
+    _fetch_nv2_data(codes)
+
+    for r in results:
+        code = r["code"]
+        s = r.get("scores", {})
+
+        # 组装 factor_lib 所需的特征行
+        feats = _extract_pit_features(code, pit_mode)
+
+        # 计算 5 日均额与 amount_ratio（PIT，用 T-1 及之前）
+        daily_rows = _NV2_DAILY_CACHE.get(code, [])
+        daily_rows_sorted = sorted(daily_rows, key=lambda x: x.get("trade_date", ""), reverse=True)
+        idx = 1 if pit_mode else 0
+        avg_amount_5d = 0.0
+        amount_ratio = 1.0
+        if len(daily_rows_sorted) >= 5 + idx:
+            try:
+                amounts = [float(rr.get("amount", 0)) for rr in daily_rows_sorted[idx:idx + 5]]
+                if amounts and all(a >= 0 for a in amounts):
+                    avg_amount_5d = sum(amounts) / len(amounts)
+                    today_amount = float(daily_rows_sorted[idx].get("amount", 0))
+                    if avg_amount_5d > 0:
+                        amount_ratio = today_amount / avg_amount_5d
+            except (ValueError, TypeError):
+                pass
+
+        row = {
+            "sentiment": s.get("sentiment", 0.0),
+            "shortterm": s.get("shortterm", 0.0),
+            "technical": s.get("technical", 0.0),
+            "fundamental": s.get("fundamental", 0.0),
+            "fundflow": s.get("fundflow", 0.0),
+            "position_20d": feats["position_20d"],
+            "trailing_10_pit": feats["trailing_10"],
+            "trailing_5_pit": feats["trailing_5"],
+            "pullback_20d": feats["pullback_20d"],
+            "pullback_10d": feats["pullback_10d"],
+            "pct_chg_std_5d": feats["pct_chg_std_5d"],
+            "pct_chg_std_10d": feats["pct_chg_std_10d"],
+            "limit_up_count_20d": feats["limit_up_count_20d"],
+            "limit_up_count_60d": feats["limit_up_count_60d"],
+            "amount_ratio": amount_ratio,
+            "avg_amount_5d": avg_amount_5d,
+            "circ_mv": feats["circ_mv"],
+        }
+        import pandas as pd
+        score = factor_sentiment_adaptive_total_pit(pd.Series(row))
+        r["sentiment_adaptive_total"] = round(score, 1)
+
+
+def _compute_balanced_total_v2_batch(results: list[dict], pit_mode: bool | None = None):
+    """为批次结果计算 balanced_total_v2 评分（PIT）。
+
+    真实扫描验证显示权重 shortterm=0.6, sentiment=0.2, technical=0.2
+    的 hit@3 显著优于原 balanced_total_pit。
+    具体规则见 plays/limit_up/backtest/factor_lib.py::factor_balanced_total_pit_v2。
+    """
+    if not results:
+        return
+
+    if pit_mode is None:
+        pit_mode = is_trading_time()
+
+    from plays.limit_up.backtest.factor_lib import factor_balanced_total_pit_v2
+
+    codes = [r["code"] for r in results]
+    _fetch_nv2_data(codes)
+
+    for r in results:
+        code = r["code"]
+        s = r.get("scores", {})
+        feats = _extract_pit_features(code, pit_mode)
+        row = {
+            "sentiment": s.get("sentiment", 0.0),
+            "shortterm": s.get("shortterm", 0.0),
+            "technical": s.get("technical", 0.0),
+            "fundamental": s.get("fundamental", 0.0),
+            "fundflow": s.get("fundflow", 0.0),
+            **feats,
+        }
+        import pandas as pd
+        score = factor_balanced_total_pit_v2(pd.Series(row))
+        r["balanced_total_v2"] = round(score, 1)
+
+
 # ===== 6. 飞书推送 =====
 def _get_feishu_token():
     """获取飞书 tenant_access_token"""
@@ -606,15 +1165,22 @@ def _get_feishu_token():
 def push_feishu(results):
     """发送飞书卡片
 
-    推送规则（ScoreGap）：
-    - 按 new_total_v2 排序
-    - 取 >= max_score * 0.95 的股票（ScoreGap）
-    - 最多 5 只
-    - 午后情绪面<25过滤
+    推送规则（Balanced-v2 Top-3）：
+    - 按 balanced_total_v2 排序（fallback 到 balanced_total / sentiment_adaptive_total / new_total_v2 / total）
+    - 默认取前 3 只
+    - 午后情绪面 < 25 过滤
     - 推送记录保存到 data/pushed/ 目录（复盘/回测去重用）
     - 不按日去重：持续高分说明强势延续，应持续推送提醒
     """
     import requests
+
+    def _score_for_sort(r):
+        return r.get(
+            "balanced_total_v2",
+            r.get("balanced_total",
+                 r.get("sentiment_adaptive_total",
+                       r.get("new_total_v2", r.get("total", 0)))),
+        )
 
     def _stars(total):
         """综合评级: >=55 ⭐⭐⭐⭐⭐  >=45 ⭐⭐⭐⭐  >=35 ⭐⭐⭐  >=30 ⭐⭐"""
@@ -627,35 +1193,28 @@ def push_feishu(results):
     # 午后情绪过滤
     is_afternoon = datetime.now().hour >= 13
 
-    # ScoreGap: 按总分排序, 取 >= max*0.90 的股票 (回测验证的最佳平衡点)
-    sorted_results = sorted(
-        results,
-        key=lambda x: x.get("new_total_v2", x.get("total", 0)),
-        reverse=True,
-    )
+    # 按 balanced_total_v2 排序，默认取 Top-3
+    sorted_results = sorted(results, key=_score_for_sort, reverse=True)
     if not sorted_results:
         print("  无可推送股票")
         return False
 
-    max_nv2 = sorted_results[0].get("new_total_v2", sorted_results[0].get("total", 0))
-    gap_threshold = max_nv2 * 0.90 if max_nv2 > 0 else 0
+    max_bt = _score_for_sort(sorted_results[0])
 
     push_list = []
     for r in sorted_results:
         code = r["code"]
-        nv2 = r.get("new_total_v2", r.get("total", 0))
         s = r.get("scores", {})
 
-        if nv2 < gap_threshold:
-            continue
+        # 午后情绪过滤
         if is_afternoon and s.get("sentiment", 0) < 25:
             continue
 
         push_list.append(r)
-        if len(push_list) >= 5:
+        if len(push_list) >= 3:
             break
 
-    print(f"  ScoreGap: max_nv2={max_nv2:.1f} threshold={gap_threshold:.1f} → {len(push_list)}只推送")
+    print(f"  Top-3: max_btv2={max_bt:.1f} → {len(push_list)}只推送")
 
     if not push_list:
         print("  无可推送股票")
@@ -687,15 +1246,15 @@ def push_feishu(results):
 
     for r in push_list:
         s = r.get('scores', {})
-        nv2 = r.get('new_total_v2', r['total'])
-        stars = _stars(nv2)
+        bt = r.get('balanced_total_v2', r.get('balanced_total', r.get('sentiment_adaptive_total', r.get('new_total_v2', r['total']))))
+        stars = _stars(bt)
         pct = r.get('pct_chg', 0)
         element = {
             "tag": "div",
             "text": {
                 "tag": "lark_md",
                 "content": f"**{r['code']} {r['name']}** {stars} 涨幅{pct:.1f}%\n"
-                          f"NV2:{nv2:.0f} 情绪:{s.get('sentiment',0):.0f} 资金:{s.get('fundflow',0):.0f} 短线:{s.get('shortterm',0):.0f}"
+                          f"BTv2:{bt:.0f} 情绪:{s.get('sentiment',0):.0f} 资金:{s.get('fundflow',0):.0f} 短线:{s.get('shortterm',0):.0f}"
             }
         }
         card["elements"].append(element)
@@ -1038,8 +1597,11 @@ def _run_pipeline(args):
         all_codes = [c["code"] for c in candidates]
         jv_unsub(all_codes)
 
-    # 计算 new_total_v2 用于 ScoreGap 排序和卡片展示
+    # 计算 new_total_v2、balanced_total 与 balanced_total_v2 用于排序和卡片展示
     _compute_new_total_v2_batch(all_results)
+    _compute_balanced_total_batch(all_results)
+    _compute_sentiment_adaptive_total_batch(all_results)
+    _compute_balanced_total_v2_batch(all_results)
 
     push_feishu(all_results)
 

@@ -157,14 +157,18 @@ def generate_report(panel: pd.DataFrame, ranking: pd.DataFrame) -> str:
 
 
 def main():
+    import argparse
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
-    # 优先使用 enriched panel
-    enriched_path = OUT / "panel_enriched.csv"
-    if enriched_path.exists():
-        print(f"使用 enriched panel: {enriched_path}")
-        panel = pd.read_csv(enriched_path)
+    parser = argparse.ArgumentParser(description="全因子扫描评估")
+    parser.add_argument("--panel", default=str(OUT / "panel_enriched.csv"), help="面板 CSV 路径")
+    args = parser.parse_args()
+
+    panel_path = Path(args.panel)
+    if panel_path.exists():
+        print(f"使用 panel: {panel_path}")
+        panel = pd.read_csv(panel_path)
     else:
         print("使用原始 panel (无衍生特征)")
         panel = load_panel()

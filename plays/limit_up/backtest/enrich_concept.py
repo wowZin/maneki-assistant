@@ -89,19 +89,24 @@ def pull_concept_daily(trade_dates: list[str]) -> pd.DataFrame:
 def pull_concept_members() -> pd.DataFrame:
     """拉取概念→成分股映射。
 
-    用 ts_code 过滤（拉某只股票所属概念），但对回测来说需要全量映射。
-    改为遍历主流概念前缀批量拉取。
+    从 concept_daily.parquet 读取真实概念码（格式如 700402.TI），
+    逐个调用 ths_member 拉取成分股，避免裸数字前缀返回空。
 
     Returns: cpt_code(概念码), stock_code(成分股代码), stock_name
     """
-    # 尝试拉取全量: ths_member with empty params returns 6000 rows at a time
-    # Use looping with prefixes to get all members
-    frames = []
-    prefixes = [str(i) for i in range(70, 90)]  # 70-89 cover most THS concepts
+    concept_daily_path = CACHE_DIR / "concept_daily.parquet"
+    if not concept_daily_path.exists():
+        print("  concept_daily.parquet 不存在，无法拉取概念成分股")
+        return pd.DataFrame()
 
-    for pfx in prefixes:
+    concept_daily = pd.read_parquet(concept_daily_path)
+    cpt_codes = concept_daily["cpt_code"].dropna().unique().tolist()
+    print(f"  待拉取概念数: {len(cpt_codes)}")
+
+    frames = []
+    for cpt_code in cpt_codes:
         try:
-            r = _tushare("ths_member", {"ts_code": pfx}, timeout=15)
+            r = _tushare("ths_member", {"ts_code": cpt_code}, timeout=15)
             items = r.get("data", {}).get("items", [])
             fields = r.get("data", {}).get("fields", [])
             if items and fields:
@@ -110,7 +115,7 @@ def pull_concept_members() -> pd.DataFrame:
                     frames.append(sub)
             time.sleep(0.2)
         except Exception as e:
-            print(f"  ths_member prefix={pfx}: {e}")
+            print(f"  ths_member {cpt_code}: {e}")
 
     if not frames:
         return pd.DataFrame()
@@ -307,6 +312,14 @@ def compute_inst_features(
     if not top_list.empty:
         tl = top_list[["ts_code", "trade_date", "net_amount", "l_buy",
                         "l_sell", "turnover_rate", "pct_change"]].copy()
+        # 同一股票同日可能有多条上榜记录，先聚合
+        tl = tl.groupby(["ts_code", "trade_date"]).agg({
+            "net_amount": "sum",
+            "l_buy": "sum",
+            "l_sell": "sum",
+            "turnover_rate": "mean",
+            "pct_change": "mean",
+        }).reset_index()
         tl = tl.rename(columns={
             "net_amount": "tl_net_amount",
             "l_buy": "tl_buy_amount",
@@ -344,13 +357,24 @@ def compute_inst_features(
 # 5. 主流程
 # ============================================================
 
+def _build_prev_date_map(dates: list[str], calendar: list[str]) -> dict[str, str | None]:
+    """把每个日期映射到上一交易日。"""
+    sorted_cal = sorted(set(calendar) | set(dates))
+    prev_map: dict[str, str | None] = {d: None for d in dates}
+    for i, d in enumerate(sorted_cal):
+        if d in prev_map and i > 0:
+            prev_map[d] = sorted_cal[i - 1]
+    return prev_map
+
+
 def enrich_with_concept_and_inst(
     panel_path: str | None = None,
     output_path: str | None = None,
+    pit_mode: bool = False,
 ) -> pd.DataFrame:
     """主流程。"""
     if panel_path is None:
-        panel_path = str(OUT_DIR / "panel_enriched_v3.csv")
+        panel_path = str(OUT_DIR / ("panel_enriched_pit_v3.csv" if pit_mode else "panel_enriched_v3.csv"))
     panel_path = Path(panel_path)
 
     print(f"加载面板: {panel_path}")
@@ -359,11 +383,28 @@ def enrich_with_concept_and_inst(
     print(f"  {len(df)} rows, {df['date'].nunique()} 日期")
 
     dmin, dmax = df["date"].min(), df["date"].max()
-    # 往前多取15个交易日用于 rolling 计算
-    start_dt = datetime.strptime(dmin, "%Y%m%d") - timedelta(days=25)
-    start = start_dt.strftime("%Y%m%d")
 
-    trade_dates = _get_trade_dates(start, dmax)
+    if pit_mode:
+        # PIT：用 T-1 数据
+        calendar = _get_trade_dates(
+            (datetime.strptime(dmin, "%Y%m%d") - timedelta(days=40)).strftime("%Y%m%d"),
+            dmax,
+        )
+        prev_map = _build_prev_date_map(df["date"].unique().tolist(), calendar)
+        df["_join_date"] = df["date"].map(prev_map)
+        join_dates = sorted(df["_join_date"].dropna().unique().tolist())
+        if not join_dates:
+            raise RuntimeError("PIT 模式无有效 join dates")
+        pull_start = (datetime.strptime(join_dates[0], "%Y%m%d") - timedelta(days=35)).strftime("%Y%m%d")
+        pull_end = join_dates[-1]
+        print(f"  PIT 模式: join dates {join_dates[0]} ~ {join_dates[-1]}")
+    else:
+        df["_join_date"] = df["date"]
+        join_dates = sorted(df["date"].unique().tolist())
+        pull_start = (datetime.strptime(dmin, "%Y%m%d") - timedelta(days=25)).strftime("%Y%m%d")
+        pull_end = dmax
+
+    trade_dates = _get_trade_dates(pull_start, pull_end)
     print(f"  交易日范围: {trade_dates[0]} ~ {trade_dates[-1]} ({len(trade_dates)} 天)")
 
     # ===== 拉取概念数据 =====
@@ -408,18 +449,21 @@ def enrich_with_concept_and_inst(
 
     for feat_df in new_feats:
         feat_df["trade_date"] = feat_df["trade_date"].astype(str)
-        # Join on stock code + date
+        # 重命名为 _join_date 用于 PIT/非 PIT 统一合并
+        feat_df = feat_df.rename(columns={"trade_date": "_join_date"})
         join_col = "stock_code" if "stock_code" in feat_df.columns else "ts_code"
         df = df.merge(
             feat_df,
-            left_on=["code", "date"],
-            right_on=[join_col, "trade_date"],
+            left_on=["code", "_join_date"],
+            right_on=[join_col, "_join_date"],
             how="left",
             suffixes=("", "_feat"),
         )
-        for c in [join_col, "trade_date"]:
+        for c in [join_col]:
             if c in df.columns:
                 df = df.drop(columns=[c], errors="ignore")
+
+    df = df.drop(columns=["_join_date"], errors="ignore")
 
     # Fill NaN with 0 for new feature columns
     new_col_patterns = ["cpt_", "inst_", "tl_", "n_concepts", "is_top_list",
@@ -430,7 +474,7 @@ def enrich_with_concept_and_inst(
 
     # 输出
     if output_path is None:
-        output_path = str(OUT_DIR / "panel_enriched_v4.csv")
+        output_path = str(OUT_DIR / ("panel_enriched_pit_v4.csv" if pit_mode else "panel_enriched_v4.csv"))
     df.to_csv(output_path, index=False)
 
     new_cols = [c for c in df.columns if any(c.startswith(p) or c == p for p in new_col_patterns)]
@@ -440,4 +484,16 @@ def enrich_with_concept_and_inst(
 
 
 if __name__ == "__main__":
-    enrich_with_concept_and_inst()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="概念+龙虎榜特征增强")
+    parser.add_argument("--panel", default=None, help="输入 panel 路径")
+    parser.add_argument("--output", default=None, help="输出路径")
+    parser.add_argument("--pit", action="store_true", help="PIT 模式：特征平移到 T-1")
+    args = parser.parse_args()
+
+    enrich_with_concept_and_inst(
+        panel_path=args.panel,
+        output_path=args.output,
+        pit_mode=args.pit,
+    )

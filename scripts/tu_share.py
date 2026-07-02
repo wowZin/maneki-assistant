@@ -34,6 +34,32 @@ TUSHARE_TOKEN = CONFIG.get("TUSHARE_TOKEN", "")
 # ===== Tushare API 缓存层 =====
 _TUSHARE_CACHE = {}
 
+# 部分接口频率限制（500次/分钟 → 至少 0.12s/次）
+# 重建场景下调大 daily_basic 间隔，避免账号级并发触发超限
+_RATE_LIMITED_APIS = {
+    "daily_basic": 0.30,
+    "moneyflow": 0.30,
+    "top_list": 0.30,
+    "top_inst": 0.30,
+    "limit_list_d": 0.15,
+    "stk_factor_pro": 0.15,
+}
+_LAST_CALL_TIME: dict[str, float] = {}
+
+
+def _apply_rate_limit(api_name: str):
+    """对易超限接口做请求间隔控制。"""
+    interval = _RATE_LIMITED_APIS.get(api_name)
+    if not interval:
+        return
+    now = time.time()
+    last = _LAST_CALL_TIME.get(api_name, 0)
+    elapsed = now - last
+    if elapsed < interval:
+        time.sleep(interval - elapsed)
+    _LAST_CALL_TIME[api_name] = time.time()
+
+
 # ===== 交易日自动修正：盘前/非交易日自动使用上一个有数据的交易日 =====
 _LAST_TRADE_DATE_CACHE = None
 
@@ -104,6 +130,10 @@ def call_tushare(api_name, params, fields="", timeout=10):
     cache_key = (api_name, json.dumps(params, sort_keys=True), fields)
     if cache_key in _TUSHARE_CACHE:
         return _TUSHARE_CACHE[cache_key]
+
+    # 频率控制（仅实际发送请求时）
+    _apply_rate_limit(api_name)
+
     try:
         payload = {"api_name": api_name, "token": TUSHARE_TOKEN, "params": params}
         if fields:

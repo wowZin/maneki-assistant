@@ -111,7 +111,15 @@ def _get_tushare_moneyflow(code: str, trade_date: str) -> list[dict]:
 
 
 def _get_tushare_daily_basic(code: str, trade_date: str) -> list[dict]:
-    """Tushare daily_basic 降级。"""
+    """Tushare daily_basic 降级。优先从 pipeline 预取缓存读取。"""
+    try:
+        from plays.limit_up.strategies import factor_ctx
+        basic = factor_ctx.get_daily_basic(code, trade_date)
+        if basic:
+            return [basic]
+    except Exception:
+        pass
+
     try:
         resp = call_tushare("daily_basic",
                             {"ts_code": code, "trade_date": trade_date},
@@ -345,13 +353,18 @@ def score_fundflow(code: str, trade_date: str = None,
             # 获取流通市值用于比例判断
             circ_mv_yuan = 0
             try:
-                from scripts.tu_share import call_tushare
-                resp_d = call_tushare("daily_basic", {"ts_code": code}, "circ_mv")
-                db_items = resp_d.get("data",{}).get("items",[])
-                if db_items:
-                    db_f = resp_d.get("data",{}).get("fields",[])
-                    d_d = dict(zip(db_f, db_items[0]))
-                    circ_mv_yuan = safe_float(d_d.get("circ_mv", 0)) * 10000  # 万元→元
+                from plays.limit_up.strategies import factor_ctx
+                basic = factor_ctx.get_daily_basic(code)
+                if basic:
+                    circ_mv_yuan = safe_float(basic.get("circ_mv", 0)) * 10000  # 万元→元
+                else:
+                    from scripts.tu_share import call_tushare
+                    resp_d = call_tushare("daily_basic", {"ts_code": code}, "circ_mv")
+                    db_items = resp_d.get("data",{}).get("items",[])
+                    if db_items:
+                        db_f = resp_d.get("data",{}).get("fields",[])
+                        d_d = dict(zip(db_f, db_items[0]))
+                        circ_mv_yuan = safe_float(d_d.get("circ_mv", 0)) * 10000  # 万元→元
             except: pass
             sell_pct = (net_sell / circ_mv_yuan * 100) if circ_mv_yuan > 0 else 999
             # 双阈值: 占比>1% 且 绝对额>1亿 → 否决（大盘股容错）

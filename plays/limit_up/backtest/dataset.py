@@ -28,18 +28,23 @@ OUT_DIR.mkdir(exist_ok=True)
 
 DIM_COLS = ["fundamental", "technical", "fundflow", "sentiment", "shortterm"]
 
+# 由 pipeline._compute_balanced_total_batch 生成的 PIT 特征列（仅追高惩罚相关）
+BT_COLS = ["balanced_total", "_bt_trailing_10", "_bt_position_20d"]
+
 
 # ===== 1. 评分记录 =====
-def load_analysis_records(dedup: str = "last") -> pd.DataFrame:
+def load_analysis_records(dedup: str = "last", analysis_dir: Path | str | None = None) -> pd.DataFrame:
     """读取所有 analysis JSON，展开为每行一条 (code,date) 评分。
 
     dedup: 同一 (code,date) 多次扫描的去重方式
       - "last": 取当日最后一次扫描（文件名时间戳最大），最接近收盘决策
       - "max_total": 取 total 最高的一次
       - "mean": 各维度取均值
+    analysis_dir: 自定义 analysis 目录，默认 PLAY_DIR / "data" / "analysis"
     """
+    analysis_dir = Path(analysis_dir) if analysis_dir else ANALYSIS_DIR
     rows = []
-    for f in sorted(glob.glob(str(ANALYSIS_DIR / "*.json"))):
+    for f in sorted(glob.glob(str(analysis_dir / "*.json"))):
         fname = os.path.basename(f)
         # skip v2 signal-based files — different format, no dimension scores
         if fname.startswith("v2_"):
@@ -53,22 +58,24 @@ def load_analysis_records(dedup: str = "last") -> pd.DataFrame:
         for r in recs:
             sc = r.get("scores", {})
             res = r.get("resonance", {}) or {}
-            rows.append(
-                {
-                    "code": r.get("code"),
-                    "date": date,
-                    "ts": ts,
-                    "fundamental": _f(sc.get("fundamental")),
-                    "technical": _f(sc.get("technical")),
-                    "fundflow": _f(sc.get("fundflow")),
-                    "sentiment": _f(sc.get("sentiment")),
-                    "shortterm": _f(sc.get("shortterm")),
-                    "total": _f(r.get("total")),
-                    "pct_chg_score_day": _f(r.get("pct_chg")),
-                    "resonance_count": _f(res.get("count")),
-                    "is_resonance": 1 if res.get("is_resonance") else 0,
-                }
-            )
+            row = {
+                "code": r.get("code"),
+                "date": date,
+                "ts": ts,
+                "scan_time": ts[-4:] if len(ts) >= 4 else "",
+                "fundamental": _f(sc.get("fundamental")),
+                "technical": _f(sc.get("technical")),
+                "fundflow": _f(sc.get("fundflow")),
+                "sentiment": _f(sc.get("sentiment")),
+                "shortterm": _f(sc.get("shortterm")),
+                "total": _f(r.get("total")),
+                "pct_chg_score_day": _f(r.get("pct_chg")),
+                "resonance_count": _f(res.get("count")),
+                "is_resonance": 1 if res.get("is_resonance") else 0,
+            }
+            for col in BT_COLS:
+                row[col] = _f(r.get(col))
+            rows.append(row)
     df = pd.DataFrame(rows).dropna(subset=["code", "date"])
     if df.empty:
         return df
@@ -78,7 +85,7 @@ def load_analysis_records(dedup: str = "last") -> pd.DataFrame:
         df = df.sort_values("total").groupby(["code", "date"], as_index=False).last()
     elif dedup == "mean":
         df = df.groupby(["code", "date"], as_index=False)[
-            DIM_COLS + ["total", "pct_chg_score_day", "resonance_count", "is_resonance"]
+            DIM_COLS + BT_COLS + ["total", "pct_chg_score_day", "resonance_count", "is_resonance"]
         ].mean()
     return df.drop(columns=["ts"], errors="ignore").reset_index(drop=True)
 
@@ -143,13 +150,63 @@ def pull_daily_bars(codes: list[str], start: str, end: str, refresh: bool = Fals
     return df
 
 
+def pull_daily_basic_bars(codes: list[str], start: str, end: str, refresh: bool = False) -> pd.DataFrame:
+    """按 trade_date 批量拉 daily_basic，缓存到 cache/daily_basic.parquet。
+
+    字段: ts_code, trade_date, pe, pb, circ_mv, turnover_rate, volume_ratio
+    """
+    cache_f = CACHE_DIR / f"dbasic_{start}_{end}.parquet"
+    if cache_f.exists() and not refresh:
+        df = pd.read_parquet(cache_f)
+        return df[df["ts_code"].isin(codes)].copy()
+
+    from scripts.tu_share import call_tushare
+
+    cal = call_tushare(
+        "trade_cal", {"exchange": "SSE", "start_date": start, "end_date": end}
+    )
+    trade_dates = []
+    if cal.get("data"):
+        fields = cal["data"]["fields"]
+        for item in cal["data"]["items"]:
+            row = dict(zip(fields, item))
+            if int(row.get("is_open", 0)) == 1:
+                trade_dates.append(str(row["cal_date"]))
+
+    frames = []
+    code_set = set(codes)
+    for d in trade_dates:
+        res = call_tushare(
+            "daily_basic",
+            {"trade_date": d},
+            "ts_code,trade_date,pe,pb,circ_mv,turnover_rate,volume_ratio",
+        )
+        if not res.get("data"):
+            continue
+        fields = res["data"]["fields"]
+        items = res["data"]["items"]
+        sub = pd.DataFrame(items, columns=fields)
+        sub = sub[sub["ts_code"].isin(code_set)]
+        frames.append(sub)
+    if not frames:
+        return pd.DataFrame()
+    df = pd.concat(frames, ignore_index=True)
+    for c in ["pe", "pb", "circ_mv", "turnover_rate", "volume_ratio"]:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+    df["trade_date"] = df["trade_date"].astype(str)
+    df = df.sort_values(["ts_code", "trade_date"]).reset_index(drop=True)
+    df.to_parquet(cache_f)
+    return df
+
+
 # ===== 3. 标签 join =====
-def build_panel(dedup: str = "last", pad_before: int = 12, pad_after: int = 6) -> pd.DataFrame:
+def build_panel(dedup: str = "last", pad_before: int = 12, pad_after: int = 6, analysis_dir: Path | str | None = None) -> pd.DataFrame:
     """构建带标签面板并落库 out/panel.csv。
 
     pad_before/after: 评分日窗口外多取的交易日（含 trailing_10 与 fwd_3 缓冲）。
+    analysis_dir: 自定义 analysis 目录。
     """
-    rec = load_analysis_records(dedup=dedup)
+    rec = load_analysis_records(dedup=dedup, analysis_dir=analysis_dir)
     if rec.empty:
         raise RuntimeError("无 analysis 记录")
     codes = sorted(rec["code"].unique().tolist())
