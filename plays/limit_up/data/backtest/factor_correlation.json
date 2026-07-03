@@ -1,0 +1,303 @@
+{
+  "n_samples": 400,
+  "n_hits": 16,
+  "factors": [
+    {
+      "factor": "t_vol_ratio",
+      "dimension": "technical",
+      "correlation": -0.0786,
+      "cohens_d": -0.5004,
+      "hit_mean": 1.48,
+      "miss_mean": 1.87,
+      "missing_rate": 0.0,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "t_circ_mv_log",
+      "dimension": "technical",
+      "correlation": 0.0808,
+      "cohens_d": 0.4679,
+      "hit_mean": 6.4,
+      "miss_mean": 6.14,
+      "missing_rate": 0.0,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "mf_net_amount",
+      "dimension": "moneyflow_tushare",
+      "correlation": 0.0588,
+      "cohens_d": 0.3049,
+      "hit_mean": 4466.8,
+      "miss_mean": -2702.65,
+      "missing_rate": 0.098,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "f_mid_net",
+      "dimension": "fundflow",
+      "correlation": 0.0445,
+      "cohens_d": 0.2647,
+      "hit_mean": 1842.16,
+      "miss_mean": -2375.93,
+      "missing_rate": 0.003,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "mf_sell_elg",
+      "dimension": "moneyflow_tushare",
+      "correlation": 0.0575,
+      "cohens_d": 0.2538,
+      "hit_mean": 57060.9,
+      "miss_mean": 31891.71,
+      "missing_rate": 0.145,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "f_main_pct",
+      "dimension": "fundflow",
+      "correlation": -0.0566,
+      "cohens_d": -0.2483,
+      "hit_mean": -13.54,
+      "miss_mean": 2.9,
+      "missing_rate": 0.007,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "mf_buy_elg",
+      "dimension": "moneyflow_tushare",
+      "correlation": 0.0502,
+      "cohens_d": 0.2342,
+      "hit_mean": 55988.67,
+      "miss_mean": 32919.32,
+      "missing_rate": 0.145,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "was_limit_yesterday",
+      "dimension": "other",
+      "correlation": 0.0506,
+      "cohens_d": 0.2294,
+      "hit_mean": 0.19,
+      "miss_mean": 0.11,
+      "missing_rate": 0.89,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "f_main_net",
+      "dimension": "fundflow",
+      "correlation": -0.0313,
+      "cohens_d": -0.2053,
+      "hit_mean": -3631.06,
+      "miss_mean": 1796.85,
+      "missing_rate": 0.007,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "t_upper_shadow_ratio",
+      "dimension": "technical",
+      "correlation": -0.0275,
+      "cohens_d": -0.1895,
+      "hit_mean": 0.28,
+      "miss_mean": 0.44,
+      "missing_rate": 0.025,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "t_5d_pct_sum",
+      "dimension": "technical",
+      "correlation": 0.0412,
+      "cohens_d": 0.1714,
+      "hit_mean": 11.49,
+      "miss_mean": 9.68,
+      "missing_rate": 0.0,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "f_main_vs_small",
+      "dimension": "fundflow",
+      "correlation": -0.0255,
+      "cohens_d": -0.1709,
+      "hit_mean": -5432.8,
+      "miss_mean": 1199.93,
+      "missing_rate": 0.003,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "t_5d_positive_days",
+      "dimension": "technical",
+      "correlation": 0.0279,
+      "cohens_d": 0.1389,
+      "hit_mean": 2.56,
+      "miss_mean": 2.41,
+      "missing_rate": 0.0,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "f_big_net",
+      "dimension": "fundflow",
+      "correlation": -0.0205,
+      "cohens_d": -0.112,
+      "hit_mean": -2139.33,
+      "miss_mean": -1228.71,
+      "missing_rate": 0.007,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "f_main_big_ratio",
+      "dimension": "fundflow",
+      "correlation": -0.0152,
+      "cohens_d": -0.1037,
+      "hit_mean": -0.66,
+      "miss_mean": 0.62,
+      "missing_rate": 0.007,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "has_limit_dna",
+      "dimension": "other",
+      "correlation": -0.0145,
+      "cohens_d": -0.1023,
+      "hit_mean": 0.0,
+      "miss_mean": 0.01,
+      "missing_rate": 0.995,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "f_consecutive_boards",
+      "dimension": "fundflow",
+      "correlation": -0.0137,
+      "cohens_d": -0.0971,
+      "hit_mean": 0.0,
+      "miss_mean": 0.02,
+      "missing_rate": 0.995,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "f_small_net",
+      "dimension": "fundflow",
+      "correlation": 0.0133,
+      "cohens_d": 0.0897,
+      "hit_mean": 1801.74,
+      "miss_mean": 596.93,
+      "missing_rate": 0.003,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "t_turnover",
+      "dimension": "technical",
+      "correlation": 0.0135,
+      "cohens_d": 0.0682,
+      "hit_mean": 14.92,
+      "miss_mean": 14.36,
+      "missing_rate": 0.0,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "t_pct_chg",
+      "dimension": "technical",
+      "correlation": 0.0114,
+      "cohens_d": 0.0611,
+      "hit_mean": 6.99,
+      "miss_mean": 6.92,
+      "missing_rate": 0.0,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "t_close_vs_pre",
+      "dimension": "technical",
+      "correlation": 0.0114,
+      "cohens_d": 0.0611,
+      "hit_mean": 6.99,
+      "miss_mean": 6.92,
+      "missing_rate": 0.0,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "t1_pct_chg",
+      "dimension": "technical",
+      "correlation": -0.0132,
+      "cohens_d": -0.0591,
+      "hit_mean": 0.61,
+      "miss_mean": 0.93,
+      "missing_rate": 0.013,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "t1_vol_ratio",
+      "dimension": "technical",
+      "correlation": 0.0099,
+      "cohens_d": 0.0532,
+      "hit_mean": 1.26,
+      "miss_mean": 1.22,
+      "missing_rate": 0.0,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "t_lower_shadow_ratio",
+      "dimension": "technical",
+      "correlation": -0.0056,
+      "cohens_d": -0.0391,
+      "hit_mean": 0.36,
+      "miss_mean": 0.43,
+      "missing_rate": 0.098,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "t1_turnover",
+      "dimension": "technical",
+      "correlation": -0.0063,
+      "cohens_d": -0.0376,
+      "hit_mean": 6.06,
+      "miss_mean": 6.24,
+      "missing_rate": 0.0,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "t_amplitude",
+      "dimension": "technical",
+      "correlation": 0.0084,
+      "cohens_d": 0.0365,
+      "hit_mean": 10.26,
+      "miss_mean": 10.16,
+      "missing_rate": 0.0,
+      "n_hit": 16,
+      "n_miss": 384
+    },
+    {
+      "factor": "t_circ_mv",
+      "dimension": "technical",
+      "correlation": 0.0032,
+      "cohens_d": 0.0203,
+      "hit_mean": 4194308.18,
+      "miss_mean": 4061700.88,
+      "missing_rate": 0.0,
+      "n_hit": 16,
+      "n_miss": 384
+    }
+  ]
+}

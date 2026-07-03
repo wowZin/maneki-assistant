@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 涨停预测完整流程脚本
-流程：异动扫描(东财API+代理) → 五维度评分 → 排序 → 飞书推送
+流程：异动扫描(同花顺直连) → 五维度评分 → 排序 → 飞书推送
 
 用法:
   python plays/limit_up/pipeline.py                  # 完整流程(requests+代理)
@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 import argparse
 import requests
+import numpy as np
 
 # 项目根目录
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
@@ -34,109 +35,68 @@ def feishu_title_prefix():
 
 # ===== Agent 权重配置 =====
 AGENT_WEIGHTS = {
-    "fundamental": float(CONFIG.get("AGENT_WEIGHT_FUNDAMENTAL", "1.5")),
-    "technical": float(CONFIG.get("AGENT_WEIGHT_TECHNICAL", "1.0")),
-    "fundflow": float(CONFIG.get("AGENT_WEIGHT_FUND_FLOW", "1.0")),
-    "sentiment": float(CONFIG.get("AGENT_WEIGHT_SENTIMENT", "1.2")),
-    "shortterm": float(CONFIG.get("AGENT_WEIGHT_SHORTTERM", "1.5")),
+    "fundamental": float(CONFIG.get("AGENT_WEIGHT_FUNDAMENTAL", "0.5")),
+    "technical": float(CONFIG.get("AGENT_WEIGHT_TECHNICAL", "0.5")),
+    "fundflow": float(CONFIG.get("AGENT_WEIGHT_FUND_FLOW", "1.5")),
+    "sentiment": float(CONFIG.get("AGENT_WEIGHT_SENTIMENT", "1.0")),
+    "shortterm": float(CONFIG.get("AGENT_WEIGHT_SHORTTERM", "0.5")),
 }
 
 # ===== 1. 扫描异动股 =====
 def scan_surge():
-    """通过东方财富clist API获取异动候选股（requests+代理，涨速+涨幅双路合并）
-    
-    数据源: push2.eastmoney.com/api/qt/clist/get
-    双路: ①涨速降序(f11) ②涨幅降序(f3) → 合并去重
-    Returns: list[dict] - [{code, name}] 候选股列表，或None
-    """
-    from scripts.proxy_utils import request_with_proxy_retry
+    """通过同花顺热门榜获取候选股（Cookie直连，无代理依赖）
 
+    数据源: dq.10jqka.com.cn 热门搜索榜 (100只)
+    过滤: ST/新股/创业板/科创板，涨幅0%-9.5%(排除当日涨停)
+    Returns: list[dict] - [{code, name, pct_chg}] 候选股列表，或None
+    """
     if not is_trading_time():
         print(f"跳过扫描: 非交易时段 ({datetime.now().strftime('%H:%M')})")
         return None
 
-    base_url = (
-        "https://push2.eastmoney.com/api/qt/clist/get?"
-        "np=1&fltt=2&invt=2&"
-        "fs=m:0+t:6+f:!2,m:0+t:80+f:!2,m:1+t:2+f:!2,m:1+t:23+f:!2,m:0+t:81+s:262144+f:!2&"
-        "fields=f12,f14,f2,f3,f11&pn=1&pz=200&po=1&dect=1&"
-        "ut=fa5fd1943c7b386f172d6893dbfba10b"
-    )
+    from scripts.ths_client import get_ths_client
+    ths = get_ths_client()
+    if not ths.has_cookie:
+        print("扫描失败: 同花顺 Cookie 未配置")
+        return None
 
-    def _fetch(fid):
-        """单次API请求，返回过滤后的候选股列表"""
-        url = f"{base_url}&fid={fid}"
-        resp = request_with_proxy_retry(url, timeout=15)
-        if resp is None:
-            return []
-        try:
-            data = resp.json()
-        except Exception:
-            return []
-        items = data.get("data", {}).get("diff", [])
-        if not items:
-            return []
-        candidates = []
-        for s in items:
-            code = s.get("f12", "")
-            name = s.get("f14", "")
-            pct = s.get("f3")
-            try:
-                pct = float(pct) if pct and pct != "-" else 0
-            except Exception:
-                pct = 0
-            # 过滤: ST/新股/创业板/科创板，涨幅2%-9.5%
-            if re.search(r"ST|\*ST|退|N", name or ""):
-                continue
-            if re.match(r"^(300|301|688|8|4|920)", code):
-                continue
-            if pct < 2 or pct > 9.5:
-                continue
-            if "." not in code:
-                code = f"{code}.SH" if code.startswith("6") else f"{code}.SZ"
-            candidates.append({"code": code, "name": name, "pct_chg": pct})
-        return candidates
-    
-    for attempt in range(3):
-        try:
-            # 双路扫描: 涨速+涨幅
-            surge_candidates = _fetch("f11")
-            pct_candidates = _fetch("f3")
-            
-            # 合并去重
-            seen = set()
-            merged = []
-            for c in surge_candidates + pct_candidates:
-                if c["code"] not in seen:
-                    seen.add(c["code"])
-                    merged.append(c)
-            
-            if not merged:
-                print(f"  双路扫描均返回空(尝试{attempt+1}/3)")
-                if attempt < 2:
-                    time.sleep(2)
-                    continue
-                return None
-            
-            print(f"扫描完成(涨速{len(surge_candidates)}+涨幅{len(pct_candidates)}→合并{len(merged)}只)")
-            return merged
-            
-        except Exception as e:
-            print(f"  扫描失败(尝试{attempt+1}/3): {e}")
-            if attempt < 2:
-                time.sleep(2)
-    
-    return None
+    items = ths.get_hot_list()
+    if not items:
+        print("扫描失败: 热门榜无数据")
+        return None
+
+    candidates = []
+    for s in items:
+        code = s.get("code", "")
+        name = s.get("name", "")
+        pct = float(s.get("pct_chg", 0))
+
+        # 过滤: ST/新股/创业板/科创板，涨幅0%-9.5%(排除当日涨停)
+        if re.search(r"ST|\*ST|退|N", name or ""):
+            continue
+        if re.match(r"^(300|301|688|8|4|920)", code):
+            continue
+        if pct < 0 or pct >= 9.5:  # 放宽下限0%但排除当日已涨停(不可交易)
+            continue
+        if "." not in code:
+            code = f"{code}.SH" if code.startswith("6") else f"{code}.SZ"
+        candidates.append({"code": code, "name": name, "pct_chg": pct})
+
+    if candidates:
+        print(f"热门榜扫描: {len(items)}只 → {len(candidates)}只候选 (过滤ST/科创/创业板, 涨幅0-9.5%(排除当日涨停))")
+    else:
+        print(f"热门榜扫描: {len(items)}只 → 0只候选")
+    return candidates
 
 def load_from_file(filepath):
     """从已有文件加载信号"""
     path = Path(filepath)
     if not path.is_absolute():
         path = PROJECT_DIR / filepath
-    
+
     with open(path) as f:
         raw = json.load(f)
-    
+
     # 兼容两种格式：直接list 或 dict包含stocks
     if isinstance(raw, dict) and "stocks" in raw:
         stocks = raw["stocks"]
@@ -145,7 +105,7 @@ def load_from_file(filepath):
     else:
         print(f"无法解析信号文件格式: {type(raw)}")
         return None
-    
+
     # 统一转换为标准格式 {code, name}
     candidates = []
     for s in stocks:
@@ -158,7 +118,7 @@ def load_from_file(filepath):
             else:
                 code = f"{code}.SZ"
         candidates.append({"code": code, "name": name})
-    
+
     print(f"从文件加载: {len(candidates)} 只候选股")
     return candidates
 
@@ -181,143 +141,188 @@ def score_technical(code):
 _FUND_FLOW_CACHE = None
 _FUND_FLOW_DATE = None
 
-def score_fundflow(code):
+# jvQuant 数据客户端（用于盘后/回测资金流，避免 Tushare moneyflow 超限）
+_JV_CLIENT = None
+
+def _get_jv_client():
+    """懒加载 jvQuant 数据客户端。"""
+    global _JV_CLIENT
+    if _JV_CLIENT is None:
+        try:
+            from scripts.jvquant_client import get_jvquant_client
+            _JV_CLIENT = get_jvquant_client()
+        except Exception as e:
+            print(f"  [jvQuant] 数据客户端初始化失败: {e}")
+            _JV_CLIENT = False
+    return _JV_CLIENT if _JV_CLIENT is not False else None
+
+
+def score_fundflow(code, trade_date: str | None = None):
     from plays.limit_up.strategies.fundflow import score_fundflow as _score_fundflow
-    return _score_fundflow(code)
+    jv = _get_jv_client()
+    return _score_fundflow(code, trade_date=trade_date, jv_client=jv)
 
-# 实时涨幅缓存（CDP/requests+代理获取，避免盘中Tushare无数据）
-_REALTIME_PCT_CACHE = {}
+# 实时行情缓存（同花顺 Cookie 直连）
+_REALTIME_PCT_CACHE = {}   # {code_short: pct_chg}  兼容旧接口
+_THS_QUOTE_CACHE = {}       # {code_short: {...}}    完整同花顺行情
 _REALTIME_PCT_TS = ""
-_POPULARITY_RANK_CACHE = {}  # {code: rank} 东方财富人气排名，取前300
+_POPULARITY_RANK_CACHE: dict[str, int] = {}  # {code_short: rank} 同花顺热门榜排名
+_HOT_CONCEPT_CACHE: dict[str, list] = {}    # {code_short: [concept_name, ...]}
+_HOT_LIST_ITEMS: list[dict] = []            # 热门榜原始数据（含 pct_chg, tag 等）
 
 
-def _batch_fetch_realtime_pct():
-    """批量获取全市场实时涨跌幅，缓存到全局变量"""
-    import requests as _req
-    global _REALTIME_PCT_CACHE, _REALTIME_PCT_TS
+def _batch_fetch_ths_for_candidates(candidates: list[dict]) -> dict[str, dict]:
+    """用同花顺批量获取候选股实时行情（替代原全市场扫描）
+
+    Args:
+        candidates: [{code, name, pct_chg, ...}]
+
+    Returns:
+        {code_short: {price, pct_chg, turnover, vol_ratio, amount, ...}}
+    """
+    global _REALTIME_PCT_CACHE, _THS_QUOTE_CACHE, _REALTIME_PCT_TS
     from datetime import datetime as _dt
     today = _dt.now().strftime("%Y%m%d")
-    if _REALTIME_PCT_TS == today and _REALTIME_PCT_CACHE:
-        return _REALTIME_PCT_CACHE
 
-    # 盘后降级：从 Tushare daily 获取
+    if _REALTIME_PCT_TS == today and _THS_QUOTE_CACHE:
+        return _THS_QUOTE_CACHE
+
+    # 盘后降级：Tushare
     from plays.limit_up.utils import is_market_closed, batch_get_pct_tushare
     if is_market_closed():
         cache = batch_get_pct_tushare(today)
         if cache:
             _REALTIME_PCT_CACHE = cache
             _REALTIME_PCT_TS = today
-            print(f"  [盘后] 实时涨幅降级Tushare: {len(cache)} 只股票")
-            return cache
+            _THS_QUOTE_CACHE = {k: {"pct_chg": v} for k, v in cache.items()}
+            print(f"  [盘后] 涨幅降级Tushare: {len(cache)} 只")
+            return _THS_QUOTE_CACHE
         return {}
 
-    try:
-        from scripts.proxy_utils import request_with_proxy_retry
-        cache = {}
-        # 逐页获取（每页最多100只，翻页至获取5000+）
-        for page in range(1, 6):  # 最多5页，覆盖500只活跃股
-            url = (
-                "https://push2.eastmoney.com/api/qt/clist/get?"
-                "np=1&fltt=2&invt=2&"
-                "fs=m:0+t:6+f:!2,m:0+t:80+f:!2,m:1+t:2+f:!2,m:1+t:23+f:!2,m:0+t:81+s:262144+f:!2&"
-                f"fields=f12,f3&fid=f3&pn={page}&pz=100&po=1&dect=1&"
-                "ut=fa5fd1943c7b386f172d6893dbfba10b"
-            )
-            resp = request_with_proxy_retry(url, timeout=15)
-            if resp is None:
-                if page == 1:
-                    break
-                continue
-            try:
-                items = resp.json().get("data", {}).get("diff", [])
-            except Exception:
-                continue
-            if not items:
-                break
-            for item in items:
-                code = str(item.get("f12", ""))
-                pct = item.get("f3")
-                if code and pct is not None:
-                    cache[code] = pct
-            if len(items) < 100:
-                break  # 最后一页
+    # 盘中：同花顺逐只获取
+    from scripts.ths_client import get_ths_client
+    ths = get_ths_client()
+    if not ths.has_cookie:
+        print("  [同花顺] Cookie 未配置，跳过实时行情预取")
+        return {}
 
+    codes = []
+    for c in candidates:
+        short = c["code"].replace(".SH", "").replace(".SZ", "")
+        if short not in _THS_QUOTE_CACHE:
+            codes.append(short)
+
+    if not codes:
+        return _THS_QUOTE_CACHE
+
+    print(f"  [同花顺] 获取 {len(codes)} 只实时行情...", end="", flush=True)
+    results = ths.get_batch_quotes(codes)
+    success = sum(1 for v in results.values() if v is not None)
+
+    for code_short, quote in results.items():
+        if quote:
+            _THS_QUOTE_CACHE[code_short] = quote
+            _REALTIME_PCT_CACHE[code_short] = quote.get("pct_chg", 0)
+
+    _REALTIME_PCT_TS = today
+    print(f" {success}/{len(codes)} 成功")
+    return _THS_QUOTE_CACHE
+
+
+def _batch_fetch_realtime_pct():
+    """获取全市场实时涨跌幅缓存（兼容旧接口）
+
+    盘中优先同花顺（已有缓存直接返回），盘后降级 Tushare。
+    注意: 同花顺无全市场批量接口，缓存在 _batch_fetch_ths_for_candidates 中预填充。
+    """
+    global _REALTIME_PCT_CACHE, _REALTIME_PCT_TS
+    from datetime import datetime as _dt
+    today = _dt.now().strftime("%Y%m%d")
+    if _REALTIME_PCT_TS == today and _REALTIME_PCT_CACHE:
+        return _REALTIME_PCT_CACHE
+
+    # 盘后降级
+    from plays.limit_up.utils import is_market_closed, batch_get_pct_tushare
+    if is_market_closed():
+        cache = batch_get_pct_tushare(today)
         if cache:
             _REALTIME_PCT_CACHE = cache
             _REALTIME_PCT_TS = today
-            print(f"  实时涨幅缓存: {len(cache)} 只股票")
+            print(f"  [盘后] 涨幅降级Tushare: {len(cache)} 只")
             return cache
-    except Exception as e:
-        print(f"  实时涨幅获取失败: {e}")
-    return {}
+        return {}
+
+    # 盘中: 如果缓存为空（未预填充），返回空，策略层会自主处理
+    print("  [同花顺] 涨幅缓存为空，请在评分前调用 _batch_fetch_ths_for_candidates")
+    return _REALTIME_PCT_CACHE
+
+
+def _fetch_ths_hot_list():
+    """获取同花顺热门榜数据（替代原人气排名方式）
+
+    填充 _POPULARITY_RANK_CACHE 和 _HOT_CONCEPT_CACHE。
+    """
+    global _POPULARITY_RANK_CACHE, _HOT_CONCEPT_CACHE, _HOT_LIST_ITEMS
+    today = datetime.now().strftime("%Y%m%d")
+    if _POPULARITY_RANK_CACHE and getattr(_fetch_ths_hot_list, '_date', '') == today:
+        return
+
+    from scripts.ths_client import get_ths_client
+    ths = get_ths_client()
+    if not ths.has_cookie:
+        return
+
+    items = ths.get_hot_list()
+    if not items:
+        print("  [热门榜] 获取失败")
+        return
+
+    _POPULARITY_RANK_CACHE.clear()
+    _POPULARITY_RANK_CACHE.update({item["code"]: item.get("hot_rank", 0) for item in items})
+    _HOT_CONCEPT_CACHE.clear()
+    _HOT_CONCEPT_CACHE.update({
+        item["code"]: item.get("tag", {}).get("concept_tag", [])
+        for item in items if item.get("code")
+    })
+    _HOT_LIST_ITEMS.clear()
+    _HOT_LIST_ITEMS.extend(items)
+    _fetch_ths_hot_list._date = today
+    zt = sum(1 for i in items if i.get('pct_chg', 0) >= 9.5)
+    print(f"  [同花顺] 热门榜: {len(items)} 只, 涨停{zt}")
 
 
 def _get_popularity_rank(code: str) -> int | None:
-    """获取个股东方财富人气排名（f62关注度降序，取前300名）
-    
-    返回排名(1-based)或None(获取失败/不在前300)
+    """获取个股人气排名（同花顺热门榜，兼容旧接口）
+
+    返回: 排名(1-based) 或 None(不在榜单)
     """
-    global _POPULARITY_RANK_CACHE, _REALTIME_PCT_TS
-    from datetime import datetime as _dt
-    today = _dt.now().strftime("%Y%m%d")
-    if _REALTIME_PCT_TS != today or not _POPULARITY_RANK_CACHE:
-        # 盘后降级：Tushare moneyflow 按主力净流入排序
-        from plays.limit_up.utils import is_market_closed, get_popularity_rank_tushare
-        if is_market_closed():
-            cache = get_popularity_rank_tushare(today)
-            if cache:
-                _POPULARITY_RANK_CACHE = cache
-                _REALTIME_PCT_TS = today
-                print(f"  [盘后] 人气排名降级Tushare: {len(cache)} 只")
-                code_short = code.split('.')[0]
-                return _POPULARITY_RANK_CACHE.get(code_short)
-            return None
-
-        try:
-            from scripts.proxy_utils import request_with_proxy_retry
-            cache = {}
-            for pg in range(1, 3):
-                url = (
-                    "https://push2.eastmoney.com/api/qt/clist/get?"
-                    "np=1&fltt=2&invt=2&"
-                    "fs=m:0+t:6+f:!2,m:0+t:80+f:!2,m:1+t:2+f:!2,m:1+t:23+f:!2&"
-                    f"fields=f12,f62&fid=f62&pn={pg}&pz=100&po=1&"
-                    "ut=fa5fd1943c7b386f172d6893dbfba10b"
-                )
-                r2 = request_with_proxy_retry(url, timeout=15)
-                if r2 is None:
-                    if pg == 1:
-                        break
-                    continue
-                try:
-                    items2 = r2.json().get("data", {}).get("diff", [])
-                except Exception:
-                    continue
-                if not items2:
-                    break
-                for rank, item in enumerate(items2, 1 + (pg - 1) * 100):
-                    c = str(item.get("f12", ""))
-                    if c:
-                        cache[c] = rank
-                if len(items2) < 100:
-                    break
-            if cache:
-                _POPULARITY_RANK_CACHE = cache
-                _REALTIME_PCT_TS = today
-                print(f"  人气排名缓存: {len(cache)} 只 (前{len(cache)})")
-        except Exception as e:
-            print(f"  人气排名获取失败: {e}")
-            return None
-    
+    if not _POPULARITY_RANK_CACHE:
+        _fetch_ths_hot_list()
     code_short = code.split('.')[0]
-    return _POPULARITY_RANK_CACHE.get(code_short)
+    rank = _POPULARITY_RANK_CACHE.get(code_short)
+    return rank if rank and rank > 0 else None
 
-# 实时资金流缓存（东财API+代理，替代T+1 Tushare moneyflow）
+
+def _get_hot_concept_tags(code: str) -> list[str]:
+    """获取个股概念标签（来自同花顺热门榜）"""
+    if not _HOT_CONCEPT_CACHE:
+        _fetch_ths_hot_list()
+    code_short = code.split('.')[0]
+    return _HOT_CONCEPT_CACHE.get(code_short, [])
+
+# 实时资金流缓存（同花顺 + L2 + Tushare 三级降级）
 _REALTIME_FUND_CACHE = {}  # code_short → {net_flow, vol_ratio, turnover, amount}
 _REALTIME_FUND_TS = ""
 
+
 def _get_realtime_fund_cache():
-    """获取全市场实时资金流数据（带缓存，每轮pipeline只调一次）
+    """获取实时资金流缓存（兼容旧接口）
+
+    数据来源优先级:
+      换手率/量比 → 同花顺直连 (ths_client)
+      主力净流入   → L2 逐笔统计 (l2_daemon_client)
+      盘后兜底     → Tushare moneyflow + daily_basic
+
     返回: {code_short: {net_flow(元), vol_ratio, turnover(%), amount(元)}}
     """
     global _REALTIME_FUND_CACHE, _REALTIME_FUND_TS
@@ -325,79 +330,377 @@ def _get_realtime_fund_cache():
     if _REALTIME_FUND_CACHE and _REALTIME_FUND_TS == today:
         return _REALTIME_FUND_CACHE
 
-    # 盘后降级：Tushare moneyflow + daily_basic
+    # 盘后降级：Tushare
     from plays.limit_up.utils import is_market_closed, batch_get_fundflow_tushare
     if is_market_closed():
         cache = batch_get_fundflow_tushare(today)
         if cache:
             _REALTIME_FUND_CACHE = cache
             _REALTIME_FUND_TS = today
-            print(f"  [盘后] 资金流降级Tushare: {len(cache)} 只股票")
+            print(f"  [盘后] 资金流降级Tushare: {len(cache)} 只")
             return cache
         return {}
 
-    from scripts.proxy_utils import request_with_proxy_retry
+    # 盘中：优先从同花顺缓存 + L2 构建资金流
+    global _THS_QUOTE_CACHE
     cache = {}
-    for page in range(1, 6):  # 翻5页×100=500只
-        url = (
-            "https://push2.eastmoney.com/api/qt/clist/get?"
-            "np=1&fltt=2&invt=2&"
-            "fs=m:0+t:6+f:!2,m:0+t:80+f:!2,m:1+t:2+f:!2,m:1+t:23+f:!2&"
-            f"fields=f12,f62,f10,f7,f6&fid=f62&pn={page}&pz=100&po=1&dect=1&"
-            "ut=fa5fd1943c7b386f172d6893dbfba10b"
-        )
-        resp = request_with_proxy_retry(url, timeout=15)
-        if resp is None:
-            print(f"  实时资金流缓存第{page}页失败(已重试)")
-            if page == 1:
-                break  # 第1页失败则放弃
-            continue
-        try:
-            items = resp.json().get("data", {}).get("diff", [])
-        except Exception:
-            continue
-        if not items:
-            break
-        for s in items:
-            code = s.get("f12", "")
-            if not code:
-                continue
-            f62 = s.get("f62")
-            try:
-                net_flow = float(f62) if f62 and f62 != "-" else 0
-            except Exception:
-                net_flow = 0
-            try:
-                vol_ratio = float(s.get("f10", 0)) if s.get("f10") and s.get("f10") != "-" else 0
-            except Exception:
-                vol_ratio = 0
-            try:
-                turnover = float(s.get("f7", 0)) if s.get("f7") and s.get("f7") != "-" else 0
-            except Exception:
-                turnover = 0
-            try:
-                amount = float(s.get("f6", 0)) if s.get("f6") and s.get("f6") != "-" else 0
-            except Exception:
-                amount = 0
-            cache[code] = {
-                "net_flow": net_flow,      # 主力净流入(元)
-                "vol_ratio": vol_ratio,     # 量比
-                "turnover": turnover,       # 换手率(%)
-                "amount": amount,           # 成交额(元)
+
+    # 从同花顺缓存提取 turnover/vol_ratio/amount
+    for code_short, quote in _THS_QUOTE_CACHE.items():
+        if quote:
+            entry = {
+                "turnover": quote.get("turnover", 0),
+                "vol_ratio": quote.get("vol_ratio", 0),
+                "amount": quote.get("amount", 0),
+                "net_flow": _get_l2_net_flow(code_short),  # L2 大单净流向
             }
-        if len(items) < 100:
-            break
-    
+            cache[code_short] = entry
+
     if cache:
         _REALTIME_FUND_CACHE = cache
         _REALTIME_FUND_TS = today
-        print(f"  实时资金流缓存: {len(cache)} 只")
+        l2_hits = sum(1 for v in cache.values() if v.get("net_flow", 0) != 0)
+        print(f"  [同花顺+L2] 资金流缓存: {len(cache)} 只 (L2命中{l2_hits})")
+
     return cache
+
+
+def _get_l2_net_flow(code_short: str) -> float:
+    """从 L2 守护进程获取个股大单净流向（特大单+大单主动性买卖差值）"""
+    try:
+        from scripts.jvquant_ws_client import daemon_alive, daemon_cmd
+        if not daemon_alive():
+            return 0.0
+        code = f"{code_short}.SH" if code_short.startswith("6") else f"{code_short}.SZ"
+        resp = daemon_cmd(f"NETFLOW {code}")
+        if resp and resp != "NULL":
+            return float(resp)
+    except Exception:
+        pass
+    return 0.0
 
 
 def score_sentiment(code):
     from plays.limit_up.strategies.sentiment import score_sentiment as _score_sentiment
     return _score_sentiment(code)
+
+
+# ===== 面板数据预取（供 total_score 使用）=====
+# 缓存当日 Tushare daily 和 limit_list 数据（避免重复请求）
+_NV2_DAILY_CACHE: dict[str, list[dict]] = {}  # code → [{trade_date, close, high, low, ...}]
+_NV2_DAILY_BASIC_CACHE: dict[str, dict[str, dict]] = {}  # code → {trade_date: {pe, pb, circ_mv, ...}}
+_NV2_LIMIT_CACHE: dict[str, int] = {}         # code → 近20日涨停次数
+_NV2_LIMIT_60D_CACHE: dict[str, int] = {}     # code → 近60日涨停次数
+_NV2_DATE = ""
+
+
+def _fetch_nv2_data(codes: list[str]):
+    """批量拉取 total_score 所需的 Tushare 面板数据
+
+    数据源:
+      - daily: 前收盘价(pre_close) → 计算 trailing_10/5, position_20d, std10, max_pct_chg_5d
+      - daily_basic: PE/PB/市值/换手/量比 → PIT 面板列
+      - limit_list_d: 近60日涨停次数 → 涨停基因(20d/60d)
+
+    注意:
+      - daily 支持多 ts_code 批量
+      - daily_basic 不支持多 ts_code，必须逐只查询
+      - limit_list_d 支持多 ts_code 批量
+    """
+    global _NV2_DAILY_CACHE, _NV2_DAILY_BASIC_CACHE, _NV2_LIMIT_CACHE, _NV2_LIMIT_60D_CACHE, _NV2_DATE
+    today = datetime.now().strftime("%Y%m%d")
+    if _NV2_DATE == today and _NV2_DAILY_CACHE and _NV2_DAILY_BASIC_CACHE:
+        return
+
+    from scripts.tu_share import call_tushare
+    from datetime import timedelta
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    start70 = (datetime.now() - timedelta(days=70)).strftime("%Y%m%d")
+    start60 = (datetime.now() - timedelta(days=60)).strftime("%Y%m%d")
+
+    def _tushare_code_msg(resp: dict) -> str:
+        code = resp.get("code")
+        msg = resp.get("msg", "")
+        if code is None:
+            return "无响应"
+        if code != 0:
+            return f"错误码{code}: {msg}"
+        return "ok"
+
+    # 1. 日线数据 (近70天，满足60日涨停基因 + 20日波动/位置计算)
+    ts_codes = [c for c in codes if c not in _NV2_DAILY_CACHE]
+    if ts_codes:
+        try:
+            resp = call_tushare("daily", {
+                "ts_code": ",".join(ts_codes),
+                "start_date": start70, "end_date": today,
+            }, "ts_code,trade_date,open,pre_close,close,high,low,vol,amount,pct_chg")
+            items = resp.get("data", {}).get("items", [])
+            flds = resp.get("data", {}).get("fields", [])
+            for row in items:
+                d = dict(zip(flds, row))
+                code = d.get("ts_code", "")
+                if code:
+                    if code not in _NV2_DAILY_CACHE:
+                        _NV2_DAILY_CACHE[code] = []
+                    _NV2_DAILY_CACHE[code].append(d)
+            print(f"  [NV2] daily: {len(items)}条, {len(ts_codes)}只 ({_tushare_code_msg(resp)})")
+        except Exception as e:
+            print(f"  [NV2] daily拉取失败: {e}")
+
+    # 2. daily_basic (近70天，PIT 综合评分需要 pe/pb/circ_mv/turnover/volume_ratio 历史)
+    # 注意：Tushare daily_basic API 不支持逗号分隔的批量 ts_code，需逐只并行查询
+    ts_codes_db = [c for c in codes if c not in _NV2_DAILY_BASIC_CACHE]
+    if ts_codes_db:
+        total_items = 0
+        failed_codes = []
+
+        def _fetch_one_daily_basic(code: str) -> tuple[str, list]:
+            try:
+                resp = call_tushare("daily_basic", {
+                    "ts_code": code,
+                    "start_date": start70, "end_date": today,
+                }, "ts_code,trade_date,pe,pb,circ_mv,turnover_rate,volume_ratio")
+                if resp.get("code", -1) != 0:
+                    return code, []
+                items = resp.get("data", {}).get("items", [])
+                return code, items
+            except Exception:
+                return code, []
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            futures = {pool.submit(_fetch_one_daily_basic, code): code for code in ts_codes_db}
+            for future in as_completed(futures):
+                code, items = future.result()
+                if not items:
+                    failed_codes.append(code)
+                    continue
+                if code not in _NV2_DAILY_BASIC_CACHE:
+                    _NV2_DAILY_BASIC_CACHE[code] = {}
+                for row in items:
+                    d = dict(zip(["ts_code", "trade_date", "pe", "pb", "circ_mv",
+                                  "turnover_rate", "volume_ratio"], row))
+                    trade_date = str(d.get("trade_date", ""))
+                    if trade_date:
+                        _NV2_DAILY_BASIC_CACHE[code][trade_date] = d
+                total_items += len(items)
+
+        fail_msg = f", 失败{len(failed_codes)}只" if failed_codes else ""
+        print(f"  [NV2] daily_basic: {total_items}条, {len(ts_codes_db)}只 (逐只){fail_msg}")
+
+    # 3. 涨停基因 (近60日，同时产出 20d/60d 计数)
+    ts_codes_l = [c for c in codes if c not in _NV2_LIMIT_CACHE]
+    if ts_codes_l:
+        try:
+            resp = call_tushare("limit_list_d", {
+                "ts_code": ",".join(ts_codes_l),
+                "start_date": start60, "end_date": today,
+                "limit_type": "U",
+            }, "ts_code,trade_date")
+            items = resp.get("data", {}).get("items", [])
+            flds = resp.get("data", {}).get("fields", [])
+            from collections import defaultdict
+            dates_by_code: dict[str, list[str]] = defaultdict(list)
+            for row in items:
+                d = dict(zip(flds, row))
+                code = d.get("ts_code", "")
+                trade_date = str(d.get("trade_date", ""))
+                if code and trade_date:
+                    dates_by_code[code].append(trade_date)
+            cutoff20 = (datetime.now() - timedelta(days=20)).strftime("%Y%m%d")
+            for code in ts_codes_l:
+                dates = sorted(dates_by_code.get(code, []))
+                count20 = sum(1 for d in dates if d >= cutoff20)
+                count60 = len(dates)
+                _NV2_LIMIT_CACHE[code] = count20
+                _NV2_LIMIT_60D_CACHE[code] = count60
+            print(f"  [NV2] limit_list: {len(items)}条涨停记录 ({_tushare_code_msg(resp)})")
+        except Exception as e:
+            print(f"  [NV2] limit_list拉取失败: {e}")
+            for code in ts_codes_l:
+                _NV2_LIMIT_CACHE.setdefault(code, 0)
+                _NV2_LIMIT_60D_CACHE.setdefault(code, 0)
+
+    # 同步到 strategies/factor_ctx，供策略打分使用
+    try:
+        from plays.limit_up.strategies import factor_ctx
+        for code in codes:
+            factor_ctx.set_daily(code, _NV2_DAILY_CACHE.get(code, []))
+            factor_ctx.set_daily_basic(code, _NV2_DAILY_BASIC_CACHE.get(code, {}))
+            factor_ctx.set_limit_counts(
+                code,
+                _NV2_LIMIT_CACHE.get(code, 0),
+                _NV2_LIMIT_60D_CACHE.get(code, 0),
+            )
+        # 概念数据按需加载一次
+        if factor_ctx._CONCEPT_DAILY_CACHE is None:
+            cache_dir = Path(__file__).resolve().parent / "backtest" / "cache"
+            factor_ctx.load_concept_data_from_cache(cache_dir)
+    except Exception as e:
+        print(f"  [NV2] factor_ctx 同步失败: {e}")
+
+    _NV2_DATE = today
+
+
+def _send_jvquant_error(msg: str):
+    """jvQuant 异常时发送飞书报警"""
+    print(f"  [jvQuant] ⚠️ {msg}")
+    try:
+        import requests
+        token_resp = requests.post(
+            "https://open.feishu.cn/open-apis/v3/tenant_access_token/internal",
+            json={"app_id": CONFIG["FEISHU_APP_ID"],
+                  "app_secret": CONFIG["FEISHU_APP_SECRET"]},
+            timeout=10)
+        token = token_resp.json().get("tenant_access_token", "")
+        if token:
+            alert = (f"⚠️ jvQuant 行情异常\n"
+                     f"错误: {msg}\n"
+                     f"时间: {datetime.now().strftime('%H:%M:%S')}\n"
+                     f"影响: 本轮无实时盘口数据，评分继续")
+            requests.post(
+                "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"receive_id": CONFIG.get("FEISHU_CHAT_ID_SIGNAL", ""),
+                      "msg_type": "text",
+                      "content": json.dumps({"text": alert})},
+                timeout=10)
+    except Exception:
+        pass
+
+
+def _safe_float(val, default: float = 0.0) -> float:
+    if val is None:
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
+
+def _extract_pit_features(code: str, pit_mode: bool) -> dict:
+    """从 _NV2_*_CACHE 提取 PIT 面板行，供 total_score 与 factors/ 使用。"""
+    daily_rows = _NV2_DAILY_CACHE.get(code, [])
+    daily_rows.sort(key=lambda x: x.get("trade_date", ""), reverse=True)
+    idx = 1 if pit_mode else 0
+
+    feats = {
+        "trailing_10": 0.0,
+        "trailing_5": 0.0,
+        "position_20d": 0.5,
+        "pullback_10d": 0.1,
+        "pullback_20d": 0.1,
+        "pct_chg_std_10d": 0.0,
+        "pct_chg_std_5d": 0.0,
+        "max_pct_chg_5d": 0.0,
+        "limit_up_count_20d": 0.0,
+        "limit_up_count_60d": 0.0,
+        "circ_mv": 0.0,
+        "pe": 999.0,
+        "pb": 999.0,
+        "turnover_rate": 5.0,
+        "volume_ratio": 1.0,
+        "avg_amount_5d": 0.0,
+    }
+
+    if not daily_rows or len(daily_rows) < 2 + idx:
+        return feats
+
+    # trailing_10 / trailing_5 (percent -> decimal)
+    def _trailing(days: int) -> float:
+        if len(daily_rows) < days + idx:
+            return 0.0
+        close_current = daily_rows[idx].get("close")
+        close_ago = daily_rows[idx + days - 1].get("close")
+        if close_current and close_ago:
+            try:
+                return float(close_current) / float(close_ago) - 1.0
+            except (ValueError, TypeError):
+                pass
+        return 0.0
+
+    feats["trailing_10"] = _trailing(10)
+    feats["trailing_5"] = _trailing(5)
+
+    # position_20d
+    try:
+        rows = daily_rows[idx:idx + 20]
+        highs = [float(rr.get("high", 0)) for rr in rows if rr.get("high")]
+        lows = [float(rr.get("low", 0)) for rr in rows if rr.get("low")]
+        closes = [float(rr.get("close", 0)) for rr in rows if rr.get("close")]
+        if highs and lows and closes:
+            h20 = max(highs)
+            l20 = min(lows)
+            c0 = closes[0]
+            if h20 > l20:
+                feats["position_20d"] = (c0 - l20) / (h20 - l20)
+    except (ValueError, TypeError):
+        pass
+
+    # pullback_10d / pullback_20d
+    def _pullback(days: int) -> float:
+        if len(daily_rows) < 2 + idx:
+            return 0.1
+        try:
+            rows = daily_rows[idx:idx + days]
+            highs = [float(rr.get("high", 0)) for rr in rows if rr.get("high")]
+            closes = [float(rr.get("close", 0)) for rr in rows if rr.get("close")]
+            if highs and closes:
+                h = max(highs)
+                c0 = closes[0]
+                if h > 0:
+                    return max(0.0, (h - c0) / h)
+        except (ValueError, TypeError):
+            pass
+        return 0.1
+
+    feats["pullback_10d"] = _pullback(10)
+    feats["pullback_20d"] = _pullback(20)
+
+    # pct_chg std / max / avg_amount
+    try:
+        pcts = [_safe_float(rr.get("pct_chg"), 0.0) for rr in daily_rows[idx:idx + 10]]
+        if len(pcts) >= 5:
+            feats["pct_chg_std_10d"] = float(np.std(pcts, ddof=0)) if len(pcts) >= 2 else 0.0
+            feats["max_pct_chg_5d"] = max(pcts[:5])
+        pcts5 = [_safe_float(rr.get("pct_chg"), 0.0) for rr in daily_rows[idx:idx + 5]]
+        if len(pcts5) >= 2:
+            feats["pct_chg_std_5d"] = float(np.std(pcts5, ddof=0))
+
+        # avg_amount_5d: amount 字段为千元，转为元
+        amounts = [_safe_float(rr.get("amount"), 0.0) * 1000 for rr in daily_rows[idx:idx + 5]]
+        if amounts:
+            feats["avg_amount_5d"] = float(np.mean(amounts))
+    except Exception:
+        pass
+
+    # daily_basic: pe/pb/circ_mv/turnover/volume_ratio for current bar (T-1 in pit_mode)
+    basic_by_date = _NV2_DAILY_BASIC_CACHE.get(code, {})
+    if basic_by_date:
+        current_row = daily_rows[idx]
+        trade_date = str(current_row.get("trade_date", ""))
+        # fallback: 取最近一个有 daily_basic 的日期
+        basic = basic_by_date.get(trade_date)
+        if basic is None:
+            for d in sorted(basic_by_date.keys(), reverse=True):
+                if d <= trade_date:
+                    basic = basic_by_date[d]
+                    break
+        if basic is None:
+            basic = list(basic_by_date.values())[0]
+        if basic:
+            feats["circ_mv"] = _safe_float(basic.get("circ_mv"), 0.0)
+            feats["pe"] = _safe_float(basic.get("pe"), 999.0)
+            feats["pb"] = _safe_float(basic.get("pb"), 999.0)
+            feats["turnover_rate"] = _safe_float(basic.get("turnover_rate"), 5.0)
+            feats["volume_ratio"] = _safe_float(basic.get("volume_ratio"), 1.0)
+
+    # limit up counts
+    feats["limit_up_count_20d"] = float(_NV2_LIMIT_CACHE.get(code, 0))
+    feats["limit_up_count_60d"] = float(_NV2_LIMIT_60D_CACHE.get(code, 0))
+
+    return feats
 
 
 # ===== 6. 飞书推送 =====
@@ -416,82 +719,39 @@ def _get_feishu_token():
 
 
 def push_feishu(results):
-    """发送飞书卡片
+    """飞书推送：按 total_score 降序取满足阈值的前 3 只，阈值默认 70。
 
-    推送规则：
-    - 高确信度筛选: 情绪≥35 + 资金≥35 + 总分≥40 (三灯全亮才推送)
-    - 午后叠加情绪面>=25门槛
-    - 同日已推送的股票不再重复推送
-    - 推送记录保存到 data/pushed/ 目录，供复盘使用
+    训练集优化后的 quality_gate 高分样本在回测中表现出 >70% 的涨停命中率与胜率，
+    因此将推送阈值从 25 提高到 70；低于阈值说明当日没有高质量信号，不推送。
     """
     import requests
 
+    threshold = float(CONFIG.get("ULTIMATE_PUSH_THRESHOLD", "95"))
+
     def _stars(total):
-        """综合评级: >=55 ⭐⭐⭐⭐⭐  >=45 ⭐⭐⭐⭐  >=35 ⭐⭐⭐  >=30 ⭐⭐"""
-        if total >= 55: return "⭐ ⭐ ⭐ ⭐ ⭐"  # noqa: E701
-        if total >= 45: return "⭐ ⭐ ⭐ ⭐"  # noqa: E701
-        if total >= 35: return "⭐ ⭐ ⭐"  # noqa: E701
-        if total >= 30: return "⭐ ⭐"  # noqa: E701
+        if total >= 90: return "⭐⭐⭐⭐⭐"
+        if total >= 80: return "⭐⭐⭐⭐"
+        if total >= 70: return "⭐⭐⭐"
+        if total >= 60: return "⭐⭐"
         return ""
 
-    # 推送筛选 (Top5，阈值30，按涨幅+情绪排序)
-    THRESHOLD = 30
+    sorted_results = sorted(results, key=lambda r: r.get("total_score", 0), reverse=True)
+    if not sorted_results:
+        print("  无可推送股票")
+        return False
 
-    # 同日去重：已推送过的股票不再重复推送
-    pushed_codes_today = set()
-    pushed_dir = DATA_DIR / "pushed"
-    today_prefix = datetime.now().strftime("%Y%m%d")
-    if pushed_dir.exists():
-        for pf in pushed_dir.glob(f"{today_prefix}_*.json"):
-            try:
-                for item in json.loads(pf.read_text()):
-                    if isinstance(item, dict) and "code" in item:
-                        pushed_codes_today.add(item["code"])
-            except Exception:
-                pass
+    max_ts = sorted_results[0].get("total_score", 0)
+    if max_ts < threshold:
+        print(f"  最高 total_score={max_ts:.1f} 低于阈值 {threshold}，不推送")
+        return False
 
-    # 午后门槛：情绪面 < 25 的股票不推（午后高位横盘≠冲板）
-    is_afternoon = datetime.now().hour >= 13
-    pm_filtered = 0
-    hc_filtered = 0  # 高确信度筛选
+    push_list = [r for r in sorted_results if r.get("total_score", 0) >= threshold][:3]
 
-    def _pass_filter(r):
-        nonlocal pm_filtered, hc_filtered
-        s = r.get('scores', {})
-        if r.get('total', 0) < THRESHOLD: return False
-        if r.get('code') in pushed_codes_today: return False
-        if is_afternoon and s.get('sentiment', 0) < 25:
-            pm_filtered += 1; return False
-        # 高确信度筛选: 情绪+资金双强 + 总分达标
-        if not (s.get('sentiment', 0) >= 35 and s.get('fundflow', 0) >= 35 and r.get('total', 0) >= 40):
-            hc_filtered += 1; return False
-        return True
-
-    above_threshold = sorted(
-        [r for r in results if _pass_filter(r)],
-        key=lambda x: x.get('total', 0),
-        reverse=True
-    )[:5]
-    if above_threshold:
-        push_list = above_threshold
-        extra = []
-        if pushed_codes_today: extra.append("已去重")
-        if pm_filtered: extra.append(f"午后过滤{pm_filtered}只")
-        if hc_filtered: extra.append(f"高确信过滤{hc_filtered}只")
-        print(f"  推送池: {len(above_threshold)}只(情绪≥35+资金≥35+总分≥40{' ' + ', '.join(extra) if extra else ''})")
-    else:
-        push_list = []
-        extra = []
-        if pushed_codes_today: extra.append(f"已推{len(pushed_codes_today)}只")
-        if pm_filtered: extra.append(f"午后不足{pm_filtered}只")
-        if hc_filtered: extra.append(f"高确信不足{hc_filtered}只")
-        print(f"  无符合条件的股票 ({', '.join(extra) if extra else '无候选'})")
-
+    print(f"  阈值 {threshold}: max_ts={max_ts:.1f} → {len(push_list)}只推送")
     if not push_list:
         print("  无可推送股票")
         return False
 
-    # 保存推送记录（供复盘使用）
     pushed_dir = DATA_DIR / "pushed"
     pushed_dir.mkdir(parents=True, exist_ok=True)
     pushed_file = pushed_dir / f"{datetime.now().strftime('%Y%m%d_%H%M')}.json"
@@ -500,45 +760,45 @@ def push_feishu(results):
     print(f"  推送记录已保存: {pushed_file}")
 
     token = _get_feishu_token()
-
     if not token:
         print("飞书token获取失败")
         return False
 
-    # 构建卡片
     card = {
         "config": {"wide_screen_mode": True},
         "header": {
-            "title": {"tag": "plain_text", "content": f"{feishu_title_prefix()}涨停预测 Top5 ({datetime.now().strftime('%H:%M')})"},
-            "template": "blue"
+            "title": {"tag": "plain_text", "content": f"{feishu_title_prefix()}涨停预测 ({datetime.now().strftime('%H:%M')})"},
+            "template": "blue",
         },
-        "elements": []
+        "elements": [],
     }
 
     for r in push_list:
-        s = r.get('scores', {})
-        stars = _stars(r['total'])
-        pct = r.get('pct_chg', 0)
-        element = {
+        s = r.get("scores", {})
+        ts = r.get("total_score", 0)
+        stars = _stars(ts)
+        pct = r.get("pct_chg", 0)
+        card["elements"].append({
             "tag": "div",
             "text": {
                 "tag": "lark_md",
-                "content": f"**{r['code']} {r['name']}** {stars} 涨幅{pct:.1f}%\n"
-                          f"综合评分:{r['total']:.1f}  情绪面:{s.get('sentiment',0):.0f} 资金面:{s.get('fundflow',0):.0f} 基本面:{s.get('fundamental',0):.0f}"
-            }
-        }
-        card["elements"].append(element)
+                "content": (
+                    f"**{r['code']} {r['name']}** {stars} 涨幅{pct:.1f}%\n"
+                    f"总分:{ts:.0f} 情绪:{s.get('sentiment',0):.0f} 资金:{s.get('fundflow',0):.0f} 短线:{s.get('shortterm',0):.0f}"
+                ),
+            },
+        })
 
-    # 发送
     resp = requests.post(
         "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id",
         headers={"Authorization": f"Bearer {token}"},
         json={
             "receive_id": CONFIG["FEISHU_CHAT_ID_SIGNAL"],
             "msg_type": "interactive",
-            "content": json.dumps(card)
-        }
+            "content": json.dumps(card),
+        },
     )
+    return True
 
 
 def _write_empty_result(reason=""):
@@ -645,16 +905,19 @@ def _score_one(stock: dict, l2_available: bool, weights: dict,
     l2data = None
     if l2_available:
         try:
-            from scripts.l2_daemon_client import daemon_get_market, daemon_get_vwap, daemon_get_kline
-            from scripts.l2_client import to_price
+            from scripts.jvquant_ws_client import daemon_get_market, daemon_get_vwap, daemon_get_kline
             mkt = daemon_get_market(code)
             vwap = daemon_get_vwap(code)
             kb = daemon_get_kline(code, n=5)
             if mkt:
-                l2data = {"last": to_price(mkt.get("last", "0")),
-                          "bid1_p": to_price(mkt.get("bid_price", [""])[0]) if mkt.get("bid_price") else 0,
-                          "ask1_p": to_price(mkt.get("ask_price", [""])[0]) if mkt.get("ask_price") else 0,
-                          "vwap": round(vwap, 2) if vwap else None, "kline_bars": len(kb)}
+                last_val = float(mkt.get("last", 0))
+                bid_prices = mkt.get("bid_price", [])
+                ask_prices = mkt.get("ask_price", [])
+                l2data = {"last": last_val,
+                          "bid1_p": float(bid_prices[0]) if bid_prices and bid_prices[0] else 0,
+                          "ask1_p": float(ask_prices[0]) if ask_prices and ask_prices[0] else 0,
+                          "vwap": round(vwap, 2) if vwap else None,
+                          "kline_bars": len(kb)}
         except Exception:
             pass
 
@@ -733,8 +996,8 @@ def main():
 
 def _run_pipeline(args):
     clear_tushare_cache()
+    from scripts.audit import reset; reset()
 
-    # 数据源预检：关键源异常时阻塞执行，避免基于错误数据决策
     from scripts.health_check import preflight_check, _send_alert_sync  # noqa: E402
     if not preflight_check():
         print("[预检] 关键数据源异常，阻塞执行。详情见 data/health_state.json")
@@ -749,7 +1012,7 @@ def _run_pipeline(args):
     if args.from_file:
         candidates = load_from_file(args.from_file)
     else:
-        print("\n[1/5] 异动扫描(东财API+代理)...")
+        print("\n[1/5] 异动扫描(同花顺直连)...")
         candidates = scan_surge()
 
     if not candidates:
@@ -757,7 +1020,7 @@ def _run_pipeline(args):
         _write_empty_result("扫描无候选股")
         return
 
-    # 1.5 全系统过滤
+    # 1.5 过滤
     print("\n[1.5/5] 全系统过滤...")
     candidates = filter_candidates(candidates)
     if not candidates:
@@ -765,15 +1028,18 @@ def _run_pipeline(args):
         _write_empty_result("过滤后无候选股")
         return
 
-    # 加载权重（从 .env 通过 tu_share.CONFIG 统一读取）
     weights = dict(AGENT_WEIGHTS)
 
-    # 今日缓存
+    # 今日缓存：先 wiki/raw/limit-up/analysis，再 data/analysis
     today_str = datetime.now().strftime("%Y%m%d")
     scored_cache = {}
-    analysis_dir = DATA_DIR / "analysis"
-    if analysis_dir.exists():
-        for f in sorted(analysis_dir.glob(f"{today_str}*.json")):
+    for base in (
+        PROJECT_DIR / "wiki" / "raw" / "limit-up" / "analysis",
+        DATA_DIR / "analysis",
+    ):
+        if not base.exists():
+            continue
+        for f in sorted(base.glob(f"{today_str}*.json")):
             try:
                 items = json.loads(f.read_text())
                 if isinstance(items, list):
@@ -781,84 +1047,120 @@ def _run_pipeline(args):
                         if "code" in item and "scores" in item:
                             scored_cache[item["code"]] = {
                                 dim: (item["scores"][dim], item.get("reasons", {}).get(dim, ""))
-                                for dim in item["scores"]}
+                                for dim in item["scores"]
+                            }
             except Exception:
                 pass
     print(f"  scored_cache: {len(scored_cache)} 只缓存" if scored_cache else "  scored_cache: 无缓存")
-    # 1.6 检查 L2 守护进程（--no-l2 模式下跳过）
+
+    # 1.6 jvQuant WS 检查
     l2_available = False
     if not args.no_l2:
-        from scripts.l2_daemon_client import daemon_alive
-        l2_available = daemon_alive()
-        if l2_available:
-            print("  [L2] L2 守护进程已就绪")
-        else:
-            print("  [L2] L2 守护进程未运行（将跳过实时行情）")
+        try:
+            from scripts.jvquant_ws_client import daemon_alive, daemon_stats
+            if daemon_alive():
+                l2_available = True
+                s = daemon_stats()
+                print(f"  [jvQuant WS] 已连接 | 今日{s['total_subscribed_today']}只={s['daily_cost']}元")
+            else:
+                _send_jvquant_error("jvQuant WebSocket 连接失败")
+        except ImportError as e:
+            _send_jvquant_error(f"jvQuant 模块未安装: {e}")
+        except Exception as e:
+            _send_jvquant_error(f"jvQuant 初始化异常: {e}")
     else:
-        print("  [L2] 已跳过 (--no-l2 模式)")
+        print("  [行情] 已跳过 (--no-l2 模式)")
 
-    # 1.7 涨停相关性预排
+    # 1.7 预排 + 概念
     print("\n[1.7/5] 涨停相关性预排...")
-    _get_popularity_rank("")  # 触发人气缓存
+    _fetch_ths_hot_list()
+    from scripts.tu_share import build_concept_map
+    build_concept_map(_HOT_CONCEPT_CACHE)
     candidates = _pre_rank(candidates, top_n=args.top)
 
-    # 2. 分批深度分析: 每批订阅→观测45s→评分→立即推送(不等全部完成)
-    BATCH_SIZE = 25
-    L2_WAIT_MAX = 60  # 最多等 60 秒, 80%就绪提前结束
-    batch_count = (len(candidates) + BATCH_SIZE - 1) // BATCH_SIZE
-    print(f"\n[2/5] 分批深度分析: {len(candidates)}只 -> {batch_count}批x{BATCH_SIZE}只, 最多{L2_WAIT_MAX}s观测")
+    # 1.8 THS 实时行情
+    print("\n[1.8/5] 同花顺实时行情预取...")
+    _batch_fetch_ths_for_candidates(candidates)
+
+    # 1.9 预取 total_score 所需的历史面板数据
+    print("\n[1.9/5] Tushare 面板数据预取（daily/daily_basic/limit_list_d）...")
+    _fetch_nv2_data([c["code"] for c in candidates])
+
+    # 2. 深度评分
+    if l2_available:
+        print(f"\n[2/5] 深度分析: {len(candidates)}只 (jvQuant 分层订阅, 无等待)")
+        from scripts.jvquant_ws_client import subscribe_tiered
+        subscribe_tiered(candidates, top_n_l1=min(15, len(candidates)),
+                         top_n_l10=min(6, len(candidates)),
+                         top_n_l2=min(2, len(candidates)))
+        time.sleep(3)
+    else:
+        print(f"\n[2/5] 深度分析: {len(candidates)}只 (无实时行情)")
 
     all_results = []
-    for bi in range(batch_count):
-        batch = candidates[bi * BATCH_SIZE : (bi + 1) * BATCH_SIZE]
-        codes = [c["code"] for c in batch]
-        print(f"\n{'='*40}")
-        print(f"批次 {bi+1}/{batch_count}: {len(codes)}只 {codes[:3]}...")
-        print(f"{'='*40}")
+    for stock in candidates:
+        code = stock["code"]
+        cache_hit = code in scored_cache
+        tag = "[缓存]" if cache_hit else "评分中"
+        print(f"  {code} {stock['name']} {tag}")
+        try:
+            r = _score_one(stock, l2_available, weights, scored_cache, cache_hit)
+            all_results.append(r)
+        except Exception as e:
+            print(f"  {code} 评分失败: {e}")
 
-        if l2_available:
-            from scripts.l2_daemon_client import daemon_subscribe, daemon_is_ready
-            daemon_subscribe(codes)
-            print(f"  [L2] 已订阅{len(codes)}只, 等待数据到达...", end="", flush=True)
-            ready = 0
-            for _ in range(L2_WAIT_MAX // 2):  # 每2秒检查一次
-                time.sleep(2)
-                ready = sum(1 for c in codes if daemon_is_ready(c))
-                print(f" {ready}/{len(codes)}", end="", flush=True)
-                if ready >= len(codes) * 0.8:
-                    break
-            print(f"\n  [L2] 最终就绪 {ready}/{len(codes)}")
+    # Top-3 升 L2 深度
+    all_results.sort(key=lambda x: x.get("total", 0), reverse=True)
+    if l2_available:
+        top_codes = [r["code"] for r in all_results[:3] if r.get("total", 0) >= 35]
+        if top_codes:
+            from scripts.jvquant_ws_client import daemon_subscribe_l2
+            daemon_subscribe_l2(top_codes)
+            time.sleep(2)
+            for r in all_results[:3]:
+                if r["code"] in top_codes:
+                    try:
+                        from scripts.jvquant_ws_client import daemon_get_market, daemon_get_vwap, daemon_get_kline
+                        mkt = daemon_get_market(r["code"])
+                        vwap = daemon_get_vwap(r["code"])
+                        kb = daemon_get_kline(r["code"], n=5)
+                        if mkt:
+                            r["l2api"] = {"last": float(mkt.get("last", 0)),
+                                          "vwap": round(vwap, 2) if vwap else None,
+                                          "kline_bars": len(kb)}
+                    except Exception:
+                        pass
+        from scripts.jvquant_ws_client import daemon_unsubscribe as jv_unsub
+        all_codes = [c["code"] for c in candidates]
+        jv_unsub(all_codes)
 
-        batch_results = []
-        for stock in batch:
-            code = stock["code"]
-            cache_hit = code in scored_cache
-            tag = "[缓存]" if cache_hit else "评分中"
-            print(f"  {code} {stock['name']} {tag}")
-            try:
-                r = _score_one(stock, l2_available, weights, scored_cache, cache_hit)
-                batch_results.append(r)
-                all_results.append(r)
-            except Exception as e:
-                print(f"  {code} 评分失败: {e}")
+    # 3. 唯一总分：total_score(row) - PIT 语义（使用 T-1 数据）
+    from plays.limit_up.total import total_score
+    from plays.limit_up.factors import REGISTRY, TOTAL_SCORE_COMPONENTS
+    for r in all_results:
+        code = r["code"]
+        feats = _extract_pit_features(code, pit_mode=True)
+        feats["sentiment"] = r["scores"].get("sentiment", 0)
+        feats["shortterm"] = r["scores"].get("shortterm", 0)
+        feats["technical"] = r["scores"].get("technical", 0)
+        feats["fundflow"] = r["scores"].get("fundflow", 0)
+        feats["fundamental"] = r["scores"].get("fundamental", 0)
+        # 记录 total_score 与三个组件因子（供 review/审计）
+        r["factors"] = {
+            name: round(REGISTRY[name](feats), 2)
+            for name in TOTAL_SCORE_COMPONENTS
+        }
+        r["total_score"] = total_score(feats)
 
-        if l2_available:
-            from scripts.l2_daemon_client import daemon_unsubscribe
-            daemon_unsubscribe(codes)
+    # 4. 推送
+    push_feishu(all_results)
 
-        # 每批出分后立即尝试推送(不等后续批次)
-        if batch_results:
-            batch_results.sort(key=lambda x: x["total"], reverse=True)
-            top3_str = ", ".join(f"{r['code']}({r['total']:.0f})" for r in batch_results[:3])
-            print(f"  批次Top3: {top3_str}")
-            push_feishu(batch_results)
-
-    # 全量排序 + 保存
-    all_results.sort(key=lambda x: x["total"], reverse=True)
+    # 5. 排序 + 落盘
+    all_results.sort(key=lambda x: x.get("total_score", 0), reverse=True)
     print("\n[排序结果]")
     for i, r in enumerate(all_results, 1):
         tag = " [共振]" if r.get("resonance", {}).get("is_resonance") else ""
-        print(f"  {i}. {r['code']} {r['name']} - 总分:{r['total']:.1f}{tag}")
+        print(f"  {i}. {r['code']} {r['name']} - total_score:{r.get('total_score', 0):.1f}{tag}")
 
     output_dir = DATA_DIR / "analysis"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -867,11 +1169,21 @@ def _run_pipeline(args):
         json.dump(all_results, f, ensure_ascii=False, indent=2)
     print(f"\n结果已保存: {output_file}")
 
-    # L2 订阅清理：已随批次循环结束时自动退订
+    from scripts.audit import summary, dump
+    print("\n" + summary())
+    logs_dir = DATA_DIR / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    audit_log = logs_dir / f"audit_{today_str}.log"
+    try:
+        dump(audit_log)
+        print(f"审计日志: {audit_log}")
+    except Exception as e:
+        print(f"审计日志写入失败（audit.dump 可能未实现）: {e}")
 
     print("\n" + "=" * 50)
     print("流程完成!")
     print("=" * 50)
+    reset()
 
 
 if __name__ == "__main__":

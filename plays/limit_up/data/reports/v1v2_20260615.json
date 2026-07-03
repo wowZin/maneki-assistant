@@ -1,0 +1,121 @@
+{
+  "date": "20260615",
+  "generated_at": "2026-06-15 16:12:57",
+  "v1": {
+    "pushed_count": 1,
+    "limit_up_count": 139,
+    "hit_count": 0,
+    "hit_rate": 0.0,
+    "hit_codes": [],
+    "miss_codes": [
+      "002636.SZ"
+    ]
+  },
+  "v2": {
+    "pushed_count": 5,
+    "limit_up_count": 139,
+    "hit_count": 2,
+    "hit_rate": 40.0,
+    "hit_codes": [
+      "603738.SH",
+      "002428.SZ"
+    ],
+    "miss_codes": [
+      "002579.SZ",
+      "002491.SZ",
+      "600498.SH"
+    ]
+  },
+  "comparison": {
+    "winner": "V2",
+    "hit_rate_diff": 40.0,
+    "v1_unique": 1,
+    "v2_unique": 5,
+    "overlap": 0
+  },
+  "signal_effectiveness": {
+    "concept_resonance": {
+      "label": "概念共振",
+      "recall": 1.0,
+      "precision": 0.157,
+      "f1": 0.271,
+      "triggered_total": 51,
+      "triggered_hit": 8,
+      "total_hit": 8
+    },
+    "whale_hunt": {
+      "label": "主力抢筹",
+      "recall": 0.0,
+      "precision": 0,
+      "f1": 0,
+      "triggered_total": 0,
+      "triggered_hit": 0,
+      "total_hit": 8
+    },
+    "volume_breakout": {
+      "label": "量价突破",
+      "recall": 1.0,
+      "precision": 0.174,
+      "f1": 0.296,
+      "triggered_total": 46,
+      "triggered_hit": 8,
+      "total_hit": 8
+    },
+    "auction_rush": {
+      "label": "竞价抢筹",
+      "recall": 0.0,
+      "precision": 0,
+      "f1": 0,
+      "triggered_total": 0,
+      "triggered_hit": 0,
+      "total_hit": 8
+    },
+    "morning_power": {
+      "label": "早盘强势",
+      "recall": 0.0,
+      "precision": 0,
+      "f1": 0,
+      "triggered_total": 0,
+      "triggered_hit": 0,
+      "total_hit": 8
+    },
+    "limit_dna": {
+      "label": "连板基因",
+      "recall": 0.75,
+      "precision": 0.113,
+      "f1": 0.197,
+      "triggered_total": 53,
+      "triggered_hit": 6,
+      "total_hit": 8
+    },
+    "smallcap": {
+      "label": "小盘弹性",
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1": 0,
+      "triggered_total": 2,
+      "triggered_hit": 0,
+      "total_hit": 8
+    }
+  },
+  "combination_matrix": {
+    "E:概念+资金/量价": {
+      "matched": 5,
+      "hit": 2,
+      "hit_rate": 40.0
+    }
+  },
+  "overlap": {
+    "both": [],
+    "v1_only": [
+      "002636.SZ"
+    ],
+    "v2_only": [
+      "002491.SZ",
+      "600498.SH",
+      "002579.SZ",
+      "603738.SH",
+      "002428.SZ"
+    ]
+  }
+}

@@ -1,0 +1,512 @@
+{
+  "optimized_at": "2026-06-15 16:38:27",
+  "total_records": 72,
+  "total_zt": 8,
+  "dates": [
+    "20260615"
+  ],
+  "baseline": {
+    "thresholds": {
+      "concept_resonance": 0.0,
+      "whale_hunt": 0.0,
+      "volume_breakout": 0.0,
+      "auction_rush": 0.0,
+      "morning_power": 0.0,
+      "limit_dna": 0.0,
+      "smallcap": 0.0
+    },
+    "combo_min_conf": 0.5,
+    "pushed": 0,
+    "hit": 0,
+    "total_zt": 8,
+    "recall": 0.0,
+    "precision": 0,
+    "f1": 0,
+    "coverage": 0.0,
+    "push_rate": 0.0
+  },
+  "pareto_frontier": [
+    {
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.3,
+        "smallcap": 0.3
+      },
+      "combo_min_conf": 0.5,
+      "pushed": 22,
+      "hit": 4,
+      "total_zt": 8,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "f1": 0.2667,
+      "coverage": 50.0,
+      "push_rate": 30.6
+    },
+    {
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.3,
+        "smallcap": 0.3
+      },
+      "combo_min_conf": 0.55,
+      "pushed": 22,
+      "hit": 4,
+      "total_zt": 8,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "f1": 0.2667,
+      "coverage": 50.0,
+      "push_rate": 30.6
+    },
+    {
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.3,
+        "smallcap": 0.3
+      },
+      "combo_min_conf": 0.6,
+      "pushed": 22,
+      "hit": 4,
+      "total_zt": 8,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "f1": 0.2667,
+      "coverage": 50.0,
+      "push_rate": 30.6
+    },
+    {
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.3,
+        "smallcap": 0.3
+      },
+      "combo_min_conf": 0.65,
+      "pushed": 22,
+      "hit": 4,
+      "total_zt": 8,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "f1": 0.2667,
+      "coverage": 50.0,
+      "push_rate": 30.6
+    },
+    {
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.3,
+        "smallcap": 0.5
+      },
+      "combo_min_conf": 0.5,
+      "pushed": 22,
+      "hit": 4,
+      "total_zt": 8,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "f1": 0.2667,
+      "coverage": 50.0,
+      "push_rate": 30.6
+    },
+    {
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.3,
+        "smallcap": 0.5
+      },
+      "combo_min_conf": 0.55,
+      "pushed": 22,
+      "hit": 4,
+      "total_zt": 8,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "f1": 0.2667,
+      "coverage": 50.0,
+      "push_rate": 30.6
+    },
+    {
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.3,
+        "smallcap": 0.5
+      },
+      "combo_min_conf": 0.6,
+      "pushed": 22,
+      "hit": 4,
+      "total_zt": 8,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "f1": 0.2667,
+      "coverage": 50.0,
+      "push_rate": 30.6
+    },
+    {
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.3,
+        "smallcap": 0.5
+      },
+      "combo_min_conf": 0.65,
+      "pushed": 22,
+      "hit": 4,
+      "total_zt": 8,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "f1": 0.2667,
+      "coverage": 50.0,
+      "push_rate": 30.6
+    },
+    {
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.5,
+        "smallcap": 0.3
+      },
+      "combo_min_conf": 0.5,
+      "pushed": 22,
+      "hit": 4,
+      "total_zt": 8,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "f1": 0.2667,
+      "coverage": 50.0,
+      "push_rate": 30.6
+    },
+    {
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.5,
+        "smallcap": 0.3
+      },
+      "combo_min_conf": 0.55,
+      "pushed": 22,
+      "hit": 4,
+      "total_zt": 8,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "f1": 0.2667,
+      "coverage": 50.0,
+      "push_rate": 30.6
+    },
+    {
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.5,
+        "smallcap": 0.3
+      },
+      "combo_min_conf": 0.6,
+      "pushed": 22,
+      "hit": 4,
+      "total_zt": 8,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "f1": 0.2667,
+      "coverage": 50.0,
+      "push_rate": 30.6
+    },
+    {
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.5,
+        "smallcap": 0.3
+      },
+      "combo_min_conf": 0.65,
+      "pushed": 22,
+      "hit": 4,
+      "total_zt": 8,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "f1": 0.2667,
+      "coverage": 50.0,
+      "push_rate": 30.6
+    },
+    {
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.5,
+        "smallcap": 0.5
+      },
+      "combo_min_conf": 0.5,
+      "pushed": 22,
+      "hit": 4,
+      "total_zt": 8,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "f1": 0.2667,
+      "coverage": 50.0,
+      "push_rate": 30.6
+    },
+    {
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.5,
+        "smallcap": 0.5
+      },
+      "combo_min_conf": 0.55,
+      "pushed": 22,
+      "hit": 4,
+      "total_zt": 8,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "f1": 0.2667,
+      "coverage": 50.0,
+      "push_rate": 30.6
+    },
+    {
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.5,
+        "smallcap": 0.5
+      },
+      "combo_min_conf": 0.6,
+      "pushed": 22,
+      "hit": 4,
+      "total_zt": 8,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "f1": 0.2667,
+      "coverage": 50.0,
+      "push_rate": 30.6
+    }
+  ],
+  "top_10": [
+    {
+      "rank": 1,
+      "f1": 0.2667,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "pushed": 22,
+      "hit": 4,
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.3,
+        "smallcap": 0.3
+      },
+      "combo_min_conf": 0.5
+    },
+    {
+      "rank": 2,
+      "f1": 0.2667,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "pushed": 22,
+      "hit": 4,
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.3,
+        "smallcap": 0.3
+      },
+      "combo_min_conf": 0.55
+    },
+    {
+      "rank": 3,
+      "f1": 0.2667,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "pushed": 22,
+      "hit": 4,
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.3,
+        "smallcap": 0.3
+      },
+      "combo_min_conf": 0.6
+    },
+    {
+      "rank": 4,
+      "f1": 0.2667,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "pushed": 22,
+      "hit": 4,
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.3,
+        "smallcap": 0.3
+      },
+      "combo_min_conf": 0.65
+    },
+    {
+      "rank": 5,
+      "f1": 0.2667,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "pushed": 22,
+      "hit": 4,
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.3,
+        "smallcap": 0.5
+      },
+      "combo_min_conf": 0.5
+    },
+    {
+      "rank": 6,
+      "f1": 0.2667,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "pushed": 22,
+      "hit": 4,
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.3,
+        "smallcap": 0.5
+      },
+      "combo_min_conf": 0.55
+    },
+    {
+      "rank": 7,
+      "f1": 0.2667,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "pushed": 22,
+      "hit": 4,
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.3,
+        "smallcap": 0.5
+      },
+      "combo_min_conf": 0.6
+    },
+    {
+      "rank": 8,
+      "f1": 0.2667,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "pushed": 22,
+      "hit": 4,
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.3,
+        "smallcap": 0.5
+      },
+      "combo_min_conf": 0.65
+    },
+    {
+      "rank": 9,
+      "f1": 0.2667,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "pushed": 22,
+      "hit": 4,
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.5,
+        "smallcap": 0.3
+      },
+      "combo_min_conf": 0.5
+    },
+    {
+      "rank": 10,
+      "f1": 0.2667,
+      "recall": 0.5,
+      "precision": 0.1818,
+      "pushed": 22,
+      "hit": 4,
+      "thresholds": {
+        "concept_resonance": 0.4,
+        "whale_hunt": 0.3,
+        "volume_breakout": 0.15,
+        "auction_rush": 0.3,
+        "morning_power": 0.3,
+        "limit_dna": 0.5,
+        "smallcap": 0.3
+      },
+      "combo_min_conf": 0.55
+    }
+  ]
+}

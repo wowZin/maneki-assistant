@@ -1,0 +1,798 @@
+{
+  "generated_at": "2026-06-15 15:38:55",
+  "data_summary": {
+    "total_records": 896,
+    "hit_count": 97,
+    "miss_count": 799,
+    "hit_rate": 10.8,
+    "date_range": "20260611 ~ 20260615",
+    "trading_days": 3
+  },
+  "feature_importance": [
+    {
+      "feature": "pct_chg_raw",
+      "label": "当日涨幅(%)",
+      "effect_size": 3.31,
+      "separation": "强",
+      "hit_mean": 10.0,
+      "miss_mean": 3.4,
+      "diff": 6.6
+    },
+    {
+      "feature": "score_sentiment",
+      "label": "评分-情绪面",
+      "effect_size": 0.628,
+      "separation": "强",
+      "hit_mean": 14.85,
+      "miss_mean": 9.11,
+      "diff": 5.74
+    },
+    {
+      "feature": "volume_ratio",
+      "label": "量比",
+      "effect_size": 0.441,
+      "separation": "中",
+      "hit_mean": 1.83,
+      "miss_mean": 1.44,
+      "diff": 0.39
+    },
+    {
+      "feature": "score_fundflow",
+      "label": "评分-资金面",
+      "effect_size": 0.351,
+      "separation": "中",
+      "hit_mean": 21.37,
+      "miss_mean": 15.92,
+      "diff": 5.45
+    },
+    {
+      "feature": "net_mf_amount",
+      "label": "主力净流入(元)",
+      "effect_size": -0.331,
+      "separation": "中",
+      "hit_mean": -65321508.25,
+      "miss_mean": 29290699.45,
+      "diff": -94612207.7
+    },
+    {
+      "feature": "turnover_rate",
+      "label": "换手率(%)",
+      "effect_size": 0.316,
+      "separation": "中",
+      "hit_mean": 7.86,
+      "miss_mean": 6.06,
+      "diff": 1.8
+    },
+    {
+      "feature": "total",
+      "label": "综合总分",
+      "effect_size": 0.28,
+      "separation": "中",
+      "hit_mean": 24.78,
+      "miss_mean": 21.98,
+      "diff": 2.8
+    },
+    {
+      "feature": "score_fundamental",
+      "label": "评分-基本面",
+      "effect_size": -0.264,
+      "separation": "中",
+      "hit_mean": 32.47,
+      "miss_mean": 38.94,
+      "diff": -6.47
+    },
+    {
+      "feature": "score_shortterm",
+      "label": "评分-短线博弈",
+      "effect_size": 0.183,
+      "separation": "弱",
+      "hit_mean": 15.56,
+      "miss_mean": 14.07,
+      "diff": 1.49
+    },
+    {
+      "feature": "amount",
+      "label": "成交额(元)",
+      "effect_size": -0.167,
+      "separation": "弱",
+      "hit_mean": 12943676019.02,
+      "miss_mean": 17096862340.21,
+      "diff": -4153186321.19
+    },
+    {
+      "feature": "score_technical",
+      "label": "评分-技术面",
+      "effect_size": -0.098,
+      "separation": "弱",
+      "hit_mean": 8.49,
+      "miss_mean": 9.88,
+      "diff": -1.39
+    },
+    {
+      "feature": "pe",
+      "label": "市盈率",
+      "effect_size": 0.093,
+      "separation": "弱",
+      "hit_mean": 173.7,
+      "miss_mean": 139.46,
+      "diff": 34.24
+    },
+    {
+      "feature": "circ_mv",
+      "label": "流通市值(元)",
+      "effect_size": -0.086,
+      "separation": "弱",
+      "hit_mean": 18991806470.22,
+      "miss_mean": 22670761665.22,
+      "diff": -3678955195.0
+    },
+    {
+      "feature": "pb",
+      "label": "市净率",
+      "effect_size": -0.038,
+      "separation": "弱",
+      "hit_mean": 5.53,
+      "miss_mean": 5.95,
+      "diff": -0.42
+    },
+    {
+      "feature": "net_mf_amount_lg",
+      "label": "大单净流入(元)",
+      "effect_size": 0.0,
+      "separation": "弱",
+      "hit_mean": 0,
+      "miss_mean": 0,
+      "diff": 0
+    }
+  ],
+  "characteristic_comparison": {
+    "circ_mv": {
+      "label": "流通市值(元)",
+      "hit": {
+        "count": 97,
+        "label": "HIT",
+        "mean": 18991806470.22,
+        "median": 9215017603.0,
+        "q1": 4451734073.0,
+        "q3": 19076224138.0,
+        "p10": 2927693445.6,
+        "p90": 41894895552.8,
+        "min": 1332893856.0,
+        "max": 333676693983.0,
+        "std": 36230373593.44
+      },
+      "miss": {
+        "count": 727,
+        "label": "MISS",
+        "mean": 22670761665.22,
+        "median": 9386456311.0,
+        "q1": 4567921545.5,
+        "q3": 21552818490.5,
+        "p10": 2834374688.2,
+        "p90": 49415976587.8,
+        "min": 860501512.0,
+        "max": 745690609300.0,
+        "std": 48425894710.08
+      },
+      "effect_size": -0.086,
+      "separation": "弱"
+    },
+    "turnover_rate": {
+      "label": "换手率(%)",
+      "hit": {
+        "count": 97,
+        "label": "HIT",
+        "mean": 7.86,
+        "median": 6.17,
+        "q1": 3.7,
+        "q3": 10.05,
+        "p10": 2.38,
+        "p90": 16.32,
+        "min": 0.63,
+        "max": 36.94,
+        "std": 6.16
+      },
+      "miss": {
+        "count": 727,
+        "label": "MISS",
+        "mean": 6.06,
+        "median": 4.31,
+        "q1": 2.68,
+        "q3": 7.75,
+        "p10": 1.76,
+        "p90": 12.69,
+        "min": 0.39,
+        "max": 44.14,
+        "std": 5.18
+      },
+      "effect_size": 0.316,
+      "separation": "中"
+    },
+    "volume_ratio": {
+      "label": "量比",
+      "hit": {
+        "count": 97,
+        "label": "HIT",
+        "mean": 1.83,
+        "median": 1.59,
+        "q1": 1.09,
+        "q3": 2.21,
+        "p10": 0.86,
+        "p90": 2.91,
+        "min": 0.4,
+        "max": 6.11,
+        "std": 1.05
+      },
+      "miss": {
+        "count": 727,
+        "label": "MISS",
+        "mean": 1.44,
+        "median": 1.28,
+        "q1": 1.01,
+        "q3": 1.69,
+        "p10": 0.81,
+        "p90": 2.18,
+        "min": 0.47,
+        "max": 9.53,
+        "std": 0.68
+      },
+      "effect_size": 0.441,
+      "separation": "中"
+    },
+    "pct_chg_raw": {
+      "label": "当日涨幅(%)",
+      "hit": {
+        "count": 97,
+        "label": "HIT",
+        "mean": 10.0,
+        "median": 10.0,
+        "q1": 9.99,
+        "q3": 10.01,
+        "p10": 9.97,
+        "p90": 10.03,
+        "min": 9.91,
+        "max": 10.13,
+        "std": 0.03
+      },
+      "miss": {
+        "count": 797,
+        "label": "MISS",
+        "mean": 3.4,
+        "median": 3.25,
+        "q1": 1.72,
+        "q3": 5.31,
+        "p10": -0.06,
+        "p90": 7.01,
+        "min": -8.46,
+        "max": 10.16,
+        "std": 2.82
+      },
+      "effect_size": 3.31,
+      "separation": "强"
+    },
+    "amount": {
+      "label": "成交额(元)",
+      "hit": {
+        "count": 97,
+        "label": "HIT",
+        "mean": 12943676019.02,
+        "median": 5723077980.0,
+        "q1": 2408463330.0,
+        "q3": 13813828978.5,
+        "p10": 1172552853.6,
+        "p90": 31398006076.08,
+        "min": 329657754.5,
+        "max": 112816213601.0,
+        "std": 19536326229.98
+      },
+      "miss": {
+        "count": 799,
+        "label": "MISS",
+        "mean": 17096862340.21,
+        "median": 5136514510.0,
+        "q1": 1856724291.2,
+        "q3": 17502077319.05,
+        "p10": 912146762.0,
+        "p90": 49529809122.0,
+        "min": 261334010.0,
+        "max": 239349891590.0,
+        "std": 29282775817.14
+      },
+      "effect_size": -0.167,
+      "separation": "弱"
+    },
+    "net_mf_amount": {
+      "label": "主力净流入(元)",
+      "hit": {
+        "count": 97,
+        "label": "HIT",
+        "mean": -65321508.25,
+        "median": -19051300.0,
+        "q1": -104672300.0,
+        "q3": 11913200.0,
+        "p10": -269849780.0,
+        "p90": 92281220.0,
+        "min": -1829926400.0,
+        "max": 1615118300.0,
+        "std": 369678462.31
+      },
+      "miss": {
+        "count": 727,
+        "label": "MISS",
+        "mean": 29290699.45,
+        "median": 10248300.0,
+        "q1": -6410050.0,
+        "q3": 43657600.0,
+        "p10": -48773500.0,
+        "p90": 122280320.0,
+        "min": -940159400.0,
+        "max": 1821403800.0,
+        "std": 162089085.51
+      },
+      "effect_size": -0.331,
+      "separation": "中"
+    },
+    "net_mf_amount_lg": {
+      "label": "大单净流入(元)",
+      "hit": {
+        "count": 0,
+        "label": "HIT"
+      },
+      "miss": {
+        "count": 0,
+        "label": "MISS"
+      },
+      "effect_size": 0.0,
+      "separation": "弱"
+    },
+    "pe": {
+      "label": "市盈率",
+      "hit": {
+        "count": 78,
+        "label": "HIT",
+        "mean": 173.7,
+        "median": 58.89,
+        "q1": 32.38,
+        "q3": 122.59,
+        "p10": 19.89,
+        "p90": 209.63,
+        "min": 12.73,
+        "max": 2860.68,
+        "std": 430.05
+      },
+      "miss": {
+        "count": 556,
+        "label": "MISS",
+        "mean": 139.46,
+        "median": 54.32,
+        "q1": 28.12,
+        "q3": 118.7,
+        "p10": 18.68,
+        "p90": 250.19,
+        "min": 6.57,
+        "max": 2991.01,
+        "std": 298.04
+      },
+      "effect_size": 0.093,
+      "separation": "弱"
+    },
+    "pb": {
+      "label": "市净率",
+      "hit": {
+        "count": 97,
+        "label": "HIT",
+        "mean": 5.53,
+        "median": 3.7,
+        "q1": 2.3,
+        "q3": 6.07,
+        "p10": 1.75,
+        "p90": 11.16,
+        "min": 0.61,
+        "max": 41.57,
+        "std": 6.18
+      },
+      "miss": {
+        "count": 726,
+        "label": "MISS",
+        "mean": 5.95,
+        "median": 3.39,
+        "q1": 2.01,
+        "q3": 6.13,
+        "p10": 1.34,
+        "p90": 11.5,
+        "min": 0.5,
+        "max": 334.63,
+        "std": 14.29
+      },
+      "effect_size": -0.038,
+      "separation": "弱"
+    }
+  },
+  "dimension_score_comparison": {
+    "score_fundamental": {
+      "label": "评分-基本面",
+      "hit": {
+        "count": 97,
+        "label": "HIT",
+        "mean": 32.47,
+        "median": 39.0,
+        "q1": 0.0,
+        "q3": 52.5,
+        "p10": 0.0,
+        "p90": 63.4,
+        "min": 0.0,
+        "max": 69.0,
+        "std": 25.17
+      },
+      "miss": {
+        "count": 799,
+        "label": "MISS",
+        "mean": 38.94,
+        "median": 46.0,
+        "q1": 30.0,
+        "q3": 57.0,
+        "p10": 0.0,
+        "p90": 64.0,
+        "min": 0.0,
+        "max": 75.5,
+        "std": 23.81
+      },
+      "effect_size": -0.264,
+      "separation": "中"
+    },
+    "score_technical": {
+      "label": "评分-技术面",
+      "hit": {
+        "count": 97,
+        "label": "HIT",
+        "mean": 8.49,
+        "median": 0.0,
+        "q1": 0.0,
+        "q3": 11.0,
+        "p10": 0.0,
+        "p90": 30.0,
+        "min": 0.0,
+        "max": 50.0,
+        "std": 13.81
+      },
+      "miss": {
+        "count": 799,
+        "label": "MISS",
+        "mean": 9.88,
+        "median": 0.0,
+        "q1": 0.0,
+        "q3": 16.0,
+        "p10": 0.0,
+        "p90": 35.0,
+        "min": 0.0,
+        "max": 59.0,
+        "std": 14.63
+      },
+      "effect_size": -0.098,
+      "separation": "弱"
+    },
+    "score_fundflow": {
+      "label": "评分-资金面",
+      "hit": {
+        "count": 97,
+        "label": "HIT",
+        "mean": 21.37,
+        "median": 21.0,
+        "q1": 7.0,
+        "q3": 33.0,
+        "p10": 0.0,
+        "p90": 42.4,
+        "min": 0.0,
+        "max": 65.0,
+        "std": 16.09
+      },
+      "miss": {
+        "count": 799,
+        "label": "MISS",
+        "mean": 15.92,
+        "median": 13.0,
+        "q1": 3.0,
+        "q3": 27.0,
+        "p10": 0.0,
+        "p90": 38.0,
+        "min": 0.0,
+        "max": 69.0,
+        "std": 14.9
+      },
+      "effect_size": 0.351,
+      "separation": "中"
+    },
+    "score_sentiment": {
+      "label": "评分-情绪面",
+      "hit": {
+        "count": 97,
+        "label": "HIT",
+        "mean": 14.85,
+        "median": 14.0,
+        "q1": 11.0,
+        "q3": 20.0,
+        "p10": 6.0,
+        "p90": 24.0,
+        "min": 0.0,
+        "max": 30.0,
+        "std": 7.23
+      },
+      "miss": {
+        "count": 799,
+        "label": "MISS",
+        "mean": 9.11,
+        "median": 10.0,
+        "q1": 0.0,
+        "q3": 17.0,
+        "p10": 0.0,
+        "p90": 22.0,
+        "min": 0.0,
+        "max": 64.0,
+        "std": 10.72
+      },
+      "effect_size": 0.628,
+      "separation": "强"
+    },
+    "score_shortterm": {
+      "label": "评分-短线博弈",
+      "hit": {
+        "count": 97,
+        "label": "HIT",
+        "mean": 15.56,
+        "median": 16.0,
+        "q1": 9.0,
+        "q3": 20.5,
+        "p10": 6.8,
+        "p90": 23.32,
+        "min": 2.2,
+        "max": 36.0,
+        "std": 7.33
+      },
+      "miss": {
+        "count": 799,
+        "label": "MISS",
+        "mean": 14.07,
+        "median": 12.0,
+        "q1": 6.8,
+        "q3": 20.0,
+        "p10": 3.8,
+        "p90": 27.26,
+        "min": 1.5,
+        "max": 40.2,
+        "std": 8.86
+      },
+      "effect_size": 0.183,
+      "separation": "弱"
+    },
+    "total": {
+      "label": "综合总分",
+      "hit": {
+        "count": 97,
+        "label": "HIT",
+        "mean": 24.78,
+        "median": 24.9,
+        "q1": 18.27,
+        "q3": 32.0,
+        "p10": 12.09,
+        "p90": 35.54,
+        "min": 4.22,
+        "max": 50.07,
+        "std": 9.41
+      },
+      "miss": {
+        "count": 799,
+        "label": "MISS",
+        "mean": 21.98,
+        "median": 20.69,
+        "q1": 14.1,
+        "q3": 29.0,
+        "p10": 9.39,
+        "p90": 36.78,
+        "min": 0.92,
+        "max": 54.61,
+        "std": 10.58
+      },
+      "effect_size": 0.28,
+      "separation": "中"
+    }
+  },
+  "patterns": {
+    "circ_mv_distribution": {
+      "微型(<20亿)": {
+        "hit_count": 4,
+        "hit_pct": 4.1,
+        "miss_count": 104,
+        "lift": 0.3
+      },
+      "小型(20-50亿)": {
+        "hit_count": 27,
+        "hit_pct": 27.8,
+        "miss_count": 171,
+        "lift": 1.3
+      },
+      "中型(50-100亿)": {
+        "hit_count": 20,
+        "hit_pct": 20.6,
+        "miss_count": 176,
+        "lift": 0.9
+      },
+      "大型(100-200亿)": {
+        "hit_count": 23,
+        "hit_pct": 23.7,
+        "miss_count": 155,
+        "lift": 1.2
+      },
+      "超大型(>200亿)": {
+        "hit_count": 23,
+        "hit_pct": 23.7,
+        "miss_count": 193,
+        "lift": 1.0
+      }
+    },
+    "turnover_distribution": {
+      "冷清(<2%)": {
+        "hit_count": 7,
+        "hit_pct": 7.2
+      },
+      "温和(2-5%)": {
+        "hit_count": 30,
+        "hit_pct": 30.9
+      },
+      "活跃(5-15%)": {
+        "hit_count": 47,
+        "hit_pct": 48.5
+      },
+      "高热(15-25%)": {
+        "hit_count": 11,
+        "hit_pct": 11.3
+      },
+      "过热(>25%)": {
+        "hit_count": 2,
+        "hit_pct": 2.1
+      }
+    },
+    "pct_chg_distribution": {
+      "微涨(0-2%)": {
+        "hit_count": 0,
+        "hit_pct": 0.0
+      },
+      "小涨(2-5%)": {
+        "hit_count": 0,
+        "hit_pct": 0.0
+      },
+      "中涨(5-7%)": {
+        "hit_count": 0,
+        "hit_pct": 0.0
+      },
+      "大涨(7-9.5%)": {
+        "hit_count": 0,
+        "hit_pct": 0.0
+      }
+    },
+    "resonance_50": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "resonance_60": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "resonance_70": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "resonance_75": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "resonance_80": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "fundamental_ge60": {
+      "hit_count": 17,
+      "hit_pct": 17.5
+    },
+    "fundamental_ge70": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "fundamental_ge75": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "fundamental_ge80": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "technical_ge60": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "technical_ge70": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "technical_ge75": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "technical_ge80": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "fundflow_ge60": {
+      "hit_count": 2,
+      "hit_pct": 2.1
+    },
+    "fundflow_ge70": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "fundflow_ge75": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "fundflow_ge80": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "sentiment_ge60": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "sentiment_ge70": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "sentiment_ge75": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "sentiment_ge80": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "shortterm_ge60": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "shortterm_ge70": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "shortterm_ge75": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "shortterm_ge80": {
+      "hit_count": 0,
+      "hit_pct": 0.0
+    },
+    "volume_ratio_distribution": {
+      "缩量(<1)": {
+        "hit_count": 19,
+        "hit_pct": 19.6
+      },
+      "正常(1-2)": {
+        "hit_count": 45,
+        "hit_pct": 46.4
+      },
+      "放量(2-5)": {
+        "hit_count": 31,
+        "hit_pct": 32.0
+      },
+      "巨量(>5)": {
+        "hit_count": 2,
+        "hit_pct": 2.1
+      }
+    }
+  },
+  "key_findings": [
+    "区分力最强的3个特征: 当日涨幅(%)(效应量3.31), 评分-情绪面(效应量0.628), 量比(效应量0.441)",
+    "涨停股中 91% 换手率在 2-25% 区间，适度活跃的换手是涨停的必要条件",
+    "资金面评分涨停组高于非涨停组 (效应量 0.35)",
+    "情绪面评分涨停组高于非涨停组 (效应量 0.63)",
+    "仅 0% 的涨停股触发维度共振(>=3维>=75)，说明单一高分维度比多维度均衡更重要"
+  ]
+}

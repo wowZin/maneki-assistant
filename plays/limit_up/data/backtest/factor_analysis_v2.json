@@ -1,0 +1,190 @@
+{
+  "n": 1800,
+  "hits": 101,
+  "factors": [
+    {
+      "factor": "max_step",
+      "cohens_d": 0.4481,
+      "correlation": 0.1242,
+      "hit_mean": 0.78,
+      "miss_mean": 0.3,
+      "missing": 0.866
+    },
+    {
+      "factor": "vol_ratio",
+      "cohens_d": -0.3456,
+      "correlation": -0.0738,
+      "hit_mean": 1.53,
+      "miss_mean": 1.79,
+      "missing": 0.0
+    },
+    {
+      "factor": "prev_turnover",
+      "cohens_d": 0.338,
+      "correlation": 0.0756,
+      "hit_mean": 7.36,
+      "miss_mean": 5.67,
+      "missing": 0.002
+    },
+    {
+      "factor": "mf_pct",
+      "cohens_d": -0.2243,
+      "correlation": -0.05,
+      "hit_mean": 3713.02,
+      "miss_mean": 5751.03,
+      "missing": 0.107
+    },
+    {
+      "factor": "cmv_yi",
+      "cohens_d": -0.2126,
+      "correlation": -0.0445,
+      "hit_mean": 17.43,
+      "miss_mean": 21.6,
+      "missing": 0.0
+    },
+    {
+      "factor": "cmv_log",
+      "cohens_d": -0.2121,
+      "correlation": -0.0471,
+      "hit_mean": 5.12,
+      "miss_mean": 5.19,
+      "missing": 0.0
+    },
+    {
+      "factor": "positive_5d",
+      "cohens_d": 0.2026,
+      "correlation": 0.0474,
+      "hit_mean": 3.13,
+      "miss_mean": 2.92,
+      "missing": 0.0
+    },
+    {
+      "factor": "vol_accel",
+      "cohens_d": -0.1985,
+      "correlation": -0.0362,
+      "hit_mean": 1.52,
+      "miss_mean": 1.8,
+      "missing": 0.0
+    },
+    {
+      "factor": "pct_5d",
+      "cohens_d": 0.1867,
+      "correlation": 0.0455,
+      "hit_mean": 10.65,
+      "miss_mean": 8.82,
+      "missing": 0.001
+    },
+    {
+      "factor": "close_pos",
+      "cohens_d": -0.1561,
+      "correlation": -0.0364,
+      "hit_mean": 0.77,
+      "miss_mean": 0.79,
+      "missing": 0.001
+    },
+    {
+      "factor": "prev_vol_ratio",
+      "cohens_d": -0.1162,
+      "correlation": -0.0235,
+      "hit_mean": 1.1,
+      "miss_mean": 1.17,
+      "missing": 0.002
+    },
+    {
+      "factor": "amplitude",
+      "cohens_d": 0.1112,
+      "correlation": 0.026,
+      "hit_mean": 10.09,
+      "miss_mean": 9.8,
+      "missing": 0.0
+    },
+    {
+      "factor": "lower_ratio",
+      "cohens_d": -0.1087,
+      "correlation": -0.0184,
+      "hit_mean": 0.25,
+      "miss_mean": 0.4,
+      "missing": 0.129
+    },
+    {
+      "factor": "mf_buy_elg",
+      "cohens_d": 0.0908,
+      "correlation": 0.0188,
+      "hit_mean": 42908.42,
+      "miss_mean": 34786.48,
+      "missing": 0.123
+    },
+    {
+      "factor": "mf_sell_elg",
+      "cohens_d": 0.0586,
+      "correlation": 0.0119,
+      "hit_mean": 36345.32,
+      "miss_mean": 31468.13,
+      "missing": 0.128
+    },
+    {
+      "factor": "upper_ratio",
+      "cohens_d": -0.0554,
+      "correlation": -0.0098,
+      "hit_mean": 0.44,
+      "miss_mean": 0.5,
+      "missing": 0.03
+    },
+    {
+      "factor": "prev_pct",
+      "cohens_d": 0.0553,
+      "correlation": 0.0129,
+      "hit_mean": 1.12,
+      "miss_mean": 0.86,
+      "missing": 0.008
+    },
+    {
+      "factor": "body_ratio",
+      "cohens_d": -0.0551,
+      "correlation": -0.0122,
+      "hit_mean": 0.64,
+      "miss_mean": 0.65,
+      "missing": 0.0
+    },
+    {
+      "factor": "pct_chg",
+      "cohens_d": 0.054,
+      "correlation": 0.0126,
+      "hit_mean": 6.62,
+      "miss_mean": 6.55,
+      "missing": 0.0
+    },
+    {
+      "factor": "turnover",
+      "cohens_d": 0.0412,
+      "correlation": 0.0094,
+      "hit_mean": 10.1,
+      "miss_mean": 9.77,
+      "missing": 0.0
+    },
+    {
+      "factor": "was_limit",
+      "cohens_d": 0.041,
+      "correlation": 0.0097,
+      "hit_mean": 0.1,
+      "miss_mean": 0.09,
+      "missing": 0.912
+    },
+    {
+      "factor": "mf_net",
+      "cohens_d": -0.0318,
+      "correlation": -0.007,
+      "hit_mean": 9866.22,
+      "miss_mean": 10937.61,
+      "missing": 0.107
+    },
+    {
+      "factor": "mf_accel",
+      "cohens_d": -0.0316,
+      "correlation": -0.0064,
+      "hit_mean": 11169.32,
+      "miss_mean": 12326.16,
+      "missing": 0.107
+    }
+  ]
+}

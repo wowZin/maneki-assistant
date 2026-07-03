@@ -1,4 +1,8 @@
-# 权重优化引擎 V2 — 排序质量优化
+# 权重优化引擎
+
+> **2026-07-02 重构后**：权重优化统一走 `plays/limit_up/backtest/optimize.py`，见 [`backtest.md`](./backtest.md#optimizepy)。以下内容为原 V2 优化器设计文档，逻辑基本延续，实现文件已合并到三件套。
+
+
 
 ## 为什么重写
 

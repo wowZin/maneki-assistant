@@ -1,0 +1,26 @@
+INFO:     Started server process [184177]
+INFO:     Waiting for application startup.
+2026-06-30 14:54:03 [INFO] feishu_bot: 飞书Bot回调服务启动: inbox writer mode
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+INFO:     127.0.0.1:39434 - "GET / HTTP/1.0" 200 OK
+INFO:     Started server process [9155]
+INFO:     Waiting for application startup.
+2026-07-01 10:40:53 [INFO] feishu_bot: 飞书Bot回调服务启动: inbox writer mode
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+INFO:     127.0.0.1:53740 - "GET / HTTP/1.1" 200 OK
+INFO:     123.58.10.239:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+INFO:     123.58.10.239:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43528 - "GET / HTTP/1.1" 200 OK
+INFO:     123.58.10.238:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+INFO:     123.58.10.238:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+INFO:     101.126.59.9:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+INFO:     101.126.59.9:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+2026-07-01 13:42:56 [INFO] feishu_bot: inbox: chat=oc_1e1d48ce58abd8f6a88bdf0ac3848e2e msg=om_x100b6b7e text=@_user_1 盯一下康强电子
+INFO:     101.126.59.7:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+2026-07-01 13:42:56 [INFO] feishu_bot: dedup: skip duplicate msg om_x100b6b7e
+INFO:     101.126.59.9:0 - "POST /feishu/callback HTTP/1.1" 200 OK
+2026-07-01 13:42:57 [INFO] httpx: HTTP Request: POST https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal "HTTP/1.1 200 OK"
+2026-07-01 13:42:57 [INFO] httpx: HTTP Request: POST https://open.feishu.cn/open-apis/im/v1/messages/om_x100b6b7ec33b04a4b2273500b4fc64d/reply "HTTP/1.1 200 OK"
+INFO:     123.58.10.238:0 - "POST /feishu/callback HTTP/1.1" 200 OK

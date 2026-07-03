@@ -58,12 +58,10 @@ def score_xxx(code: str) -> tuple[int | float, str]:
 
 ### 3. 数据源约束
 
-- 实时数据：优先 **requests+代理 东方财富API**（push2.eastmoney.com）
+- 实时数据：优先 **同花顺 Cookie 直连**（ths_client.py）
 - 非实时数据：优先 **tushare** 获取
-- 代理模块统一使用 `scripts/proxy_utils.py`
 - tushare sdk 统一使用 `scripts/tu_share.py`
-- Level2 数据统一使用 `scripts/l2_client.py`（SDK 初始化 + 订阅管理 + 数据缓存，具体用到哪些数据由各策略自行决定）
-- 代理IP配置：`.env` 中 `PROXY_ENABLED=true`
+- 代理IP配置已废弃（全量迁移至同花顺直连）
 
 ### 4. Pipeline 主流程规范
 

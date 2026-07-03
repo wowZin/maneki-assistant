@@ -1,0 +1,55 @@
+[
+  {
+    "code": "002156.SZ",
+    "name": "通富微电",
+    "pct_chg": 5.17,
+    "signals": {
+      "concept_resonance": {
+        "triggered": true,
+        "confidence": 0.9,
+        "detail": "存储芯片 6只涨停 最强概念"
+      },
+      "whale_hunt": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      },
+      "volume_breakout": {
+        "triggered": true,
+        "confidence": 0.5,
+        "detail": "放量启动: 量比1.5, 涨幅5.2%"
+      },
+      "auction_rush": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "竞价数据不可用"
+      },
+      "morning_power": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "午后平淡: 涨幅5.2%"
+      },
+      "limit_dna": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无近期涨停记录"
+      },
+      "smallcap": {
+        "triggered": false,
+        "confidence": 0.0,
+        "detail": "无市值数据"
+      }
+    },
+    "triggered_count": 2,
+    "triggered_signals": [
+      "concept_resonance",
+      "volume_breakout"
+    ],
+    "push_decision": {
+      "should_push": true,
+      "combination": "E:概念+资金/量价",
+      "confidence": 0.72
+    },
+    "signal_summary": "[FIRE]概念共振 [CHART]量价突破"
+  }
+]

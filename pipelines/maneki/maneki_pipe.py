@@ -314,9 +314,10 @@ def build_system_prompt(inbox_dir: str) -> str:
 
 ## 你的能力
 
-1. **分析股票** — 运行 `python plays/limit_up/pipeline.py --code CODE` 获取五维度评分
-2. **盯盘管理** — 运行 `python plays/watchdog/watchdog.py` 管理盯盘
+1. **分析股票** — 运行 `python plays/limit_up/pipeline.py` 获取五维度评分(基本面/技术面/资金面/情绪面/短线博弈)
+2. **盯盘管理** — 运行 `python plays/watchdog/watchdog.py` 管理盯盘(使用jvQuant实时行情)
 3. **知识查询** — 读取 `wiki/` 目录搜索A股概念和术语
+4. **回测优化** — 运行 `python plays/limit_up/backtest_v2.py` 做因子回测分析
 
 ## 回应方式
 
@@ -476,13 +477,22 @@ async def main():
                                             getattr(b, 'type', None) == "tool_use"
                                             for b in (message.content or [])
                                         )
-                                        texts = [
-                                            getattr(b, 'text', '')[:60]
+                                        texts_full = [
+                                            getattr(b, 'text', '')
                                             for b in (message.content or [])
                                             if hasattr(b, 'text')
                                         ]
+                                        texts_trunc = [t[:60] for t in texts_full]
                                         log.info("turn%d: AssistantMessage tools=%s text=%s",
-                                                 turn_count, has_tool, texts[0] if texts else "")
+                                                 turn_count, has_tool, texts_trunc[0] if texts_trunc else "")
+                                        # Claude 未使用工具时，主动将文本回复发送到飞书
+                                        if not has_tool and texts_full:
+                                            full_text = texts_full[0]
+                                            try:
+                                                await feishu.reply_text(message_id, full_text)
+                                                log.info("  → forwarded to feishu (len=%d)", len(full_text))
+                                            except Exception as e:
+                                                log.error("  → forward feishu failed: %s", e)
                                     elif isinstance(message, ResultMessage):
                                         if not message.is_error:
                                             final_session_id = message.session_id

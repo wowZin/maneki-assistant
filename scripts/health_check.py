@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """数据源健康巡检系统
 ================================
-监控 Tushare / 东财缓存 / Level2 TCP / 代理 四大数据源。
+监控 Tushare / 同花顺 / jvQuant WebSocket 三大数据源。
 支持: 数据异常检测、飞书告警、熔断阻断、状态持久化。
 
 用法:
@@ -358,12 +358,44 @@ def check_tushare_apis(full: bool = False) -> list[HealthStatus]:
 
 
 # ═══════════════════════════════════════════════════════════
-# 2. 东财实时缓存巡检
+# 2. 实时行情缓存巡检
 # ═══════════════════════════════════════════════════════════
 
 
-def check_eastmoney_caches() -> list[HealthStatus]:
-    """检查东财实时缓存的数据完整性和异常值"""
+
+def check_ths_connectivity() -> list[HealthStatus]:
+    """检查同花顺 Cookie 有效性和 API 可达性"""
+    results = []
+    t0 = time.time()
+    try:
+        from scripts.ths_client import get_ths_client
+        ths = get_ths_client()
+        if not ths.has_cookie:
+            results.append(HealthStatus(
+                source="ths:cookie", severity=Severity.CRITICAL,
+                message="同花顺 Cookie 未配置 (THS_COOKIE)",
+                latency_ms=(time.time()-t0)*1000))
+            return results
+        items = ths.get_hot_list()
+        if items and len(items) > 0:
+            results.append(HealthStatus(
+                source="ths:api", severity=Severity.OK,
+                message=f"同花顺正常, 热门榜{len(items)}只",
+                latency_ms=(time.time()-t0)*1000,
+                detail={"hot_list_count": len(items)}))
+        else:
+            results.append(HealthStatus(
+                source="ths:api", severity=Severity.CRITICAL,
+                message="同花顺 Cookie 可能已过期(热门榜返回空)",
+                latency_ms=(time.time()-t0)*1000))
+    except Exception as e:
+        results.append(HealthStatus(
+            source="ths:api", severity=Severity.CRITICAL,
+            message=f"同花顺检查异常: {e}", latency_ms=(time.time()-t0)*1000))
+    return results
+
+def check_realtime_caches() -> list[HealthStatus]:
+    """检查实时缓存的数据完整性和异常值"""
     results = []
     t0 = time.time()
 
@@ -377,7 +409,7 @@ def check_eastmoney_caches() -> list[HealthStatus]:
         if _is_market_hours():
             if not pct_cache or pct_ts != datetime.now().strftime("%Y%m%d"):
                 results.append(HealthStatus(
-                    source="eastmoney:pct_cache",
+                    source="realtime:pct_cache",
                     severity=Severity.OK,
                     message="缓存为空(跨进程巡检,跳过)",
                     latency_ms=(time.time() - t0) * 1000,
@@ -395,28 +427,28 @@ def check_eastmoney_caches() -> list[HealthStatus]:
                         anomalies.append(f"{code}={pct}")
                 if len(anomalies) > len(pct_cache) * 0.1:
                     results.append(HealthStatus(
-                        source="eastmoney:pct_cache",
+                        source="realtime:pct_cache",
                         severity=Severity.CRITICAL,
                         message=f"涨跌幅异常值过多: {len(anomalies)}/{len(pct_cache)}",
                         detail={"anomaly_sample": anomalies[:5]},
                     ))
                 elif anomalies:
                     results.append(HealthStatus(
-                        source="eastmoney:pct_cache",
+                        source="realtime:pct_cache",
                         severity=Severity.WARNING,
                         message=f"涨跌幅异常值: {len(anomalies)}个",
                         detail={"anomaly_sample": anomalies[:5]},
                     ))
                 else:
                     results.append(HealthStatus(
-                        source="eastmoney:pct_cache",
+                        source="realtime:pct_cache",
                         severity=Severity.OK,
                         message=f"正常 ({len(pct_cache)}只)",
                         latency_ms=(time.time() - t0) * 1000,
                     ))
         else:
             results.append(HealthStatus(
-                source="eastmoney:pct_cache",
+                source="realtime:pct_cache",
                 severity=Severity.OK,
                 message="非交易时段,跳过",
                 latency_ms=(time.time() - t0) * 1000,
@@ -429,7 +461,7 @@ def check_eastmoney_caches() -> list[HealthStatus]:
         if _is_market_hours():
             if not fund_cache or fund_ts != datetime.now().strftime("%Y%m%d"):
                 results.append(HealthStatus(
-                    source="eastmoney:fund_cache",
+                    source="realtime:fund_cache",
                     severity=Severity.OK,
                     message="缓存为空(跨进程巡检,跳过)",
                     detail={"cache_size": len(fund_cache), "cache_date": fund_ts},
@@ -442,7 +474,7 @@ def check_eastmoney_caches() -> list[HealthStatus]:
                 )
                 total = len(fund_cache)
                 results.append(HealthStatus(
-                    source="eastmoney:fund_cache",
+                    source="realtime:fund_cache",
                     severity=Severity.OK,
                     message=f"正常 ({total}只, 全零{zero_count}只)" if total > 0 else "空",
                     detail={"total": total, "all_zero": zero_count},
@@ -450,7 +482,7 @@ def check_eastmoney_caches() -> list[HealthStatus]:
                 ))
         else:
             results.append(HealthStatus(
-                source="eastmoney:fund_cache",
+                source="realtime:fund_cache",
                 severity=Severity.OK,
                 message="非交易时段,跳过",
                 latency_ms=(time.time() - t0) * 1000,
@@ -458,7 +490,7 @@ def check_eastmoney_caches() -> list[HealthStatus]:
 
     except Exception as e:
         results.append(HealthStatus(
-            source="eastmoney:caches",
+            source="realtime:caches",
             severity=Severity.CRITICAL,
             message=f"缓存检查异常: {e}",
             latency_ms=(time.time() - t0) * 1000,
@@ -469,239 +501,41 @@ def check_eastmoney_caches() -> list[HealthStatus]:
 
 
 # ═══════════════════════════════════════════════════════════
-# 3. Level2 守护进程巡检 + 自动启动
-# ═══════════════════════════════════════════════════════════
+# 3. jvQuant WebSocket 行情巡检
 
-L2_DAEMON_PID = PROJECT_DIR / "plays" / "limit_up" / "data" / ".l2_daemon.pid"
-L2_DAEMON_HOST = "127.0.0.1"
-L2_DAEMON_PORT = 18999
-
-
-def _is_l2_hours() -> bool:
-    """L2 守护进程运行时段 (9:25-15:05, 工作日)"""
-    now = datetime.now()
-    hhmm = now.hour * 100 + now.minute
-    return now.weekday() < 5 and 925 <= hhmm <= 1505
-
-
-def _daemon_alive() -> bool:
-    """检查 PID 文件 + 进程存活 + TCP 端口响应"""
-    if not L2_DAEMON_PID.exists():
-        return False
-    try:
-        pid = int(L2_DAEMON_PID.read_text().strip())
-        os.kill(pid, 0)  # 进程存活?
-    except (ProcessLookupError, ValueError, OSError):
-        L2_DAEMON_PID.unlink(missing_ok=True)
-        return False
-    try:
-        s = socket.create_connection((L2_DAEMON_HOST, L2_DAEMON_PORT), timeout=2)
-        s.sendall(b"PING\n")
-        resp = s.recv(128)
-        s.close()
-        return resp.strip() == b"PONG"
-    except Exception:
-        return False
-
-
-def _start_daemon() -> tuple[bool, str]:
-    """启动 L2 守护进程, 返回 (成功?, 消息)"""
-    try:
-        script = str(PROJECT_DIR / "scripts" / "l2_daemon.py")
-        # 使用 Popen (不 capture_output) 避免 fork 后子进程继承管道导致死等
-        subprocess.Popen(
-            [sys.executable, script, "--daemon"],
-            cwd=str(PROJECT_DIR),
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        )
-        time.sleep(3)  # 等待进程初始化和 PID 文件写入
-        alive = _daemon_alive()
-        if alive:
-            return True, f"已自动启动(PID={L2_DAEMON_PID.read_text().strip()})"
-        else:
-            return False, "启动后验证失败(守护进程未就绪)"
-    except Exception as e:
-        return False, f"启动异常: {e}"
-
-
-def check_l2_connection() -> list[HealthStatus]:
-    """检查 L2 守护进程状态, 未运行时自动启动 (交易时段)"""
+def check_jvquant_ws() -> list[HealthStatus]:
+    """检查 jvQuant WebSocket 连接状态"""
     results = []
     t0 = time.time()
-
     try:
-        from scripts.tu_share import CONFIG
-        enabled = CONFIG.get("L2API_ENABLED", "").lower() == "true"
-
-        if not enabled:
+        from scripts.jvquant_ws_client import daemon_alive, daemon_stats
+        if daemon_alive():
+            s = daemon_stats()
             results.append(HealthStatus(
-                source="l2:connection",
-                severity=Severity.OK,
-                message="未启用 (L2API_ENABLED=false)",
-                latency_ms=(time.time() - t0) * 1000,
-            ))
-            return results
-
-        # ── 守护进程存活检查 ──
-        alive = _daemon_alive()
-
-        if not alive and _is_l2_hours():
-            ok, msg = _start_daemon()
-            results.append(HealthStatus(
-                source="l2:connection",
-                severity=Severity.OK if ok else Severity.WARNING,
-                message=msg,
-                latency_ms=(time.time() - t0) * 1000,
-            ))
-            alive = ok
-        elif not alive:
-            results.append(HealthStatus(
-                source="l2:connection",
-                severity=Severity.OK,
-                message="未运行(非交易时段)",
-                latency_ms=(time.time() - t0) * 1000,
-            ))
+                source="jvquant:ws", severity=Severity.OK,
+                message=(f"已连接 | L1={s['l1_count']} L10={s['l10_count']} "
+                         f"L2={s['l2_count']} | "
+                         f"今日{s['total_subscribed_today']}只={s['daily_cost']}元"),
+                latency_ms=(time.time()-t0)*1000, detail=s))
         else:
-            # 获取详细状态
-            try:
-                s = socket.create_connection((L2_DAEMON_HOST, L2_DAEMON_PORT), timeout=2)
-                s.sendall(b"HEALTH\n")
-                resp = s.recv(4096)
-                s.sendall(b"SUBSCRIBED\n")
-                sub_resp = s.recv(4096)
-                s.close()
-                detail = json.loads(resp.decode().strip())
-                subs = json.loads(sub_resp.decode().strip())
-                sc = len(subs)
-                results.append(HealthStatus(
-                    source="l2:connection",
-                    severity=Severity.OK,
-                    message=f"运行中, 订阅{sc}只",
-                    latency_ms=(time.time() - t0) * 1000,
-                    detail={"subscriptions": subs, **detail},
-                ))
-            except Exception:
-                results.append(HealthStatus(
-                    source="l2:connection",
-                    severity=Severity.OK,
-                    message="运行中(状态查询异常)",
-                    latency_ms=(time.time() - t0) * 1000,
-                ))
-
+            results.append(HealthStatus(
+                source="jvquant:ws", severity=Severity.WARNING,
+                message="jvQuant WebSocket 未连接",
+                latency_ms=(time.time()-t0)*1000))
+    except ImportError:
+        results.append(HealthStatus(
+            source="jvquant:ws", severity=Severity.WARNING,
+            message="jvQuant 模块未安装", latency_ms=(time.time()-t0)*1000))
     except Exception as e:
         results.append(HealthStatus(
-            source="l2:connection",
-            severity=Severity.WARNING,
-            message=f"检查异常: {e}",
-            latency_ms=(time.time() - t0) * 1000,
-            detail={"error": str(e)},
-        ))
-
+            source="jvquant:ws", severity=Severity.CRITICAL,
+            message=f"jvQuant 检查异常: {e}", latency_ms=(time.time()-t0)*1000))
     return results
 
+# 4. 代理 (已废弃, 全量迁移到同花顺+jvQuant)
 
-# ═══════════════════════════════════════════════════════════
-# 4. 代理巡检
-# ═══════════════════════════════════════════════════════════
+# check_proxy 已移除
 
-
-def check_proxy() -> list[HealthStatus]:
-    """检查代理连通性和东财API可达性"""
-    results = []
-    t0 = time.time()
-
-    try:
-        from scripts.proxy_utils import get_proxy_ip, request_with_proxy_retry
-
-        # 1. 代理IP获取
-        proxy_addr = get_proxy_ip(force_refresh=True)
-        if proxy_addr is None:
-            results.append(HealthStatus(
-                source="proxy:acquire",
-                severity=Severity.CRITICAL,
-                message="无法获取代理IP(配额耗尽或服务异常)",
-                latency_ms=(time.time() - t0) * 1000,
-            ))
-            return results
-
-        results.append(HealthStatus(
-            source="proxy:acquire",
-            severity=Severity.OK,
-            message=f"获取成功 ({proxy_addr})",
-            latency_ms=(time.time() - t0) * 1000,
-            detail={"proxy": proxy_addr},
-        ))
-
-        # 2. 东财API可达性
-        t1 = time.time()
-        url = (
-            "https://push2.eastmoney.com/api/qt/stock/get"
-            "?secid=1.000001&fields=f43,f57,f170"
-        )
-        resp = request_with_proxy_retry(url, max_retries=1, timeout=15)
-        if resp is None:
-            results.append(HealthStatus(
-                source="proxy:eastmoney",
-                severity=Severity.WARNING,
-                message="通过代理无法访问东财API(重试后仍失败)",
-                latency_ms=(time.time() - t1) * 1000,
-            ))
-        elif resp.status_code != 200:
-            results.append(HealthStatus(
-                source="proxy:eastmoney",
-                severity=Severity.WARNING,
-                message=f"东财返回非200: {resp.status_code}",
-                latency_ms=(time.time() - t1) * 1000,
-            ))
-        else:
-            try:
-                data = resp.json()
-                d = data.get("data", {})
-                if d and d.get("f57"):
-                    results.append(HealthStatus(
-                        source="proxy:eastmoney",
-                        severity=Severity.OK,
-                        message=f"东财API正常 (code={d.get('f57')})",
-                        latency_ms=(time.time() - t1) * 1000,
-                    ))
-                else:
-                    # 检查是否是反爬页面
-                    text = resp.text[:200]
-                    if "<!DOCTYPE" in text or "验证" in text:
-                        results.append(HealthStatus(
-                            source="proxy:eastmoney",
-                            severity=Severity.WARNING,
-                            message="代理IP可能被东财拦截(返回HTML非JSON)",
-                            latency_ms=(time.time() - t1) * 1000,
-                        ))
-                    else:
-                        results.append(HealthStatus(
-                            source="proxy:eastmoney",
-                            severity=Severity.WARNING,
-                            message="东财返回空数据",
-                            latency_ms=(time.time() - t1) * 1000,
-                        ))
-            except Exception:
-                results.append(HealthStatus(
-                    source="proxy:eastmoney",
-                    severity=Severity.WARNING,
-                    message="东财响应非JSON",
-                    latency_ms=(time.time() - t1) * 1000,
-                ))
-
-    except Exception as e:
-        results.append(HealthStatus(
-            source="proxy",
-            severity=Severity.CRITICAL,
-            message=f"代理检查异常: {e}",
-            latency_ms=(time.time() - t0) * 1000,
-            detail={"error": str(e)},
-        ))
-
-    return results
-
-
-# ═══════════════════════════════════════════════════════════
 # 顶层接口
 # ═══════════════════════════════════════════════════════════
 
@@ -729,17 +563,19 @@ def preflight_check() -> bool:
     # 2. 关键检查
     critical_failures = []
 
+    # L2 守护进程（优先拉起，后续 pipeline 要用）
+    l2_results = check_jvquant_ws()
+    l2_warnings = [c for c in l2_results if c.severity == Severity.WARNING]
+    if l2_warnings:
+        critical_failures.append(f"l2:connection: {l2_warnings[0].message}")
+
     # Tushare CRITICAL API
     for api in TUSHARE_CRITICAL:
         status = _check_single_tushare(api, "critical")
         if status.severity == Severity.CRITICAL:
             critical_failures.append(f"tushare:{api}: {status.message}")
 
-    # 代理 (不检查东财缓存, 因为 preflight 可能在 pipeline 填充缓存之前运行)
-    proxy_results = check_proxy()
-    for s in proxy_results:
-        if s.severity == Severity.CRITICAL:
-            critical_failures.append(f"{s.source}: {s.message}")
+    # 代理已全量迁移到同花顺直连，不再检查代理可达性
 
     # 3. 判定
     if critical_failures:
@@ -773,19 +609,17 @@ def run_health_check(full: bool = False, quiet: bool = False) -> HealthReport:
     report.circuit_breaker_active = CircuitBreaker.is_active()
 
     # 0. L2 守护进程（放最前，Tushare 慢检查之前就拉起）
-    report.checks.extend(check_l2_connection())
+    report.checks.extend(check_jvquant_ws())
 
     # 1. Tushare
     report.checks.extend(check_tushare_apis(full=full))
 
-    # 2. 东财缓存
-    report.checks.extend(check_eastmoney_caches())
+    # 2. 实时缓存 (已废弃，全量迁移同花顺)
 
     # 3. Level2
     # (已提到最前)
 
-    # 4. 代理
-    report.checks.extend(check_proxy())
+    # 4. 代理 (已废弃，全量迁移同花顺)
 
     # 汇总
     severities = [c.severity for c in report.checks]

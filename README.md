@@ -15,11 +15,8 @@ maneki-agent/
 │   └── watchdog/           ← 买卖盯盘
 ├── scripts/                ← 共享基础设施
 │   ├── proxy_utils.py       ← 动态代理池 + 重试机制
-│   ├── l2_client.py          ← Level2 实时行情 SDK (TCP 长连接)
 │   ├── tu_share.py           ← Tushare API 封装 (含缓存 & 日期回退)
-│   ├── health_check.py       ← 数据源健康巡检 (支持熔断阻断, 自动拉起L2)
-│   ├── l2_daemon.py           ← L2 守护进程 (TCP代理, 单例长连接)
-│   └── l2_daemon_client.py    ← L2 守护进程 TCP 客户端
+│   └── health_check.py       ← 数据源健康巡检 (支持熔断阻断)
 ├── feishu_bot/             ← 飞书桥梁（只写 inbox，不决策）
 │   ├── main.py             ← FastAPI → 写入 inbox
 │   └── feishu_client.py    ← 飞书 API 封装
@@ -78,16 +75,15 @@ plays/limit_up/
 
 ### watchdog — 盯盘助手
 
-基于 L2 实时数据 + 双引擎动量-均值回归策略，持续监控标的。通过飞书推送买卖信号。
+基于双引擎动量-均值回归策略，持续监控标的，通过飞书推送买卖信号。
 
 ## 数据源
 
 | 场景 | 数据源 | 方式 | 类型 |
 |------|--------|------|------|
-| 盘中涨速扫描 | 东方财富 push2 clist API | requests + 动态代理 | 实时 |
-| 实时行情/资金流 | 东方财富 push2 clist API | requests + 动态代理(失败自动换IP重试) | 实时 |
-| 个股实时行情 | 东方财富 push2 stock/get API | requests + 代理 → clist缓存降级 | 实时 |
-| Level2 实时数据 | dy1.l2api.cn :18100/18103/18105 | TCP 长连接 | 实时(Tick) |
+| 盘中涨速扫描 | 同花顺热门榜 + 实时行情 | Cookie 直连 | 实时 |
+| 实时行情/资金流 | 同花顺实时行情 API | Cookie 直连 | 实时 |
+| 个股实时行情 | 同花顺批量行情 + Tushare | Cookie 直连 / Tushare | 实时/T+1 |
 | 历史日线/财务 | Tushare REST API | scripts/tu_share.py | T+1 / 季度 |
 | 涨停列表/龙虎榜 | Tushare REST API | scripts/tu_share.py | T+1 |
 
@@ -100,8 +96,7 @@ plays/limit_up/
 | 收盘复盘 | 周一至五 18:00 | `python plays/limit_up/review.py` |
 | 权重优化 | 周一至五 19:00 | `python plays/limit_up/optimize.py` |
 | Wiki 编译 | 周一至五 20:00 | `python wiki/compile.py` |
-| L2 守护进程 | 周一至五 9:25 (随--full巡检自动拉起) | `scripts/l2_daemon.py` (15:05自动退出) |
-| 全量数据巡检(含L2启动) | 周一至五 9:25 | `python scripts/health_check.py --full` |
+| 全量数据巡检 | 周一至五 9:25 | `python scripts/health_check.py --full` |
 | 数据巡检(盘中) | 周一至五 9:35~14:30 每小时 | `python scripts/health_check.py` |
 | 玩法巡检 | 周一至五 10~14点整点 | `python plays/limit_up/health_patrol.py` |
 
@@ -123,7 +118,7 @@ plays/新玩法名/
 ### 环境要求
 - Python 3.10+
 - 2C4G 以上服务器
-- 已配置 `.env`（Tushare Token、飞书凭证、L2 账号、代理）
+- 已配置 `.env`（Tushare Token、飞书凭证、代理）
 
 ### 全部服务启动
 
@@ -141,17 +136,11 @@ nohup python3 pipelines/maneki/maneki_pipe.py \
   > data/logs/maneki_pipe.log 2>&1 &
 
 # ===== 3. 盯盘引擎（可选） =====
-# 基于 L2 实时数据监控标的，推送买卖信号
+# 持续监控标的，推送买卖信号
 nohup python3 plays/watchdog/watchdog.py \
   > data/logs/watchdog.log 2>&1 &
 
-# ===== 4. L2 守护进程（自动/手动） =====
-# 维护唯一 L2 长连接，供 pipeline/watchdog 通过 TCP 共享 (127.0.0.1:18999)
-# 开盘日 9:25 由 health_check --full 自动拉起，15:05 自动退出
-# 也可手动启动：
-# python3 scripts/l2_daemon.py --daemon
-
-# ===== 5. 涨停预测（手动/定时触发） =====
+# ===== 4. 涨停预测（手动/定时触发） =====
 # 主流程: 异动扫描 → 五维评分 → 排序 → 飞书推送
 python3 plays/limit_up/pipeline.py
 
@@ -165,7 +154,7 @@ python3 plays/limit_up/review.py
 # 快速预检（pipeline 启动前自动调用，阻塞执行）
 python3 scripts/health_check.py --preflight
 
-# 全量巡检（检查 23 个 Tushare API + 东财缓存 + L2 + 代理）
+# 全量巡检（检查 23 个 Tushare API + 东财缓存 + 代理）
 python3 scripts/health_check.py --full
 
 # 常规巡检（仅 CRITICAL + WARNING 级别）
@@ -178,13 +167,10 @@ python3 scripts/health_check.py
 
 ```bash
 # 检查各服务进程
-ps aux | grep -E "uvicorn|maneki_pipe|watchdog|l2_daemon" | grep -v grep
+ps aux | grep -E "uvicorn|maneki_pipe|watchdog" | grep -v grep
 
 # 检查飞书 Bot 健康
 curl http://localhost:8080/
-
-# 检查 L2 守护进程
-echo "HEALTH" | nc localhost 18999
 
 # 检查 inbox 积压消息
 ls -la pipelines/maneki/inbox/

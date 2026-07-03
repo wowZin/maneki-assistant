@@ -1,6 +1,18 @@
 # 数据接口审计
 
-> 所有接口清单、已知坑、权限/时序要求。更新于 2026-05-22。
+> 所有接口清单、已知坑、权限/时序要求。更新于 2026-07-02。
+
+## 审计红线（2026-07-02 起）
+
+- **每次 API 调用必须 `scripts.audit.record(source, api, ok=..., items=..., latency_ms=..., extra=...)`**
+- 错误路径 `extra` 结构化为 `ERR:<异常类>|<msg60>|params:<关键入参>`
+- `pipeline.main()` 结束时 `scripts.audit.dump(data/logs/audit_{trade_date}.log)`；`summary()` 按 api 拆分
+- 客户端覆盖：
+  - ✅ `scripts/tu_share.py::call_tushare`
+  - ✅ `scripts/ths_client.py`（quote/batch/hot；补 `get_concept_tags / get_hot_rank_map` 首触发路径）
+  - ✅ `scripts/jvquant_client.py`（所有 public 方法，用 `_call_with_audit` 装饰）
+  - ✅ `scripts/jvquant_ws_client.py`（connect/subscribe/unsubscribe/reconnect 事件级）
+
 
 ## Tushare 接口 (23个)
 
@@ -40,7 +52,17 @@
 | `limit_list` | 个股历史涨停记录 | 基础 | T+1 | **不支持trade_date筛选,返回全量历史** |
 | `limit_list_d` | 全市场涨停列表 | 基础 | T日盘后 | 约16:00更新;盘中用daily接口替代 |
 | `limit_step` | 连板天梯 | 基础 | T日盘后 | - |
-| `limit_cpt_list` | 涨停概念板块(东财) | 基础 | T日盘后 | - |
+| `limit_cpt_list` | 涨停概念板块(同花顺) | 基础 | T日盘后 | - |
+
+### 概念数据
+
+| 接口 | 用途 | 权限 | 时序 | 已知坑 |
+|------|------|:--:|:--:|------|
+| `ths_daily` | 同花顺概念板块日线行情 | 基础 | T日盘后 | 概念代码格式为 `.TI`，如 `700402.TI` |
+| `ths_member` | 同花顺概念成分股映射 | 基础 | 静态 | `ts_code` 必须传完整概念码（`.TI`），传裸数字前缀会返回空 |
+
+> 概念动量 PIT 用法：T 日评分使用 T-1 日概念行情与成分股映射。
+> 缓存路径：`plays/limit_up/backtest/cache/concept_daily.parquet`、`plays/limit_up/backtest/cache/concept_members.parquet`。
 
 ### 股本/股东
 
@@ -52,15 +74,15 @@
 | `anns_d` | 公司公告 | 基础 | 实时 | 返回JSON需解析 |
 | `concept_detail` | 概念板块映射 | 概念权限 | 静态 | **需单独开通概念权限**;字段名是`concept_name`非`name` |
 
-## 东方财富 API (2个，复用为多缓存)
+## 同花顺 API (2个，复用为多缓存)
 
-> 数据优先级: **requests+代理(Eastmoney) > Tushare**。实时数据优先走东财API+代理，Tushare仅作兜底。
-> 方式: **requests + zdtps代理**。代理配置: `.env` 中 `PROXY_ENABLED=true`, 模块 `scripts/proxy_utils.py`
+> 数据优先级: **Cookie直连(同花顺) > Tushare**。实时数据优先走同花顺Cookie直连，Tushare仅作兜底。
+> 方式: **Cookie 直连**。无需代理配置。
 
 | 接口 | 用途 | 关键字段 | 已知坑 |
 |------|------|------|------|
-| `push2.eastmoney.com/api/qt/clist/get` | 异动扫描/行情/资金流/人气 | f3(涨幅) f11(涨速) f62(主力净流入) f10(量比) f6(成交额) f7(换手率) | `po=0`升序/`po=1`降序;代理IP约2-3分钟过期 |
-| `push2.eastmoney.com/api/qt/stock/get` | 个股实时行情(分时数据) | f170(涨跌幅) | secid格式:`{market}.{code}` |
+| 同花顺行情API(clist) | 异动扫描/行情/资金流/人气 | f3(涨幅) f11(涨速) f62(主力净流入) f10(量比) f6(成交额) f7(换手率) | Cookie直连;同花顺数据源 |
+| 同花顺行情API(个股) | 个股实时行情(分时数据) | f170(涨跌幅) | Cookie直连;同花顺数据源 |
 
 > 三个缓存复用同一API: `_get_realtime_fund_cache`(f62/f10/f7/f6) + `_get_popularity_rank`(f62) + `_get_realtime_pct_cache`(f3)
 
@@ -68,7 +90,7 @@
 
 ```
 09:25  stk_auction 竞价数据就绪 ← 不能早于此时
-09:30  东财实时行情就绪
+09:30  同花顺实时行情就绪
 09:35  第一轮扫描开始
 11:30  上午收盘,最后一轮
 13:00  下午开盘
@@ -88,12 +110,12 @@
 | concept_detail无数据 | 未开通概念权限 | Tushare控制台检查 |
 | stock_basic industry过滤无效 | Tushare不支持该参数 | 客户端过滤 |
 | limit_list返回超量 | 不支持日期筛选 | 取items[0]为最新 |
-| 东财API超时/空 | 代理IP过期 | 重试+刷新代理 |
+|| 同花顺API超时/空 | Cookie过期 | 重试+刷新Cookie |
 | call_tushare静默失败 | except:pass吞错误 | 看return是否为空dict |
 
 ## akshare 接口 (5个)
 
-> ⚠️ akshare 底层封装东方财富API。本服务器 `push2.eastmoney.com` 被TCP层封禁，**akshare 大部分接口不可用**。
+> ⚠️ akshare 底层封装的API（已不可用，数据源已迁移至同花顺/ths）。
 
 | 接口 | 用途 | 文件 | 可用? | 备注 |
 |------|------|------|:--:|------|

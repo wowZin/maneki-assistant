@@ -1,0 +1,91 @@
+{
+  "date": "20260615",
+  "pushed_count": 1,
+  "cumulative_limit_count": 180,
+  "hit_count": 0,
+  "hit_rate": 0.0,
+  "win_rate": 100.0,
+  "win_count": 1,
+  "win_total": 1,
+  "hit_codes": [],
+  "miss_codes": [
+    "002636.SZ"
+  ],
+  "hit_details": [],
+  "dim_performance": {
+    "fundamental": {
+      "total": 1,
+      "hit_avg": 0,
+      "miss_avg": 66.3
+    },
+    "technical": {
+      "total": 1,
+      "hit_avg": 0,
+      "miss_avg": 0.0
+    },
+    "fundflow": {
+      "total": 1,
+      "hit_avg": 0,
+      "miss_avg": 0.0
+    },
+    "sentiment": {
+      "total": 1,
+      "hit_avg": 0,
+      "miss_avg": 60.0
+    },
+    "shortterm": {
+      "total": 1,
+      "hit_avg": 0,
+      "miss_avg": 36.5
+    }
+  },
+  "confidence_dist": {
+    "high": 1,
+    "medium": 0,
+    "low": 0
+  },
+  "ab_comparison": {
+    "enabled": true,
+    "prev": {
+      "weights": {
+        "fundamental": 0.6,
+        "technical": 1.9,
+        "fundflow": 2.0,
+        "sentiment": 1.1,
+        "shortterm": 1.0
+      },
+      "pushed": 14,
+      "codes": [
+        "605006.SH",
+        "002842.SZ",
+        "000988.SZ",
+        "600111.SH",
+        "002203.SZ",
+        "600172.SH",
+        "000657.SZ",
+        "002938.SZ",
+        "603738.SH",
+        "002119.SZ",
+        "002463.SZ",
+        "002636.SZ",
+        "600105.SH",
+        "601208.SH"
+      ],
+      "hits": 2
+    },
+    "curr": {
+      "weights": {
+        "fundamental": 0.2,
+        "technical": 1.0,
+        "fundflow": 2.3,
+        "sentiment": 0.7,
+        "shortterm": 0.6
+      },
+      "pushed": 1,
+      "codes": [
+        "002636.SZ"
+      ],
+      "hits": 0
+    }
+  }
+}

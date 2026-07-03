@@ -1,0 +1,1122 @@
+{
+  "meta": {
+    "run_time": "2026-06-26T19:12:50.122694",
+    "trade_dates": [
+      "20260625",
+      "20260626"
+    ],
+    "days": 2,
+    "top_n": 20
+  },
+  "metrics": {
+    "n_days": 2,
+    "n_stocks_scored": 40,
+    "n_actual_limit_ups": 0,
+    "limit_up_rate": 0.0,
+    "score_distribution": {
+      "mean": 33.21,
+      "std": 3.2316249782423703,
+      "min": 26.1,
+      "p25": 31.45,
+      "p50": 34.7,
+      "p75": 35.75,
+      "p90": 36.230000000000004,
+      "max": 38.0
+    },
+    "precision@5": 0.0,
+    "recall@5": 0,
+    "precision@10": 0.0,
+    "recall@10": 0,
+    "precision@20": 0.0,
+    "recall@20": 0,
+    "precision@50": 0.0,
+    "recall@50": 0,
+    "precision@100": 0.0,
+    "recall@100": 0,
+    "push_simulation": {
+      "threshold": 35,
+      "pushed_count": 16,
+      "pushed_hits": 0,
+      "push_hit_rate": 0.0,
+      "push_win_rate": 1.0
+    },
+    "push_simulation_high": {
+      "threshold": 45,
+      "pushed_count": 0,
+      "pushed_hits": 0,
+      "push_hit_rate": 0
+    },
+    "push_simulation_vhigh": {
+      "threshold": 55,
+      "pushed_count": 0,
+      "pushed_hits": 0,
+      "push_hit_rate": 0
+    },
+    "fundamental_cohens_d": -51.0,
+    "fundamental_correlation": NaN,
+    "fundamental_hit_mean": 0,
+    "fundamental_miss_mean": 51.0,
+    "technical_cohens_d": -3.1955,
+    "technical_correlation": NaN,
+    "technical_hit_mean": 0,
+    "technical_miss_mean": 21.68,
+    "fundflow_cohens_d": 0.0,
+    "fundflow_correlation": NaN,
+    "fundflow_hit_mean": 0,
+    "fundflow_miss_mean": 0.0,
+    "sentiment_cohens_d": -46.0514,
+    "sentiment_correlation": NaN,
+    "sentiment_hit_mean": 0,
+    "sentiment_miss_mean": 21.6,
+    "shortterm_cohens_d": -3.7778,
+    "shortterm_correlation": NaN,
+    "shortterm_hit_mean": 0,
+    "shortterm_miss_mean": 6.19
+  },
+  "by_date": {
+    "20260625": [
+      {
+        "code": "601133.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 35,
+          "fundflow": 0,
+          "sentiment": 22,
+          "shortterm": 4.5
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[低] 换手5.4%健康+5; 多头排列+15; 回踩MA10企稳+5; 波动收敛(带宽29.4%)+5; 价>中轨+2; 分时强势(回撤0.2%)+3",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手5.4%+1; 竞价跳空15149501647.2%[震荡态×1.0]→2分; 竞价量比52438.7+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手偏低(7.1%)+10 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手7.06%+5"
+        },
+        "total": 37.3,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "柏诚股份",
+        "pct_chg": 7.507,
+        "is_hit": false
+      },
+      {
+        "code": "002463.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 35,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 3.8
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[低] 换手3.7%健康+5; 多头排列+15; 回踩MA10企稳+5; 波动收敛(带宽21.2%)+5; 价>中轨+2; 分时强势(回撤0.6%)+3",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空266366956709.0%[震荡态×1.0]→2分; 竞价量比192281.0+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手极低(4.3%)+5 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手4.27%+5"
+        },
+        "total": 36.9,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "沪电股份",
+        "pct_chg": 8.12,
+        "is_hit": false
+      },
+      {
+        "code": "002859.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 32,
+          "fundflow": 0,
+          "sentiment": 22,
+          "shortterm": 4.5
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手7.0%健康+5; 多头排列+15; 回踩MA10企稳+5; 下影支撑+4; 假突破:3日2日上影-4; 波动收敛(带宽47.3%)+5",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手7.0%+1; 竞价跳空37087054649.3%[震荡态×1.0]→2分; 竞价量比40589.9+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手偏低(8.3%)+10 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手8.34%+5"
+        },
+        "total": 36.5,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "洁美科技",
+        "pct_chg": 7.7452,
+        "is_hit": false
+      },
+      {
+        "code": "002515.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 31,
+          "fundflow": 0,
+          "sentiment": 22,
+          "shortterm": 6.8
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手7.4%健康+5; 多头排列+15; 回踩MA10企稳+5; 下影支撑+4; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手7.4%+1; 竞价跳空11503312168.5%[震荡态×1.0]→2分; 竞价量比110185.0+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手适中(11.5%)+25 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手11.45%+5"
+        },
+        "total": 36.2,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "金字火腿",
+        "pct_chg": 9.3308,
+        "is_hit": false
+      },
+      {
+        "code": "600531.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 31,
+          "fundflow": 0,
+          "sentiment": 22,
+          "shortterm": 6.8
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手13.7%健康+5; 多头排列+15; 回踩MA10企稳+5; 下影支撑+4; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手13.7%+1; 竞价跳空17897043649.6%[震荡态×1.0]→2分; 竞价量比120926.0+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手适中(15.9%)+25 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手15.90%+5"
+        },
+        "total": 36.2,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "豫光金铅",
+        "pct_chg": 7.9949,
+        "is_hit": false
+      },
+      {
+        "code": "920981.BJ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 31,
+          "fundflow": 0,
+          "sentiment": 22,
+          "shortterm": 9.0
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手11.8%健康+5; 多头排列+15; 回踩MA10企稳+5; 下影支撑+4; 价>中轨+2",
+          "fundflow": "否决: 纯散户博弈:主力净占比0.0%<5%+3日累计净流入0万≤0",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手11.8%+1; 竞价跳空1650820135.1%[震荡态×1.0]→2分; 竞价量比3846.3+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手适中(26.1%)+25; 温和放量(量比1.7)+5 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价正常(量比1.7开3.7%)+5; 竞价换手26.06%+5"
+        },
+        "total": 36.2,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "晶赛科技",
+        "pct_chg": 7.9373,
+        "is_hit": false
+      },
+      {
+        "code": "002046.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 31,
+          "fundflow": 0,
+          "sentiment": 22,
+          "shortterm": 4.5
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手5.8%健康+5; 多头排列+15; 回踩MA10企稳+5; 下影支撑+4; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手5.8%+1; 竞价跳空33544414236.5%[震荡态×1.0]→2分; 竞价量比53017.8+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手偏低(5.4%)+10 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手5.40%+5"
+        },
+        "total": 36.2,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "国机精工",
+        "pct_chg": 7.8056,
+        "is_hit": false
+      },
+      {
+        "code": "600176.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 30,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 4.5
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手4.3%健康+5; 多头排列+15; 回踩MA10企稳+5; 价>中轨+2; 分时强势(回撤0.4%)+3",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空232181789901.2%[震荡态×1.0]→2分; 竞价量比400314.0+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手偏低(5.7%)+10 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手5.67%+5"
+        },
+        "total": 35.6,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "中国巨石",
+        "pct_chg": 9.2255,
+        "is_hit": false
+      },
+      {
+        "code": "600206.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 26,
+          "fundflow": 0,
+          "sentiment": 23,
+          "shortterm": 6.8
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 多头排列+15; 回踩MA10企稳+5; 下影支撑+4; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手18.2%活跃+2; 竞价跳空39788004973.4%[震荡态×1.0]→2分; 竞价量比84655.3+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手适中(17.1%)+25 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手17.05%+5"
+        },
+        "total": 35.2,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "有研新材",
+        "pct_chg": 8.5008,
+        "is_hit": false
+      },
+      {
+        "code": "001696.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 26,
+          "fundflow": 0,
+          "sentiment": 23,
+          "shortterm": 5.2
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 多头排列+15; 回踩MA10企稳+5; 下影支撑+4; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手18.3%活跃+2; 竞价跳空19789025019.6%[震荡态×1.0]→2分; 竞价量比89139.8+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手适中(10.1%)+25 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0"
+        },
+        "total": 35.2,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "宗申动力",
+        "pct_chg": 7.9487,
+        "is_hit": false
+      },
+      {
+        "code": "603458.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 27,
+          "fundflow": 0,
+          "sentiment": 22,
+          "shortterm": 9.0
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手5.6%健康+5; 多头排列+15; 回踩MA10企稳+5; 下影支撑+4; 假突破:3日2日上影-4; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手5.6%+1; 竞价跳空4438803718.9%[震荡态×1.0]→2分; 竞价量比30612.5+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手适中(14.1%)+25; 温和放量(量比1.7)+5 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价正常(量比1.7开0.1%)+5; 竞价换手14.09%+5"
+        },
+        "total": 35.1,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "勘设股份",
+        "pct_chg": 8.3629,
+        "is_hit": false
+      },
+      {
+        "code": "000066.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 20,
+          "fundflow": 0,
+          "sentiment": 22,
+          "shortterm": 4.5
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手10.2%健康+5; 回踩MA10企稳+5; 波动收敛(带宽25.0%)+5; 价>中轨+2; 分时强势(回撤0.3%)+3",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手10.2%+1; 竞价跳空57092265069.1%[震荡态×1.0]→2分; 竞价量比322555.0+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手偏低(9.9%)+10 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手9.85%+5"
+        },
+        "total": 33.2,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "中国长城",
+        "pct_chg": 7.7368,
+        "is_hit": false
+      },
+      {
+        "code": "600708.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 16,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 3.8
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手2.1%健康+5; MA60下倾-5; 回踩MA10企稳+5; 下影支撑+4; 波动收敛(带宽20.6%)+5; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空7298897359.7%[震荡态×1.0]→2分; 竞价量比222528.0+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手极低(2.6%)+5 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手2.64%+5"
+        },
+        "total": 31.8,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "光明地产",
+        "pct_chg": 8.6567,
+        "is_hit": false
+      },
+      {
+        "code": "001389.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 14,
+          "fundflow": 0,
+          "sentiment": 22,
+          "shortterm": 9.0
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手5.4%健康+5; 均线多头(斜率平)+10; 收盘<=MA20-5; 下影支撑+4",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手5.4%+1; 竞价跳空27702667974.3%[震荡态×1.0]→2分; 竞价量比15221.2+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手适中(12.9%)+25; 温和放量(量比2.0)+5 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价正常(量比2.0开4.7%)+5; 竞价换手12.87%+5"
+        },
+        "total": 31.6,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "广合科技",
+        "pct_chg": 9.1304,
+        "is_hit": false
+      },
+      {
+        "code": "920476.BJ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 15,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 6.0
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手2.7%健康+5; MA60下倾-5; 回踩MA10企稳+5; 假突破:3日2日上影-4; 波动收敛(带宽23.5%)+5; 价>中轨+2",
+          "fundflow": "否决: 纯散户博弈:主力净占比0.0%<5%+3日累计净流入0万≤0",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空1534392714.2%[震荡态×1.0]→2分; 竞价量比8063.0+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手极低(4.2%)+5; 温和放量(量比1.6)+5 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价正常(量比1.6开4.3%)+5; 竞价换手4.24%+5"
+        },
+        "total": 31.5,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "海能技术",
+        "pct_chg": 8.1081,
+        "is_hit": false
+      },
+      {
+        "code": "920184.BJ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 14,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 4.5
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手3.9%健康+5; 空头排列-10; MA60下倾-5; 回踩MA10企稳+5; 收盘<=MA20-5; 下影支撑+4",
+          "fundflow": "否决: 纯散户博弈:主力净占比0.0%<5%+3日累计净流入0万≤0",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空1083137419.0%[震荡态×1.0]→2分; 竞价量比8936.8+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手偏低(6.2%)+10 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手6.19%+5"
+        },
+        "total": 31.3,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "国源科技",
+        "pct_chg": 9.0,
+        "is_hit": false
+      },
+      {
+        "code": "603898.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 10,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 3.0
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手2.8%健康+5; MA60下倾-5; 回踩MA10企稳+5; 价>中轨+2; 分时强势(回撤0.0%)+3",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空3969648783.2%[震荡态×1.0]→2分; 竞价量比31134.5+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手极低(3.9%)+5; 温和放量(量比1.7)+5 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0"
+        },
+        "total": 30.2,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "好莱客",
+        "pct_chg": 8.7547,
+        "is_hit": false
+      },
+      {
+        "code": "920029.BJ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 5,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 3.0
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手0.6%健康+5; 空头排列-10; MA60下倾-5; 收盘<=MA20-5; 分时走弱(价<中轨)-8",
+          "fundflow": "否决: 纯散户博弈:主力净占比0.0%<5%+3日累计净流入0万≤0",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空7178642381.5%[震荡态×1.0]→2分; 竞价量比20136.5+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手过高(87.8%)-5 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手87.75%+5"
+        },
+        "total": 28.8,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "开发科技",
+        "pct_chg": 8.2228,
+        "is_hit": false
+      },
+      {
+        "code": "002444.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 5,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 2.2
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手0.9%健康+5; 空头排列-10; MA60下倾-5; 收盘<=MA20-5; 下影支撑+4; 假突破:3日2日上影-4",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空33255147150.5%[震荡态×1.0]→2分; 竞价量比114673.0+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手极低(1.9%)+5 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] "
+        },
+        "total": 28.8,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "巨星科技",
+        "pct_chg": 7.8351,
+        "is_hit": false
+      },
+      {
+        "code": "603031.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 5,
+          "fundflow": 0,
+          "sentiment": 22,
+          "shortterm": 4.5
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手7.8%健康+5; 空头排列-10; 回踩MA10企稳+5; 收盘<=MA20-5; 下影支撑+4; 假突破:3日2日上影-4",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手7.8%+1; 竞价跳空16530678376.0%[震荡态×1.0]→2分; 竞价量比31439.0+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手偏低(8.7%)+10 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手8.69%+5"
+        },
+        "total": 26.1,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "安孚科技",
+        "pct_chg": 8.0748,
+        "is_hit": false
+      }
+    ],
+    "20260626": [
+      {
+        "code": "605376.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 39,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 6.8
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[低] 换手4.6%健康+5; 多头排列+15; 回踩MA10企稳+5; 下影支撑+4; 波动收敛(带宽43.7%)+5; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空58378705400.8%[震荡态×1.0]→2分; 竞价量比26160.0+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手偏低(7.6%)+10; 温和放量(量比1.6)+5 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价正常(量比1.6开3.3%)+5; 竞价换手7.64%+5"
+        },
+        "total": 38.0,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "博迁新材",
+        "pct_chg": 6.9519,
+        "is_hit": false
+      },
+      {
+        "code": "603938.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 31,
+          "fundflow": 0,
+          "sentiment": 22,
+          "shortterm": 5.2
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手13.6%健康+5; 多头排列+15; 回踩MA10企稳+5; 下影支撑+4; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手13.6%+1; 竞价跳空25329715923.1%[震荡态×1.0]→2分; 竞价量比38262.4+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手适中(12.0%)+25 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0"
+        },
+        "total": 36.2,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "三孚股份",
+        "pct_chg": 8.7974,
+        "is_hit": false
+      },
+      {
+        "code": "002787.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 31,
+          "fundflow": 0,
+          "sentiment": 22,
+          "shortterm": 11.2
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手5.7%健康+5; 多头排列+15; 回踩MA10企稳+5; 下影支撑+4; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手5.7%+1; 竞价跳空6730519769.8%[震荡态×1.0]→2分; 竞价量比24808.3+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手适中(17.1%)+25; 量比2.5+10 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价走强(量比2.5开4.4%)+10; 竞价换手17.08%+5"
+        },
+        "total": 36.2,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "华源控股",
+        "pct_chg": 7.0204,
+        "is_hit": false
+      },
+      {
+        "code": "600206.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 26,
+          "fundflow": 0,
+          "sentiment": 23,
+          "shortterm": 6.8
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 多头排列+15; 回踩MA10企稳+5; 下影支撑+4; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手18.2%活跃+2; 竞价跳空39788004973.4%[震荡态×1.0]→2分; 竞价量比84655.3+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手适中(17.1%)+25 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手17.05%+5"
+        },
+        "total": 35.2,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "有研新材",
+        "pct_chg": 8.1909,
+        "is_hit": false
+      },
+      {
+        "code": "603065.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 27,
+          "fundflow": 0,
+          "sentiment": 22,
+          "shortterm": 8.2
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手14.6%健康+5; 多头排列+15; 回踩MA10企稳+5; 下影支撑+4; 假突破:3日2日上影-4; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手14.6%+1; 竞价跳空7491146071.1%[震荡态×1.0]→2分; 竞价量比41896.8+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手适中(14.7%)+25 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价正常(量比1.2开2.4%)+5; 竞价换手14.70%+5"
+        },
+        "total": 35.1,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "宿迁联盛",
+        "pct_chg": 8.5445,
+        "is_hit": false
+      },
+      {
+        "code": "000668.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 27,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 3.8
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手3.7%健康+5; 多头排列+15; 回踩MA10企稳+5; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空3347997856.0%[震荡态×1.0]→2分; 竞价量比14684.2+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手极低(4.1%)+5 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手4.11%+5"
+        },
+        "total": 34.8,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "荣丰控股",
+        "pct_chg": 7.7873,
+        "is_hit": false
+      },
+      {
+        "code": "003036.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 27,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 4.5
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手3.7%健康+5; 多头排列+15; 下影支撑+4; 假突破:3日2日上影-4; 波动收敛(带宽56.0%)+5; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空19249509435.9%[震荡态×1.0]→2分; 竞价量比21628.6+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手偏低(5.8%)+10 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手5.75%+5"
+        },
+        "total": 34.8,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "泰坦股份",
+        "pct_chg": 7.7088,
+        "is_hit": false
+      },
+      {
+        "code": "603281.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 27,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 3.8
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手3.5%健康+5; 多头排列+15; 回踩MA10企稳+5; 假突破:3日2日上影-4; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空13917878367.7%[震荡态×1.0]→2分; 竞价量比37333.3+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手极低(3.1%)+5 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手3.08%+5"
+        },
+        "total": 34.8,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "江瀚新材",
+        "pct_chg": 7.1465,
+        "is_hit": false
+      },
+      {
+        "code": "002668.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 27,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 6.8
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手2.0%健康+5; 多头排列+15; 回踩MA10企稳+5; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空11394018591.6%[震荡态×1.0]→2分; 竞价量比108411.0+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手极低(5.0%)+5; 量比2.5+10 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价正常(量比2.5开-0.2%)+5; 竞价换手4.96%+5"
+        },
+        "total": 34.8,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "TCL智家",
+        "pct_chg": 7.0039,
+        "is_hit": false
+      },
+      {
+        "code": "600520.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 25,
+          "fundflow": 0,
+          "sentiment": 22,
+          "shortterm": 9.8
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手9.0%健康+5; 均线多头(斜率平)+10; 回踩MA10企稳+5; 下影支撑+4; 假突破:3日3日上影-4; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手9.0%+1; 竞价跳空5126793911.0%[震荡态×1.0]→2分; 竞价量比15843.0+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手适中(26.8%)+25; 量比2.4+10 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价正常(量比2.4开-1.1%)+5; 竞价换手26.85%+5"
+        },
+        "total": 34.6,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "三佳科技",
+        "pct_chg": 7.5269,
+        "is_hit": false
+      },
+      {
+        "code": "603256.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 25,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 2.2
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 多头排列+15; 波动收敛(带宽53.2%)+5; 价>中轨+2; 分时强势(回撤0.0%)+3",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空213782514670.6%[震荡态×1.0]→2分; 竞价量比87972.8+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手极低(2.0%)+5 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] "
+        },
+        "total": 34.2,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "宏和科技",
+        "pct_chg": 7.3132,
+        "is_hit": false
+      },
+      {
+        "code": "000703.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 20,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 7.5
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手2.8%健康+5; 回踩MA10企稳+5; 波动收敛(带宽15.3%)+5; 价>中轨+2; 分时强势(回撤0.0%)+3",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空52238364121.3%[震荡态×1.0]→2分; 竞价量比380191.0+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手偏低(6.5%)+10; 量比3.0+10 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价正常(量比3.0开10.0%)+5; 竞价换手6.53%+5"
+        },
+        "total": 32.9,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "恒逸石化",
+        "pct_chg": 7.3406,
+        "is_hit": false
+      },
+      {
+        "code": "002579.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 16,
+          "fundflow": 0,
+          "sentiment": 23,
+          "shortterm": 7.5
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手18.7%健康+5; 暴量滞涨(换手18.7%)-10; 回踩MA10企稳+5; 下影支撑+4; 波动收敛(带宽41.0%)+5; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手18.7%活跃+2; 竞价跳空11242319113.3%[震荡态×1.0]→2分; 竞价量比58341.2+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手偏高(38.3%)+15; 温和放量(量比1.7)+5 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价正常(量比1.7开-1.3%)+5; 竞价换手38.28%+5"
+        },
+        "total": 32.5,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "中京电子",
+        "pct_chg": 6.9484,
+        "is_hit": false
+      },
+      {
+        "code": "002617.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 17,
+          "fundflow": 0,
+          "sentiment": 22,
+          "shortterm": 9.0
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手9.5%健康+5; 回踩MA10企稳+5; 下影支撑+4; 假突破:3日2日上影-4; 波动收敛(带宽27.8%)+5; 价>中轨+2",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手9.5%+1; 竞价跳空17668404940.0%[震荡态×1.0]→2分; 竞价量比187762.0+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手适中(20.2%)+25; 温和放量(量比1.6)+5 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价正常(量比1.6开-1.0%)+5; 竞价换手20.17%+5"
+        },
+        "total": 32.4,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "露笑科技",
+        "pct_chg": 7.4527,
+        "is_hit": false
+      },
+      {
+        "code": "002208.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 15,
+          "fundflow": 0,
+          "sentiment": 22,
+          "shortterm": 6.8
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手9.2%健康+5; 均线多头(斜率平)+10; 收盘<=MA20-5; 下影支撑+4; 假突破:3日2日上影-4; 波动收敛(带宽23.2%)+5",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 换手9.2%+1; 竞价跳空13363113752.1%[震荡态×1.0]→2分; 竞价量比80307.2+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手适中(13.1%)+25 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价换手13.11%+5"
+        },
+        "total": 31.9,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "合肥城建",
+        "pct_chg": 7.2529,
+        "is_hit": false
+      },
+      {
+        "code": "603010.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 14,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 8.2
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手2.4%健康+5; 回踩MA10企稳+5; 收盘<=MA20-5; 下影支撑+4; 波动收敛(带宽15.6%)+5",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空8224939092.5%[震荡态×1.0]→2分; 竞价量比57077.8+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手偏低(9.4%)+10; 放量(量比3.1)+15 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价正常(量比3.1开1.7%)+5; 竞价换手9.43%+5"
+        },
+        "total": 31.3,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "万盛股份",
+        "pct_chg": 6.9543,
+        "is_hit": false
+      },
+      {
+        "code": "603661.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 14,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 11.2
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手4.7%健康+5; 空头排列-10; 收盘<=MA20-5; 下影支撑+4; 波动收敛(带宽17.7%)+5",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空4881250393.9%[震荡态×1.0]→2分; 竞价量比13906.7+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手适中(10.2%)+25; 量比2.2+10 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价走强(量比2.2开2.9%)+10; 竞价换手10.25%+5"
+        },
+        "total": 28.2,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "恒林股份",
+        "pct_chg": 7.3995,
+        "is_hit": false
+      },
+      {
+        "code": "600619.SH",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 10,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 8.2
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手2.1%健康+5; 空头排列-10; MA60下倾-5; 收盘<=MA20-5; 下影支撑+4; 假突破:3日2日上影-4",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空11569300459.8%[震荡态×1.0]→2分; 竞价量比78917.5+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手偏低(7.5%)+10; 放量(量比3.3)+15 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价正常(量比3.3开-0.7%)+5; 竞价换手7.49%+5"
+        },
+        "total": 27.1,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "海立股份",
+        "pct_chg": 7.0163,
+        "is_hit": false
+      },
+      {
+        "code": "002456.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 5,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 7.5
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手3.0%健康+5; 回踩MA10企稳+5; 收盘<=MA20-5; 下影支撑+4; 假突破:3日3日上影-4; 分时走弱(价<中轨)-8",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空30090843807.4%[震荡态×1.0]→2分; 竞价量比331762.0+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手偏低(8.0%)+10; 量比2.4+10 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价正常(量比2.4开-0.6%)+5; 竞价换手8.00%+5"
+        },
+        "total": 26.9,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "欧菲光",
+        "pct_chg": 8.8,
+        "is_hit": false
+      },
+      {
+        "code": "001335.SZ",
+        "scores": {
+          "fundamental": 51.0,
+          "technical": 5,
+          "fundflow": 0,
+          "sentiment": 21,
+          "shortterm": 6.8
+        },
+        "reasons": {
+          "fundamental": "[低] 解禁冲击低+0.1",
+          "technical": "[无] 换手3.6%健康+5; 空头排列-10; 收盘<=MA20-5; 下影支撑+4; 假突破:3日2日上影-4; 分时走弱(价<中轨)-8",
+          "fundflow": "[无] [无] 无明显资金信号",
+          "sentiment": "[无] 炸板率19.0%+7; 最高4板+5; 梯队完整+4; 竞价跳空1152802375.8%[震荡态×1.0]→2分; 竞价量比2554.4+3",
+          "shortterm": "[封板] 无涨停记录 | [连板] 近期无涨停 | [开盘] 换手偏低(8.7%)+10; 温和放量(量比1.8)+5 | [板块] 无概念数据+10 | [攻击] 无近30日数据+0 | [竞价] 竞价正常(量比1.8开4.4%)+5; 竞价换手8.74%+5"
+        },
+        "total": 26.6,
+        "resonance": {
+          "count": 0,
+          "threshold": 75,
+          "is_resonance": false
+        },
+        "name": "信凯科技",
+        "pct_chg": 8.8262,
+        "is_hit": false
+      }
+    ]
+  }
+}

@@ -29,12 +29,15 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
 from plays.watchdog.indicators import calc_all, check_trend, check_pullback, check_entry_score, check_exit_signal
-from scripts.l2_client import to_price, to_volume, normalize_code  # noqa: E402
-from scripts.l2_daemon_client import daemon_alive, daemon_cmd  # noqa: E402
 from scripts.tu_share import call_tushare  # noqa: E402
+from scripts.jvquant_ws_client import daemon_alive, daemon_cmd  # noqa: E402
+
+# 工具函数
+def _norm(code: str) -> str:
+    if "." in code: return code
+    return f"{code}.SH" if code.startswith("6") else f"{code}.SZ"
 
 logger = logging.getLogger(__name__)
-
 STATE_FILE = PROJECT_DIR / "plays" / "watchdog" / "data" / "state.json"
 SCAN_INTERVAL = 30  # 每30秒检查一次信号
 MAX_WATCH = 5       # 同时盯盘上限5只
@@ -193,7 +196,7 @@ class WatchdogEngine:
         return code
 
     def add(self, codes: list[str]) -> str:
-        codes = [normalize_code(c) for c in codes]
+        codes = [_norm(c) for c in codes]
         msgs = []
         init_reasons: dict[str, str] = {}
         with self._lock:
@@ -233,7 +236,7 @@ class WatchdogEngine:
         return "\n".join(msgs)
 
     def remove(self, codes: list[str]) -> str:
-        codes = [normalize_code(c) for c in codes]
+        codes = [_norm(c) for c in codes]
         msgs = []
         with self._lock:
             for code in codes:
@@ -365,11 +368,11 @@ class WatchdogEngine:
                     logger.info(f"  {code} 行情解析失败: {market_resp[:60]}")
                 continue
 
-            last = to_price(market.get("last", "0"))
+            last = float(market.get("last", 0))
             vwap_resp = daemon_cmd(f"VWAP {code}")
             vwap_val = float(vwap_resp) if vwap_resp != "None" else 0.0
             # 用Market trade_volume作为日内成交量
-            current_vol = to_volume(market.get("trade_volume", "0"))
+            current_vol = int(market.get("trade_volume", 0))
 
             inds = st.indicators
             atr_val = inds["atr20"][-1] if not np.isnan(inds["atr20"][-1]) else 0
@@ -422,7 +425,7 @@ class WatchdogEngine:
     def _check_entry_confirm(self, st: WatchState, inds: dict, last: float, vwap: float,
                               current_vol: float, atr_val: float, market: dict, now: datetime):
         # Step 3: 入场计分
-        open_price = to_price(market.get("open", "0"))
+        open_price = float(market.get("open", 0))
         score, score_reason = check_entry_score(
             inds, atr_val, vwap, open_price,
             st.signal_low, st.signal_high, last, current_vol, st.avg_vol_20
@@ -634,14 +637,8 @@ def main():
     if env_file.exists():
         load_dotenv(env_file)
 
-    account = os.getenv("L2API_ACCOUNT", "")
-    password = os.getenv("L2API_PASSWORD", "")
-
-    if not account or not password:
-        logger.error("未配置 L2API_ACCOUNT / L2API_PASSWORD，无法启动盯盘")
-        sys.exit(1)
-
-    # 等待 L2 守护进程就绪
+    # 盯盘使用 jvQuant WebSocket（不再需要旧 L2API 凭证）
+    # 等待 jvQuant WebSocket 就绪
     logger.info("正在连接 L2 守护进程...")
     for _ in range(30):  # 最多等30秒
         if daemon_alive():
