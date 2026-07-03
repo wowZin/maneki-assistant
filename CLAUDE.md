@@ -95,11 +95,44 @@ def main():
 # 例如：检查消息中是否包含新玩法关键词，路由到对应 pipeline
 ```
 
-### 6. 知识库同步
+## 知识库同步
 
 - 跨玩法通用知识 → `wiki/concepts/`
 - 玩法专属数据 → `wiki/plays/新玩法名/entities/`
 - wiki compile 脚本需同步更新以支持新玩法
+
+## wiki/raw/ 原始数据归档规范
+
+`wiki/raw/` 存档管线/扫描产生的原始数据，按玩法命名空间分目录，禁止在 `wiki/raw/` 根目录存放文件。
+
+### 目录规范
+
+```
+wiki/raw/
+└── <play-slug>/              ← 玩法名（连字符形式，如 limit-up）
+    ├── analysis/              ← pipeline 每日扫描评分结果（datetime.json）
+    ├── pushed/                ← 推送记录（datetime.json）
+    ├── signals/               ← 手动/外部信号文件（datetime.json）
+    ├── reports/               ← 复盘报告（date.json / date.md）
+    ├── weights/               ← 权重优化结果
+    ├── panel/                 ← 回测面板数据（parquet）
+    └── training/              ← 训练集（CSV）
+```
+
+### 关键规则
+
+1. **按玩法分目录** — `wiki/raw/limit-up/xxx`，不允许 `wiki/raw/xxx`
+2. **`_relocate_raw_data()` 自动搬迁** — compile.py 在编译完成后将 `plays/<play>/data/` 下的当日文件 mv 到 `wiki/raw/<play-slug>/`
+3. **`_gc_stale_raw_data()` 防漏** — compile 启动时自动清理 `plays/<play>/data/` 下非今日残留文件
+4. **读取路径** — 回测/查询统一走 `wiki/raw/<play-slug>/`，不走 plays/<play>/data/
+5. **禁止写入 `wiki/raw/` 根目录** — 任何代码都不可直接写 `wiki/raw/xxx`，必须写 `wiki/raw/<play-slug>/xxx`
+6. **只存原始数据** — `wiki/raw/` 只存管线/扫描产生的 JSON/MD/CSV/parquet，不是文档目录。文档放 `wiki/concepts/` 或 `wiki/plays/`
+
+### 当前玩法
+
+| play | play-slug | raw 路径 |
+|------|-----------|----------|
+| limit_up | limit-up | `wiki/raw/limit-up/` |
 
 ## 代码修改约束
 
