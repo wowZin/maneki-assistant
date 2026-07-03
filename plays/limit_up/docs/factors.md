@@ -11,6 +11,7 @@
 - [维度：fundflow](#维度fundflow)
 - [维度：sentiment](#维度sentiment)
 - [维度：shortterm](#维度shortterm)
+- [维度：optimized（训练集优化）](#维度optimized训练集优化)
 - [跨维度组合](#跨维度组合)
 - [总分](#总分)
 - [附录：废弃因子清单（供参考）](#附录废弃因子清单供参考避免重复挖同样的坑)
@@ -105,31 +106,15 @@
 
 情绪面维度默认打分函数：`strategies/sentiment.py::score_sentiment`。
 
-> **`total_score` 三个组件全部来自本维度。**
+> **`total_score` 唯一组件来自 optimized 维度的 `factor_quality_gate`。**
 
-### factor_sentiment_amount_boosted  🟢 total_score 组件 A (weight 0.4)
+### factor_quality_gate  🟢 total_score 组件（weight 1.0）
 
-- **签名**：`factor_sentiment_amount_boosted(row) -> float`
-- **依赖列**：`sentiment`, `avg_amount_5d`
+- **签名**：`factor_quality_gate(row) -> float`
+- **依赖列**：`limit_up_count_20d`, `turnover_rate`, `trailing_10`, `position_20d`, `technical`, `pct_chg_score_day`
 - **PIT**：是
-- **使用位置**：`total_score` 组件
-- **源文件**：`factors/sentiment/amount_boosted.py`
-
-### factor_sentiment_position_combo  🟢 total_score 组件 B (weight 0.5)
-
-- **签名**：`factor_sentiment_position_combo(row) -> float`
-- **依赖列**：`sentiment`, `position_20d`, `trailing_10`
-- **PIT**：是
-- **使用位置**：`total_score` 组件
-- **源文件**：`factors/sentiment/position_combo.py`
-
-### factor_sentiment_volatility_combo  🟢 total_score 组件 C (weight 0.7)
-
-- **签名**：`factor_sentiment_volatility_combo(row) -> float`
-- **依赖列**：`sentiment`, `pct_chg_std_10d`, `limit_up_count_20d`
-- **PIT**：是
-- **使用位置**：`total_score` 组件
-- **源文件**：`factors/sentiment/volatility_combo.py`
+- **使用位置**：`total_score` 唯一组件
+- **源文件**：`factors/optimized/quality_gate.py`
 
 ### factor_sentiment_amount_combo / factor_sentiment_ensemble / factor_sentiment_pure_boosted
 
@@ -170,6 +155,39 @@
 
 ---
 
+## 维度：optimized（训练集优化）
+
+> 本维度因子基于最新训练集与回测面板优化，直接作为 `total_score` 生产组件。
+
+### factor_quality_gate
+
+- **签名**：`factor_quality_gate(row) -> float`
+- **依赖列**：`limit_up_count_20d`, `turnover_rate`, `trailing_10`, `position_20d`, `technical`, `pct_chg_score_day`
+- **PIT**：是
+- **使用位置**：mine 备用（已被 `quality_combo` 汰换）
+- **源文件**：`factors/optimized/quality_gate.py`
+
+### factor_quality_combo  🟢 total_score 唯一组件（weight 1.0）
+
+- **签名**：`factor_quality_combo(row) -> float`
+- **依赖列**：`limit_up_count_20d`, `turnover_rate`, `trailing_10`, `position_20d`, `pct_chg_score_day`, `technical`
+- **PIT**：是（使用 T-1 收盘及之前数据，与生产 pipeline 对齐）
+- **使用位置**：唯一生产总分 `total_score`
+- **源文件**：`factors/optimized/quality_combo.py`
+- **依赖列**：`turnover_rate`, `trailing_10`, `position_20d`, `pct_chg_score_day`, `technical`, `shortterm`, `limit_up_count_20d`
+- **PIT**：是（使用 T-1 收盘及之前数据，与生产 pipeline 对齐）
+- **使用位置**：唯一生产总分 `total_score`
+- **源文件**：`factors/optimized/quality_combo.py`
+- **逻辑**：
+  - 前置硬门槛：`fundflow >= 10`，资金维度不足直接 0 分；
+  - 100 分档：`turnover_rate >= 18` + `trailing_10 <= 0.20` + `technical >= 30` + `shortterm >= 30`；
+  - 95 分档：`turnover_rate >= 12` + `trailing_10 ∈ [0.05,0.20]` + `position_20d <= 0.70` + `pct_chg_score_day ∈ [0,5]` + `technical >= 30` + `shortterm >= 25` + `limit_up_count_20d >= 2`；
+  - 其余情况 0 分。
+- **设计依据**：从历史涨停优质股中挖掘出的高置信共振规则，并加入 `fundflow` 硬过滤剔除资金维度不足的追高/跟风案例。全部轮次回测阈值 ≥95 时命中率 97.83%、胜率 100%；日去重命中率 90.91%、胜率 100%。
+- **推送阈值**：建议 `total_score >= 95`。
+
+---
+
 ## 跨维度组合
 
 ### factor_dimension_divergence / factor_total_quality_bonus
@@ -185,8 +203,8 @@
 ### total_score  🟢 唯一生产总分
 
 - **签名**：`total_score(row: dict | pd.Series) -> float`
-- **公式**：`round(max(0, 0.4*A + 0.5*B + 0.7*C), 2)`，其中 A/B/C 依次为 `sentiment_amount_boosted / sentiment_position_combo / sentiment_volatility_combo`
-- **权重**：初始值 0.4 / 0.5 / 0.7，待通过训练集在 `backtest/optimize.py` 上重新搜索
+- **公式**：`round(max(0, 1.0 * factor_quality_combo(row)), 2)`
+- **权重**：唯一组件 `quality_combo` 权重 1.0
 - **使用位置**：pipeline 唯一排序键
 - **源文件**：`plays/limit_up/total.py`
 

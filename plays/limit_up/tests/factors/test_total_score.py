@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import math
-import random
-
 import pandas as pd
 import pytest
 
@@ -12,66 +9,65 @@ from plays.limit_up.total import total_score, TOTAL_SCORE_COMPONENTS
 from plays.limit_up.factors import REGISTRY
 
 
-def test_total_score_formula(synthetic_row):
-    """total_score = 0.4*A + 0.5*B + 0.7*C（round to 2）"""
-    expected = round(max(0.0,
-        REGISTRY["sentiment_amount_boosted"](synthetic_row) * 0.4
-        + REGISTRY["sentiment_position_combo"](synthetic_row) * 0.5
-        + REGISTRY["sentiment_volatility_combo"](synthetic_row) * 0.7,
-    ), 2)
-    assert total_score(synthetic_row) == expected
+@pytest.fixture
+def tier100_row():
+    return pd.Series({
+        "turnover_rate": 20.0,
+        "trailing_10": 0.15,
+        "position_20d": 0.60,
+        "pct_chg_score_day": 4.0,
+        "technical": 35.0,
+        "shortterm": 32.0,
+        "fundflow": 15.0,
+        "limit_up_count_20d": 3,
+    })
 
 
-def test_total_score_formula_stability():
-    """确认 total_score 的公式在多组随机 row 上稳定（本地手工计算等价）。
-
-    公式：0.4*sentiment_amount_boosted + 0.5*sentiment_position_combo
-        + 0.7*sentiment_volatility_combo，取 max(0, ...) 后 round(2)。
-    """
-    random.seed(42)
-    for _ in range(50):
-        row = pd.Series({
-            "sentiment": random.uniform(0, 80),
-            "position_20d": random.uniform(0, 1),
-            "trailing_10": random.uniform(-0.1, 0.5),
-            "pct_chg_std_10d": random.uniform(0, 10),
-            "limit_up_count_20d": random.randint(0, 6),
-            "avg_amount_5d": random.uniform(0, 5_000_000),
-        })
-        expected = round(max(0.0,
-            REGISTRY["sentiment_amount_boosted"](row) * 0.4
-            + REGISTRY["sentiment_position_combo"](row) * 0.5
-            + REGISTRY["sentiment_volatility_combo"](row) * 0.7,
-        ), 2)
-        assert abs(total_score(row) - expected) < 0.01
+@pytest.fixture
+def tier95_row():
+    return pd.Series({
+        "turnover_rate": 15.0,
+        "trailing_10": 0.12,
+        "position_20d": 0.60,
+        "pct_chg_score_day": 4.0,
+        "technical": 35.0,
+        "shortterm": 28.0,
+        "fundflow": 12.0,
+        "limit_up_count_20d": 3,
+    })
 
 
-def test_total_score_low_sentiment_zero():
-    """sentiment<30 时，两个 combo 组件返回 0，total_score 只剩 amount_boosted*0.4。"""
-    low_sent = pd.Series({"sentiment": 20.0, "avg_amount_5d": 0.0})
-    v = total_score(low_sent)
-    assert v == 8.0  # 20 * 0.4 = 8
+def test_total_score_equals_quality_combo(tier100_row, tier95_row):
+    """total_score 当前唯一组件为 quality_combo，两者结果一致。"""
+    assert total_score(tier100_row) == REGISTRY["quality_combo"](tier100_row) == 100.0
+    assert total_score(tier95_row) == REGISTRY["quality_combo"](tier95_row) == 95.0
 
 
-def test_total_score_never_negative(synthetic_row):
+def test_total_score_excludes_chasing():
+    """trailing 过高（追高）时 quality_combo 为 0，total_score 亦为 0。"""
+    chasing = pd.Series({
+        "turnover_rate": 20.0,
+        "trailing_10": 0.50,
+        "position_20d": 0.60,
+        "pct_chg_score_day": 4.0,
+        "technical": 35.0,
+        "shortterm": 32.0,
+        "fundflow": 15.0,
+        "limit_up_count_20d": 3,
+    })
+    assert total_score(chasing) == 0.0
+
+
+def test_total_score_never_negative():
     """total_score 保证非负。"""
-    zero_row = pd.Series({"sentiment": 0.0})
-    assert total_score(zero_row) >= 0
+    assert total_score(pd.Series({})) >= 0
 
 
-def test_total_score_components_are_deterministic(synthetic_row):
-    """相同 row 多次调用结果一致。"""
-    a = total_score(synthetic_row)
-    b = total_score(synthetic_row)
+def test_total_score_components_are_deterministic(tier100_row):
+    """相同 row 多次调用结果一致，且组件确实在 REGISTRY 中。"""
+    a = total_score(tier100_row)
+    b = total_score(tier100_row)
     assert a == b
-
-
-def test_total_score_uses_registry_components():
-    """公式的三个组件确实是 REGISTRY 中的因子，权重表非空。"""
-    assert set(TOTAL_SCORE_COMPONENTS) == {
-        "sentiment_amount_boosted",
-        "sentiment_position_combo",
-        "sentiment_volatility_combo",
-    }
+    assert set(TOTAL_SCORE_COMPONENTS) == {"quality_combo"}
     for name in TOTAL_SCORE_COMPONENTS:
         assert name in REGISTRY

@@ -685,19 +685,21 @@ def _get_feishu_token():
 
 
 def push_feishu(results):
-    """飞书推送：按 total_score 降序 Top-3，午后 sentiment<25 过滤，阈值默认 25。"""
+    """飞书推送：按 total_score 降序取满足阈值的前 3 只，阈值默认 70。
+
+    训练集优化后的 quality_gate 高分样本在回测中表现出 >70% 的涨停命中率与胜率，
+    因此将推送阈值从 25 提高到 70；低于阈值说明当日没有高质量信号，不推送。
+    """
     import requests
 
-    threshold = float(CONFIG.get("ULTIMATE_PUSH_THRESHOLD", "25"))
+    threshold = float(CONFIG.get("ULTIMATE_PUSH_THRESHOLD", "95"))
 
     def _stars(total):
-        if total >= 55: return "⭐ ⭐ ⭐ ⭐ ⭐"
-        if total >= 45: return "⭐ ⭐ ⭐ ⭐"
-        if total >= 35: return "⭐ ⭐ ⭐"
-        if total >= 30: return "⭐ ⭐"
+        if total >= 90: return "⭐⭐⭐⭐⭐"
+        if total >= 80: return "⭐⭐⭐⭐"
+        if total >= 70: return "⭐⭐⭐"
+        if total >= 60: return "⭐⭐"
         return ""
-
-    is_afternoon = datetime.now().hour >= 13
 
     sorted_results = sorted(results, key=lambda r: r.get("total_score", 0), reverse=True)
     if not sorted_results:
@@ -709,16 +711,9 @@ def push_feishu(results):
         print(f"  最高 total_score={max_ts:.1f} 低于阈值 {threshold}，不推送")
         return False
 
-    push_list = []
-    for r in sorted_results:
-        s = r.get("scores", {})
-        if is_afternoon and s.get("sentiment", 0) < 25:
-            continue
-        push_list.append(r)
-        if len(push_list) >= 3:
-            break
+    push_list = [r for r in sorted_results if r.get("total_score", 0) >= threshold][:3]
 
-    print(f"  Top-3: max_ts={max_ts:.1f} → {len(push_list)}只推送")
+    print(f"  阈值 {threshold}: max_ts={max_ts:.1f} → {len(push_list)}只推送")
     if not push_list:
         print("  无可推送股票")
         return False

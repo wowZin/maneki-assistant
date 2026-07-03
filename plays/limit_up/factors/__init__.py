@@ -71,6 +71,10 @@ from plays.limit_up.factors.shortterm.guardrail import factor_chasing_guardrail 
 from plays.limit_up.factors.crossdim.divergence import factor_dimension_divergence
 from plays.limit_up.factors.crossdim.quality_bonus import factor_total_quality_bonus
 
+# ── optimized（训练集优化后的生产因子）───────────────────
+from plays.limit_up.factors.optimized.quality_gate import factor_quality_gate
+from plays.limit_up.factors.optimized.quality_combo import factor_quality_combo
+
 
 REGISTRY: dict[str, Callable] = {
     # fundamental
@@ -110,6 +114,9 @@ REGISTRY: dict[str, Callable] = {
     # crossdim (mine 备用)
     "dimension_divergence": factor_dimension_divergence,
     "total_quality_bonus": factor_total_quality_bonus,
+    # optimized
+    "quality_gate": factor_quality_gate,
+    "quality_combo": factor_quality_combo,
 }
 
 
@@ -135,13 +142,12 @@ DIMENSIONS: dict[str, list[str]] = {
         "turnover_momentum", "growth_momentum",
     ],
     "crossdim": ["dimension_divergence", "total_quality_bonus"],
+    "optimized": ["quality_gate", "quality_combo"],
 }
 
 
 TOTAL_SCORE_COMPONENTS: dict[str, float] = {
-    "sentiment_amount_boosted": 0.4,
-    "sentiment_position_combo": 0.5,
-    "sentiment_volatility_combo": 0.7,
+    "quality_combo": 1.0,
 }
 
 

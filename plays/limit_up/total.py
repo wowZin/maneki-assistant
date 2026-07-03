@@ -2,14 +2,13 @@
 
 对外唯一入口 `total_score(row)`。
 
-公式：
-  total_score = round(max(0.0,
-      0.4 * factor_sentiment_amount_boosted(row)
-    + 0.5 * factor_sentiment_position_combo(row)
-    + 0.7 * factor_sentiment_volatility_combo(row)
-  ), 2)
+公式（训练集优化后）：
+  total_score = round(max(0.0, 1.0 * factor_quality_combo(row)), 2)
 
-三个组件的权重待通过 backtest/optimize.py 在训练集上重新优化。
+`factor_quality_combo` 由 `plays.limit_up.factors.optimized.quality_combo` 实现。
+它不是单一阈值，而是把涨停基因、换手、动量、位置、当日涨幅、技术分
+六个因子组合成 60/80/100 的阶梯评分；高分档在多因子共振时出现，
+从而过滤追高失败案例。推送阈值建议 ≥ 85（只推 100 分档）。
 """
 
 from __future__ import annotations
