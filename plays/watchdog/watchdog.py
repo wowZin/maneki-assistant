@@ -33,7 +33,7 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
 from plays.watchdog.indicators import price_features, realtime_row, sma, atr
-from plays.watchdog.signals import check_entry, check_exit, compute_factor_scores, is_worth_watching
+from plays.watchdog.signals import check_entry, check_exit, check_abnormal, compute_factor_scores, is_worth_watching
 from scripts.tu_share import call_tushare  # noqa: E402
 from scripts.jvquant_ws_client import _get_ws, JvQuantWSClient  # noqa: E402
 
@@ -364,10 +364,31 @@ class WatchdogEngine:
             klines = self._ws.get_kline(code, n=10) if self._ws else []
 
             daily_features = price_features(st.daily_rows)
-            row = realtime_row(code, market, vwap, klines, daily_features, st.daily_basic, st.dim_scores)
+            row = realtime_row(code, market, vwap, klines, daily_features, st.daily_basic, st.dim_scores, st.daily_rows)
             scores = compute_factor_scores(row)
 
             last = float(market.get("last", 0))
+
+            # ── 异常状态检测（资金离场 / 抛压）──
+            netflow = self._get_netflow(code)
+            ask_bid = self._ws.get_bid_ask_ratio(code) if self._ws else 1.0
+            abnormal, level, abnormal_reason = check_abnormal(
+                row, scores, netflow, ask_bid,
+                entry_price=st.entry_price if st.status == "entered" else 0.0
+            )
+            if abnormal:
+                icon = "🚨" if level == "critical" else "⚠️"
+                msg = (
+                    f"{icon} {st.name}({code}) 异常状态 [{level}]\n"
+                    f"{abnormal_reason}\n"
+                    f"现价: {last:.2f} | VWAP: {vwap:.2f}"
+                )
+                logger.info(msg)
+                _push_feishu(msg)
+                # critical 直接移出盯盘；warning 仅提醒
+                if level == "critical":
+                    self.remove([code])
+                    continue
 
             if st.status == "watching":
                 triggered, sig_type, reason = check_entry(row, scores, klines)
@@ -434,6 +455,23 @@ class WatchdogEngine:
             return 0.0
         market = self._ws.get_market(code)
         return float(market.get("last", 0)) if market else 0.0
+
+    def _get_netflow(self, code: str) -> float:
+        """从 jvQuant 获取当日大单+中单净流向（元）。"""
+        try:
+            from scripts.jvquant_client import get_jvquant_client
+            client = get_jvquant_client()
+            data = client.get_fundflow_single(_short(code))
+            if data:
+                # main_net/big_net/mid_net 单位万元，转元
+                return (
+                    float(data.get("main_net", 0) or 0)
+                    + float(data.get("big_net", 0) or 0)
+                    + float(data.get("mid_net", 0) or 0)
+                ) * 10000
+        except Exception as e:
+            logger.debug(f"获取资金流向失败 {code}: {e}")
+        return 0.0
 
     # ---- 日线数据 ----
 

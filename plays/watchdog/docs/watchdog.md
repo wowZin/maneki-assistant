@@ -64,6 +64,19 @@ exited       已出场，移出盯盘
 - **日线/基本面**：Tushare `daily` / `daily_basic`
 - **五维度评分**：`wiki/raw/limit-up/analysis/` 或 `plays/limit_up/data/analysis/` 最新一轮结果
 
+## 异常状态提醒
+
+对每只盯盘标的持续检测：
+
+| 异常 | 级别 | 动作 |
+|------|------|------|
+| 大单资金离场 | critical | 飞书提醒并自动移出盯盘 |
+| 卖盘压力过大 | warning | 飞书提醒 |
+| 放量跌破 VWAP | warning | 飞书提醒 |
+| 持仓急跌放量 | critical | 飞书提醒并自动移出盯盘 |
+
+资金流向来自 jvQuant 的 `get_fundflow_single()`。
+
 ## 启动
 
 ```bash

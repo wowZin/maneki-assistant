@@ -61,6 +61,15 @@ EXIT_CONFIG = {
 }
 
 
+ABNORMAL_CONFIG = {
+    "netflow_threshold": -5_000_000,  # 大单净流出 500万 触发警告（元）
+    "ask_bid_ratio": 2.0,             # 卖盘/买盘量比 > 2 触发压力警告
+    "drop_vs_vwap_pct": -2.0,         # 现价低于 VWAP 2% 触发
+    "price_drop_pct": -3.0,           # 相对入场价跌 3% 且放量触发
+    "vol_ratio_threshold": 1.5,       # 放量阈值
+}
+
+
 def compute_factor_scores(row: dict) -> dict:
     """计算实时面板行的各因子得分。"""
     return {
@@ -182,6 +191,63 @@ def check_exit(
         return True, f"日内反转: 强度转负且跌破VWAP({vwap:.2f})"
 
     return False, ""
+
+
+def check_abnormal(
+    row: dict,
+    scores: dict,
+    netflow: float,
+    ask_bid_ratio: float,
+    entry_price: float,
+    config: dict | None = None,
+) -> tuple[bool, str, str]:
+    """检测异常状态（资金离场/抛压）。
+
+    返回: (is_abnormal, level, reason)
+    level: "critical" | "warning"
+    """
+    cfg = config or ABNORMAL_CONFIG
+    last = row.get("pct_chg_score_day", 0.0)
+    pct = row.get("pct_chg_score_day", 0.0)
+    vol_ratio = row.get("vol_ratio_proxy", 1.0)
+    vwap = row.get("vwap", 0.0)
+    current_price = last  # pct 字段名继承 limit_up，这里实际为涨幅，不表示价格
+
+    # 修正：传入 current_price 更清晰，这里用 row 中的 last 价格
+    # 因为 realtime_row 中 pct_chg_score_day 是涨幅，不是价格
+    # 调用方应传入 current_price 参数
+    # 但为了兼容，这里重新约定：current_price 通过 row.get("last_price") 取
+    current_price = row.get("last_price", 0.0)
+
+    # 1. 大单资金离场（critical）
+    if netflow <= cfg["netflow_threshold"]:
+        return True, "critical", (
+            f"大单净流出 {netflow/10000:.0f}万，资金离场"
+        )
+
+    # 2. 卖盘压力（warning）
+    if ask_bid_ratio >= cfg["ask_bid_ratio"]:
+        return True, "warning", f"卖盘压力 {ask_bid_ratio:.1f}:1"
+
+    # 3. 跌破 VWAP 且放量（warning）
+    if vwap > 0 and current_price > 0:
+        vs_vwap = (current_price / vwap - 1) * 100
+        if vs_vwap <= cfg["drop_vs_vwap_pct"] and vol_ratio >= cfg["vol_ratio_threshold"]:
+            return True, "warning", (
+                f"放量跌破 VWAP: 现价{current_price:.2f} VWAP{vwap:.2f} "
+                f"偏离{vs_vwap:.1f}% 量比{vol_ratio:.1f}"
+            )
+
+    # 4. 持仓中的急跌+放量（critical）
+    if entry_price > 0:
+        drop_pct = (current_price / entry_price - 1) * 100
+        if drop_pct <= cfg["price_drop_pct"] and vol_ratio >= cfg["vol_ratio_threshold"]:
+            return True, "critical", (
+                f"急跌放量: 入场{entry_price:.2f} 现价{current_price:.2f} "
+                f"跌幅{drop_pct:.1f}% 量比{vol_ratio:.1f}"
+            )
+
+    return False, "", ""
 
 
 def is_worth_watching(row: dict, scores: dict) -> tuple[bool, str]:

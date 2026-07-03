@@ -142,6 +142,7 @@ def realtime_row(
     daily_features: dict,
     daily_basic: dict,
     dim_scores: dict,
+    daily_rows: list[dict] | None = None,
 ) -> dict:
     """构造一条可传入 limit_up 因子函数的实时面板行。
 
@@ -150,6 +151,15 @@ def realtime_row(
     last = float(market.get("last", 0))
     open_price = float(market.get("open", market.get("open_price", 0)))
     pre_close = float(market.get("pre_close", 0))
+
+    # fallback：从日线取开盘价/昨收（非交易日测试数据常缺失）
+    if daily_rows:
+        latest = daily_rows[-1]
+        if open_price <= 0:
+            open_price = float(latest.get("open", 0))
+        if pre_close <= 0:
+            pre_close = float(latest.get("pre_close", 0))
+
     pct = ((last / pre_close - 1) * 100) if pre_close > 0 else 0.0
     gap = ((open_price / pre_close - 1) * 100) if pre_close > 0 else 0.0
 
@@ -163,11 +173,12 @@ def realtime_row(
             vol_ratio_proxy = last_amount / daily_features["avg_amount_5d"]
 
     # 换手率代理：当日累计成交额 / 流通市值（%）
+    # circ_mv 单位万元（Tushare daily_basic），trade_amount 单位元（L2）
     turnover_rate = 0.0
     circ_mv = float(daily_basic.get("circ_mv", 0))
     if circ_mv > 0:
         last_amount = float(market.get("trade_amount", market.get("amount", 0)))
-        turnover_rate = (last_amount / circ_mv) * 100
+        turnover_rate = (last_amount / (circ_mv * 10000)) * 100
 
     # 成交额比
     amount_ratio = 1.0
@@ -177,6 +188,7 @@ def realtime_row(
 
     row = {
         "code": code,
+        "last_price": last,
         "pct_chg_score_day": pct,
         "gap_up": gap,
         "gap_up_pit": gap,
