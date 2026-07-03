@@ -401,17 +401,34 @@ def _fetch_nv2_data(codes: list[str]):
       - daily: 前收盘价(pre_close) → 计算 trailing_10/5, position_20d, std10, max_pct_chg_5d
       - daily_basic: PE/PB/市值/换手/量比 → PIT 面板列
       - limit_list_d: 近60日涨停次数 → 涨停基因(20d/60d)
+
+    注意:
+      - daily 支持多 ts_code 批量
+      - daily_basic 不支持多 ts_code，必须逐只查询
+      - limit_list_d 支持多 ts_code 批量
     """
     global _NV2_DAILY_CACHE, _NV2_DAILY_BASIC_CACHE, _NV2_LIMIT_CACHE, _NV2_LIMIT_60D_CACHE, _NV2_DATE
     today = datetime.now().strftime("%Y%m%d")
-    if _NV2_DATE == today and _NV2_DAILY_CACHE:
+    if _NV2_DATE == today and _NV2_DAILY_CACHE and _NV2_DAILY_BASIC_CACHE:
         return
 
     from scripts.tu_share import call_tushare
     from datetime import timedelta
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    start70 = (datetime.now() - timedelta(days=70)).strftime("%Y%m%d")
+    start60 = (datetime.now() - timedelta(days=60)).strftime("%Y%m%d")
+
+    def _tushare_code_msg(resp: dict) -> str:
+        code = resp.get("code")
+        msg = resp.get("msg", "")
+        if code is None:
+            return "无响应"
+        if code != 0:
+            return f"错误码{code}: {msg}"
+        return "ok"
 
     # 1. 日线数据 (近70天，满足60日涨停基因 + 20日波动/位置计算)
-    start70 = (datetime.now() - timedelta(days=70)).strftime("%Y%m%d")
     ts_codes = [c for c in codes if c not in _NV2_DAILY_CACHE]
     if ts_codes:
         try:
@@ -428,37 +445,54 @@ def _fetch_nv2_data(codes: list[str]):
                     if code not in _NV2_DAILY_CACHE:
                         _NV2_DAILY_CACHE[code] = []
                     _NV2_DAILY_CACHE[code].append(d)
-            print(f"  [NV2] daily: {len(items)}条, {len(ts_codes)}只")
+            print(f"  [NV2] daily: {len(items)}条, {len(ts_codes)}只 ({_tushare_code_msg(resp)})")
         except Exception as e:
             print(f"  [NV2] daily拉取失败: {e}")
 
     # 2. daily_basic (近70天，PIT 综合评分需要 pe/pb/circ_mv/turnover/volume_ratio 历史)
+    # daily_basic 不支持多 ts_code，必须逐只并行查询
     ts_codes_db = [c for c in codes if c not in _NV2_DAILY_BASIC_CACHE]
     if ts_codes_db:
-        try:
-            resp = call_tushare("daily_basic", {
-                "ts_code": ",".join(ts_codes_db),
-                "start_date": start70, "end_date": today,
-            }, "ts_code,trade_date,pe,pb,circ_mv,turnover_rate,volume_ratio")
-            items = resp.get("data", {}).get("items", [])
-            flds = resp.get("data", {}).get("fields", [])
-            for row in items:
-                d = dict(zip(flds, row))
-                code = d.get("ts_code", "")
-                trade_date = str(d.get("trade_date", ""))
-                if code and trade_date:
-                    if code not in _NV2_DAILY_BASIC_CACHE:
-                        _NV2_DAILY_BASIC_CACHE[code] = {}
-                    _NV2_DAILY_BASIC_CACHE[code][trade_date] = d
-            print(f"  [NV2] daily_basic: {len(items)}条, {len(ts_codes_db)}只")
-        except Exception as e:
-            print(f"  [NV2] daily_basic拉取失败: {e}")
+        total_items = 0
+        failed_codes = []
+
+        def _fetch_one_daily_basic(code: str) -> tuple[str, list]:
+            try:
+                resp = call_tushare("daily_basic", {
+                    "ts_code": code,
+                    "start_date": start70, "end_date": today,
+                }, "ts_code,trade_date,pe,pb,circ_mv,turnover_rate,volume_ratio")
+                if resp.get("code", -1) != 0:
+                    return code, []
+                items = resp.get("data", {}).get("items", [])
+                return code, items
+            except Exception:
+                return code, []
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            futures = {pool.submit(_fetch_one_daily_basic, code): code for code in ts_codes_db}
+            for future in as_completed(futures):
+                code, items = future.result()
+                if not items:
+                    failed_codes.append(code)
+                    continue
+                if code not in _NV2_DAILY_BASIC_CACHE:
+                    _NV2_DAILY_BASIC_CACHE[code] = {}
+                for row in items:
+                    d = dict(zip(["ts_code", "trade_date", "pe", "pb", "circ_mv",
+                                  "turnover_rate", "volume_ratio"], row))
+                    trade_date = str(d.get("trade_date", ""))
+                    if trade_date:
+                        _NV2_DAILY_BASIC_CACHE[code][trade_date] = d
+                total_items += len(items)
+
+        fail_msg = f", 失败{len(failed_codes)}只" if failed_codes else ""
+        print(f"  [NV2] daily_basic: {total_items}条, {len(ts_codes_db)}只 (逐只){fail_msg}")
 
     # 3. 涨停基因 (近60日，同时产出 20d/60d 计数)
     ts_codes_l = [c for c in codes if c not in _NV2_LIMIT_CACHE]
     if ts_codes_l:
         try:
-            start60 = (datetime.now() - timedelta(days=60)).strftime("%Y%m%d")
             resp = call_tushare("limit_list_d", {
                 "ts_code": ",".join(ts_codes_l),
                 "start_date": start60, "end_date": today,
@@ -481,7 +515,7 @@ def _fetch_nv2_data(codes: list[str]):
                 count60 = len(dates)
                 _NV2_LIMIT_CACHE[code] = count20
                 _NV2_LIMIT_60D_CACHE[code] = count60
-            print(f"  [NV2] limit_list: {len(items)}条涨停记录")
+            print(f"  [NV2] limit_list: {len(items)}条涨停记录 ({_tushare_code_msg(resp)})")
         except Exception as e:
             print(f"  [NV2] limit_list拉取失败: {e}")
             for code in ts_codes_l:
