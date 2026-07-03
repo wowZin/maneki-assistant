@@ -498,6 +498,8 @@ def compile_watchdog(trade_date: str):
 
     rows = []
     for code, st in state.items():
+        if not isinstance(st, dict):
+            continue
         name = names.get(code, code.split(".")[0])
         status_text = status_icons.get(st.get("status", ""), st.get("status", "?"))
         added = st.get("added_at", "")[:10]
