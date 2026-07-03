@@ -318,9 +318,14 @@ async def feishu_webhook(req: Request):
         return JSONResponse({"ok": True})
 
     # 过滤机器人自身的消息，防止循环
-    sender = event.get("event", {}).get("sender", {})
+    sender = event.get("sender", {})
     if sender.get("sender_type") == "app":
         return JSONResponse({"code": 0})
+
+    # 过滤超时的旧消息（超过 5 分钟的丢弃，防止重启后飞书重发旧事件）
+    msg_time_ms = header.get("create_time", 0)
+    if msg_time_ms and (time.time() * 1000 - int(msg_time_ms)) > 300_000:
+        return JSONResponse({"ok": True})
 
     # 持久化去重：已处理过的 message_id 不再处理（防重启后飞书重发旧事件）
     if message_id in _seen_msg_ids:

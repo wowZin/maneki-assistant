@@ -66,7 +66,7 @@ async def feishu_callback(request: Request):
     content_raw = message.get("content", "{}")
 
     # 过滤机器人自身的消息，防止循环
-    sender = event.get("event", {}).get("sender", {})
+    sender = event.get("sender", {})
     if sender.get("sender_type") == "app":
         return JSONResponse({"code": 0})
 
