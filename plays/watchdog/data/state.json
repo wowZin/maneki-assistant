@@ -8,35 +8,34 @@
     "entry_at": "",
     "highest_since_entry": 0.0,
     "bars_held": 0,
-    "signal_low": 0.0,
-    "signal_high": 0.0,
+    "signal_type": "",
+    "signal_reason": "",
     "signal_at": "",
-    "avg_vol_20": 0.0,
     "last_alert_at": "",
-    "last_daily_update": "20260701"
-  },
-  "002484.SZ": {
-    "code": "002484.SZ",
-    "name": "江海股份",
-    "added_at": "2026-06-17T13:00:00",
-    "status": "watching",
-    "entry_price": 0.0,
-    "entry_at": "",
-    "highest_since_entry": 0.0,
-    "bars_held": 0,
-    "signal_low": 0.0,
-    "signal_high": 0.0,
-    "signal_at": "",
-    "avg_vol_20": 0.0,
-    "last_alert_at": "",
-    "last_daily_update": "20260701"
+    "daily_basic": {
+      "ts_code": "002463.SZ",
+      "trade_date": "20260702",
+      "pe": 65.7061,
+      "pb": 14.9583,
+      "circ_mv": 25094599.8355,
+      "turnover_rate": 4.5688,
+      "volume_ratio": 1.0
+    },
+    "dim_scores": {},
+    "last_daily_update": "20260703"
   },
   "watchlist": [
     {
-      "code": "002119.SZ",
-      "name": "康强电子",
-      "price": 13.9476,
-      "added_at": "2026-07-01T13:43:39.815523"
+      "code": "002579.SZ",
+      "name": "中京电子",
+      "price": 12.65,
+      "added_at": "2026-07-03T15:30:25.793644"
+    },
+    {
+      "code": "603906.SH",
+      "name": "龙蟠科技",
+      "price": 14.76,
+      "added_at": "2026-07-03T15:30:26.092671"
     }
   ]
 }
