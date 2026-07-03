@@ -5,14 +5,19 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
-from plays.watchdog.signals import check_entry, check_exit, compute_factor_scores, is_worth_watching
+from plays.watchdog.signals import (
+    check_entry, check_exit, check_abnormal,
+    compute_factor_scores, is_worth_watching,
+)
 
 
 def _make_row(pct: float, gap: float, turnover: float, vol_ratio: float,
               position: float = 0.6, trailing: float = 0.1,
               pullback10: float = 0.05, pullback20: float = 0.08,
-              limit20: float = 2.0, **kwargs):
+              limit20: float = 2.0, last_price: float = 10.0,
+              vwap: float = 10.0, **kwargs):
     return {
+        "last_price": last_price,
         "pct_chg_score_day": pct,
         "gap_up": gap,
         "gap_up_pit": gap,
@@ -21,7 +26,7 @@ def _make_row(pct: float, gap: float, turnover: float, vol_ratio: float,
         "vol_ratio_proxy": vol_ratio,
         "volume_ratio": vol_ratio,
         "amount_ratio": 1.5,
-        "vwap": 10.0,
+        "vwap": vwap,
         "position_20d": position,
         "trailing_10": trailing,
         "trailing_10_pit": trailing,
@@ -95,6 +100,47 @@ def test_is_worth_watching():
     assert ok
 
 
+# ── 异常状态置信度 ──
+
+def test_abnormal_low_position_no_critical():
+    """低位放量下跌，即使资金流出大，也不应直接 critical（可能是诱空）。"""
+    row = _make_row(pct=-5.0, gap=-1.0, turnover=15.0, vol_ratio=2.0,
+                    position=0.2, last_price=9.5, vwap=10.0)
+    abn, level, reason = check_abnormal(row, {}, -80_000_000, 1.5, 0)
+    assert not abn or level != "critical", reason
+
+
+def test_abnormal_high_position_critical():
+    """高位 + 大跌 + 资金流出 + 抛压 → critical。"""
+    row = _make_row(pct=-6.0, gap=-2.0, turnover=18.0, vol_ratio=2.5,
+                    position=0.9, last_price=9.4, vwap=10.0,
+                    limit20=3.0)
+    abn, level, reason = check_abnormal(row, {}, -60_000_000, 3.0, 0)
+    assert abn
+    assert level == "critical", reason
+
+
+def test_abnormal_consecutive_outflow():
+    """连续 3 轮净流出，加分后应触发 warning 或 critical。"""
+    row = _make_row(pct=-2.0, gap=-0.5, turnover=10.0, vol_ratio=1.6,
+                    position=0.7, last_price=9.8, vwap=10.0)
+    abn, level, reason = check_abnormal(
+        row, {}, -15_000_000, 2.5, 0,
+        netflow_history=[-10_000_000, -20_000_000, -15_000_000]
+    )
+    assert abn
+
+
+def test_abnormal_holding_drop():
+    """持仓后急跌放量 → critical。"""
+    row = _make_row(pct=-6.0, gap=-2.0, turnover=15.0, vol_ratio=2.5,
+                    position=0.75, last_price=9.4, vwap=10.0,
+                    limit20=3.0)
+    abn, level, reason = check_abnormal(row, {}, -2_000_000, 1.2, 10.0)
+    assert abn
+    assert level == "critical", reason
+
+
 if __name__ == "__main__":
     test_quality_combo_high_score()
     test_breakout_entry()
@@ -102,4 +148,8 @@ if __name__ == "__main__":
     test_stop_loss()
     test_trailing_stop()
     test_is_worth_watching()
+    test_abnormal_low_position_no_critical()
+    test_abnormal_high_position_critical()
+    test_abnormal_consecutive_outflow()
+    test_abnormal_holding_drop()
     print("signals tests passed")

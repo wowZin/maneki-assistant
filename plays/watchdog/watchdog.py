@@ -52,6 +52,7 @@ logger = logging.getLogger(__name__)
 STATE_FILE = PROJECT_DIR / "plays" / "watchdog" / "data" / "state.json"
 SCAN_INTERVAL = 30  # 每30秒检查一次信号
 MAX_WATCH = 20      # 同时盯盘上限
+ABNORMAL_COOLDOWN_SECONDS = 300  # 异常推送冷却：同一 level 5 分钟内不重复推送
 
 # 候选池来源：limit_up pipeline 产出的 analysis
 ANALYSIS_DIRS = [
@@ -123,6 +124,11 @@ class WatchState:
         self.signal_reason: str = ""
         self.signal_at: str = ""
         self.last_alert_at: str = ""
+        # 异常状态推送去重
+        self.last_abnormal_level: str = ""
+        self.last_abnormal_pushed_at: float = 0.0
+        # 资金流向历史（最近 N 轮扫描）
+        self.netflow_history: list[float] = []
         # 日线数据缓存
         self.daily_rows: list[dict] = []
         self.daily_basic: dict = {}
@@ -137,6 +143,9 @@ class WatchState:
             "bars_held": self.bars_held, "signal_type": self.signal_type,
             "signal_reason": self.signal_reason, "signal_at": self.signal_at,
             "last_alert_at": self.last_alert_at,
+            "last_abnormal_level": self.last_abnormal_level,
+            "last_abnormal_pushed_at": self.last_abnormal_pushed_at,
+            "netflow_history": self.netflow_history,
             "daily_basic": self.daily_basic,
             "dim_scores": self.dim_scores,
             "last_daily_update": self.last_daily_update,
@@ -155,6 +164,9 @@ class WatchState:
         s.signal_reason = d.get("signal_reason", "")
         s.signal_at = d.get("signal_at", "")
         s.last_alert_at = d.get("last_alert_at", "")
+        s.last_abnormal_level = d.get("last_abnormal_level", "")
+        s.last_abnormal_pushed_at = d.get("last_abnormal_pushed_at", 0.0)
+        s.netflow_history = d.get("netflow_history", [])
         s.daily_basic = d.get("daily_basic", {})
         s.dim_scores = d.get("dim_scores", {})
         s.last_daily_update = d.get("last_daily_update", "")
@@ -259,10 +271,11 @@ class WatchdogEngine:
 
         self._subscribe(codes)
 
+        # 添加成功不推送飞书（避免干扰）；指令响应由飞书 bot 直接回复
         for code in codes:
             if code in self._states:
                 st = self._states[code]
-                _push_feishu(f"👁 盯盘 {st.name}({code})\n日线数据: {'OK' if st.daily_rows else '加载中'}")
+                logger.info(f"开始盯盘 {st.name}({code}) 日线数据: {'OK' if st.daily_rows else '加载中'}")
 
         return "\n".join(msgs)
 
@@ -369,26 +382,43 @@ class WatchdogEngine:
 
             last = float(market.get("last", 0))
 
-            # ── 异常状态检测（资金离场 / 抛压）──
+            # 记录资金流向历史（最多保留 10 轮）
             netflow = self._get_netflow(code)
+            st.netflow_history.append(netflow)
+            if len(st.netflow_history) > 10:
+                st.netflow_history = st.netflow_history[-10:]
+
+            # ── 异常状态检测（资金离场 / 抛压）──
             ask_bid = self._ws.get_bid_ask_ratio(code) if self._ws else 1.0
             abnormal, level, abnormal_reason = check_abnormal(
                 row, scores, netflow, ask_bid,
-                entry_price=st.entry_price if st.status == "entered" else 0.0
+                entry_price=st.entry_price if st.status == "entered" else 0.0,
+                netflow_history=st.netflow_history,
             )
             if abnormal:
+                # 去重：同一 level 冷却期内不重复推送
+                should_push = (
+                    level != st.last_abnormal_level
+                    or (time.time() - st.last_abnormal_pushed_at) >= ABNORMAL_COOLDOWN_SECONDS
+                )
                 icon = "🚨" if level == "critical" else "⚠️"
                 msg = (
                     f"{icon} {st.name}({code}) 异常状态 [{level}]\n"
                     f"{abnormal_reason}\n"
                     f"现价: {last:.2f} | VWAP: {vwap:.2f}"
                 )
-                logger.info(msg)
-                _push_feishu(msg)
+                if should_push:
+                    logger.info(msg)
+                    _push_feishu(msg)
+                    st.last_abnormal_level = level
+                    st.last_abnormal_pushed_at = time.time()
                 # critical 直接移出盯盘；warning 仅提醒
                 if level == "critical":
                     self.remove([code])
                     continue
+            else:
+                # 状态恢复正常，清空冷却记录（下次异常立即推送）
+                st.last_abnormal_level = ""
 
             if st.status == "watching":
                 triggered, sig_type, reason = check_entry(row, scores, klines)
