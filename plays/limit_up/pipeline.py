@@ -450,7 +450,7 @@ def _fetch_nv2_data(codes: list[str]):
             print(f"  [NV2] daily拉取失败: {e}")
 
     # 2. daily_basic (近70天，PIT 综合评分需要 pe/pb/circ_mv/turnover/volume_ratio 历史)
-    # daily_basic 不支持多 ts_code，必须逐只并行查询
+    # 注意：Tushare daily_basic API 不支持逗号分隔的批量 ts_code，需逐只并行查询
     ts_codes_db = [c for c in codes if c not in _NV2_DAILY_BASIC_CACHE]
     if ts_codes_db:
         total_items = 0
