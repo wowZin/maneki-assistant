@@ -26,7 +26,8 @@ DATA_DIR = PLAY_DIR / "data"
 sys.path.insert(0, str(PROJECT_DIR))
 
 from scripts.tu_share import CONFIG, clear_tushare_cache  # noqa: E402
-from plays.limit_up.utils import is_trading_time  # noqa: E402
+from plays.limit_up.utils import is_trading_time, log_data_audit  # noqa: E402
+from plays.limit_up.pit_features import build_pit_features  # noqa: E402
 
 # ===== Feishu 测试模式 =====
 FEISHU_TEST_MODE = CONFIG.get("FEISHU_TEST_MODE", "").lower() == "true"
@@ -391,6 +392,7 @@ _NV2_DAILY_CACHE: dict[str, list[dict]] = {}  # code → [{trade_date, close, hi
 _NV2_DAILY_BASIC_CACHE: dict[str, dict[str, dict]] = {}  # code → {trade_date: {pe, pb, circ_mv, ...}}
 _NV2_LIMIT_CACHE: dict[str, int] = {}         # code → 近20日涨停次数
 _NV2_LIMIT_60D_CACHE: dict[str, int] = {}     # code → 近60日涨停次数
+_NV2_MONEYFLOW_CACHE: dict[str, dict[str, dict]] = {}  # code → {trade_date: moneyflow_row}
 _NV2_DATE = ""
 
 
@@ -407,7 +409,7 @@ def _fetch_nv2_data(codes: list[str]):
       - daily_basic 不支持多 ts_code，必须逐只查询
       - limit_list_d 支持多 ts_code 批量
     """
-    global _NV2_DAILY_CACHE, _NV2_DAILY_BASIC_CACHE, _NV2_LIMIT_CACHE, _NV2_LIMIT_60D_CACHE, _NV2_DATE
+    global _NV2_DAILY_CACHE, _NV2_DAILY_BASIC_CACHE, _NV2_LIMIT_CACHE, _NV2_LIMIT_60D_CACHE, _NV2_MONEYFLOW_CACHE, _NV2_DATE
     today = datetime.now().strftime("%Y%m%d")
     if _NV2_DATE == today and _NV2_DAILY_CACHE and _NV2_DAILY_BASIC_CACHE:
         return
@@ -489,7 +491,51 @@ def _fetch_nv2_data(codes: list[str]):
         fail_msg = f", 失败{len(failed_codes)}只" if failed_codes else ""
         print(f"  [NV2] daily_basic: {total_items}条, {len(ts_codes_db)}只 (逐只){fail_msg}")
 
-    # 3. 涨停基因 (近60日，同时产出 20d/60d 计数)
+        # 数据审计：主板 circ_mv 过小
+        for code, by_date in _NV2_DAILY_BASIC_CACHE.items():
+            if not by_date:
+                continue
+            latest = max(by_date.keys())
+            row = by_date[latest]
+            circ_mv = _safe_float(row.get("circ_mv"), 0.0)
+            pure = code.split(".")[0]
+            if 0 < circ_mv < 1000 and pure.startswith(("00", "60")):
+                log_data_audit(
+                    f"[pipeline] {code} circ_mv 异常小: {circ_mv}万元 (date={latest})"
+                )
+
+    # 3. moneyflow（近 25 个自然日，按日期全市场拉取，供模型资金流特征）
+    if not _NV2_MONEYFLOW_CACHE:
+        start20 = (datetime.now() - timedelta(days=25)).strftime("%Y%m%d")
+        print(f"  [NV2] moneyflow: 拉取 {start20}~{today}")
+        total_mf = 0
+        for offset in range(26):
+            d = (datetime.now() - timedelta(days=offset)).strftime("%Y%m%d")
+            try:
+                resp = call_tushare(
+                    "moneyflow",
+                    {"trade_date": d},
+                    "ts_code,trade_date,net_mf_amount,buy_elg_amount,sell_elg_amount,"
+                    "buy_lg_amount,sell_lg_amount",
+                )
+                if resp.get("code", -1) != 0:
+                    continue
+                items = resp.get("data", {}).get("items", [])
+                fields = resp.get("data", {}).get("fields", [])
+                for row in items:
+                    drow = dict(zip(fields, row))
+                    code = drow.get("ts_code", "")
+                    td = str(drow.get("trade_date", ""))
+                    if code and td:
+                        if code not in _NV2_MONEYFLOW_CACHE:
+                            _NV2_MONEYFLOW_CACHE[code] = {}
+                        _NV2_MONEYFLOW_CACHE[code][td] = drow
+                total_mf += len(items)
+            except Exception as e:
+                print(f"  [NV2] moneyflow {d} 拉取失败: {e}")
+        print(f"  [NV2] moneyflow: 共 {total_mf} 条")
+
+    # 4. 涨停基因 (近60日，同时产出 20d/60d 计数)
     ts_codes_l = [c for c in codes if c not in _NV2_LIMIT_CACHE]
     if ts_codes_l:
         try:
@@ -582,124 +628,28 @@ def _safe_float(val, default: float = 0.0) -> float:
 def _extract_pit_features(code: str, pit_mode: bool) -> dict:
     """从 _NV2_*_CACHE 提取 PIT 面板行，供 total_score 与 factors/ 使用。"""
     daily_rows = _NV2_DAILY_CACHE.get(code, [])
-    daily_rows.sort(key=lambda x: x.get("trade_date", ""), reverse=True)
-    idx = 1 if pit_mode else 0
-
-    feats = {
-        "trailing_10": 0.0,
-        "trailing_5": 0.0,
-        "position_20d": 0.5,
-        "pullback_10d": 0.1,
-        "pullback_20d": 0.1,
-        "pct_chg_std_10d": 0.0,
-        "pct_chg_std_5d": 0.0,
-        "max_pct_chg_5d": 0.0,
-        "limit_up_count_20d": 0.0,
-        "limit_up_count_60d": 0.0,
-        "circ_mv": 0.0,
-        "pe": 999.0,
-        "pb": 999.0,
-        "turnover_rate": 5.0,
-        "volume_ratio": 1.0,
-        "avg_amount_5d": 0.0,
-    }
-
-    if not daily_rows or len(daily_rows) < 2 + idx:
-        return feats
-
-    # trailing_10 / trailing_5 (percent -> decimal)
-    def _trailing(days: int) -> float:
-        if len(daily_rows) < days + idx:
-            return 0.0
-        close_current = daily_rows[idx].get("close")
-        close_ago = daily_rows[idx + days - 1].get("close")
-        if close_current and close_ago:
-            try:
-                return float(close_current) / float(close_ago) - 1.0
-            except (ValueError, TypeError):
-                pass
-        return 0.0
-
-    feats["trailing_10"] = _trailing(10)
-    feats["trailing_5"] = _trailing(5)
-
-    # position_20d
-    try:
-        rows = daily_rows[idx:idx + 20]
-        highs = [float(rr.get("high", 0)) for rr in rows if rr.get("high")]
-        lows = [float(rr.get("low", 0)) for rr in rows if rr.get("low")]
-        closes = [float(rr.get("close", 0)) for rr in rows if rr.get("close")]
-        if highs and lows and closes:
-            h20 = max(highs)
-            l20 = min(lows)
-            c0 = closes[0]
-            if h20 > l20:
-                feats["position_20d"] = (c0 - l20) / (h20 - l20)
-    except (ValueError, TypeError):
-        pass
-
-    # pullback_10d / pullback_20d
-    def _pullback(days: int) -> float:
-        if len(daily_rows) < 2 + idx:
-            return 0.1
-        try:
-            rows = daily_rows[idx:idx + days]
-            highs = [float(rr.get("high", 0)) for rr in rows if rr.get("high")]
-            closes = [float(rr.get("close", 0)) for rr in rows if rr.get("close")]
-            if highs and closes:
-                h = max(highs)
-                c0 = closes[0]
-                if h > 0:
-                    return max(0.0, (h - c0) / h)
-        except (ValueError, TypeError):
-            pass
-        return 0.1
-
-    feats["pullback_10d"] = _pullback(10)
-    feats["pullback_20d"] = _pullback(20)
-
-    # pct_chg std / max / avg_amount
-    try:
-        pcts = [_safe_float(rr.get("pct_chg"), 0.0) for rr in daily_rows[idx:idx + 10]]
-        if len(pcts) >= 5:
-            feats["pct_chg_std_10d"] = float(np.std(pcts, ddof=0)) if len(pcts) >= 2 else 0.0
-            feats["max_pct_chg_5d"] = max(pcts[:5])
-        pcts5 = [_safe_float(rr.get("pct_chg"), 0.0) for rr in daily_rows[idx:idx + 5]]
-        if len(pcts5) >= 2:
-            feats["pct_chg_std_5d"] = float(np.std(pcts5, ddof=0))
-
-        # avg_amount_5d: amount 字段为千元，转为元
-        amounts = [_safe_float(rr.get("amount"), 0.0) * 1000 for rr in daily_rows[idx:idx + 5]]
-        if amounts:
-            feats["avg_amount_5d"] = float(np.mean(amounts))
-    except Exception:
-        pass
-
-    # daily_basic: pe/pb/circ_mv/turnover/volume_ratio for current bar (T-1 in pit_mode)
     basic_by_date = _NV2_DAILY_BASIC_CACHE.get(code, {})
-    if basic_by_date:
-        current_row = daily_rows[idx]
-        trade_date = str(current_row.get("trade_date", ""))
-        # fallback: 取最近一个有 daily_basic 的日期
-        basic = basic_by_date.get(trade_date)
-        if basic is None:
-            for d in sorted(basic_by_date.keys(), reverse=True):
-                if d <= trade_date:
-                    basic = basic_by_date[d]
-                    break
-        if basic is None:
-            basic = list(basic_by_date.values())[0]
-        if basic:
-            feats["circ_mv"] = _safe_float(basic.get("circ_mv"), 0.0)
-            feats["pe"] = _safe_float(basic.get("pe"), 999.0)
-            feats["pb"] = _safe_float(basic.get("pb"), 999.0)
-            feats["turnover_rate"] = _safe_float(basic.get("turnover_rate"), 5.0)
-            feats["volume_ratio"] = _safe_float(basic.get("volume_ratio"), 1.0)
-
-    # limit up counts
+    moneyflow_by_date = _NV2_MONEYFLOW_CACHE.get(code, {})
+    code_short = code.split(".")[0]
+    try:
+        from plays.limit_up.strategies import factor_ctx
+        concept_momentum = factor_ctx.get_concept_momentum(code_short)
+    except Exception:
+        concept_momentum = None
+    # 复用统一 PIT 特征构建器，保持生产与回测特征口径一致
+    feats = build_pit_features(
+        code=code,
+        score_date=_NV2_DATE,
+        daily_rows=daily_rows,
+        basic_by_date=basic_by_date,
+        moneyflow_by_date=moneyflow_by_date,
+        auction_by_date=None,
+        concept_momentum=concept_momentum,
+        pit_mode=pit_mode,
+    )
+    # 兼容旧逻辑：生产 pipeline 的 limit_up_count 来自 limit_list_d 缓存，精度更高
     feats["limit_up_count_20d"] = float(_NV2_LIMIT_CACHE.get(code, 0))
     feats["limit_up_count_60d"] = float(_NV2_LIMIT_60D_CACHE.get(code, 0))
-
     return feats
 
 
@@ -719,14 +669,16 @@ def _get_feishu_token():
 
 
 def push_feishu(results):
-    """飞书推送：按 total_score 降序取满足阈值的前 3 只，阈值默认 70。
+    """飞书推送：按 total_score 降序取满足阈值的前 3 只。
 
-    训练集优化后的 quality_gate 高分样本在回测中表现出 >70% 的涨停命中率与胜率，
-    因此将推送阈值从 25 提高到 70；低于阈值说明当日没有高质量信号，不推送。
+    模型模式（LIMIT_UP_USE_MODEL=true）下默认阈值 70；
+    quality_combo 模式下默认阈值 95。
     """
     import requests
 
-    threshold = float(CONFIG.get("ULTIMATE_PUSH_THRESHOLD", "95"))
+    model_mode = os.environ.get("LIMIT_UP_USE_MODEL", "").lower() in ("true", "1", "yes")
+    default_thr = "70" if model_mode else "95"
+    threshold = float(CONFIG.get("ULTIMATE_PUSH_THRESHOLD", default_thr))
 
     def _stars(total):
         if total >= 90: return "⭐⭐⭐⭐⭐"

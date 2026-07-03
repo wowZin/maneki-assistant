@@ -1,0 +1,10 @@
+{
+  "auc_hit_limit_3": 0.7504023030929358,
+  "auc_fwd_ret_3_positive": 0.6488244803376054,
+  "ic_hit_limit_3": 0.35374270037418026,
+  "ic_fwd_ret_3": 0.25674770145904,
+  "top3_hit_rate": 0.5,
+  "top3_win_rate": 0.0,
+  "top5_hit_rate": 0.5,
+  "top5_win_rate": 0.1
+}

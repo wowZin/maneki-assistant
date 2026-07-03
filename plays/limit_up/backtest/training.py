@@ -47,8 +47,10 @@ from plays.limit_up.backtest.dataset import (
     ANALYSIS_DIRS,
     pull_daily_bars,
     pull_daily_basic_bars,
+    pull_moneyflow_bars,
     _trade_dates,
 )
+from plays.limit_up.pit_features import build_pit_features
 
 TRAINING_DIR = PROJECT_DIR / "wiki" / "raw" / "limit-up" / "training"
 TRAINING_DIR.mkdir(parents=True, exist_ok=True)
@@ -108,10 +110,18 @@ def get_limit_up_codes(trade_date: str) -> set[str]:
 
 FEATURE_COLS = [
     "position_20d", "trailing_10", "trailing_5",
-    "pct_chg_std_10d", "pct_chg_std_5d",
-    "limit_up_count_20d", "limit_up_count_60d",
+    "pct_chg_std_10d", "pct_chg_std_5d", "max_pct_chg_5d",
+    "limit_up_count_20d", "limit_up_count_60d", "max_step", "was_limit",
     "avg_amount_5d", "pct_chg_score_day",
-    "turnover_rate", "volume_ratio", "circ_mv", "pe", "pb",
+    "turnover_rate", "volume_ratio", "prev_turnover", "prev_vol_ratio", "vol_accel",
+    "circ_mv", "cmv_yi", "pe", "pb",
+    "pullback_10d", "pullback_20d",
+    "prev_pct", "pct_5d", "positive_5d",
+    "close_pos", "body_ratio", "upper_ratio", "lower_ratio", "amplitude",
+    "net_mf_amount", "net_mf_ratio", "buy_elg_ratio", "buy_lg_ratio",
+    "mf_net", "mf_accel", "mf_pct",
+    "sector_heat", "sector_rank", "n_concepts",
+    "auc_amount", "auc_vol", "auc_amt_ratio", "auc_vol_ratio",
 ]
 LABEL_COLS = ["fwd_ret_3", "hit_limit_3", "fwd_max_3"]
 
@@ -132,65 +142,42 @@ def _extract_row(
     trade_date: str,
     daily_by_code: dict[str, list[dict]],
     dbasic_by_code_date: dict[str, dict[str, dict]],
+    mf_by_code_date: dict[str, dict[str, dict]],
     limit_by_code: dict[str, list[str]],
     dates_all: list[str],
 ) -> dict | None:
     """在 trade_date 提取一只股票的面板行 + 未来标签（PIT）。"""
-    rows = daily_by_code.get(code, [])
-    if not rows:
+    daily_rows = daily_by_code.get(code, [])
+    if not daily_rows:
         return None
 
     # 该股票的日线时序按 trade_date 升序
-    rows_sorted = sorted(rows, key=lambda r: r.get("trade_date", ""))
+    rows_sorted = sorted(daily_rows, key=lambda r: r.get("trade_date", ""))
     dates_asc = [r["trade_date"] for r in rows_sorted]
-    closes = [r.get("close") for r in rows_sorted]
-    highs = [r.get("high") for r in rows_sorted]
-    lows = [r.get("low") for r in rows_sorted]
-    pcts = [r.get("pct_chg") for r in rows_sorted]
-    amounts = [r.get("amount") for r in rows_sorted]
 
     if trade_date not in dates_asc:
         return None
     i = dates_asc.index(trade_date)
-    c0 = closes[i]
+    c0 = rows_sorted[i].get("close")
     if c0 is None:
         return None
 
-    # 20 日位置
-    lo20 = max(0, i - 19)
-    hs = [h for h in highs[lo20:i+1] if h is not None]
-    ls = [l for l in lows[lo20:i+1] if l is not None]
-    pos_20d = (c0 - min(ls)) / (max(hs) - min(ls)) if (hs and ls and max(hs) > min(ls)) else 0.5
-
-    # trailing
-    trailing_10 = (c0 / closes[i-10] - 1.0) if (i >= 10 and closes[i-10]) else 0.0
-    trailing_5 = (c0 / closes[i-5] - 1.0) if (i >= 5 and closes[i-5]) else 0.0
-
-    # std
-    def _std(w):
-        lo = max(0, i - w + 1)
-        seq = [p for p in pcts[lo:i+1] if p is not None]
-        return float(np.std(seq, ddof=0)) if len(seq) >= 2 else 0.0
-
-    # 5 日均成交额（daily.amount 单位千元 → 元）
-    amt_seq = [a for a in amounts[max(0, i-4):i+1] if a is not None]
-    avg_amount_5d = float(np.mean(amt_seq)) * 1000 if amt_seq else 0.0
-
-    # 涨停基因（PIT：只算截至 trade_date 的历史）
-    lim_dates = limit_by_code.get(code, [])
-    cutoff_20 = dates_asc[max(0, i - 19)]
-    cutoff_60 = dates_asc[max(0, i - 59)]
-    lu20 = sum(1 for ld in lim_dates if cutoff_20 <= ld <= trade_date)
-    lu60 = sum(1 for ld in lim_dates if cutoff_60 <= ld <= trade_date)
-
-    # daily_basic on that day
-    db = dbasic_by_code_date.get(code, {}).get(trade_date, {})
+    feat = build_pit_features(
+        code=code,
+        score_date=trade_date,
+        daily_rows=rows_sorted,
+        basic_by_date=dbasic_by_code_date.get(code, {}),
+        moneyflow_by_date=mf_by_code_date.get(code, {}),
+        pit_mode=True,
+    )
 
     # 未来 3 日标签
     fwd_ret_3 = None
     fwd_max_3 = None
     hit_limit_3 = None
-    if i + 3 < len(dates_asc):
+    closes = [r.get("close") for r in rows_sorted]
+    pcts = [r.get("pct_chg") for r in rows_sorted]
+    if i + 3 < len(rows_sorted):
         base = closes[i]
         c_end = closes[i + 3]
         if base and c_end:
@@ -202,29 +189,15 @@ def _extract_row(
         if fut_pcts:
             hit_limit_3 = int(any(p >= 9.8 for p in fut_pcts))
 
-    return {
+    out = {
         "code": code,
         "trade_date": trade_date,
-        # 特征
-        "position_20d": pos_20d,
-        "trailing_10": trailing_10,
-        "trailing_5": trailing_5,
-        "pct_chg_std_10d": _std(10),
-        "pct_chg_std_5d": _std(5),
-        "limit_up_count_20d": lu20,
-        "limit_up_count_60d": lu60,
-        "avg_amount_5d": avg_amount_5d,
-        "pct_chg_score_day": float(pcts[i] or 0.0),
-        "turnover_rate": float(db.get("turnover_rate") or 0.0),
-        "volume_ratio": float(db.get("volume_ratio") or 0.0),
-        "circ_mv": float(db.get("circ_mv") or 0.0),
-        "pe": float(db.get("pe") or 999.0),
-        "pb": float(db.get("pb") or 999.0),
-        # 标签
+        **feat,
         "fwd_ret_3": fwd_ret_3,
         "hit_limit_3": hit_limit_3,
         "fwd_max_3": fwd_max_3,
     }
+    return out
 
 
 # ══════════════════════════════════════════════════════
@@ -258,6 +231,8 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
     daily = pull_daily_bars(codes_list, start, end)
     print(f"  拉/读 daily_basic ({start}~{end})...")
     dbasic = pull_daily_basic_bars(codes_list, start, end)
+    print(f"  拉/读 moneyflow ({start}~{end})...")
+    mf = pull_moneyflow_bars(codes_list, start, end)
 
     # 3. 索引
     daily_by_code: dict[str, list[dict]] = defaultdict(list)
@@ -267,6 +242,10 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
     dbasic_by_code_date: dict[str, dict[str, dict]] = defaultdict(dict)
     for _, r in dbasic.iterrows():
         dbasic_by_code_date[r["ts_code"]][r["trade_date"]] = r.to_dict()
+
+    mf_by_code_date: dict[str, dict[str, dict]] = defaultdict(dict)
+    for _, r in mf.iterrows():
+        mf_by_code_date[r["ts_code"]][r["trade_date"]] = r.to_dict()
 
     # 4. 涨停基因索引（需要 lookback 期内所有股票的涨停日期）
     #    对每天的涨停股取并集
@@ -292,7 +271,7 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
     rows_out = []
     for code in codes_list:
         row = _extract_row(code, trade_date, daily_by_code, dbasic_by_code_date,
-                            limit_by_code, dates_all)
+                            mf_by_code_date, limit_by_code, dates_all)
         if row is None:
             continue
         row["label"] = 1 if code in positives else 0

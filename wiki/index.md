@@ -1,7 +1,7 @@
 # Wiki Index
 
 > Content catalog. Every wiki page listed under its type with a one-line summary.
-> Last updated: 2026-05-23 | Total pages: 36
+> Last updated: 2026-07-04 | Total pages: 37
 
 ## Concepts
 
@@ -12,6 +12,10 @@
 - [[权重优化引擎]] — 排序质量优化器 optimize_ranking.py
 - [[AB对比机制]] — 新旧权重对比验证、3天固化规则
 - [[子策略说明]] — 五维度各子策略评分依据、否决机制
+
+## Playbooks
+
+- [[plays/limit-up/ic-optimization-v4.md]] — limit_up V4 IC 优化：XGBoost 模型分 + PIT 特征扩展 + 回测结果
 
 ## Entities
 

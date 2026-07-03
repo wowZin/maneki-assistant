@@ -169,9 +169,9 @@ def batch_get_daily_basic_tushare(trade_date: str = None) -> dict[str, dict]:
             if r.get("volume_ratio") is not None:
                 entry["volume_ratio"] = float(r["volume_ratio"])
             if r.get("circ_mv") is not None:
-                entry["circ_mv"] = float(r["circ_mv"]) * 10000  # 万元→元
+                entry["circ_mv"] = normalize_circ_mv(r["circ_mv"], "万元", "元")
             if r.get("total_mv") is not None:
-                entry["total_mv"] = float(r["total_mv"]) * 10000
+                entry["total_mv"] = normalize_circ_mv(r["total_mv"], "万元", "元")
         except (ValueError, TypeError):
             pass
         if entry:
@@ -232,7 +232,7 @@ def get_stock_quote_tushare(code: str, trade_date: str = None) -> dict:
             if r.get("volume_ratio") is not None:
                 result["vol_ratio"] = float(r["volume_ratio"])
             if r.get("circ_mv") is not None:
-                result["circ_mv"] = float(r["circ_mv"]) * 10000
+                result["circ_mv"] = normalize_circ_mv(r["circ_mv"], "万元", "元")
         except (ValueError, TypeError):
             pass
 
@@ -336,3 +336,40 @@ def list_to_dict(items, fields):
                     d[f] = item[i]
             result.append(d)
     return result
+
+
+# ═══════════════════════════════════════════════════════════
+# 单位统一与数据审计
+# ═══════════════════════════════════════════════════════════
+
+# circ_mv 在面板、特征、模型输入中统一为"万元"（Tushare daily_basic 原生单位）。
+# 需要以"元"做比较时，应显式调用 normalize_circ_mv(..., "万元", "元")。
+CIRC_MV_PANEL_UNIT = "万元"
+
+
+def normalize_circ_mv(value, source_unit: str = "万元", target_unit: str = "万元") -> float:
+    """把 circ_mv 从 source_unit 换算到 target_unit，统一单位。
+
+    支持的单位: 元、万元、亿元。
+    """
+    v = safe_float(value)
+    if v == 0.0:
+        return 0.0
+    units = {"元": 1, "万元": 10_000, "亿元": 100_000_000}
+    src = units.get(source_unit)
+    dst = units.get(target_unit)
+    if src is None or dst is None:
+        raise ValueError(f"unsupported circ_mv unit: {source_unit} -> {target_unit}")
+    return v * src / dst
+
+
+def log_data_audit(message: str):
+    """记录数据层异常到 plays/limit_up/data/logs/data_audit.log（按日追加）。"""
+    from pathlib import Path
+
+    log_dir = Path(__file__).resolve().parent / "data" / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "data_audit.log"
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write(f"[{now}] {message}\n")

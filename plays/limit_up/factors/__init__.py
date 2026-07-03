@@ -17,6 +17,7 @@ row 可以是 pandas.Series 或 dict，两种都能读到面板/factor_ctx 的�
 
 from __future__ import annotations
 
+import os
 from typing import Callable
 
 # ── fundamental ─────────────────────────────────────────
@@ -74,6 +75,7 @@ from plays.limit_up.factors.crossdim.quality_bonus import factor_total_quality_b
 # ── optimized（训练集优化后的生产因子）───────────────────
 from plays.limit_up.factors.optimized.quality_gate import factor_quality_gate
 from plays.limit_up.factors.optimized.quality_combo import factor_quality_combo
+from plays.limit_up.factors.optimized.model_score import factor_model_score
 
 
 REGISTRY: dict[str, Callable] = {
@@ -117,6 +119,7 @@ REGISTRY: dict[str, Callable] = {
     # optimized
     "quality_gate": factor_quality_gate,
     "quality_combo": factor_quality_combo,
+    "model_score": factor_model_score,
 }
 
 
@@ -142,11 +145,15 @@ DIMENSIONS: dict[str, list[str]] = {
         "turnover_momentum", "growth_momentum",
     ],
     "crossdim": ["dimension_divergence", "total_quality_bonus"],
-    "optimized": ["quality_gate", "quality_combo"],
+    "optimized": ["quality_gate", "quality_combo", "model_score"],
 }
 
 
+# 生产总分组件：默认仍用 quality_combo；设置 LIMIT_UP_USE_MODEL=true 切换到 model_score
+_use_model = os.environ.get("LIMIT_UP_USE_MODEL", "").lower() in ("true", "1", "yes")
 TOTAL_SCORE_COMPONENTS: dict[str, float] = {
+    "model_score": 1.0,
+} if _use_model else {
     "quality_combo": 1.0,
 }
 

@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from plays.limit_up.pit_features import build_pit_features
+from plays.limit_up.utils import log_data_audit
 from . import labels as L
 
 PLAY_DIR = Path(__file__).resolve().parent.parent
@@ -176,6 +178,42 @@ _API_FIELDS: dict[str, dict[str, bool]] = {
 }
 
 
+def _is_main_board(code: str) -> bool:
+    """判断是否为主板（00/60 开头）。"""
+    pure = code.split(".")[0] if code else ""
+    return pure.startswith(("00", "60"))
+
+
+def _validate_day_df(api: str, date: str, df: pd.DataFrame) -> pd.DataFrame:
+    """校验某天面板数据的日期一致性、异常市值，并写审计日志。
+
+    返回可能被修正（如 trade_date 强转字符串）的 DataFrame。
+    """
+    if df.empty:
+        return df
+
+    # 1. trade_date 与文件名一致
+    if "trade_date" in df.columns:
+        df["trade_date"] = df["trade_date"].astype(str)
+        unique_dates = df["trade_date"].dropna().unique()
+        if len(unique_dates) != 1 or str(unique_dates[0]) != str(date):
+            log_data_audit(
+                f"[panel] {api}/{date}.parquet trade_date 不匹配: "
+                f"unique={list(unique_dates)}, expected={date}"
+            )
+
+    # 2. daily_basic circ_mv 异常（主板 < 1000 万元视为异常）
+    if api == "daily_basic" and "circ_mv" in df.columns and "ts_code" in df.columns:
+        bad = df[(df["circ_mv"] > 0) & (df["circ_mv"] < 1000) & df["ts_code"].apply(_is_main_board)]
+        if not bad.empty:
+            samples = bad[["ts_code", "circ_mv"]].head(5).to_dict("records")
+            log_data_audit(
+                f"[panel] {api}/{date}.parquet 发现主板异常 circ_mv(<1000万元): {samples}"
+            )
+
+    return df
+
+
 def _trade_dates(start: str, end: str) -> list[str]:
     """从 Tushare 拉指定区间的交易日历。"""
     from scripts.tu_share import call_tushare
@@ -223,20 +261,24 @@ def _ensure_day_columns(api: str, date: str, cols_needed: list[str]) -> pd.DataF
 
     if day_file.exists():
         df = pd.read_parquet(day_file)
+        df = _validate_day_df(api, date, df)
         missing = [c for c in non_key if c not in df.columns]
         if not missing:
             return df
         # 列增量拉取
         print(f"  [{api}] {date} 缺列 {missing}, 增量拉取")
         add = _fetch_day_partial(api, date, missing)
+        add = _validate_day_df(api, date, add)
         if add.empty:
             return df
         df = df.merge(add[["ts_code", "trade_date"] + missing], on=["ts_code", "trade_date"], how="left")
+        df = _validate_day_df(api, date, df)
         df.to_parquet(day_file)
         return df
 
     # 整天新拉
     df = _fetch_day_partial(api, date, non_key)
+    df = _validate_day_df(api, date, df)
     if df.empty:
         return df
     df.to_parquet(day_file)
@@ -351,7 +393,7 @@ def build_panel(
     # ── 补面板特征 + 重算 total_score ──
     panel = _augment_and_score(panel, grouped_daily, grouped_basic, grouped_moneyflow)
 
-    out_file = OUT_DIR / "panel.csv"
+    out_file = OUT_DIR / f"panel_{dmin}_{dmax}.csv"
     panel.to_csv(out_file, index=False)
     return panel
 
@@ -359,201 +401,70 @@ def build_panel(
 def _augment_and_score(panel: pd.DataFrame, grouped_daily: dict, grouped_basic: dict,
                        grouped_moneyflow: dict | None = None) -> pd.DataFrame:
     """对面板每行补 total_score 所需的 PIT 特征列，然后调 total_score() 重算总分。"""
-    import numpy as np
     from plays.limit_up.factors import REGISTRY, TOTAL_SCORE_COMPONENTS
     from plays.limit_up.total import total_score as _total_score
 
     total_scores = []
     comp_cols: dict[str, list] = {n: [] for n in TOTAL_SCORE_COMPONENTS}
 
-    # 新增特征列缓存
-    feat_cols = {
-        "position_20d": [],
-        "trailing_10": [],
-        "trailing_5": [],
-        "pct_chg_std_10d": [],
-        "pct_chg_std_5d": [],
-        "limit_up_count_20d": [],
-        "limit_up_count_60d": [],
-        "avg_amount_5d": [],
-        "pct_chg_score_day": [],
-        "turnover_rate": [],
-        "volume_ratio": [],
-        "circ_mv": [],
-        "pe": [],
-        "pb": [],
-        "pullback_10d": [],
-        "pullback_20d": [],
-        "net_mf_amount": [],
-        "net_mf_ratio": [],
-        "buy_elg_ratio": [],
-        "buy_lg_ratio": [],
-    }
+    # 预先把 grouped DataFrame 转成 dict/list，复用给 build_pit_features
+    daily_rows_by_code: dict[str, list[dict]] = {}
+    for code, gd in grouped_daily.items():
+        daily_rows_by_code[code] = gd.sort_values("trade_date").to_dict("records")
 
+    basic_by_code_date: dict[str, dict[str, dict]] = {}
+    for code, gb in (grouped_basic or {}).items():
+        basic_by_code_date[code] = {}
+        for _, r in gb.iterrows():
+            basic_by_code_date[code][str(r["trade_date"])] = r.to_dict()
+
+    mf_by_code_date: dict[str, dict[str, dict]] = {}
+    for code, gm in (grouped_moneyflow or {}).items():
+        mf_by_code_date[code] = {}
+        for _, r in gm.iterrows():
+            mf_by_code_date[code][str(r["trade_date"])] = r.to_dict()
+
+    feat_rows: list[dict] = []
     for _, row in panel.iterrows():
         code = row["code"]
         date = row["date"]
         gd = grouped_daily.get(code)
-        gb = grouped_basic.get(code) if grouped_basic else None
         if gd is None or gd.empty:
             total_scores.append(None)
             for n in TOTAL_SCORE_COMPONENTS:
                 comp_cols[n].append(None)
-            for c in feat_cols:
-                feat_cols[c].append(None)
+            feat_rows.append({})
             continue
 
-        dates = gd["trade_date"].tolist()
-        closes = gd["close"].tolist()
-        highs = gd["high"].tolist()
-        lows = gd["low"].tolist() if "low" in gd.columns else [None] * len(closes)
-        pcts = gd["pct_chg"].tolist()
-        amounts = gd["amount"].tolist() if "amount" in gd.columns else [None] * len(closes)
-
-        try:
-            i = dates.index(date)
-        except ValueError:
-            total_scores.append(None)
-            for n in TOTAL_SCORE_COMPONENTS:
-                comp_cols[n].append(None)
-            for c in feat_cols:
-                feat_cols[c].append(None)
-            continue
-
-        # PIT 索引：用评分日前一个交易日（T-1）收盘，与生产 pipeline 保持一致
-        pit_i = i - 1 if i >= 1 else i
-        c0 = closes[pit_i] if pit_i >= 0 else closes[i]
-        pit_date = dates[pit_i] if pit_i >= 0 else date
-
-        # 20 日位置（基于 T-1 及之前 19 个交易日）
-        lo20 = max(0, pit_i - 19)
-        hs = [x for x in highs[lo20:pit_i+1] if x is not None]
-        ls = [x for x in lows[lo20:pit_i+1] if x is not None]
-        pos_20d = (c0 - min(ls)) / (max(hs) - min(ls)) if (c0 and hs and ls and max(hs) > min(ls)) else 0.5
-
-        # trailing（T-1 相对 T-11/T-6）
-        trailing_10 = (closes[pit_i] / closes[pit_i-10] - 1.0) if (pit_i >= 10 and closes[pit_i-10]) else 0.0
-        trailing_5 = (closes[pit_i] / closes[pit_i-5] - 1.0) if (pit_i >= 5 and closes[pit_i-5]) else 0.0
-
-        def _std(w):
-            lo = max(0, pit_i - w + 1)
-            seq = [p for p in pcts[lo:pit_i+1] if p is not None]
-            return float(np.std(seq, ddof=0)) if len(seq) >= 2 else 0.0
-
-        # 5 日均成交额（T-1 往前 5 日；daily.amount 单位千元 → 元）
-        amt_seq = [a for a in amounts[max(0, pit_i-4):pit_i+1] if a is not None]
-        avg_amount_5d = float(np.mean(amt_seq)) * 1000 if amt_seq else 0.0
-
-        # 涨停基因（截至 T-1，不含评分日当天）
-        def _limit_count(window):
-            lo = max(0, pit_i - window + 1)
-            return sum(1 for p in pcts[lo:pit_i+1] if p is not None and p >= 9.8)
-
-        limit_up_count_20d = float(_limit_count(20))
-        limit_up_count_60d = float(_limit_count(60))
-
-        # 回撤（基于 T-1 窗口高点）
-        def _pullback(window):
-            whs = [h for h in highs[max(0, pit_i - window + 1):pit_i+1] if h is not None]
-            if whs and c0:
-                hmax = max(whs)
-                return max(0.0, (hmax - c0) / hmax) if hmax > 0 else 0.0
-            return 0.0
-
-        pullback_10d = _pullback(10)
-        pullback_20d = _pullback(20)
-
-        # daily_basic 取 T-1（与生产 pipeline 一致）
-        db_row = {}
-        if gb is not None and not gb.empty:
-            db_sub = gb[gb["trade_date"] == pit_date]
-            if db_sub.empty:
-                # fallback：取最近一个不大于 pit_date 的日期
-                for d in sorted(gb["trade_date"].unique().tolist(), reverse=True):
-                    if d <= pit_date:
-                        db_sub = gb[gb["trade_date"] == d]
-                        break
-            if not db_sub.empty:
-                db_row = db_sub.iloc[0].to_dict()
-
-        def _db(key, default=0.0):
-            v = db_row.get(key)
-            try:
-                return float(v) if v is not None else default
-            except (ValueError, TypeError):
-                return default
-
-        # moneyflow 取 T-1
-        mf_row = {}
-        gm = grouped_moneyflow.get(code) if grouped_moneyflow else None
-        if gm is not None and not gm.empty:
-            mf_sub = gm[gm["trade_date"] == pit_date]
-            if mf_sub.empty:
-                for d in sorted(gm["trade_date"].unique().tolist(), reverse=True):
-                    if d <= pit_date:
-                        mf_sub = gm[gm["trade_date"] == d]
-                        break
-            if not mf_sub.empty:
-                mf_row = mf_sub.iloc[0].to_dict()
-
-        def _mf(key, default=0.0):
-            v = mf_row.get(key)
-            try:
-                return float(v) if v is not None else default
-            except (ValueError, TypeError):
-                return default
-
-        net_mf = _mf("net_mf_amount")
-        buy_elg = _mf("buy_elg_amount")
-        sell_elg = _mf("sell_elg_amount")
-        buy_lg = _mf("buy_lg_amount")
-        sell_lg = _mf("sell_lg_amount")
-        t1_amount = amounts[pit_i] * 1000 if (pit_i >= 0 and amounts[pit_i]) else 0.0
-        net_mf_ratio = net_mf / t1_amount if t1_amount > 0 else 0.0
-        buy_elg_ratio = buy_elg / (buy_elg + sell_elg) if (buy_elg + sell_elg) > 0 else 0.5
-        buy_lg_ratio = buy_lg / (buy_lg + sell_lg) if (buy_lg + sell_lg) > 0 else 0.5
-
-        feat = {
-            "sentiment": float(row.get("sentiment") or 0.0),
-            "shortterm": float(row.get("shortterm") or 0.0),
-            "technical": float(row.get("technical") or 0.0),
-            "fundflow": float(row.get("fundflow") or 0.0),
-            "fundamental": float(row.get("fundamental") or 0.0),
-            "position_20d": pos_20d,
-            "trailing_10": trailing_10,
-            "trailing_5": trailing_5,
-            "pct_chg_std_10d": _std(10),
-            "pct_chg_std_5d": _std(5),
-            "limit_up_count_20d": limit_up_count_20d,
-            "limit_up_count_60d": limit_up_count_60d,
-            "avg_amount_5d": avg_amount_5d,
-            "pct_chg_score_day": float(pcts[i] or 0.0),
-            "turnover_rate": _db("turnover_rate", 5.0),
-            "volume_ratio": _db("volume_ratio", 1.0),
-            "circ_mv": _db("circ_mv", 0.0),
-            "pe": _db("pe", 999.0),
-            "pb": _db("pb", 999.0),
-            "pullback_10d": pullback_10d,
-            "pullback_20d": pullback_20d,
-            "net_mf_amount": net_mf,
-            "net_mf_ratio": net_mf_ratio,
-            "buy_elg_ratio": buy_elg_ratio,
-            "buy_lg_ratio": buy_lg_ratio,
-        }
+        feat = build_pit_features(
+            code=code,
+            score_date=str(date),
+            daily_rows=daily_rows_by_code[code],
+            basic_by_date=basic_by_code_date.get(code, {}),
+            moneyflow_by_date=mf_by_code_date.get(code, {}),
+            pit_mode=True,
+        )
+        # 把维度分接入 feat，供 quality_combo 等现有因子使用
+        for dim in DIM_COLS:
+            feat[dim] = float(row.get(dim) or 0.0)
 
         ts = _total_score(feat)
         total_scores.append(ts)
         for n in TOTAL_SCORE_COMPONENTS:
             comp_cols[n].append(round(REGISTRY[n](feat), 2))
-        for c in feat_cols:
-            feat_cols[c].append(feat[c])
+        feat_rows.append(feat)
 
-    panel = panel.copy()
+    feat_df = pd.DataFrame(feat_rows)
+    panel = panel.copy().reset_index(drop=True)
     panel["total_score"] = total_scores
     for n, vals in comp_cols.items():
         panel[f"comp_{n}"] = vals
-    for c, vals in feat_cols.items():
-        panel[c] = vals
+    if not feat_df.empty:
+        # 避免与已有列冲突：以 feat_df 为准
+        for c in feat_df.columns:
+            if c in panel.columns:
+                panel = panel.drop(columns=[c])
+        panel = pd.concat([panel, feat_df.reset_index(drop=True)], axis=1)
     return panel
 
 

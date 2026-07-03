@@ -6,12 +6,14 @@
 
 ```
 plays/limit_up/backtest/
-├── data.py          # 面板加载/切片/缓存
+├── dataset.py       # 面板加载/切片/缓存
 ├── labels.py        # 标签生成（hit_limit_N / fwd_ret_N / fwd_max_N）
 ├── metrics.py       # IC / hit@K / chasing_score / sharpe
-├── mine.py          # 因子挖掘（单/双/三因子组合）
+├── mine.py          # 因子挖掘（单因子 IC / Cohen's d）
 ├── validate.py      # 单因子 / total_score 的 IC & hit 报告
 ├── optimize.py      # 权重优化（total_score 组件权重 + 维度权重）
+├── model.py         # 树模型封装（HistGradientBoostingClassifier）
+├── train_model.py   # 模型训练 CLI
 ├── cache/           # .gitignore
 └── out/             # .gitignore
 ```
@@ -20,7 +22,14 @@ plays/limit_up/backtest/
 
 ### mine.py
 
-因子挖掘：在训练集上遍历单/双/三因子组合，输出 Top-K 按 IC 排序的候选。
+因子挖掘：在训练集上计算每个特征对目标标签的 Rank IC、Pearson IC 与 Cohen's d。
+
+```bash
+python plays/limit_up/backtest/mine.py --label hit_limit_3
+python plays/limit_up/backtest/mine.py --label fwd_ret_3 --top 20
+```
+
+产物：`backtest/out/mine_<label>.csv`。
 
 ### validate.py
 
@@ -29,6 +38,24 @@ plays/limit_up/backtest/
 ### optimize.py
 
 网格 / 贝叶斯搜索 `total_score` 三个组件的权重（A/B/C）与维度权重 `AGENT_WEIGHTS`。
+
+### train_model.py
+
+训练 `HistGradientBoostingClassifier` 模型，分别预测 3 日涨停概率与 3 日胜率，混合输出连续 model score。
+
+```bash
+python plays/limit_up/backtest/train_model.py \
+    --train-start 20260519 --train-end 20260620 \
+    --test-start 20260621 --test-end 20260702
+```
+
+产物：`plays/limit_up/data/backtest/models/`：
+- `limit_up_model.joblib`
+- `model_features.json`
+- `feature_importance.json`
+- `validation_report.json`
+
+训练完成后，设置 `LIMIT_UP_USE_MODEL=true` 即可在回测/生产中使用模型分。
 
 ## 面板生成
 

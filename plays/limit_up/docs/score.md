@@ -15,19 +15,29 @@ scanner → filter → cache_layer → pre_rank → quote_cache
 
 **入口**：`plays/limit_up/total.py::total_score(row: dict) -> float`
 
-**公式**：
+**默认公式**（未开启模型时）：
 
 ```
 total_score = round(max(0.0, 1.0 * factor_quality_combo(row)), 2)
 ```
 
-**权重**：唯一组件 `quality_combo` 权重 1.0。
+**模型公式**（设置 `LIMIT_UP_USE_MODEL=true` 时）：
 
-**组件因子**：
+```
+total_score = round(max(0.0, 1.0 * factor_model_score(row)), 2)
+```
 
-| 组件 | 模块 |
-|------|------|
-| `factor_quality_combo` | `factors/optimized/quality_combo.py` |
+`factor_model_score` 由 `plays.limit_up.factors.optimized.model_score` 实现：
+- 加载 `plays/limit_up/data/backtest/models/limit_up_model.joblib`；
+- 输出 0–100 连续分；
+- 模型文件缺失或加载失败时，**自动回退**到 `factor_quality_combo`。
+
+### 组件因子
+
+| 组件 | 模块 | 启用条件 |
+|------|------|----------|
+| `factor_quality_combo` | `factors/optimized/quality_combo.py` | 默认（`LIMIT_UP_USE_MODEL` 未设置或 `false`） |
+| `factor_model_score` | `factors/optimized/model_score.py` | `LIMIT_UP_USE_MODEL=true` |
 
 `factor_quality_combo` 不再使用 60/80/100 的宽口径阶梯，而是提炼为两条高置信规则，并新增 **`fundflow` 硬过滤**：
 
@@ -39,7 +49,16 @@ total_score = round(max(0.0, 1.0 * factor_quality_combo(row)), 2)
 
 组件因子的定义见 [`factors.md`](./factors.md)。因子有效性以最新训练集的评估为准，不引用历史回测数据。
 
-## 三、维度权重（供其他用途，非 total）
+## 三、模型分说明
+
+当启用 `LIMIT_UP_USE_MODEL=true` 时：
+
+- 模型输入为 `pit_features.py` 构建的 30+ 个 PIT 特征（含 `prev_turnover`、`max_step`、资金流加速度、K 线形态、板块动量等）。
+- 模型由 `HistGradientBoostingClassifier` 训练，同时预测 `hit_limit_3` 与 `fwd_ret_3 > 0`，混合为 0–100 分。
+- 反追高护栏作为乘性惩罚保留。
+- 训练脚本见 [`backtest.md`](./backtest.md)。
+
+## 四、维度权重（供其他用途，非 total）
 
 维度权重仍从 `.env` 读取（用于监控、health_patrol、旧 review 兼容），**不参与 `total_score` 计算**。
 
@@ -51,15 +70,17 @@ total_score = round(max(0.0, 1.0 * factor_quality_combo(row)), 2)
 | sentiment | `AGENT_WEIGHT_SENTIMENT` | 1.0 |
 | shortterm | `AGENT_WEIGHT_SHORTTERM` | 0.5 |
 
-## 四、推送规则
+## 五、推送规则
 
 - **排序键**：`total_score` 降序（唯一键，无 fallback）
 - **推送数**：满足阈值后最多 Top-3；无满足阈值则当日不推送
-- **推送阈值**：`total_score >= 95`（由 `.env` 的 `ULTIMATE_PUSH_THRESHOLD` 控制，默认 95；只推送 `quality_combo` 的 95/100 分档）
+- **推送阈值**：
+  - `quality_combo` 模式下默认 `total_score >= 95`（由 `.env` 的 `ULTIMATE_PUSH_THRESHOLD` 控制）
+  - `model_score` 模式下默认 `total_score >= 70`
 - **午后过滤**：已移除
 - **落盘**：`data/pushed/{HHMM}.json`
 
-## 五、评级
+## 六、评级
 
 | total_score | 星级 |
 |:--:|:--:|
@@ -67,16 +88,17 @@ total_score = round(max(0.0, 1.0 * factor_quality_combo(row)), 2)
 | = 100 | ⭐⭐⭐⭐⭐ |
 | 0 | 不评级 |
 
-> 当前 `total_score` 仅输出 0/95/100，评级仅用于标识高置信推送档。
+> `quality_combo` 模式下 `total_score` 仅输出 0/95/100；`model_score` 模式下为连续 0–100。
 
-## 六、缺失处理
+## 七、缺失处理
 
 - 子策略超时 / 报错：该维度记为 `null`（不参与 `total_score`；总分组件因子基于原始 panel 特征，独立于维度评分）
 - 扫描返回空：写零结果文件到 `data/analysis/`
 - 过滤后空：同上
 - Level2 不可用：跳过 L2 观测，直接评分
+- 模型文件缺失 / 加载失败：`factor_model_score` 回退到 `factor_quality_combo`
 
-## 七、输出字段
+## 八、输出字段
 
 `data/analysis/{HHMM}.json` 每条记录：
 
@@ -103,6 +125,6 @@ total_score = round(max(0.0, 1.0 * factor_quality_combo(row)), 2)
 }
 ```
 
-## 八、AB 对比
+## 九、AB 对比
 
 如需 AB 对比不同权重或不同组件因子组合，走 `plays/limit_up/backtest/optimize.py`（详见 [`backtest.md`](./backtest.md)）。**不在生产 pipeline 中并行计算多套总分。**

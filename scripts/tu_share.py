@@ -8,8 +8,21 @@ import time
 from pathlib import Path
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 logger = logging.getLogger(__name__)
+
+# 带重试的 session：对连接/读取错误重试 3 次，避免偶发 SSL/EOF 导致全量失败
+_SESSION = requests.Session()
+_RETRY = Retry(
+    total=3,
+    backoff_factor=0.5,
+    status_forcelist=[500, 502, 503, 504],
+    allowed_methods=["POST"],
+)
+_SESSION.mount("https://", HTTPAdapter(max_retries=_RETRY))
+_SESSION.mount("http://", HTTPAdapter(max_retries=_RETRY))
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
@@ -84,7 +97,7 @@ def get_last_trade_date_with_data() -> str:
                    "params": {"exchange": "SSE", "start_date": ds, "end_date": ds},
                    "fields": "cal_date,is_open"}
         try:
-            resp = requests.post("https://api.tushare.pro", json=payload, timeout=5).json()
+            resp = _SESSION.post("https://api.tushare.pro", json=payload, timeout=5).json()
             items = resp.get("data", {}).get("items", [])
             for item in items:
                 if item and len(item) >= 2 and item[1] == 1:
@@ -99,7 +112,7 @@ def get_last_trade_date_with_data() -> str:
                    "params": {"trade_date": ds, "ts_code": "000001.SZ"},
                    "fields": "trade_date,pct_chg"}
         try:
-            resp = requests.post("https://api.tushare.pro", json=payload, timeout=5).json()
+            resp = _SESSION.post("https://api.tushare.pro", json=payload, timeout=5).json()
             if resp.get("data", {}).get("items"):
                 _LAST_TRADE_DATE_CACHE = ds
                 return ds

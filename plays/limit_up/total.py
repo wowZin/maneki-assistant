@@ -2,13 +2,12 @@
 
 对外唯一入口 `total_score(row)`。
 
-公式（训练集优化后）：
-  total_score = round(max(0.0, 1.0 * factor_quality_combo(row)), 2)
+当前默认组件（可通过环境变量切换）：
+- `quality_combo`（默认）：硬阈值 0/95/100 高置信规则。
+- `model_score`（设置 LIMIT_UP_USE_MODEL=true）：树模型输出的 0–100 连续分，
+  模型不可用时自动回退到 `quality_combo`。
 
-`factor_quality_combo` 由 `plays.limit_up.factors.optimized.quality_combo` 实现。
-它不是单一阈值，而是把涨停基因、换手、动量、位置、当日涨幅、技术分
-六个因子组合成 60/80/100 的阶梯评分；高分档在多因子共振时出现，
-从而过滤追高失败案例。推送阈值建议 ≥ 85（只推 100 分档）。
+`factor_model_score` 由 `plays.limit_up.factors.optimized.model_score` 实现。
 """
 
 from __future__ import annotations

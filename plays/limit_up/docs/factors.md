@@ -186,6 +186,48 @@
 - **设计依据**：从历史涨停优质股中挖掘出的高置信共振规则，并加入 `fundflow` 硬过滤剔除资金维度不足的追高/跟风案例。全部轮次回测阈值 ≥95 时命中率 97.83%、胜率 100%；日去重命中率 90.91%、胜率 100%。
 - **推送阈值**：建议 `total_score >= 95`。
 
+### factor_model_score  🟢 total_score 生产组件（模型模式）
+
+- **签名**：`factor_model_score(row) -> float`
+- **依赖列**：`pit_features.py` 构建的全部 PIT 特征（见下节「PIT 特征字段」）
+- **PIT**：是
+- **使用位置**：`LIMIT_UP_USE_MODEL=true` 时的 `total_score` 唯一组件
+- **源文件**：`factors/optimized/model_score.py`
+- **逻辑**：
+  - 懒加载 `data/backtest/models/limit_up_model.joblib`；
+  - 模型输出（0–1）乘以 100 后，再通过 `factor_chasing_guardrail` 做追高惩罚；
+  - 模型文件缺失/加载失败/预测失败时，自动回退到 `factor_quality_combo`。
+- **推送阈值**：建议 `total_score >= 70`。
+
+## PIT 特征字段
+
+以下字段由 `plays/limit_up/pit_features.py::build_pit_features` 统一构建，是 `factor_model_score` 的输入，也沉淀到回测面板 `panel.csv` 与训练集 `training_set.csv`。
+
+| 字段 | 说明 |
+|------|------|
+| `position_20d` | T-1 收盘价在 20 日高低点区间位置 |
+| `trailing_10` / `trailing_5` | T-1 相对 T-11/T-6 收益率 |
+| `pct_chg_std_10d` / `pct_chg_std_5d` | 10/5 日 pct_chg 标准差 |
+| `max_pct_chg_5d` | 5 日内最大涨幅 |
+| `limit_up_count_20d` / `limit_up_count_60d` | 20/60 日涨停次数 |
+| `max_step` | T-1 连板高度（连续 pct_chg>=9.8 天数） |
+| `was_limit` | T-1 是否涨停 |
+| `avg_amount_5d` | 5 日均成交额（元） |
+| `pct_chg_score_day` | 评分日（T）涨幅，生产中为盘中观测值 |
+| `turnover_rate` / `volume_ratio` | T-1 换手率/量比 |
+| `prev_turnover` / `prev_vol_ratio` | T-2 换手率/量比 |
+| `vol_accel` | 量比加速度 |
+| `circ_mv` / `cmv_yi` | T-1 流通市值（万元/亿元） |
+| `pe` / `pb` | T-1 估值 |
+| `pullback_10d` / `pullback_20d` | T-1 相对窗口高点回撤 |
+| `prev_pct` / `pct_5d` / `positive_5d` | T-2 涨幅 / T-5~T-1 累计涨幅 / 正涨幅天数 |
+| `close_pos` / `body_ratio` / `upper_ratio` / `lower_ratio` / `amplitude` | T-1 K 线形态 |
+| `net_mf_amount` / `net_mf_ratio` | T-1 主力净流入（万元）/ 成交额占比 |
+| `buy_elg_ratio` / `buy_lg_ratio` | 超大单/大单买入占比 |
+| `mf_net` / `mf_accel` / `mf_pct` | 净流入/加速度/占比 |
+| `sector_heat` / `sector_rank` / `n_concepts` | 概念动量 |
+| `auc_amount` / `auc_vol` / `auc_amt_ratio` / `auc_vol_ratio` | 竞价金额/量及比率 |
+
 ---
 
 ## 跨维度组合
@@ -203,8 +245,9 @@
 ### total_score  🟢 唯一生产总分
 
 - **签名**：`total_score(row: dict | pd.Series) -> float`
-- **公式**：`round(max(0, 1.0 * factor_quality_combo(row)), 2)`
-- **权重**：唯一组件 `quality_combo` 权重 1.0
+- **默认公式**：`round(max(0, 1.0 * factor_quality_combo(row)), 2)`
+- **模型公式**：`round(max(0, 1.0 * factor_model_score(row)), 2)`（需 `LIMIT_UP_USE_MODEL=true`）
+- **权重**：`quality_combo` 或 `model_score` 权重 1.0，由环境变量切换
 - **使用位置**：pipeline 唯一排序键
 - **源文件**：`plays/limit_up/total.py`
 
