@@ -37,69 +37,139 @@ from plays.limit_up.backtest.dataset import build_panel, load_analysis_records
 from plays.limit_up.backtest.metrics import rank_ic
 
 
+def _fmt_pct(x):
+    """百分比格式；NaN 显示占位符。"""
+    return "-" if x is None or (isinstance(x, float) and np.isnan(x)) else f"{x:.2%}"
+
+
+def _fmt_ic(x):
+    return "-" if x is None or (isinstance(x, float) and np.isnan(x)) else f"{x:.4f}"
+
+
 def report(df: pd.DataFrame):
-    """输出命中率、胜率、IC 表格。"""
-    df = df.dropna(subset=["total_score", "hit_limit_3", "fwd_ret_3"])
+    """输出命中率、胜率、IC 表格。未来 1/2/3 日各自独立，数据不足时占位符。"""
+    df = df.dropna(subset=["total_score"])
     if df.empty:
-        print("[report] 无有效样本")
+        print("[report] 无有效样本（total_score 全空）")
         return
 
     n_days = df["date"].nunique()
-    n_rounds = len(df)
+    n_rounds = df.groupby(["date", "scan_time"]).ngroups
     n_codes = df["code"].nunique()
 
-    print("\n" + "=" * 68)
+    print("\n" + "=" * 84)
     print(f"回测报告 · {df['date'].min()} ~ {df['date'].max()}")
-    print("=" * 68)
+    print("=" * 84)
     print(f"样本: {n_rounds} 轮扫描 × {n_codes} 股票 × {n_days} 交易日")
-    print(f"基线 hit_rate = {df['hit_limit_3'].mean():.2%}, 基线 avg_ret = {df['fwd_ret_3'].mean():.2%}")
 
-    # ── Top-K 每轮取前 K 只 ──
-    print(f"\n[Top-K 命中率与胜率]  (每轮扫描按 total_score 排序取 Top-K)")
-    print(f"  {'K':>3} | {'日均池':>6} | {'命中率':>7} | {'胜率':>7} | {'3日平均收益':>10} | {'3日最大收益':>10}")
-    print("  " + "-" * 66)
+    # 各 N 日的可用样本量
+    for n in (1, 2, 3):
+        col = f"hit_limit_{n}"
+        if col in df.columns:
+            valid = df[col].notna().sum()
+            base = df[col].mean()
+            print(f"  未来 {n} 日: {valid} 条有标签, 基线 hit_rate = {_fmt_pct(base) if valid else '-'}")
+
+    # ── Top-K 命中率与胜率（对 N=1/2/3 分别）──
+    print(f"\n[Top-K 命中率]  (每轮扫描按 total_score 排序取 Top-K)")
+    print(f"  {'K':>3} | {'日均池':>6} | {'命中@1':>7} | {'命中@2':>7} | {'命中@3':>7} | "
+          f"{'胜@1':>6} | {'胜@2':>6} | {'胜@3':>6}")
+    print("  " + "-" * 78)
     for k in (3, 5, 10, 20):
-        hits, wins, rets, maxs, pools = [], [], [], [], []
-        # 一个"轮次" = 同一 (date, scan_time)
+        hits_by_n = {1: [], 2: [], 3: []}
+        wins_by_n = {1: [], 2: [], 3: []}
+        pools = []
         for (date, scan_time), sub in df.groupby(["date", "scan_time"]):
             if len(sub) < 3:
                 continue
             top = sub.nlargest(min(k, len(sub)), "total_score")
-            hits.append(top["hit_limit_3"].mean())
-            wins.append((top["fwd_ret_3"] > 0).mean())
-            rets.append(top["fwd_ret_3"].mean())
-            if "fwd_max_3" in top.columns:
-                maxs.append(top["fwd_max_3"].mean())
             pools.append(len(sub))
-        if not hits:
+            for n in (1, 2, 3):
+                hcol = f"hit_limit_{n}"
+                rcol = f"fwd_ret_{n}"
+                if hcol in top.columns and top[hcol].notna().any():
+                    hits_by_n[n].append(top[hcol].mean())
+                if rcol in top.columns and top[rcol].notna().any():
+                    wins_by_n[n].append((top[rcol] > 0).mean())
+        if not pools:
             continue
-        print(f"  {k:>3} | {np.mean(pools):>6.0f} | {np.mean(hits):>7.2%} | "
-              f"{np.mean(wins):>7.2%} | {np.mean(rets):>10.2%} | "
-              f"{np.mean(maxs) if maxs else 0:>10.2%}")
+
+        def _avg(seq):
+            return np.mean(seq) if seq else None
+
+        h1, h2, h3 = _avg(hits_by_n[1]), _avg(hits_by_n[2]), _avg(hits_by_n[3])
+        w1, w2, w3 = _avg(wins_by_n[1]), _avg(wins_by_n[2]), _avg(wins_by_n[3])
+        print(f"  {k:>3} | {np.mean(pools):>6.0f} | "
+              f"{_fmt_pct(h1):>7} | {_fmt_pct(h2):>7} | {_fmt_pct(h3):>7} | "
+              f"{_fmt_pct(w1):>6} | {_fmt_pct(w2):>6} | {_fmt_pct(w3):>6}")
+
+    # ── Top-K 平均收益 ──
+    print(f"\n[Top-K 平均收益]  (未来 N 日累计收益)")
+    print(f"  {'K':>3} | {'平均@1':>8} | {'平均@2':>8} | {'平均@3':>8} | "
+          f"{'最大@1':>8} | {'最大@2':>8} | {'最大@3':>8}")
+    print("  " + "-" * 78)
+    for k in (3, 5, 10, 20):
+        rets_by_n = {1: [], 2: [], 3: []}
+        maxs_by_n = {1: [], 2: [], 3: []}
+        for (date, scan_time), sub in df.groupby(["date", "scan_time"]):
+            if len(sub) < 3:
+                continue
+            top = sub.nlargest(min(k, len(sub)), "total_score")
+            for n in (1, 2, 3):
+                rcol = f"fwd_ret_{n}"
+                mcol = f"fwd_max_{n}"
+                if rcol in top.columns and top[rcol].notna().any():
+                    rets_by_n[n].append(top[rcol].mean())
+                if mcol in top.columns and top[mcol].notna().any():
+                    maxs_by_n[n].append(top[mcol].mean())
+
+        def _avg(seq):
+            return np.mean(seq) if seq else None
+
+        r1, r2, r3 = _avg(rets_by_n[1]), _avg(rets_by_n[2]), _avg(rets_by_n[3])
+        m1, m2, m3 = _avg(maxs_by_n[1]), _avg(maxs_by_n[2]), _avg(maxs_by_n[3])
+        print(f"  {k:>3} | {_fmt_pct(r1):>8} | {_fmt_pct(r2):>8} | {_fmt_pct(r3):>8} | "
+              f"{_fmt_pct(m1):>8} | {_fmt_pct(m2):>8} | {_fmt_pct(m3):>8}")
 
     # ── 阈值推送模式 ──
     print(f"\n[阈值推送模式]  (total_score >= 阈值)")
-    print(f"  {'阈值':>4} | {'总推送':>6} | {'日均':>6} | {'命中率':>7} | {'胜率':>7} | {'3日平均收益':>10}")
-    print("  " + "-" * 64)
-    for thr in (25, 30, 35, 40, 45, 50):
+    print(f"  {'阈值':>4} | {'总推送':>6} | {'日均':>6} | "
+          f"{'命中@1':>7} | {'命中@2':>7} | {'命中@3':>7} | "
+          f"{'胜率@3':>7} | {'收益@3':>7}")
+    print("  " + "-" * 76)
+    for thr in (25, 30, 35, 40, 45, 50, 60, 70, 85, 95, 100):
         sub = df[df["total_score"] >= thr]
         if sub.empty:
-            print(f"  {thr:>4} | {'0':>6} | {'0':>6} | {'-':>7} | {'-':>7} | {'-':>10}")
+            print(f"  {thr:>4} | {'0':>6} | {'0':>6} | "
+                  f"{'-':>7} | {'-':>7} | {'-':>7} | {'-':>7} | {'-':>7}")
             continue
         avg_daily = len(sub) / n_days
+        h1 = sub["hit_limit_1"].mean() if "hit_limit_1" in sub.columns and sub["hit_limit_1"].notna().any() else None
+        h2 = sub["hit_limit_2"].mean() if "hit_limit_2" in sub.columns and sub["hit_limit_2"].notna().any() else None
+        h3 = sub["hit_limit_3"].mean() if "hit_limit_3" in sub.columns and sub["hit_limit_3"].notna().any() else None
+        w3 = (sub["fwd_ret_3"] > 0).mean() if "fwd_ret_3" in sub.columns and sub["fwd_ret_3"].notna().any() else None
+        r3 = sub["fwd_ret_3"].mean() if "fwd_ret_3" in sub.columns and sub["fwd_ret_3"].notna().any() else None
         print(f"  {thr:>4} | {len(sub):>6d} | {avg_daily:>6.1f} | "
-              f"{sub['hit_limit_3'].mean():>7.2%} | "
-              f"{(sub['fwd_ret_3'] > 0).mean():>7.2%} | "
-              f"{sub['fwd_ret_3'].mean():>10.2%}")
+              f"{_fmt_pct(h1):>7} | {_fmt_pct(h2):>7} | {_fmt_pct(h3):>7} | "
+              f"{_fmt_pct(w3):>7} | {_fmt_pct(r3):>7}")
 
-    # ── IC (供参考) ──
-    print(f"\n[排序 IC]")
-    ic_hit = rank_ic(df["total_score"], df["hit_limit_3"])
-    ic_fwd = rank_ic(df["total_score"], df["fwd_ret_3"])
-    ic_fmax = rank_ic(df["total_score"], df.get("fwd_max_3", pd.Series([np.nan] * len(df))))
-    print(f"  RankIC(hit_limit_3) = {ic_hit:.4f}")
-    print(f"  RankIC(fwd_ret_3)   = {ic_fwd:.4f}")
-    print(f"  RankIC(fwd_max_3)   = {ic_fmax:.4f}")
+    # ── IC ──
+    print(f"\n[排序 IC]  (每 N 日独立)")
+    for n in (1, 2, 3):
+        hcol = f"hit_limit_{n}"
+        rcol = f"fwd_ret_{n}"
+        mcol = f"fwd_max_{n}"
+        parts = []
+        if hcol in df.columns and df[hcol].notna().any():
+            parts.append(f"IC(hit_limit_{n})={_fmt_ic(rank_ic(df['total_score'], df[hcol]))}")
+        if rcol in df.columns and df[rcol].notna().any():
+            parts.append(f"IC(fwd_ret_{n})={_fmt_ic(rank_ic(df['total_score'], df[rcol]))}")
+        if mcol in df.columns and df[mcol].notna().any():
+            parts.append(f"IC(fwd_max_{n})={_fmt_ic(rank_ic(df['total_score'], df[mcol]))}")
+        if parts:
+            print(f"  未来 {n} 日: " + " | ".join(parts))
+        else:
+            print(f"  未来 {n} 日: 无标签数据")
 
 
 def resolve_dates(args) -> list[str] | None:

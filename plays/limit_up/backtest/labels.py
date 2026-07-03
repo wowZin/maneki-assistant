@@ -87,13 +87,23 @@ def compute_labels(
     """对单只股票在 score_date 计算全部标签。
 
     返回 dict，缺失项为 None。调用方负责传入升序对齐的四个序列。
+    未来 1 日、2 日、3 日标签独立计算：数据不够时对应字段为 None。
     """
     i = _idx_of(dates, score_date)
     return {
+        # 未来 1 日
         "fwd_ret_1": forward_return(closes, i, 1),
+        "fwd_max_1": forward_max_return(highs, closes, i, 1),
+        "hit_limit_1": hit_limit(pct_chgs, i, 1),
+        # 未来 2 日
+        "fwd_ret_2": forward_return(closes, i, 2),
+        "fwd_max_2": forward_max_return(highs, closes, i, 2),
+        "hit_limit_2": hit_limit(pct_chgs, i, 2),
+        # 未来 3 日
         "fwd_ret_3": forward_return(closes, i, 3),
         "fwd_max_3": forward_max_return(highs, closes, i, 3),
         "hit_limit_3": hit_limit(pct_chgs, i, 3),
+        # trailing
         "trailing_5": trailing_return(closes, i, 5),
         "trailing_10": trailing_return(closes, i, 10),
         "_aligned": i >= 0,
