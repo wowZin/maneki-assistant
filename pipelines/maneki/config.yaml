@@ -1,28 +1,4 @@
-# Maneki Stock Bot — Claude SDK 管道配置
-# pipes/maneki/config.yaml
-
-# Claude 会话配置
 claude:
-  model: null                # 模型覆盖，null 使用默认
-  max_turns: 50              # 每次消息最大 agentic turns，超出后超时兜底
-  system_prompt_extra: ""    # 追加的系统提示词
-
-# inbox 轮询间隔（秒）
-poll_interval: 5.0
-
-# 飞书配置（app_id/app_secret 从 .env 读取，此处只配群聊）
-feishu:
-  # 监听群聊ID列表。留空则自动从 inbox 目录扫描 *.jsonl 文件发现群聊。
-  # 手动指定示例: ["oc_xxxxx", "oc_yyyyy"]
-  chat_ids: []
-
-# 工具授权 — 管道运行时用户无感知，在此显式声明允许的工具
-# 飞书 MCP 工具由管道自动注入，无需手动添加
-allowed_tools:
-  - Read
-  - Write
-  - Edit
-  - Glob
-  - Grep
-  - Bash
-  - Skill
+  max_turns: null
+  model: null
+  system_prompt_extra: ""
