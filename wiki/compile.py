@@ -13,6 +13,7 @@
 """
 
 import json
+import os
 import sys
 from collections import defaultdict
 from datetime import datetime
@@ -182,9 +183,18 @@ def _relocate_raw_data(trade_date: str, play: str = "limit_up",
     import shutil
 
     play_data = PROJECT_DIR / "plays" / play / "data"
-    if (play_data / "pipeline.lock").exists():
-        print(f"  [wiki relocate] {play} pipeline 运行中，跳过搬迁")
-        return
+    lock_file = play_data / "pipeline.lock"
+    if lock_file.exists():
+        # 检查锁是否有效（对应进程是否还活着）
+        try:
+            old_pid = int(lock_file.read_text().strip())
+            os.kill(old_pid, 0)  # 信号 0 = 只检查进程是否存在
+            print(f"  [wiki relocate] {play} pipeline 运行中 (PID={old_pid})，跳过搬迁")
+            return
+        except (OSError, ValueError):
+            # 进程已死 → 脏锁，清理后继续搬迁
+            lock_file.unlink(missing_ok=True)
+            print(f"  [wiki relocate] {play} 清理脏锁 (PID 已死)，继续搬迁")
 
     raw_play_root = WIKI_DIR / "raw" / play_slug
 

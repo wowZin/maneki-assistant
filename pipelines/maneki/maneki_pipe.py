@@ -216,6 +216,7 @@ class ClaudePipe:
         args = self._build_args()
         log.info("spawning claude for query: %s", text[:60])
 
+        global _current_proc
         proc = await asyncio.create_subprocess_exec(
             *args,
             stdin=asyncio.subprocess.PIPE,
@@ -223,6 +224,7 @@ class ClaudePipe:
             stderr=asyncio.subprocess.PIPE,
             cwd=str(REPO_ROOT),
         )
+        _current_proc = proc
 
         prompt = f"[chat_id:{chat_id}] [message_id:{message_id}] [用户] {text}"
         # 写 query + 关 stdin（Claude 需要 EOF 才开始处理）
@@ -231,7 +233,15 @@ class ClaudePipe:
         proc.stdin.close()
 
         # 读全部 stdout
-        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=180)
+        try:
+            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=180)
+        except asyncio.TimeoutError:
+            log.warning("claude timeout (180s), killing")
+            proc.kill()
+            await proc.wait()
+            raise
+        finally:
+            _current_proc = None
         output = stdout.decode().strip()
         log.info("claude done: %d chars output", len(output))
 
@@ -246,8 +256,29 @@ class ClaudePipe:
 
 config = load_config()
 feishu = FeishuAPI(config["feishu"]["app_id"], config["feishu"]["app_secret"])
-_dedup: set[str] = set()
+_dedup: set[str] = set()            # 回复去重（运行时，被杀/重启后清零）
+_seen_msg_ids: set[str] = set()     # 已处理消息ID（持久化，防重启重复）
 _queue: asyncio.Queue = asyncio.Queue()
+_current_proc: asyncio.subprocess.Process | None = None  # 当前正在跑的 claude 进程
+
+# 加载持久化去重
+SEEN_FILE = PIPE_DIR / "inbox" / "seen_ids.json"
+if SEEN_FILE.exists():
+    try:
+        data = json.loads(SEEN_FILE.read_text())
+        _seen_msg_ids = set(data.get("ids", []))
+        log.info("loaded %d seen message_ids from disk", len(_seen_msg_ids))
+    except Exception:
+        pass
+
+
+def _persist_seen():
+    """持久化已处理消息ID到磁盘。"""
+    try:
+        SEEN_FILE.parent.mkdir(parents=True, exist_ok=True)
+        SEEN_FILE.write_text(json.dumps({"ids": list(_seen_msg_ids)[-5000:]}, ensure_ascii=False))
+    except Exception:
+        pass
 
 
 @asynccontextmanager
@@ -285,6 +316,17 @@ async def feishu_webhook(req: Request):
 
     if msg_type != "text":
         return JSONResponse({"ok": True})
+
+    # 过滤机器人自身的消息，防止循环
+    sender = event.get("event", {}).get("sender", {})
+    if sender.get("sender_type") == "app":
+        return JSONResponse({"code": 0})
+
+    # 持久化去重：已处理过的 message_id 不再处理（防重启后飞书重发旧事件）
+    if message_id in _seen_msg_ids:
+        return JSONResponse({"ok": True})
+    _seen_msg_ids.add(message_id)
+    _persist_seen()
 
     try:
         content = json.loads(content_raw)
@@ -381,9 +423,21 @@ async def _handle_slash_command(text: str, chat_id: str, message_id: str):
         await feishu.reply_markdown(message_id, reply, _dedup)
 
     elif name == "/reset":
-        log.info("slash /reset: clearing dedup")
+        log.info("slash /reset: killing current claude + clearing queue")
+        # 杀掉当前正在跑的 claude 进程
+        proc = _current_proc
+        if proc and proc.returncode is None:
+            proc.kill()
+            log.info("  killed claude PID=%d", proc.pid)
+        # 清空队列
+        while not _queue.empty():
+            try:
+                _queue.get_nowait()
+                _queue.task_done()
+            except asyncio.QueueEmpty:
+                break
         _dedup.clear()
-        reply = "🔄 去重缓存已重置"
+        reply = "🔄 已终止当前处理，队列已清空"
         await feishu.reply_markdown(message_id, reply, _dedup)
 
     else:
