@@ -48,14 +48,20 @@ def main():
         df = pd.read_csv(args.panel, dtype={"date": str, "code": str})
         df["trade_date"] = df["date"]
         df["fwd_ret_3_positive"] = (df["fwd_ret_3"] > 0).astype(int)
+        df = df[(df["trade_date"] >= args.train_start) & (df["trade_date"] <= args.test_end)]
+        train_df = df[df["trade_date"] <= args.train_end]
+        test_df = df[df["trade_date"] >= args.test_start]
+        test_df = test_df[~test_df.index.isin(train_df.index)].copy()
     else:
         print(f"[train] 加载训练集 {TRAINING_CSV}")
-        df = load_all()
+        train_df, test_df = load_training_data(
+            TRAINING_CSV,
+            train_start=args.train_start,
+            train_end=args.train_end,
+            test_start=args.test_start,
+            test_end=args.test_end,
+        )
 
-    df = df[(df["trade_date"] >= args.train_start) & (df["trade_date"] <= args.test_end)]
-    train_df = df[df["trade_date"] <= args.train_end]
-    test_df = df[df["trade_date"] >= args.test_start]
-    test_df = test_df[~test_df.index.isin(train_df.index)].copy()
     train_df = train_df.reset_index(drop=True)
     test_df = test_df.reset_index(drop=True)
 

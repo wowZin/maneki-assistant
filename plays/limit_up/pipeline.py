@@ -18,6 +18,7 @@ from pathlib import Path
 import argparse
 import requests
 import numpy as np
+import pandas as pd
 
 # 项目根目录
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
@@ -393,6 +394,8 @@ _NV2_DAILY_BASIC_CACHE: dict[str, dict[str, dict]] = {}  # code → {trade_date:
 _NV2_LIMIT_CACHE: dict[str, int] = {}         # code → 近20日涨停次数
 _NV2_LIMIT_60D_CACHE: dict[str, int] = {}     # code → 近60日涨停次数
 _NV2_MONEYFLOW_CACHE: dict[str, dict[str, dict]] = {}  # code → {trade_date: moneyflow_row}
+_NV2_TOP_LIST_CACHE: dict[str, dict[str, dict]] = {}  # code → {trade_date: top_list_row}
+_NV2_TOP_INST_CACHE: dict[str, dict[str, list[dict]]] = {}  # code → {trade_date: [top_inst_rows]}
 _NV2_DATE = ""
 
 
@@ -409,7 +412,7 @@ def _fetch_nv2_data(codes: list[str]):
       - daily_basic 不支持多 ts_code，必须逐只查询
       - limit_list_d 支持多 ts_code 批量
     """
-    global _NV2_DAILY_CACHE, _NV2_DAILY_BASIC_CACHE, _NV2_LIMIT_CACHE, _NV2_LIMIT_60D_CACHE, _NV2_MONEYFLOW_CACHE, _NV2_DATE
+    global _NV2_DAILY_CACHE, _NV2_DAILY_BASIC_CACHE, _NV2_LIMIT_CACHE, _NV2_LIMIT_60D_CACHE, _NV2_MONEYFLOW_CACHE, _NV2_TOP_LIST_CACHE, _NV2_TOP_INST_CACHE, _NV2_DATE
     today = datetime.now().strftime("%Y%m%d")
     if _NV2_DATE == today and _NV2_DAILY_CACHE and _NV2_DAILY_BASIC_CACHE:
         return
@@ -535,6 +538,57 @@ def _fetch_nv2_data(codes: list[str]):
                 print(f"  [NV2] moneyflow {d} 拉取失败: {e}")
         print(f"  [NV2] moneyflow: 共 {total_mf} 条")
 
+    # 3.5 龙虎榜数据（近 25 个自然日，按日期全市场拉取）
+    if not _NV2_TOP_LIST_CACHE:
+        print(f"  [NV2] top_list/top_inst: 拉取 {start20}~{today}")
+        total_tl = 0
+        total_ti = 0
+        for offset in range(26):
+            d = (datetime.now() - timedelta(days=offset)).strftime("%Y%m%d")
+            try:
+                resp_tl = call_tushare(
+                    "top_list",
+                    {"trade_date": d},
+                    "ts_code,trade_date,name,close,pct_change,turnover_rate,amount,"
+                    "l_sell,l_buy,l_amount,net_amount,net_rate,amount_rate,float_values,reason",
+                )
+                if resp_tl.get("code", -1) == 0:
+                    items = resp_tl.get("data", {}).get("items", [])
+                    fields = resp_tl.get("data", {}).get("fields", [])
+                    for row in items:
+                        drow = dict(zip(fields, row))
+                        code = drow.get("ts_code", "")
+                        td = str(drow.get("trade_date", ""))
+                        if code and td:
+                            if code not in _NV2_TOP_LIST_CACHE:
+                                _NV2_TOP_LIST_CACHE[code] = {}
+                            _NV2_TOP_LIST_CACHE[code][td] = drow
+                    total_tl += len(items)
+            except Exception as e:
+                print(f"  [NV2] top_list {d} 拉取失败: {e}")
+
+            try:
+                resp_ti = call_tushare(
+                    "top_inst",
+                    {"trade_date": d},
+                    "ts_code,trade_date,exalter,buy,buy_rate,sell,sell_rate,net_buy,side,reason",
+                )
+                if resp_ti.get("code", -1) == 0:
+                    items = resp_ti.get("data", {}).get("items", [])
+                    fields = resp_ti.get("data", {}).get("fields", [])
+                    for row in items:
+                        drow = dict(zip(fields, row))
+                        code = drow.get("ts_code", "")
+                        td = str(drow.get("trade_date", ""))
+                        if code and td:
+                            if code not in _NV2_TOP_INST_CACHE:
+                                _NV2_TOP_INST_CACHE[code] = {}
+                            _NV2_TOP_INST_CACHE[code].setdefault(td, []).append(drow)
+                    total_ti += len(items)
+            except Exception as e:
+                print(f"  [NV2] top_inst {d} 拉取失败: {e}")
+        print(f"  [NV2] top_list: {total_tl} 条, top_inst: {total_ti} 条")
+
     # 4. 涨停基因 (近60日，同时产出 20d/60d 计数)
     ts_codes_l = [c for c in codes if c not in _NV2_LIMIT_CACHE]
     if ts_codes_l:
@@ -579,10 +633,9 @@ def _fetch_nv2_data(codes: list[str]):
                 _NV2_LIMIT_CACHE.get(code, 0),
                 _NV2_LIMIT_60D_CACHE.get(code, 0),
             )
-        # 概念数据按需加载一次
+        # 概念数据按需加载一次（默认路径为 wiki/raw/limit-up/panel/concept/）
         if factor_ctx._CONCEPT_DAILY_CACHE is None:
-            cache_dir = Path(__file__).resolve().parent / "backtest" / "cache"
-            factor_ctx.load_concept_data_from_cache(cache_dir)
+            factor_ctx.load_concept_data_from_cache()
     except Exception as e:
         print(f"  [NV2] factor_ctx 同步失败: {e}")
 
@@ -633,7 +686,14 @@ def _extract_pit_features(code: str, pit_mode: bool) -> dict:
     code_short = code.split(".")[0]
     try:
         from plays.limit_up.strategies import factor_ctx
-        concept_momentum = factor_ctx.get_concept_momentum(code_short)
+        # PIT：评分日 T 使用 T-1 日概念动量，避免未来信息泄露
+        dates = sorted({str(r.get("trade_date", "")) for r in daily_rows if r.get("trade_date")})
+        pit_date = _NV2_DATE
+        if _NV2_DATE in dates:
+            idx = dates.index(_NV2_DATE)
+            if idx >= 1:
+                pit_date = dates[idx - 1]
+        concept_momentum = factor_ctx.get_concept_momentum(code_short, trade_date=pit_date)
     except Exception:
         concept_momentum = None
     # 复用统一 PIT 特征构建器，保持生产与回测特征口径一致
@@ -645,6 +705,8 @@ def _extract_pit_features(code: str, pit_mode: bool) -> dict:
         moneyflow_by_date=moneyflow_by_date,
         auction_by_date=None,
         concept_momentum=concept_momentum,
+        top_list_by_date=_NV2_TOP_LIST_CACHE.get(code, {}),
+        top_inst_by_date=_NV2_TOP_INST_CACHE.get(code, {}),
         pit_mode=pit_mode,
     )
     # 兼容旧逻辑：生产 pipeline 的 limit_up_count 来自 limit_list_d 缓存，精度更高
@@ -1089,20 +1151,42 @@ def _run_pipeline(args):
     # 3. 唯一总分：total_score(row) - PIT 语义（使用 T-1 数据）
     from plays.limit_up.total import total_score
     from plays.limit_up.factors import REGISTRY, TOTAL_SCORE_COMPONENTS
-    for r in all_results:
-        code = r["code"]
-        feats = _extract_pit_features(code, pit_mode=True)
-        feats["sentiment"] = r["scores"].get("sentiment", 0)
-        feats["shortterm"] = r["scores"].get("shortterm", 0)
-        feats["technical"] = r["scores"].get("technical", 0)
-        feats["fundflow"] = r["scores"].get("fundflow", 0)
-        feats["fundamental"] = r["scores"].get("fundamental", 0)
-        # 记录 total_score 与三个组件因子（供 review/审计）
-        r["factors"] = {
-            name: round(REGISTRY[name](feats), 2)
-            for name in TOTAL_SCORE_COMPONENTS
-        }
-        r["total_score"] = total_score(feats)
+
+    model_mode = "model_score" in TOTAL_SCORE_COMPONENTS
+    if model_mode and all_results:
+        # 模型分批量预测：避免逐行 XGBoost 预测的高开销
+        from plays.limit_up.factors.optimized.model_score import factor_model_score_batch
+
+        feats_list = []
+        for r in all_results:
+            feats = _extract_pit_features(r["code"], pit_mode=True)
+            feats["sentiment"] = r["scores"].get("sentiment", 0)
+            feats["shortterm"] = r["scores"].get("shortterm", 0)
+            feats["technical"] = r["scores"].get("technical", 0)
+            feats["fundflow"] = r["scores"].get("fundflow", 0)
+            feats["fundamental"] = r["scores"].get("fundamental", 0)
+            feats_list.append(feats)
+
+        model_scores = factor_model_score_batch(pd.DataFrame(feats_list))
+        for i, r in enumerate(all_results):
+            score = round(float(model_scores.iloc[i]), 2)
+            r["factors"] = {"model_score": score}
+            r["total_score"] = score
+    else:
+        for r in all_results:
+            code = r["code"]
+            feats = _extract_pit_features(code, pit_mode=True)
+            feats["sentiment"] = r["scores"].get("sentiment", 0)
+            feats["shortterm"] = r["scores"].get("shortterm", 0)
+            feats["technical"] = r["scores"].get("technical", 0)
+            feats["fundflow"] = r["scores"].get("fundflow", 0)
+            feats["fundamental"] = r["scores"].get("fundamental", 0)
+            # 记录 total_score 与三个组件因子（供 review/审计）
+            r["factors"] = {
+                name: round(REGISTRY[name](feats), 2)
+                for name in TOTAL_SCORE_COMPONENTS
+            }
+            r["total_score"] = total_score(feats)
 
     # 4. 推送
     push_feishu(all_results)

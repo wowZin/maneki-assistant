@@ -56,6 +56,18 @@ def _mf_on_or_before(mf_by_date: dict[str, dict] | None, date: str) -> dict:
     return {}
 
 
+def _top_on_or_before(top_by_date: dict[str, Any] | None, date: str) -> Any | None:
+    """龙虎榜/席位数据按日期查找（值可能是 dict 或 list[dict]）。"""
+    if not top_by_date:
+        return None
+    if date in top_by_date:
+        return top_by_date[date]
+    for d in sorted(top_by_date.keys(), reverse=True):
+        if d <= date:
+            return top_by_date[d]
+    return None
+
+
 def _consecutive_limit_height(pcts: list[float], end_idx: int) -> int:
     """从 end_idx 向前数连续涨停（pct_chg >= 9.8）的天数。"""
     h = 0
@@ -108,6 +120,8 @@ def build_pit_features(
     moneyflow_by_date: dict[str, dict] | None = None,
     auction_by_date: dict[str, dict] | None = None,
     concept_momentum: dict[str, Any] | None = None,
+    top_list_by_date: dict[str, dict] | None = None,
+    top_inst_by_date: dict[str, dict] | None = None,
     pit_mode: bool = True,
 ) -> dict:
     """为某只股票在 score_date 构建 PIT 特征字典。
@@ -173,6 +187,15 @@ def build_pit_features(
         "auc_vol": 0.0,
         "auc_amt_ratio": 0.0,
         "auc_vol_ratio": 0.0,
+        # 龙虎榜 PIT 特征（T-1）
+        "dt_is_listed": 0.0,
+        "dt_net_amount": 0.0,
+        "dt_net_rate": 0.0,
+        "dt_l_buy_ratio": 0.0,
+        "dt_n_exalter": 0.0,
+        "dt_inst_net_buy": 0.0,
+        "dt_hot_net_buy": 0.0,
+        "dt_inst_sell_ratio": 0.0,
     }
 
     if not daily_rows:
@@ -319,6 +342,47 @@ def build_pit_features(
     # 简单实现：用 ret1_avg 的 tanh 映射；后续可接入全市场概念排名
     feats["sector_rank"] = math.tanh(ret1_avg / 5.0)
     feats["n_concepts"] = _safe_float(cm.get("n_concepts"), 0.0)
+
+    # ═══════════════════════════════════════════════════════
+    # 龙虎榜 PIT 特征（T-1 日上榜数据）
+    # ═══════════════════════════════════════════════════════
+    tl_pit = _top_on_or_before(top_list_by_date, dates[pit_i]) if top_list_by_date else None
+    ti_pit = _top_on_or_before(top_inst_by_date, dates[pit_i]) if top_inst_by_date else None
+
+    if isinstance(tl_pit, dict):
+        feats["dt_is_listed"] = 1.0
+        net_amount = _safe_float(tl_pit.get("net_amount"), 0.0)
+        amount = _safe_float(tl_pit.get("amount"), 0.0)
+        l_buy = _safe_float(tl_pit.get("l_buy"), 0.0)
+        l_amount = _safe_float(tl_pit.get("l_amount"), 0.0)
+        feats["dt_net_amount"] = net_amount
+        feats["dt_net_rate"] = _safe_float(tl_pit.get("net_rate"), 0.0)
+        feats["dt_l_buy_ratio"] = l_buy / l_amount if l_amount > 0 else 0.0
+
+    if ti_pit is not None:
+        ti_rows = ti_pit if isinstance(ti_pit, list) else [ti_pit]
+
+        inst_net_buy = 0.0
+        hot_net_buy = 0.0
+        inst_sell = 0.0
+        for row in ti_rows:
+            if not isinstance(row, dict):
+                continue
+            exalter = str(row.get("exalter", ""))
+            net_buy = _safe_float(row.get("net_buy"), 0.0)
+            if "机构" in exalter or "专用" in exalter:
+                inst_net_buy += net_buy
+            else:
+                hot_net_buy += net_buy
+            if net_buy < 0 and ("机构" in exalter or "专用" in exalter):
+                inst_sell += abs(net_buy)
+
+        feats["dt_n_exalter"] = float(len(ti_rows))
+        feats["dt_inst_net_buy"] = inst_net_buy
+        feats["dt_hot_net_buy"] = hot_net_buy
+        amount = _safe_float(tl_pit.get("amount"), 0.0) if isinstance(tl_pit, dict) else 0.0
+        if amount > 0:
+            feats["dt_inst_sell_ratio"] = inst_sell / amount
 
     # ═══════════════════════════════════════════════════════
     # 竞价特征（如提供，Tushare stk_auction amount 单位为元，vol 单位为股）

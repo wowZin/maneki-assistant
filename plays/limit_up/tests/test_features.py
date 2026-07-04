@@ -99,10 +99,62 @@ def test_momentum_features():
     assert feat["prev_pct"] == 2.0
 
 
+def test_concept_momentum_features():
+    rows = _make_daily_rows()
+    basic = {"20260623": {"turnover_rate": 5.0, "volume_ratio": 1.0, "circ_mv": 500000}}
+    concept_momentum = {
+        "ret1_avg": 2.5,
+        "n_concepts": 3,
+    }
+    feat = build_pit_features(
+        "000001.SZ", "20260624", rows, basic,
+        concept_momentum=concept_momentum, pit_mode=True,
+    )
+    assert feat["sector_heat"] == 2.5
+    assert feat["n_concepts"] == 3
+    import math
+    assert abs(feat["sector_rank"] - math.tanh(2.5 / 5.0)) < 1e-6
+
+
+def test_dragon_tiger_features():
+    rows = _make_daily_rows()
+    basic = {"20260623": {"turnover_rate": 5.0, "volume_ratio": 1.0, "circ_mv": 500000}}
+    top_list = {
+        "20260623": {
+            "net_amount": 1000000.0,
+            "amount": 50000000.0,
+            "net_rate": 2.0,
+            "l_buy": 600000.0,
+            "l_amount": 1000000.0,
+        },
+    }
+    top_inst = {
+        "20260623": [
+            {"exalter": "机构专用", "net_buy": 800000.0},
+            {"exalter": "游资营业部", "net_buy": 200000.0},
+            {"exalter": "机构专用", "net_buy": -100000.0},
+        ],
+    }
+    feat = build_pit_features(
+        "000001.SZ", "20260624", rows, basic,
+        top_list_by_date=top_list, top_inst_by_date=top_inst, pit_mode=True,
+    )
+    assert feat["dt_is_listed"] == 1.0
+    assert feat["dt_net_amount"] == 1000000.0
+    assert feat["dt_net_rate"] == 2.0
+    assert abs(feat["dt_l_buy_ratio"] - 0.6) < 1e-6
+    assert feat["dt_n_exalter"] == 3.0
+    assert feat["dt_inst_net_buy"] == 700000.0  # 80万 - 10万
+    assert feat["dt_hot_net_buy"] == 200000.0
+    assert abs(feat["dt_inst_sell_ratio"] - 100000.0 / 50000000.0) < 1e-6
+
+
 if __name__ == "__main__":
     test_prev_turnover_and_vol_accel()
     test_max_step_and_was_limit()
     test_candle_features()
     test_moneyflow_features()
     test_momentum_features()
+    test_concept_momentum_features()
+    test_dragon_tiger_features()
     print("test_features OK")

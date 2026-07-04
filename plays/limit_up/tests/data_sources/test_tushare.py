@@ -50,3 +50,27 @@ def test_audit_summary_reports_tushare_calls():
     call_tushare("stock_basic", {"ts_code": "600176.SH"}, "ts_code,name")
     s = audit.summary()
     assert "tushare" in s
+
+
+def test_ths_daily_returns_concept_data():
+    resp = call_tushare("ths_daily", {"trade_date": "20260701"}, "")
+    items = resp.get("data", {}).get("items", [])
+    assert len(items) > 100, f"ths_daily 应返回大量概念: 实际 {len(items)}"
+
+
+def test_ths_member_returns_members():
+    resp = call_tushare("ths_member", {"ts_code": "882001.TI"}, "")
+    items = resp.get("data", {}).get("items", [])
+    assert items, "ths_member 对 882001.TI 应返回成分股"
+
+
+def test_top_list_returns_data():
+    resp = call_tushare("top_list", {"trade_date": "20260701"}, "")
+    items = resp.get("data", {}).get("items", [])
+    assert len(items) > 10, f"top_list 应返回上榜数据: 实际 {len(items)}"
+
+
+def test_top_inst_returns_data():
+    resp = call_tushare("top_inst", {"trade_date": "20260701"}, "")
+    items = resp.get("data", {}).get("items", [])
+    assert len(items) > 10, f"top_inst 应返回席位数据: 实际 {len(items)}"

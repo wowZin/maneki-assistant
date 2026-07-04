@@ -175,6 +175,20 @@ _API_FIELDS: dict[str, dict[str, bool]] = {
         "buy_lg_amount": True, "sell_lg_amount": True,
         "net_mf_amount": True,
     },
+    "top_list": {
+        "ts_code": False, "trade_date": False,
+        "name": False, "close": True, "pct_change": True,
+        "turnover_rate": True, "amount": True, "l_sell": True,
+        "l_buy": True, "l_amount": True, "net_amount": True,
+        "net_rate": True, "amount_rate": True, "float_values": True,
+        "reason": False,
+    },
+    "top_inst": {
+        "ts_code": False, "trade_date": False,
+        "exalter": False, "buy": True, "buy_rate": True,
+        "sell": True, "sell_rate": True, "net_buy": True,
+        "side": False, "reason": False,
+    },
 }
 
 
@@ -336,6 +350,30 @@ def pull_moneyflow_bars(codes: list[str], start: str, end: str, refresh: bool = 
     return df[df["ts_code"].isin(set(codes))].copy()
 
 
+def pull_top_list_bars(codes: list[str], start: str, end: str, refresh: bool = False,
+                       cols: list[str] | None = None) -> pd.DataFrame:
+    """按天拉/读龙虎榜上榜明细，按列增量。"""
+    cols = cols or ["name", "close", "pct_change", "turnover_rate", "amount",
+                    "l_sell", "l_buy", "l_amount", "net_amount", "net_rate",
+                    "amount_rate", "float_values", "reason"]
+    dates = _trade_dates(start, end)
+    df = _load_or_fetch_by_day("top_list", dates, cols, refresh=refresh)
+    if df.empty:
+        return df
+    return df[df["ts_code"].isin(set(codes))].copy()
+
+
+def pull_top_inst_bars(codes: list[str], start: str, end: str, refresh: bool = False,
+                        cols: list[str] | None = None) -> pd.DataFrame:
+    """按天拉/读龙虎榜机构席位明细，按列增量。"""
+    cols = cols or ["exalter", "buy", "buy_rate", "sell", "sell_rate", "net_buy", "side", "reason"]
+    dates = _trade_dates(start, end)
+    df = _load_or_fetch_by_day("top_inst", dates, cols, refresh=refresh)
+    if df.empty:
+        return df
+    return df[df["ts_code"].isin(set(codes))].copy()
+
+
 # ===== 3. 标签 join =====
 def build_panel(
     dedup: str | None = None,
@@ -360,6 +398,14 @@ def build_panel(
     start = _shift_calendar(dmin, -pad_before * 2)
     end = _shift_calendar(dmax, pad_after * 2)
 
+    # 加载概念缓存供 PIT 动量特征使用
+    try:
+        from plays.limit_up.strategies import factor_ctx
+        if factor_ctx._CONCEPT_DAILY_CACHE is None or factor_ctx._CONCEPT_MEMBER_CACHE is None:
+            factor_ctx.load_concept_data_from_cache()
+    except Exception as e:
+        print(f"  [warn] 概念缓存加载失败: {e}; sector_* 特征将使用默认值")
+
     bars = pull_daily_bars(codes, start, end)
     if bars.empty:
         raise RuntimeError("日线拉取为空（检查 .env / tushare token）")
@@ -370,11 +416,17 @@ def build_panel(
     # 拉 moneyflow 供资金流特征
     mf = pull_moneyflow_bars(codes, start, end)
 
+    # 拉龙虎榜数据供 PIT 特征
+    top_list = pull_top_list_bars(codes, start, end)
+    top_inst = pull_top_inst_bars(codes, start, end)
+
     # 按 code 分组
     label_rows = []
     grouped_daily = {c: g for c, g in bars.groupby("ts_code")}
     grouped_basic = {c: g for c, g in dbasic.groupby("ts_code")} if not dbasic.empty else {}
     grouped_moneyflow = {c: g for c, g in mf.groupby("ts_code")} if not mf.empty else {}
+    grouped_top_list = {c: g for c, g in top_list.groupby("ts_code")} if not top_list.empty else {}
+    grouped_top_inst = {c: g for c, g in top_inst.groupby("ts_code")} if not top_inst.empty else {}
 
     for _, row in rec.iterrows():
         g = grouped_daily.get(row["code"])
@@ -391,7 +443,8 @@ def build_panel(
     panel = pd.concat([rec.reset_index(drop=True), lab], axis=1)
 
     # ── 补面板特征 + 重算 total_score ──
-    panel = _augment_and_score(panel, grouped_daily, grouped_basic, grouped_moneyflow)
+    panel = _augment_and_score(panel, grouped_daily, grouped_basic, grouped_moneyflow,
+                               grouped_top_list, grouped_top_inst)
 
     out_file = OUT_DIR / f"panel_{dmin}_{dmax}.csv"
     panel.to_csv(out_file, index=False)
@@ -399,7 +452,9 @@ def build_panel(
 
 
 def _augment_and_score(panel: pd.DataFrame, grouped_daily: dict, grouped_basic: dict,
-                       grouped_moneyflow: dict | None = None) -> pd.DataFrame:
+                       grouped_moneyflow: dict | None = None,
+                       grouped_top_list: dict | None = None,
+                       grouped_top_inst: dict | None = None) -> pd.DataFrame:
     """对面板每行补 total_score 所需的 PIT 特征列，然后调 total_score() 重算总分。"""
     from plays.limit_up.factors import REGISTRY, TOTAL_SCORE_COMPONENTS
     from plays.limit_up.total import total_score as _total_score
@@ -424,13 +479,29 @@ def _augment_and_score(panel: pd.DataFrame, grouped_daily: dict, grouped_basic: 
         for _, r in gm.iterrows():
             mf_by_code_date[code][str(r["trade_date"])] = r.to_dict()
 
+    top_list_by_code_date: dict[str, dict[str, dict]] = {}
+    for code, gt in (grouped_top_list or {}).items():
+        top_list_by_code_date[code] = {}
+        for _, r in gt.iterrows():
+            top_list_by_code_date[code][str(r["trade_date"])] = r.to_dict()
+
+    top_inst_by_code_date: dict[str, dict[str, list[dict]]] = {}
+    for code, gi in (grouped_top_inst or {}).items():
+        top_inst_by_code_date[code] = {}
+        for _, r in gi.iterrows():
+            top_inst_by_code_date[code].setdefault(str(r["trade_date"]), []).append(r.to_dict())
+
+    model_mode = "model_score" in TOTAL_SCORE_COMPONENTS
+    if model_mode:
+        from plays.limit_up.factors.optimized.model_score import factor_model_score_batch
+
     feat_rows: list[dict] = []
+    non_model_components = [n for n in TOTAL_SCORE_COMPONENTS if n != "model_score"]
     for _, row in panel.iterrows():
         code = row["code"]
         date = row["date"]
         gd = grouped_daily.get(code)
         if gd is None or gd.empty:
-            total_scores.append(None)
             for n in TOTAL_SCORE_COMPONENTS:
                 comp_cols[n].append(None)
             feat_rows.append({})
@@ -442,20 +513,38 @@ def _augment_and_score(panel: pd.DataFrame, grouped_daily: dict, grouped_basic: 
             daily_rows=daily_rows_by_code[code],
             basic_by_date=basic_by_code_date.get(code, {}),
             moneyflow_by_date=mf_by_code_date.get(code, {}),
+            top_list_by_date=top_list_by_code_date.get(code, {}),
+            top_inst_by_date=top_inst_by_code_date.get(code, {}),
             pit_mode=True,
         )
         # 把维度分接入 feat，供 quality_combo 等现有因子使用
         for dim in DIM_COLS:
             feat[dim] = float(row.get(dim) or 0.0)
 
-        ts = _total_score(feat)
-        total_scores.append(ts)
-        for n in TOTAL_SCORE_COMPONENTS:
+        for n in non_model_components:
             comp_cols[n].append(round(REGISTRY[n](feat), 2))
+        if model_mode:
+            # model_score 走批量预测，先占位
+            comp_cols["model_score"].append(None)
         feat_rows.append(feat)
 
     feat_df = pd.DataFrame(feat_rows)
     panel = panel.copy().reset_index(drop=True)
+
+    if model_mode:
+        # 批量模型预测：避免逐行 XGBoost 预测的巨大开销
+        model_scores = factor_model_score_batch(feat_df)
+        for i, score in enumerate(model_scores):
+            if feat_rows[i]:
+                comp_cols["model_score"][i] = round(float(score), 2)
+                total_scores.append(comp_cols["model_score"][i])
+            else:
+                comp_cols["model_score"][i] = None
+                total_scores.append(None)
+    else:
+        for feat in feat_rows:
+            total_scores.append(_total_score(feat) if feat else None)
+
     panel["total_score"] = total_scores
     for n, vals in comp_cols.items():
         panel[f"comp_{n}"] = vals

@@ -22,7 +22,8 @@ if _libomp.exists():
 
 import joblib
 
-# 默认特征列：与 training.py FEATURE_COLS 保持一致，并加入五维度分
+# 默认特征列：与 training.py FEATURE_COLS 保持一致
+# NOTE: 修改训练特征时，必须同步更新此处列表
 DEFAULT_FEATURES = [
     "position_20d", "trailing_10", "trailing_5",
     "pct_chg_std_10d", "pct_chg_std_5d", "max_pct_chg_5d",
@@ -37,7 +38,10 @@ DEFAULT_FEATURES = [
     "mf_net", "mf_accel", "mf_pct",
     "sector_heat", "sector_rank", "n_concepts",
     "auc_amount", "auc_vol", "auc_amt_ratio", "auc_vol_ratio",
-    # 五维度分：由 pipeline / backtest panel 提供，是强先验信号
+    # 龙虎榜 PIT 特征
+    "dt_is_listed", "dt_net_amount", "dt_net_rate", "dt_l_buy_ratio",
+    "dt_n_exalter", "dt_inst_net_buy", "dt_hot_net_buy", "dt_inst_sell_ratio",
+    # 五维度分：从 analysis 记录提取，强先验信号
     "fundamental", "technical", "fundflow", "sentiment", "shortterm",
 ]
 

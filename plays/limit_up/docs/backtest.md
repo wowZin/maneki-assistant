@@ -57,6 +57,34 @@ python plays/limit_up/backtest/train_model.py \
 
 训练完成后，设置 `LIMIT_UP_USE_MODEL=true` 即可在回测/生产中使用模型分。
 
+## 概念缓存（PIT 前置依赖）
+
+模型训练与回测面板依赖概念动量特征（`sector_heat`、`sector_rank`、`n_concepts`）。这些特征由 Tushare `ths_daily` + `ths_member` 构建，必须先构建概念缓存：
+
+```bash
+# 构建概念日线行情（按交易日期增量追加）
+python plays/limit_up/backtest/concept_cache.py build --start 20260601 --end 20260702
+
+# 构建概念成分股映射（静态，首次运行约 8-10 分钟）
+python plays/limit_up/backtest/concept_cache.py build-members
+
+# 检查缓存覆盖
+python plays/limit_up/backtest/concept_cache.py check
+```
+
+缓存归档路径：`wiki/raw/limit-up/panel/concept/`。
+训练集/回测/生产会优先从此路径加载；如缺失则回退到旧的 `plays/limit_up/backtest/cache/`。
+
+## 训练集重建
+
+新增 PIT 特征（概念动量、龙虎榜）后，必须重建训练集 CSV，否则新特征全为默认值：
+
+```bash
+python plays/limit_up/backtest/training.py build --start 20260519 --end 20260702 --force
+```
+
+产物：`wiki/raw/limit-up/training/training_set.csv`。
+
 ## 面板生成
 
 `dataset.py::build_panel(dates=[...])` 一站式：读 wiki/raw/limit-up/analysis 里的评分记录 + 拉 Tushare daily/daily_basic + join 未来标签 + 重算 `total_score`。

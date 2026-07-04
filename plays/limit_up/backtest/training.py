@@ -48,9 +48,12 @@ from plays.limit_up.backtest.dataset import (
     pull_daily_bars,
     pull_daily_basic_bars,
     pull_moneyflow_bars,
+    pull_top_list_bars,
+    pull_top_inst_bars,
     _trade_dates,
 )
 from plays.limit_up.pit_features import build_pit_features
+from plays.limit_up.strategies import factor_ctx
 
 TRAINING_DIR = PROJECT_DIR / "wiki" / "raw" / "limit-up" / "training"
 TRAINING_DIR.mkdir(parents=True, exist_ok=True)
@@ -122,8 +125,46 @@ FEATURE_COLS = [
     "mf_net", "mf_accel", "mf_pct",
     "sector_heat", "sector_rank", "n_concepts",
     "auc_amount", "auc_vol", "auc_amt_ratio", "auc_vol_ratio",
+    # 龙虎榜 PIT 特征
+    "dt_is_listed", "dt_net_amount", "dt_net_rate", "dt_l_buy_ratio",
+    "dt_n_exalter", "dt_inst_net_buy", "dt_hot_net_buy", "dt_inst_sell_ratio",
+    # 五维度分：从 analysis 记录提取，缺失时填 0
+    "fundamental", "technical", "fundflow", "sentiment", "shortterm",
 ]
 LABEL_COLS = ["fwd_ret_3", "hit_limit_3", "fwd_max_3"]
+
+
+def get_dim_scores_by_code(trade_date: str) -> dict[str, dict[str, float]]:
+    """从当日 analysis 记录中提取每只股票最新的五维度分。
+
+    返回: {code: {"fundamental": x, "technical": x, ...}}
+    同一股票多轮扫描时，保留 total 最高的一轮。
+    """
+    dim_cols = ["fundamental", "technical", "fundflow", "sentiment", "shortterm"]
+    out: dict[str, dict[str, float]] = {}
+    for base in ANALYSIS_DIRS:
+        if not base.exists():
+            continue
+        for f in sorted(glob.glob(str(base / f"{trade_date}*.json"))):
+            try:
+                recs = json.load(open(f))
+                for r in recs:
+                    if not isinstance(r, dict) or not r.get("code"):
+                        continue
+                    code = r["code"]
+                    sc = r.get("scores", {}) or {}
+                    dims = {d: float(sc.get(d, 0.0) or 0.0) for d in dim_cols}
+                    total = float(r.get("total", 0.0) or 0.0)
+                    existing = out.get(code)
+                    if existing is None or total > existing.get("_total", 0.0):
+                        dims["_total"] = total
+                        out[code] = dims
+            except Exception:
+                continue
+    # 删除内部用的 _total
+    for code in out:
+        out[code].pop("_total", None)
+    return out
 
 
 def _build_limit_gene_index(limit_by_date: dict[str, set[str]]) -> dict[str, list[str]]:
@@ -143,7 +184,10 @@ def _extract_row(
     daily_by_code: dict[str, list[dict]],
     dbasic_by_code_date: dict[str, dict[str, dict]],
     mf_by_code_date: dict[str, dict[str, dict]],
+    top_list_by_code_date: dict[str, dict[str, dict]],
+    top_inst_by_code_date: dict[str, dict[str, list[dict]]],
     limit_by_code: dict[str, list[str]],
+    dim_scores: dict[str, dict[str, float]],
     dates_all: list[str],
 ) -> dict | None:
     """在 trade_date 提取一只股票的面板行 + 未来标签（PIT）。"""
@@ -162,14 +206,29 @@ def _extract_row(
     if c0 is None:
         return None
 
+    # PIT 基准日：与 build_pit_features(pit_mode=True) 保持一致，即 T-1
+    pit_i = i - 1 if i >= 1 else i
+    pit_date = dates_asc[pit_i] if 0 <= pit_i < len(dates_asc) else trade_date
+    code_short = code.split(".")[0]
+    concept_momentum = factor_ctx.get_concept_momentum(code_short, trade_date=pit_date)
+
     feat = build_pit_features(
         code=code,
         score_date=trade_date,
         daily_rows=rows_sorted,
         basic_by_date=dbasic_by_code_date.get(code, {}),
         moneyflow_by_date=mf_by_code_date.get(code, {}),
+        concept_momentum=concept_momentum,
+        top_list_by_date=top_list_by_code_date.get(code, {}),
+        top_inst_by_date=top_inst_by_code_date.get(code, {}),
         pit_mode=True,
     )
+
+    # 补充五维度分（从 analysis 记录，缺失时保持 0）
+    dim_cols = ["fundamental", "technical", "fundflow", "sentiment", "shortterm"]
+    dims = dim_scores.get(code, {})
+    for d in dim_cols:
+        feat[d] = float(dims.get(d, 0.0) or 0.0)
 
     # 未来 3 日标签
     fwd_ret_3 = None
@@ -219,7 +278,18 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
     if not all_codes:
         return pd.DataFrame()
 
-    # 2. 拉/读面板数据（往前 lookback 天用于计算特征，往后 3 天用于标签）
+    # 0. 加载概念缓存（PIT 动量特征依赖）
+    if factor_ctx._CONCEPT_DAILY_CACHE is None or factor_ctx._CONCEPT_MEMBER_CACHE is None:
+        try:
+            factor_ctx.load_concept_data_from_cache()
+            print(f"  概念缓存已加载")
+        except Exception as e:
+            print(f"  [warn] 概念缓存加载失败: {e}; sector_* 特征将使用默认值")
+
+    # 0.5 从 analysis 记录读取五维度分
+    dim_scores = get_dim_scores_by_code(trade_date)
+
+    # 1. 拉/读面板数据（往前 lookback 天用于计算特征，往后 3 天用于标签）
     from datetime import datetime, timedelta
     d_dt = datetime.strptime(trade_date, "%Y%m%d")
     start = (d_dt - timedelta(days=lookback + 15)).strftime("%Y%m%d")
@@ -233,8 +303,12 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
     dbasic = pull_daily_basic_bars(codes_list, start, end)
     print(f"  拉/读 moneyflow ({start}~{end})...")
     mf = pull_moneyflow_bars(codes_list, start, end)
+    print(f"  拉/读 top_list ({start}~{end})...")
+    top_list = pull_top_list_bars(codes_list, start, end)
+    print(f"  拉/读 top_inst ({start}~{end})...")
+    top_inst = pull_top_inst_bars(codes_list, start, end)
 
-    # 3. 索引
+    # 2. 索引
     daily_by_code: dict[str, list[dict]] = defaultdict(list)
     for _, r in daily.iterrows():
         daily_by_code[r["ts_code"]].append(r.to_dict())
@@ -247,7 +321,15 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
     for _, r in mf.iterrows():
         mf_by_code_date[r["ts_code"]][r["trade_date"]] = r.to_dict()
 
-    # 4. 涨停基因索引（需要 lookback 期内所有股票的涨停日期）
+    top_list_by_code_date: dict[str, dict[str, dict]] = defaultdict(dict)
+    for _, r in top_list.iterrows():
+        top_list_by_code_date[r["ts_code"]][r["trade_date"]] = r.to_dict()
+
+    top_inst_by_code_date: dict[str, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
+    for _, r in top_inst.iterrows():
+        top_inst_by_code_date[r["ts_code"]][r["trade_date"]].append(r.to_dict())
+
+    # 3. 涨停基因索引（需要 lookback 期内所有股票的涨停日期）
     #    对每天的涨停股取并集
     from scripts.tu_share import call_tushare
     print(f"  拉涨停记录（lookback {lookback} 天）...")
@@ -267,11 +349,12 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
             limit_by_date.setdefault(date, set()).add(code)
     limit_by_code = _build_limit_gene_index(limit_by_date)
 
-    # 5. 逐股提取样本
+    # 4. 逐股提取样本
     rows_out = []
     for code in codes_list:
         row = _extract_row(code, trade_date, daily_by_code, dbasic_by_code_date,
-                            mf_by_code_date, limit_by_code, dates_all)
+                            mf_by_code_date, top_list_by_code_date,
+                            top_inst_by_code_date, limit_by_code, dim_scores, dates_all)
         if row is None:
             continue
         row["label"] = 1 if code in positives else 0

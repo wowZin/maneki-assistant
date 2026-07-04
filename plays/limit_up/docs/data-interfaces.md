@@ -42,8 +42,8 @@
 | `moneyflow` | 个股资金流向(主力净流入) | 基础 | T+1 | 当天无实时数据 |
 | `margin_detail` | 融资融券明细 | 基础 | T+1 | 当天无数据 |
 | `hk_hold` | 沪深港通持股 | 基础 | T+1 | - |
-| `top_list` | 龙虎榜 | 基础 | T日盘后 | 约16:30更新 |
-| `top_inst` | 龙虎榜机构明细 | 基础 | T日盘后 | - |
+| `top_list` | 龙虎榜 | 基础 | T日盘后 | 约16:30更新；支持按 `trade_date` 全市场拉取 |
+| `top_inst` | 龙虎榜机构明细 | 基础 | T日盘后 | 支持按 `trade_date` 全市场拉取 |
 
 ### 涨停/封板
 
@@ -62,7 +62,17 @@
 | `ths_member` | 同花顺概念成分股映射 | 基础 | 静态 | `ts_code` 必须传完整概念码（`.TI`），传裸数字前缀会返回空 |
 
 > 概念动量 PIT 用法：T 日评分使用 T-1 日概念行情与成分股映射。
-> 缓存路径：`plays/limit_up/backtest/cache/concept_daily.parquet`、`plays/limit_up/backtest/cache/concept_members.parquet`。
+> 归档路径：`wiki/raw/limit-up/panel/concept/concept_daily.parquet`、`wiki/raw/limit-up/panel/concept/concept_members.parquet`。
+> 构建命令：`python plays/limit_up/backtest/concept_cache.py build --start YYYYMMDD --end YYYYMMDD`。
+> `factor_ctx.load_concept_data_from_cache` 优先读取新路径，并兼容旧的 `plays/limit_up/backtest/cache/`。
+
+### 龙虎榜 Panel
+
+`top_list` / `top_inst` 按天全市场拉取，增量缓存到：
+- `wiki/raw/limit-up/panel/top_list/<YYYYMMDD>.parquet`
+- `wiki/raw/limit-up/panel/top_inst/<YYYYMMDD>.parquet`
+
+训练集与回测面板通过 `backtest/dataset.py::pull_top_list_bars` / `pull_top_inst_bars` 读取。
 
 ### 股本/股东
 

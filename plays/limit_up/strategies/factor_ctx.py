@@ -249,11 +249,29 @@ def get_concept_momentum(code_short: str, trade_date: str | None = None) -> dict
     return result
 
 
-def load_concept_data_from_cache(cache_dir: str | Path):
-    """从 backtest/cache 加载概念数据（pipeline 初始化时调用）。"""
-    cache_dir = Path(cache_dir)
+def load_concept_data_from_cache(cache_dir: str | Path | None = None):
+    """从概念缓存目录加载概念数据（pipeline 初始化时调用）。
+
+    默认路径按 wiki/raw 归档规范指向 wiki/raw/limit-up/panel/concept/；
+    若新路径不存在，兼容旧路径 plays/limit_up/backtest/cache/。
+    """
+    project_dir = Path(__file__).resolve().parent.parent.parent.parent
+    default_dir = project_dir / "wiki" / "raw" / "limit-up" / "panel" / "concept"
+    legacy_dir = project_dir / "plays" / "limit_up" / "backtest" / "cache"
+
+    cache_dir = Path(cache_dir) if cache_dir else default_dir
     daily_f = cache_dir / "concept_daily.parquet"
     member_f = cache_dir / "concept_members.parquet"
+
+    # 新路径缺失时回退旧路径
+    if cache_dir == default_dir and (not daily_f.exists() or not member_f.exists()):
+        legacy_daily = legacy_dir / "concept_daily.parquet"
+        legacy_member = legacy_dir / "concept_members.parquet"
+        if legacy_daily.exists() or legacy_member.exists():
+            cache_dir = legacy_dir
+            daily_f = legacy_daily
+            member_f = legacy_member
+
     cd = pd.read_parquet(daily_f) if daily_f.exists() else pd.DataFrame()
     cm = pd.read_parquet(member_f) if member_f.exists() else pd.DataFrame()
     set_concept_data(cd, cm)

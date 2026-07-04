@@ -8,7 +8,9 @@
 
 专注A股T+1~T+3资金驱动型涨停预判。五维度量化评分，含一票否决规则（市场状态调节器、一字板豁免、3日累计豁免）。
 
-数据源：同花顺 f62 实时主力净流入（优先）+ Tushare moneyflow（T+1降级）+ l2api Level2（盘口买卖比/VWAP）。
+数据源：同花顺 f62 实时主力净流入（优先）+ Tushare moneyflow（T+1降级）+ l2api Level2（盘口买卖比/VWAP）+ Tushare 龙虎榜（top_list/top_inst）。
+
+> **模型输入扩展**：Tushare `top_list` / `top_inst` 数据已提取为 PIT 特征进入模型训练，详见 [`factors.md`](./factors.md) 中 `dt_*` 字段。
 
 ## 五维度权重
 

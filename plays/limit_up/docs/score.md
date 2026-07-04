@@ -53,7 +53,12 @@ total_score = round(max(0.0, 1.0 * factor_model_score(row)), 2)
 
 当启用 `LIMIT_UP_USE_MODEL=true` 时：
 
-- 模型输入为 `pit_features.py` 构建的 30+ 个 PIT 特征（含 `prev_turnover`、`max_step`、资金流加速度、K 线形态、板块动量等）。
+- 模型输入为 `pit_features.py` 构建的 PIT 特征，包括：
+  - 价格位置与动量（`position_20d`、`trailing_5/10`、`max_step` 等）
+  - 资金流（`net_mf_amount`、`mf_accel`、`buy_elg_ratio` 等）
+  - K 线形态（`close_pos`、`body_ratio`、`upper_ratio` 等）
+  - 板块/概念动量（`sector_heat`、`sector_rank`、`n_concepts`）
+  - 龙虎榜因子（`dt_is_listed`、`dt_net_amount`、`dt_inst_net_buy`、`dt_hot_net_buy` 等）
 - 模型由 `HistGradientBoostingClassifier` 训练，同时预测 `hit_limit_3` 与 `fwd_ret_3 > 0`，混合为 0–100 分。
 - 反追高护栏作为乘性惩罚保留。
 - 训练脚本见 [`backtest.md`](./backtest.md)。

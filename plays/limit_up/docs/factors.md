@@ -225,8 +225,16 @@
 | `net_mf_amount` / `net_mf_ratio` | T-1 主力净流入（万元）/ 成交额占比 |
 | `buy_elg_ratio` / `buy_lg_ratio` | 超大单/大单买入占比 |
 | `mf_net` / `mf_accel` / `mf_pct` | 净流入/加速度/占比 |
-| `sector_heat` / `sector_rank` / `n_concepts` | 概念动量 |
+| `sector_heat` / `sector_rank` / `n_concepts` | 概念动量（T-1 日所属概念平均涨幅 / 排名映射 / 概念数） |
 | `auc_amount` / `auc_vol` / `auc_amt_ratio` / `auc_vol_ratio` | 竞价金额/量及比率 |
+| `dt_is_listed` | T-1 日是否上榜龙虎榜 |
+| `dt_net_amount` | T-1 日龙虎榜净买卖额（元） |
+| `dt_net_rate` | T-1 日龙虎榜净买卖额 / 成交额（%） |
+| `dt_l_buy_ratio` | T-1 日龙虎榜买入额 / 龙虎榜成交额 |
+| `dt_n_exalter` | T-1 日龙虎榜披露席位数量 |
+| `dt_inst_net_buy` | T-1 日机构席位净买入额（元） |
+| `dt_hot_net_buy` | T-1 日游资席位净买入额（元） |
+| `dt_inst_sell_ratio` | T-1 日机构净卖出 / 成交额（当净卖出时） |
 
 ---
 
