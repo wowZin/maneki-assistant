@@ -189,6 +189,16 @@ _API_FIELDS: dict[str, dict[str, bool]] = {
         "sell": True, "sell_rate": True, "net_buy": True,
         "side": False, "reason": False,
     },
+    "auction": {
+        "ts_code": False, "trade_date": False,
+        "vol": True, "price": True, "amount": True,
+        "pre_close": True, "turnover_rate": True, "volume_ratio": True, "float_share": True,
+    },
+}
+
+# 面板内部名 -> Tushare API 名（多数相同，个别需要映射）
+_API_TUSHARE_NAME: dict[str, str] = {
+    "auction": "stk_auction",
 }
 
 
@@ -244,13 +254,14 @@ def _trade_dates(start: str, end: str) -> list[str]:
     return trade_dates
 
 
-def _fetch_day_partial(api: str, date: str, fields_needed: list[str]) -> pd.DataFrame:
+def _fetch_day_partial(api: str, date: str, fields_needed: list[str], timeout: int = 10) -> pd.DataFrame:
     """拉某一天全市场的指定字段。fields_needed 不含 ts_code/trade_date 也会自动补上。"""
     from scripts.tu_share import call_tushare
+    api_name = _API_TUSHARE_NAME.get(api, api)
     key_fields = ["ts_code", "trade_date"]
     fields_req = list(dict.fromkeys(key_fields + fields_needed))  # 去重保序
     fields_str = ",".join(fields_req)
-    res = call_tushare(api, {"trade_date": date}, fields_str)
+    res = call_tushare(api_name, {"trade_date": date}, fields_str, timeout=timeout)
     if not res.get("data"):
         return pd.DataFrame()
     cols = res["data"]["fields"]
@@ -264,7 +275,7 @@ def _fetch_day_partial(api: str, date: str, fields_needed: list[str]) -> pd.Data
     return df
 
 
-def _ensure_day_columns(api: str, date: str, cols_needed: list[str]) -> pd.DataFrame:
+def _ensure_day_columns(api: str, date: str, cols_needed: list[str], timeout: int = 10) -> pd.DataFrame:
     """确保某天 parquet 中含有所需字段：缺则按列增量拉取并合并。"""
     day_dir = PANEL_DIR / api
     day_dir.mkdir(parents=True, exist_ok=True)
@@ -281,7 +292,7 @@ def _ensure_day_columns(api: str, date: str, cols_needed: list[str]) -> pd.DataF
             return df
         # 列增量拉取
         print(f"  [{api}] {date} 缺列 {missing}, 增量拉取")
-        add = _fetch_day_partial(api, date, missing)
+        add = _fetch_day_partial(api, date, missing, timeout=timeout)
         add = _validate_day_df(api, date, add)
         if add.empty:
             return df
@@ -291,7 +302,7 @@ def _ensure_day_columns(api: str, date: str, cols_needed: list[str]) -> pd.DataF
         return df
 
     # 整天新拉
-    df = _fetch_day_partial(api, date, non_key)
+    df = _fetch_day_partial(api, date, non_key, timeout=timeout)
     df = _validate_day_df(api, date, df)
     if df.empty:
         return df
@@ -300,13 +311,13 @@ def _ensure_day_columns(api: str, date: str, cols_needed: list[str]) -> pd.DataF
 
 
 def _load_or_fetch_by_day(api: str, dates: list[str], cols_needed: list[str],
-                            refresh: bool = False) -> pd.DataFrame:
+                            refresh: bool = False, timeout: int = 10) -> pd.DataFrame:
     """为一组交易日装载 api 所需字段，行 + 列都做增量。"""
     frames = []
     for d in dates:
         if refresh:
             (PANEL_DIR / api / f"{d}.parquet").unlink(missing_ok=True)
-        df = _ensure_day_columns(api, d, cols_needed)
+        df = _ensure_day_columns(api, d, cols_needed, timeout=timeout)
         if not df.empty:
             frames.append(df)
     if not frames:
@@ -374,6 +385,21 @@ def pull_top_inst_bars(codes: list[str], start: str, end: str, refresh: bool = F
     return df[df["ts_code"].isin(set(codes))].copy()
 
 
+def pull_auction_bars(codes: list[str], start: str, end: str, refresh: bool = False,
+                      cols: list[str] | None = None) -> pd.DataFrame:
+    """按天拉/读集合竞价数据（Tushare stk_auction），按列增量。
+
+    默认拉取 vol/amount/turnover_rate/volume_ratio，用于构造 auc_* 特征。
+    stk_auction 接口响应较慢，默认 timeout 30s。
+    """
+    cols = cols or ["vol", "amount", "turnover_rate", "volume_ratio"]
+    dates = _trade_dates(start, end)
+    df = _load_or_fetch_by_day("auction", dates, cols, refresh=refresh, timeout=30)
+    if df.empty:
+        return df
+    return df[df["ts_code"].isin(set(codes))].copy()
+
+
 # ===== 3. 标签 join =====
 def build_panel(
     dedup: str | None = None,
@@ -420,6 +446,9 @@ def build_panel(
     top_list = pull_top_list_bars(codes, start, end)
     top_inst = pull_top_inst_bars(codes, start, end)
 
+    # 拉集合竞价数据供 auc_* 特征
+    auction = pull_auction_bars(codes, start, end)
+
     # 按 code 分组
     label_rows = []
     grouped_daily = {c: g for c, g in bars.groupby("ts_code")}
@@ -427,6 +456,7 @@ def build_panel(
     grouped_moneyflow = {c: g for c, g in mf.groupby("ts_code")} if not mf.empty else {}
     grouped_top_list = {c: g for c, g in top_list.groupby("ts_code")} if not top_list.empty else {}
     grouped_top_inst = {c: g for c, g in top_inst.groupby("ts_code")} if not top_inst.empty else {}
+    grouped_auction = {c: g for c, g in auction.groupby("ts_code")} if not auction.empty else {}
 
     for _, row in rec.iterrows():
         g = grouped_daily.get(row["code"])
@@ -444,7 +474,7 @@ def build_panel(
 
     # ── 补面板特征 + 重算 total_score ──
     panel = _augment_and_score(panel, grouped_daily, grouped_basic, grouped_moneyflow,
-                               grouped_top_list, grouped_top_inst)
+                               grouped_top_list, grouped_top_inst, grouped_auction)
 
     out_file = OUT_DIR / f"panel_{dmin}_{dmax}.csv"
     panel.to_csv(out_file, index=False)
@@ -454,7 +484,8 @@ def build_panel(
 def _augment_and_score(panel: pd.DataFrame, grouped_daily: dict, grouped_basic: dict,
                        grouped_moneyflow: dict | None = None,
                        grouped_top_list: dict | None = None,
-                       grouped_top_inst: dict | None = None) -> pd.DataFrame:
+                       grouped_top_inst: dict | None = None,
+                       grouped_auction: dict | None = None) -> pd.DataFrame:
     """对面板每行补 total_score 所需的 PIT 特征列，然后调 total_score() 重算总分。"""
     from plays.limit_up.factors import REGISTRY, TOTAL_SCORE_COMPONENTS
     from plays.limit_up.total import total_score as _total_score
@@ -491,6 +522,12 @@ def _augment_and_score(panel: pd.DataFrame, grouped_daily: dict, grouped_basic: 
         for _, r in gi.iterrows():
             top_inst_by_code_date[code].setdefault(str(r["trade_date"]), []).append(r.to_dict())
 
+    auction_by_code_date: dict[str, dict[str, dict]] = {}
+    for code, ga in (grouped_auction or {}).items():
+        auction_by_code_date[code] = {}
+        for _, r in ga.iterrows():
+            auction_by_code_date[code][str(r["trade_date"])] = r.to_dict()
+
     model_mode = "model_score" in TOTAL_SCORE_COMPONENTS
     if model_mode:
         from plays.limit_up.factors.optimized.model_score import factor_model_score_batch
@@ -513,6 +550,7 @@ def _augment_and_score(panel: pd.DataFrame, grouped_daily: dict, grouped_basic: 
             daily_rows=daily_rows_by_code[code],
             basic_by_date=basic_by_code_date.get(code, {}),
             moneyflow_by_date=mf_by_code_date.get(code, {}),
+            auction_by_date=auction_by_code_date.get(code, {}),
             top_list_by_date=top_list_by_code_date.get(code, {}),
             top_inst_by_date=top_inst_by_code_date.get(code, {}),
             pit_mode=True,

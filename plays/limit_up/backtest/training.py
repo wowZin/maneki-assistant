@@ -45,6 +45,7 @@ sys.path.insert(0, str(PROJECT_DIR))
 
 from plays.limit_up.backtest.dataset import (
     ANALYSIS_DIRS,
+    pull_auction_bars,
     pull_daily_bars,
     pull_daily_basic_bars,
     pull_moneyflow_bars,
@@ -184,6 +185,7 @@ def _extract_row(
     daily_by_code: dict[str, list[dict]],
     dbasic_by_code_date: dict[str, dict[str, dict]],
     mf_by_code_date: dict[str, dict[str, dict]],
+    auction_by_code_date: dict[str, dict[str, dict]],
     top_list_by_code_date: dict[str, dict[str, dict]],
     top_inst_by_code_date: dict[str, dict[str, list[dict]]],
     limit_by_code: dict[str, list[str]],
@@ -218,6 +220,7 @@ def _extract_row(
         daily_rows=rows_sorted,
         basic_by_date=dbasic_by_code_date.get(code, {}),
         moneyflow_by_date=mf_by_code_date.get(code, {}),
+        auction_by_date=auction_by_code_date.get(code, {}),
         concept_momentum=concept_momentum,
         top_list_by_date=top_list_by_code_date.get(code, {}),
         top_inst_by_date=top_inst_by_code_date.get(code, {}),
@@ -307,6 +310,8 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
     top_list = pull_top_list_bars(codes_list, start, end)
     print(f"  拉/读 top_inst ({start}~{end})...")
     top_inst = pull_top_inst_bars(codes_list, start, end)
+    print(f"  拉/读 auction ({start}~{end})...")
+    auction = pull_auction_bars(codes_list, start, end)
 
     # 2. 索引
     daily_by_code: dict[str, list[dict]] = defaultdict(list)
@@ -328,6 +333,10 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
     top_inst_by_code_date: dict[str, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
     for _, r in top_inst.iterrows():
         top_inst_by_code_date[r["ts_code"]][r["trade_date"]].append(r.to_dict())
+
+    auction_by_code_date: dict[str, dict[str, dict]] = defaultdict(dict)
+    for _, r in auction.iterrows():
+        auction_by_code_date[r["ts_code"]][r["trade_date"]] = r.to_dict()
 
     # 3. 涨停基因索引（需要 lookback 期内所有股票的涨停日期）
     #    对每天的涨停股取并集
@@ -353,7 +362,8 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
     rows_out = []
     for code in codes_list:
         row = _extract_row(code, trade_date, daily_by_code, dbasic_by_code_date,
-                            mf_by_code_date, top_list_by_code_date,
+                            mf_by_code_date, auction_by_code_date,
+                            top_list_by_code_date,
                             top_inst_by_code_date, limit_by_code, dim_scores, dates_all)
         if row is None:
             continue
