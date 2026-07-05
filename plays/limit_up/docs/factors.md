@@ -106,15 +106,15 @@
 
 情绪面维度默认打分函数：`strategies/sentiment.py::score_sentiment`。
 
-> **`total_score` 唯一组件来自 optimized 维度的 `factor_quality_gate`。**
+> **`total_score` 唯一组件来自 optimized 维度的 `factor_quality_combo`（默认）或 `factor_model_score`（模型模式）。**
 
-### factor_quality_gate  🟢 total_score 组件（weight 1.0）
+### factor_quality_combo  🟢 total_score 组件（weight 1.0）
 
-- **签名**：`factor_quality_gate(row) -> float`
-- **依赖列**：`limit_up_count_20d`, `turnover_rate`, `trailing_10`, `position_20d`, `technical`, `pct_chg_score_day`
+- **签名**：`factor_quality_combo(row) -> float`
+- **依赖列**：`turnover_rate`, `trailing_10`, `position_20d`, `pct_chg_score_day`, `technical`, `shortterm`, `fundflow`, `limit_up_count_20d`
 - **PIT**：是
-- **使用位置**：`total_score` 唯一组件
-- **源文件**：`factors/optimized/quality_gate.py`
+- **使用位置**：`total_score` 唯一组件（默认模式）
+- **源文件**：`factors/optimized/quality_combo.py`
 
 ### factor_sentiment_amount_combo / factor_sentiment_ensemble / factor_sentiment_pure_boosted
 
@@ -170,13 +170,9 @@
 ### factor_quality_combo  🟢 total_score 唯一组件（weight 1.0）
 
 - **签名**：`factor_quality_combo(row) -> float`
-- **依赖列**：`limit_up_count_20d`, `turnover_rate`, `trailing_10`, `position_20d`, `pct_chg_score_day`, `technical`
+- **依赖列**：`turnover_rate`, `trailing_10`, `position_20d`, `pct_chg_score_day`, `technical`, `shortterm`, `fundflow`, `limit_up_count_20d`
 - **PIT**：是（使用 T-1 收盘及之前数据，与生产 pipeline 对齐）
-- **使用位置**：唯一生产总分 `total_score`
-- **源文件**：`factors/optimized/quality_combo.py`
-- **依赖列**：`turnover_rate`, `trailing_10`, `position_20d`, `pct_chg_score_day`, `technical`, `shortterm`, `limit_up_count_20d`
-- **PIT**：是（使用 T-1 收盘及之前数据，与生产 pipeline 对齐）
-- **使用位置**：唯一生产总分 `total_score`
+- **使用位置**：唯一生产总分 `total_score`（默认模式）
 - **源文件**：`factors/optimized/quality_combo.py`
 - **逻辑**：
   - 前置硬门槛：`fundflow >= 10`，资金维度不足直接 0 分；
@@ -189,12 +185,13 @@
 ### factor_model_score  🟢 total_score 生产组件（模型模式）
 
 - **签名**：`factor_model_score(row) -> float`
-- **依赖列**：`pit_features.py` 构建的全部 PIT 特征（见下节「PIT 特征字段」）
+- **依赖列**：`pit_features.py` 构建的全部 PIT 特征（见下节「PIT 特征字段」），包括最新加入的日内分时特征 `id_*`
 - **PIT**：是
 - **使用位置**：`LIMIT_UP_USE_MODEL=true` 时的 `total_score` 唯一组件
 - **源文件**：`factors/optimized/model_score.py`
 - **逻辑**：
   - 懒加载 `data/backtest/models/limit_up_model.joblib`；
+  - 模型输入包含 T-1 日分时聚合特征（`id_vwap_dev`、`id_range` 等）。生产 pipeline 会从 `wiki/raw/limit-up/panel/intraday/<YYYYMMDD>.parquet` 加载这些指标；若 parquet 缺失则回退到 jvQuant 在线拉取；
   - 模型输出（0–1）乘以 100 后，再通过 `factor_chasing_guardrail` 做追高惩罚；
   - 模型文件缺失/加载失败/预测失败时，自动回退到 `factor_quality_combo`。
 - **推送阈值**：建议 `total_score >= 70`。
@@ -227,6 +224,12 @@
 | `mf_net` / `mf_accel` / `mf_pct` | 净流入/加速度/占比 |
 | `sector_heat` / `sector_rank` / `n_concepts` | 概念动量（T-1 日所属概念平均涨幅 / 排名映射 / 概念数） |
 | `auc_amount` / `auc_vol` / `auc_amt_ratio` / `auc_vol_ratio` | 竞价金额/量及比率 |
+| `id_vwap_dev` | T-1 分时收盘价相对 VWAP 的偏离：`close / vwap - 1` |
+| `id_range` | T-1 分时振幅：`high / low - 1` |
+| `id_morning_vol_ratio` | T-1 上午成交量占全天比例 |
+| `id_afternoon_strength` | T-1 下午相对上午量能强度：`afternoon_vol / morning_vol` |
+| `id_tail_vol_ratio` | T-1 尾盘（14:30-15:00）成交量占全天比例 |
+| `id_amount_ratio` | T-1 分时估算成交额 / 近 5 日均成交额（元/元） |
 | `dt_is_listed` | T-1 日是否上榜龙虎榜 |
 | `dt_net_amount` | T-1 日龙虎榜净买卖额（元） |
 | `dt_net_rate` | T-1 日龙虎榜净买卖额 / 成交额（%） |

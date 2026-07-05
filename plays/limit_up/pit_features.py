@@ -119,6 +119,7 @@ def build_pit_features(
     basic_by_date: dict[str, dict] | None = None,
     moneyflow_by_date: dict[str, dict] | None = None,
     auction_by_date: dict[str, dict] | None = None,
+    intraday_by_date: dict[str, dict] | None = None,
     concept_momentum: dict[str, Any] | None = None,
     top_list_by_date: dict[str, dict] | None = None,
     top_inst_by_date: dict[str, dict] | None = None,
@@ -187,6 +188,13 @@ def build_pit_features(
         "auc_vol": 0.0,
         "auc_amt_ratio": 0.0,
         "auc_vol_ratio": 0.0,
+        # 日内分时特征（T-1）
+        "id_vwap_dev": 0.0,
+        "id_range": 0.0,
+        "id_morning_vol_ratio": 0.5,
+        "id_afternoon_strength": 1.0,
+        "id_tail_vol_ratio": 0.1,
+        "id_amount_ratio": 0.0,
         # 龙虎榜 PIT 特征（T-1）
         "dt_is_listed": 0.0,
         "dt_net_amount": 0.0,
@@ -397,6 +405,27 @@ def build_pit_features(
     t1_vol = _safe_float(rows[pit_i].get("vol"), 0.0) if pit_i >= 0 else 0.0
     if t1_vol > 0:
         feats["auc_vol_ratio"] = auc_vol / t1_vol
+
+    # ═══════════════════════════════════════════════════════
+    # 日内分时特征（T-1 jvQuant 分钟数据聚合）
+    # ═══════════════════════════════════════════════════════
+    iday = _mf_on_or_before(intraday_by_date, dates[pit_i]) if pit_i >= 0 else {}
+    if iday:
+        vwap = _safe_float(iday.get("vwap"), 0.0)
+        close_id = _safe_float(iday.get("close"), 0.0)
+        high_id = _safe_float(iday.get("high"), 0.0)
+        low_id = _safe_float(iday.get("low"), 0.0)
+        amount_est = _safe_float(iday.get("amount_est"), 0.0)
+        if vwap > 0 and close_id > 0:
+            feats["id_vwap_dev"] = close_id / vwap - 1.0
+        if low_id > 0 and high_id > 0:
+            feats["id_range"] = high_id / low_id - 1.0
+        feats["id_morning_vol_ratio"] = _safe_float(iday.get("morning_vol_ratio"), 0.5)
+        feats["id_afternoon_strength"] = _safe_float(iday.get("afternoon_strength"), 1.0)
+        feats["id_tail_vol_ratio"] = _safe_float(iday.get("tail_vol_ratio"), 0.1)
+        if feats["avg_amount_5d"] > 0:
+            # amount_est 与 avg_amount_5d 均为元，直接求比率
+            feats["id_amount_ratio"] = amount_est / feats["avg_amount_5d"]
 
     return feats
 

@@ -11,8 +11,10 @@ from plays.limit_up import pipeline as pl
 
 @pytest.fixture(autouse=True)
 def _dry_run_feishu(monkeypatch):
-    """打断 _get_feishu_token 与 requests.post 避免真实推送。"""
+    """打断 _get_feishu_token 与 requests.post 避免真实推送；重置推送状态。"""
     monkeypatch.setattr(pl, "_get_feishu_token", lambda: "")
+    pl._PUSH_STATE_DATE = ""
+    pl._PUSH_TRACKER.clear()
 
 
 def test_push_feishu_returns_false_when_empty():
@@ -71,3 +73,49 @@ def test_push_feishu_default_threshold_85(monkeypatch, tmp_path):
     import json
     written = json.loads(files[0].read_text())
     assert [r["code"] for r in written] == ["600002.SH"]
+
+
+def test_push_feishu_consecutive_top3_repush(monkeypatch, tmp_path):
+    """模型模式：同一股票连续第 2 轮进入 Top-3 时再次推送，第 3 轮不再推送。"""
+    monkeypatch.setattr(pl, "DATA_DIR", tmp_path)
+    monkeypatch.setenv("LIMIT_UP_USE_MODEL", "true")
+    monkeypatch.setitem(__import__("scripts.tu_share", fromlist=["CONFIG"]).CONFIG,
+                        "ULTIMATE_PUSH_THRESHOLD", "55")
+
+    base = {"name": "A", "pct_chg": 5.0, "scores": {"sentiment": 60}}
+
+    # 第 1 轮：600001 首次进入 Top-3，应推送
+    r1 = pl.push_feishu([{**base, "code": "600001.SH", "total_score": 60}])
+    assert r1 is True
+    files = sorted((tmp_path / "pushed").glob("*.json"))
+    assert len(files) == 1
+
+    # 第 2 轮：600001 连续在榜，应再次推送
+    r2 = pl.push_feishu([{**base, "code": "600001.SH", "total_score": 62}])
+    assert r2 is True
+    files = sorted((tmp_path / "pushed").glob("*.json"))
+    assert len(files) == 2
+
+    # 第 3 轮：600001 仍连续在榜，不应再推
+    r3 = pl.push_feishu([{**base, "code": "600001.SH", "total_score": 65}])
+    assert r3 is False
+    files = sorted((tmp_path / "pushed").glob("*.json"))
+    assert len(files) == 2
+
+
+def test_push_feishu_reset_on_drop(monkeypatch, tmp_path):
+    """掉出 Top-3 后重新进入，应视为首次推送。"""
+    monkeypatch.setattr(pl, "DATA_DIR", tmp_path)
+    monkeypatch.setenv("LIMIT_UP_USE_MODEL", "true")
+    monkeypatch.setitem(__import__("scripts.tu_share", fromlist=["CONFIG"]).CONFIG,
+                        "ULTIMATE_PUSH_THRESHOLD", "55")
+
+    base = {"name": "A", "pct_chg": 5.0, "scores": {"sentiment": 60}}
+
+    # 第 1 轮进入
+    pl.push_feishu([{**base, "code": "600001.SH", "total_score": 60}])
+    # 第 2 轮掉出（600002 进入）
+    pl.push_feishu([{**base, "code": "600002.SH", "total_score": 60}])
+    # 第 3 轮 600001 重新进入，应再次推送
+    r = pl.push_feishu([{**base, "code": "600001.SH", "total_score": 65}])
+    assert r is True

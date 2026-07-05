@@ -400,6 +400,81 @@ def pull_auction_bars(codes: list[str], start: str, end: str, refresh: bool = Fa
     return df[df["ts_code"].isin(set(codes))].copy()
 
 
+def pull_intraday_metrics(codes: list[str], dates: list[str], refresh: bool = False,
+                          max_workers: int = 8, per_call_timeout: float = 15.0) -> pd.DataFrame:
+    """按天拉/读 jvQuant 历史分时数据聚合指标。
+
+    返回字段：ts_code, trade_date, vwap, close, open, high, low, volume,
+             amount_est, morning_vol_ratio, afternoon_strength, tail_vol_ratio。
+    数据落盘到 wiki/raw/limit-up/panel/intraday/YYYYMMDD.parquet，按天增量。
+
+    jvQuant 单股查询较慢（~2-4s），默认 8 线程并行，可把 8k 次查询压到 ~5min。
+    """
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+    from scripts.jvquant_client import get_jvquant_client
+
+    try:
+        client = get_jvquant_client()
+    except Exception as e:
+        print(f"  [intraday] jvQuant 客户端初始化失败: {e}")
+        return pd.DataFrame()
+
+    day_dir = PANEL_DIR / "intraday"
+    day_dir.mkdir(parents=True, exist_ok=True)
+    target_codes = set(codes)
+    frames: list[pd.DataFrame] = []
+
+    def _fetch_one(code_full: str, date: str) -> dict | None:
+        short = code_full.split(".")[0]
+        try:
+            metrics = client.get_intraday_metrics(short, date)
+            if metrics:
+                return {"ts_code": code_full, "trade_date": date, **metrics}
+        except Exception as e:
+            print(f"  [intraday] {code_full} {date} 拉取失败: {e}")
+        return None
+
+    for date in dates:
+        day_file = day_dir / f"{date}.parquet"
+        existing = pd.DataFrame()
+        need = target_codes.copy()
+
+        if day_file.exists() and not refresh:
+            existing = pd.read_parquet(day_file)
+            if "ts_code" in existing.columns:
+                need = need - set(existing["ts_code"].unique())
+
+        if need:
+            rows: list[dict] = []
+            tasks = [(c, date) for c in sorted(need)]
+            with ThreadPoolExecutor(max_workers=max_workers) as ex:
+                futures = {ex.submit(_fetch_one, c, date): c for c, _ in tasks}
+                for fut in futures:
+                    try:
+                        row = fut.result(timeout=per_call_timeout)
+                        if row:
+                            rows.append(row)
+                    except FutureTimeoutError:
+                        print(f"  [intraday] {futures[fut]} {date} 超时")
+                    except Exception as e:
+                        print(f"  [intraday] {futures[fut]} {date} 异常: {e}")
+
+            if rows:
+                new_df = pd.DataFrame(rows)
+                combined = pd.concat([existing, new_df], ignore_index=True) if not existing.empty else new_df
+                combined = combined.drop_duplicates(subset=["ts_code", "trade_date"], keep="last")
+                combined.to_parquet(day_file, index=False)
+                frames.append(combined)
+            elif not existing.empty:
+                frames.append(existing)
+        elif not existing.empty:
+            frames.append(existing)
+
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, ignore_index=True).sort_values(["ts_code", "trade_date"]).reset_index(drop=True)
+
+
 # ===== 3. 标签 join =====
 def build_panel(
     dedup: str | None = None,
@@ -449,6 +524,10 @@ def build_panel(
     # 拉集合竞价数据供 auc_* 特征
     auction = pull_auction_bars(codes, start, end)
 
+    # 拉日内分时指标供 id_* 特征
+    intraday_dates = _trade_dates(start, end)
+    intraday = pull_intraday_metrics(codes, intraday_dates)
+
     # 按 code 分组
     label_rows = []
     grouped_daily = {c: g for c, g in bars.groupby("ts_code")}
@@ -457,6 +536,7 @@ def build_panel(
     grouped_top_list = {c: g for c, g in top_list.groupby("ts_code")} if not top_list.empty else {}
     grouped_top_inst = {c: g for c, g in top_inst.groupby("ts_code")} if not top_inst.empty else {}
     grouped_auction = {c: g for c, g in auction.groupby("ts_code")} if not auction.empty else {}
+    grouped_intraday = {c: g for c, g in intraday.groupby("ts_code")} if not intraday.empty else {}
 
     for _, row in rec.iterrows():
         g = grouped_daily.get(row["code"])
@@ -474,7 +554,8 @@ def build_panel(
 
     # ── 补面板特征 + 重算 total_score ──
     panel = _augment_and_score(panel, grouped_daily, grouped_basic, grouped_moneyflow,
-                               grouped_top_list, grouped_top_inst, grouped_auction)
+                               grouped_top_list, grouped_top_inst, grouped_auction,
+                               grouped_intraday)
 
     out_file = OUT_DIR / f"panel_{dmin}_{dmax}.csv"
     panel.to_csv(out_file, index=False)
@@ -485,7 +566,8 @@ def _augment_and_score(panel: pd.DataFrame, grouped_daily: dict, grouped_basic: 
                        grouped_moneyflow: dict | None = None,
                        grouped_top_list: dict | None = None,
                        grouped_top_inst: dict | None = None,
-                       grouped_auction: dict | None = None) -> pd.DataFrame:
+                       grouped_auction: dict | None = None,
+                       grouped_intraday: dict | None = None) -> pd.DataFrame:
     """对面板每行补 total_score 所需的 PIT 特征列，然后调 total_score() 重算总分。"""
     from plays.limit_up.factors import REGISTRY, TOTAL_SCORE_COMPONENTS
     from plays.limit_up.total import total_score as _total_score
@@ -528,6 +610,12 @@ def _augment_and_score(panel: pd.DataFrame, grouped_daily: dict, grouped_basic: 
         for _, r in ga.iterrows():
             auction_by_code_date[code][str(r["trade_date"])] = r.to_dict()
 
+    intraday_by_code_date: dict[str, dict[str, dict]] = {}
+    for code, gi in (grouped_intraday or {}).items():
+        intraday_by_code_date[code] = {}
+        for _, r in gi.iterrows():
+            intraday_by_code_date[code][str(r["trade_date"])] = r.to_dict()
+
     model_mode = "model_score" in TOTAL_SCORE_COMPONENTS
     if model_mode:
         from plays.limit_up.factors.optimized.model_score import factor_model_score_batch
@@ -551,6 +639,7 @@ def _augment_and_score(panel: pd.DataFrame, grouped_daily: dict, grouped_basic: 
             basic_by_date=basic_by_code_date.get(code, {}),
             moneyflow_by_date=mf_by_code_date.get(code, {}),
             auction_by_date=auction_by_code_date.get(code, {}),
+            intraday_by_date=intraday_by_code_date.get(code, {}),
             top_list_by_date=top_list_by_code_date.get(code, {}),
             top_inst_by_date=top_inst_by_code_date.get(code, {}),
             pit_mode=True,

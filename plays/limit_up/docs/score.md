@@ -59,7 +59,9 @@ total_score = round(max(0.0, 1.0 * factor_model_score(row)), 2)
   - K 线形态（`close_pos`、`body_ratio`、`upper_ratio` 等）
   - 板块/概念动量（`sector_heat`、`sector_rank`、`n_concepts`）
   - 龙虎榜因子（`dt_is_listed`、`dt_net_amount`、`dt_inst_net_buy`、`dt_hot_net_buy` 等）
-- 模型由 `HistGradientBoostingClassifier` 训练，同时预测 `hit_limit_3` 与 `fwd_ret_3 > 0`，混合为 0–100 分。
+  - **日内分时因子（`id_vwap_dev`、`id_range`、`id_morning_vol_ratio`、`id_afternoon_strength`、`id_tail_vol_ratio`、`id_amount_ratio`）**
+- 模型由 XGBoost / HistGradientBoostingClassifier 训练，同时预测 `hit_limit_3` 与 `fwd_ret_3 > 0`，混合为 0–100 分。
+- 生产 pipeline 会从 `wiki/raw/limit-up/panel/intraday/<YYYYMMDD>.parquet` 加载 T-1 分时指标作为模型输入；parquet 缺失时回退到 jvQuant 在线拉取。
 - 反追高护栏作为乘性惩罚保留。
 - 训练脚本见 [`backtest.md`](./backtest.md)。
 
@@ -78,12 +80,13 @@ total_score = round(max(0.0, 1.0 * factor_model_score(row)), 2)
 ## 五、推送规则
 
 - **排序键**：`total_score` 降序（唯一键，无 fallback）
-- **推送数**：满足阈值后最多 Top-3；无满足阈值则当日不推送
-- **推送阈值**：
-  - `quality_combo` 模式下默认 `total_score >= 95`（由 `.env` 的 `ULTIMATE_PUSH_THRESHOLD` 控制）
-  - `model_score` 模式下默认 `total_score >= 70`
-- **午后过滤**：已移除
+- **推送策略**：
+  - `quality_combo` 模式：固定阈值 ≥95，取满足条件的前 3 只；
+  - `model_score` 模式：默认阈值 55，采用「**首次进入 Top-3 推送 + 连续第 2 轮仍在 Top-3 再推一次**」。同一股票连续在榜超过 2 轮后不再推送，掉出 Top-3 后重新进入视为首次。
+- **数量上限**：每轮扫描最多 3 只
 - **落盘**：`data/pushed/{HHMM}.json`
+
+> 模型模式阈值可通过 `.env` 的 `ULTIMATE_PUSH_THRESHOLD` 覆盖；连续推送逻辑由 `pipeline.py::push_feishu` 维护，跨天自动重置。
 
 ## 六、评级
 

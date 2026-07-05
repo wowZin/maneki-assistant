@@ -48,6 +48,7 @@ from plays.limit_up.backtest.dataset import (
     pull_auction_bars,
     pull_daily_bars,
     pull_daily_basic_bars,
+    pull_intraday_metrics,
     pull_moneyflow_bars,
     pull_top_list_bars,
     pull_top_inst_bars,
@@ -126,6 +127,9 @@ FEATURE_COLS = [
     "mf_net", "mf_accel", "mf_pct",
     "sector_heat", "sector_rank", "n_concepts",
     "auc_amount", "auc_vol", "auc_amt_ratio", "auc_vol_ratio",
+    # 日内分时特征（T-1）
+    "id_vwap_dev", "id_range", "id_morning_vol_ratio", "id_afternoon_strength",
+    "id_tail_vol_ratio", "id_amount_ratio",
     # 龙虎榜 PIT 特征
     "dt_is_listed", "dt_net_amount", "dt_net_rate", "dt_l_buy_ratio",
     "dt_n_exalter", "dt_inst_net_buy", "dt_hot_net_buy", "dt_inst_sell_ratio",
@@ -186,6 +190,7 @@ def _extract_row(
     dbasic_by_code_date: dict[str, dict[str, dict]],
     mf_by_code_date: dict[str, dict[str, dict]],
     auction_by_code_date: dict[str, dict[str, dict]],
+    intraday_by_code_date: dict[str, dict[str, dict]],
     top_list_by_code_date: dict[str, dict[str, dict]],
     top_inst_by_code_date: dict[str, dict[str, list[dict]]],
     limit_by_code: dict[str, list[str]],
@@ -221,6 +226,7 @@ def _extract_row(
         basic_by_date=dbasic_by_code_date.get(code, {}),
         moneyflow_by_date=mf_by_code_date.get(code, {}),
         auction_by_date=auction_by_code_date.get(code, {}),
+        intraday_by_date=intraday_by_code_date.get(code, {}),
         concept_momentum=concept_momentum,
         top_list_by_date=top_list_by_code_date.get(code, {}),
         top_inst_by_date=top_inst_by_code_date.get(code, {}),
@@ -318,6 +324,13 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
     for _, r in daily.iterrows():
         daily_by_code[r["ts_code"]].append(r.to_dict())
 
+    available_dates = sorted(daily["trade_date"].unique())
+    pit_idx = available_dates.index(trade_date) - 1 if trade_date in available_dates else -1
+    pit_date = available_dates[pit_idx] if pit_idx >= 0 else trade_date
+
+    print(f"  拉/读 intraday metrics ({pit_date})...")
+    intraday = pull_intraday_metrics(codes_list, [pit_date])
+
     dbasic_by_code_date: dict[str, dict[str, dict]] = defaultdict(dict)
     for _, r in dbasic.iterrows():
         dbasic_by_code_date[r["ts_code"]][r["trade_date"]] = r.to_dict()
@@ -337,6 +350,10 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
     auction_by_code_date: dict[str, dict[str, dict]] = defaultdict(dict)
     for _, r in auction.iterrows():
         auction_by_code_date[r["ts_code"]][r["trade_date"]] = r.to_dict()
+
+    intraday_by_code_date: dict[str, dict[str, dict]] = defaultdict(dict)
+    for _, r in intraday.iterrows():
+        intraday_by_code_date[r["ts_code"]][r["trade_date"]] = r.to_dict()
 
     # 3. 涨停基因索引（需要 lookback 期内所有股票的涨停日期）
     #    对每天的涨停股取并集
@@ -362,7 +379,7 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
     rows_out = []
     for code in codes_list:
         row = _extract_row(code, trade_date, daily_by_code, dbasic_by_code_date,
-                            mf_by_code_date, auction_by_code_date,
+                            mf_by_code_date, auction_by_code_date, intraday_by_code_date,
                             top_list_by_code_date,
                             top_inst_by_code_date, limit_by_code, dim_scores, dates_all)
         if row is None:

@@ -41,13 +41,16 @@ python plays/limit_up/backtest/mine.py --label fwd_ret_3 --top 20
 
 ### train_model.py
 
-训练 `HistGradientBoostingClassifier` 模型，分别预测 3 日涨停概率与 3 日胜率，混合输出连续 model score。
+训练树模型，分别预测 3 日涨停概率（`hit_limit_3`）与 3 日正收益概率（`fwd_ret_3 > 0`），混合输出连续 model score。
 
 ```bash
 python plays/limit_up/backtest/train_model.py \
     --train-start 20260519 --train-end 20260620 \
-    --test-start 20260621 --test-end 20260702
+    --test-start 20260621 --test-end 20260702 \
+    --estimator xgboost
 ```
+
+支持 `--estimator xgboost` 或 `--estimator hist`。当前默认模型使用 XGBoost；训练前需确认训练集已包含最新特征（含日内 `id_*` 字段），否则新特征重要性为 0。
 
 产物：`plays/limit_up/data/backtest/models/`：
 - `limit_up_model.joblib`
@@ -56,6 +59,20 @@ python plays/limit_up/backtest/train_model.py \
 - `validation_report.json`
 
 训练完成后，设置 `LIMIT_UP_USE_MODEL=true` 即可在回测/生产中使用模型分。
+
+## 分时数据准备（新增）
+
+模型中的日内特征（`id_vwap_dev`、`id_range`、`id_morning_vol_ratio` 等）依赖 jvQuant 历史分时数据。离线数据以 zip 包形式提供，需先解析为按天 parquet：
+
+```bash
+python plays/limit_up/backtest/extract_intraday_zip.py --zip /path/to/2026.zip
+```
+
+产物：`wiki/raw/limit-up/panel/intraday/<YYYYMMDD>.parquet`。
+
+`dataset.py::pull_intraday_metrics(codes, [pit_date])` 会优先读取本地 parquet；缺失时自动调用 jvQuant 单股接口补数（较慢，适合盘前数据管线）。生产 pipeline 在推理时同样从该路径加载 T-1 分时指标。
+
+训练集重建、回测面板生成、生产 pipeline 都会自动使用这些 parquet，无需额外配置。
 
 ## 概念缓存（PIT 前置依赖）
 
@@ -77,13 +94,24 @@ python plays/limit_up/backtest/concept_cache.py check
 
 ## 训练集重建
 
-新增 PIT 特征（概念动量、龙虎榜）后，必须重建训练集 CSV，否则新特征全为默认值：
+新增 PIT 特征（概念动量、龙虎榜、**日内分时指标**）后，必须重建训练集 CSV，否则新特征全为默认值：
 
 ```bash
 python plays/limit_up/backtest/training.py build --start 20260519 --end 20260702 --force
 ```
 
 产物：`wiki/raw/limit-up/training/training_set.csv`。
+
+重建后建议检查 `id_*` 列非空率：
+
+```bash
+python -c "
+import pandas as pd
+df = pd.read_csv('wiki/raw/limit-up/training/training_set.csv')
+for c in [c for c in df.columns if c.startswith('id_')]:
+    print(c, df[c].notna().mean())
+"
+```
 
 ## 面板生成
 

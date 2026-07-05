@@ -149,6 +149,35 @@ def test_dragon_tiger_features():
     assert abs(feat["dt_inst_sell_ratio"] - 100000.0 / 50000000.0) < 1e-6
 
 
+def test_intraday_features():
+    """验证 build_pit_features 正确计算日内分时特征。"""
+    rows = _make_daily_rows()
+    basic = {"20260623": {"turnover_rate": 5.0, "volume_ratio": 1.0, "circ_mv": 500000}}
+    intraday = {
+        "20260623": {
+            "vwap": 10.5,
+            "close": 11.0,
+            "high": 11.5,
+            "low": 10.0,
+            "morning_vol_ratio": 0.6,
+            "afternoon_strength": 0.8,
+            "tail_vol_ratio": 0.15,
+            "amount_est": 150000000.0,
+        }
+    }
+    feat = build_pit_features(
+        "000001.SZ", "20260624", rows, basic,
+        intraday_by_date=intraday, pit_mode=True,
+    )
+    assert abs(feat["id_vwap_dev"] - (11.0 / 10.5 - 1.0)) < 1e-6
+    assert abs(feat["id_range"] - (11.5 / 10.0 - 1.0)) < 1e-6
+    assert feat["id_morning_vol_ratio"] == 0.6
+    assert feat["id_afternoon_strength"] == 0.8
+    assert feat["id_tail_vol_ratio"] == 0.15
+    # avg_amount_5d = 10000*1000 = 10,000,000 元
+    assert abs(feat["id_amount_ratio"] - 150000000.0 / 20000000.0) < 1e-6
+
+
 if __name__ == "__main__":
     test_prev_turnover_and_vol_accel()
     test_max_step_and_was_limit()
@@ -157,4 +186,5 @@ if __name__ == "__main__":
     test_momentum_features()
     test_concept_momentum_features()
     test_dragon_tiger_features()
+    test_intraday_features()
     print("test_features OK")

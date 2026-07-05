@@ -396,6 +396,7 @@ _NV2_LIMIT_60D_CACHE: dict[str, int] = {}     # code → 近60日涨停次数
 _NV2_MONEYFLOW_CACHE: dict[str, dict[str, dict]] = {}  # code → {trade_date: moneyflow_row}
 _NV2_TOP_LIST_CACHE: dict[str, dict[str, dict]] = {}  # code → {trade_date: top_list_row}
 _NV2_TOP_INST_CACHE: dict[str, dict[str, list[dict]]] = {}  # code → {trade_date: [top_inst_rows]}
+_NV2_INTRADAY_CACHE: dict[str, dict[str, dict]] = {}       # code → {trade_date: intraday_metrics}
 _NV2_DATE = ""
 
 
@@ -639,6 +640,36 @@ def _fetch_nv2_data(codes: list[str]):
     except Exception as e:
         print(f"  [NV2] factor_ctx 同步失败: {e}")
 
+    # 5. 日内分时指标（T-1，供模型 id_* 特征使用）
+    try:
+        from plays.limit_up.backtest.dataset import pull_intraday_metrics
+        all_trade_dates = sorted({
+            str(r.get("trade_date", ""))
+            for rows in _NV2_DAILY_CACHE.values()
+            for r in rows if r.get("trade_date")
+        })
+        pit_date = today
+        if all_trade_dates:
+            # 找到 <= today 的最近交易日，再往前推一天（与 build_pit_features pit_mode 一致）
+            latest_t = today
+            for d in reversed(all_trade_dates):
+                if d <= today:
+                    latest_t = d
+                    break
+            idx = all_trade_dates.index(latest_t) if latest_t in all_trade_dates else -1
+            pit_date = all_trade_dates[idx - 1] if idx >= 1 else latest_t
+        print(f"  [NV2] intraday metrics ({pit_date})...")
+        id_df = pull_intraday_metrics(codes, [pit_date])
+        if not id_df.empty:
+            _NV2_INTRADAY_CACHE.clear()
+            for _, r in id_df.iterrows():
+                code = r["ts_code"]
+                td = str(r["trade_date"])
+                _NV2_INTRADAY_CACHE.setdefault(code, {})[td] = r.to_dict()
+            print(f"  [NV2] intraday: {len(id_df)} 条")
+    except Exception as e:
+        print(f"  [NV2] intraday 加载失败: {e}")
+
     _NV2_DATE = today
 
 
@@ -704,6 +735,7 @@ def _extract_pit_features(code: str, pit_mode: bool) -> dict:
         basic_by_date=basic_by_date,
         moneyflow_by_date=moneyflow_by_date,
         auction_by_date=None,
+        intraday_by_date=_NV2_INTRADAY_CACHE.get(code, {}),
         concept_momentum=concept_momentum,
         top_list_by_date=_NV2_TOP_LIST_CACHE.get(code, {}),
         top_inst_by_date=_NV2_TOP_INST_CACHE.get(code, {}),
@@ -716,6 +748,20 @@ def _extract_pit_features(code: str, pit_mode: bool) -> dict:
 
 
 # ===== 6. 飞书推送 =====
+# 推送状态：用于「首次推送 + 连续在榜升级推送」逻辑
+_PUSH_STATE_DATE = ""
+_PUSH_TRACKER: dict[str, int] = {}  # code -> 连续进入 Top-3 的轮次数
+
+
+def _reset_push_state_if_new_day():
+    """跨天时重置推送状态。"""
+    global _PUSH_STATE_DATE, _PUSH_TRACKER
+    today = datetime.now().strftime("%Y%m%d")
+    if _PUSH_STATE_DATE != today:
+        _PUSH_STATE_DATE = today
+        _PUSH_TRACKER.clear()
+
+
 def _get_feishu_token():
     """获取飞书 tenant_access_token"""
     import requests
@@ -731,15 +777,18 @@ def _get_feishu_token():
 
 
 def push_feishu(results):
-    """飞书推送：按 total_score 降序取满足阈值的前 3 只。
+    """飞书推送：模型模式下采用「首次进入 Top-3 推送 + 连续第 2 轮再推」策略。
 
-    模型模式（LIMIT_UP_USE_MODEL=true）下默认阈值 70；
-    quality_combo 模式下默认阈值 95。
+    - quality_combo 模式保持固定阈值 95；
+    - 模型模式默认阈值 55，且每天同一只股票首次进入 Top-3 推送一次，连续第 2
+      轮仍在 Top-3 时再推送一次，之后不再重复推送。
     """
     import requests
 
+    _reset_push_state_if_new_day()
+
     model_mode = os.environ.get("LIMIT_UP_USE_MODEL", "").lower() in ("true", "1", "yes")
-    default_thr = "70" if model_mode else "95"
+    default_thr = "55" if model_mode else "95"
     threshold = float(CONFIG.get("ULTIMATE_PUSH_THRESHOLD", default_thr))
 
     def _stars(total):
@@ -759,11 +808,27 @@ def push_feishu(results):
         print(f"  最高 total_score={max_ts:.1f} 低于阈值 {threshold}，不推送")
         return False
 
-    push_list = [r for r in sorted_results if r.get("total_score", 0) >= threshold][:3]
+    # 本轮 Top-3 候选（已按分数排序）
+    eligible = [r for r in sorted_results if r.get("total_score", 0) >= threshold][:3]
+    top3_codes = {r["code"] for r in eligible}
 
-    print(f"  阈值 {threshold}: max_ts={max_ts:.1f} → {len(push_list)}只推送")
+    # 首次进入 Top-3 或连续第 2 轮仍在 Top-3 才推送
+    push_list = []
+    for r in eligible:
+        code = r["code"]
+        consecutive = _PUSH_TRACKER.get(code, 0)
+        if consecutive < 2:  # 0: 首次；1: 第 2 轮（再推一次）
+            push_list.append(r)
+            _PUSH_TRACKER[code] = consecutive + 1
+
+    # 掉出 Top-3 的股票重置连续计数
+    for code in list(_PUSH_TRACKER.keys()):
+        if code not in top3_codes:
+            del _PUSH_TRACKER[code]
+
+    print(f"  阈值 {threshold}: max_ts={max_ts:.1f}, 本轮 Top3={len(eligible)}只, 实际推送={len(push_list)}只")
     if not push_list:
-        print("  无可推送股票")
+        print("  本轮回合无新推送（均已推送过或无需升级）")
         return False
 
     pushed_dir = DATA_DIR / "pushed"

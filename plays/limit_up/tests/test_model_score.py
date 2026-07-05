@@ -91,7 +91,50 @@ def test_model_score_with_dummy_artifact():
         assert score_low < score
 
 
+def test_model_score_differs_with_intraday_features():
+    """验证模型分会随 id_* 特征变化（模型路径真正用到了分时数据）。"""
+    from sklearn.tree import DecisionTreeClassifier
+
+    clear_model_cache()
+    # 构造最小可区分数据集：id_range 是主要区分特征，其余特征相同
+    df = pd.DataFrame({
+        "hit_limit_3": [1, 1, 0, 0],
+        "fwd_ret_3": [0.05, 0.05, -0.02, -0.02],
+    })
+    for c in DEFAULT_FEATURES:
+        df[c] = 0.0
+    df["id_range"] = [0.12, 0.11, 0.03, 0.02]
+    df["fwd_ret_3_positive"] = (df["fwd_ret_3"] > 0).astype(int)
+
+    hit_est = DecisionTreeClassifier(random_state=42)
+    win_est = DecisionTreeClassifier(random_state=42)
+    model = LimitUpModel(
+        hit_estimator=hit_est,
+        win_estimator=win_est,
+        blend_hit=1.0,
+        blend_win=0.0,
+    )
+    model.fit(df)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        model_dir = Path(tmp)
+        model.save(model_dir)
+        os.environ["LIMIT_UP_MODEL_PATH"] = str(model_dir)
+        clear_model_cache()
+
+        row = _dummy_row()
+        row["id_range"] = 0.12
+        score_high = factor_model_score(row)
+        row_low = dict(row)
+        row_low["id_range"] = 0.03
+        score_low = factor_model_score(row_low)
+        assert 0 <= score_high <= 100
+        assert 0 <= score_low <= 100
+        assert score_high != score_low
+
+
 if __name__ == "__main__":
     test_fallback_without_model()
     test_model_score_with_dummy_artifact()
+    test_model_score_differs_with_intraday_features()
     print("test_model_score OK")

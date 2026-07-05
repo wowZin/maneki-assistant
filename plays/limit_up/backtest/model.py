@@ -38,6 +38,9 @@ DEFAULT_FEATURES = [
     "mf_net", "mf_accel", "mf_pct",
     "sector_heat", "sector_rank", "n_concepts",
     "auc_amount", "auc_vol", "auc_amt_ratio", "auc_vol_ratio",
+    # 日内分时特征（T-1）
+    "id_vwap_dev", "id_range", "id_morning_vol_ratio", "id_afternoon_strength",
+    "id_tail_vol_ratio", "id_amount_ratio",
     # 龙虎榜 PIT 特征
     "dt_is_listed", "dt_net_amount", "dt_net_rate", "dt_l_buy_ratio",
     "dt_n_exalter", "dt_inst_net_buy", "dt_hot_net_buy", "dt_inst_sell_ratio",
