@@ -59,9 +59,10 @@ total_score = round(max(0.0, 1.0 * factor_model_score(row)), 2)
   - K 线形态（`close_pos`、`body_ratio`、`upper_ratio` 等）
   - 板块/概念动量（`sector_heat`、`sector_rank`、`n_concepts`）
   - 龙虎榜因子（`dt_is_listed`、`dt_net_amount`、`dt_inst_net_buy`、`dt_hot_net_buy` 等）
+  - **集合竞价因子（`auc_amount`、`auc_vol`、`auc_amt_ratio`、`auc_vol_ratio`）**
   - **日内分时因子（`id_vwap_dev`、`id_range`、`id_morning_vol_ratio`、`id_afternoon_strength`、`id_tail_vol_ratio`、`id_amount_ratio`）**
 - 模型由 XGBoost / HistGradientBoostingClassifier 训练，同时预测 `hit_limit_3` 与 `fwd_ret_3 > 0`，混合为 0–100 分。
-- 生产 pipeline 会从 `wiki/raw/limit-up/panel/intraday/<YYYYMMDD>.parquet` 加载 T-1 分时指标作为模型输入；parquet 缺失时回退到 jvQuant 在线拉取。
+- 生产 pipeline 会从 Tushare `stk_auction` 拉取当日集合竞价数据，并从 `wiki/raw/limit-up/panel/intraday/<YYYYMMDD>.parquet` 加载 T-1 分时指标作为模型输入；任一数据源缺失时回退到默认值，不阻塞评分。
 - 反追高护栏作为乘性惩罚保留。
 - 训练脚本见 [`backtest.md`](./backtest.md)。
 

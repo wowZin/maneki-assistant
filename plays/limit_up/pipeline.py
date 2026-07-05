@@ -397,6 +397,7 @@ _NV2_MONEYFLOW_CACHE: dict[str, dict[str, dict]] = {}  # code → {trade_date: m
 _NV2_TOP_LIST_CACHE: dict[str, dict[str, dict]] = {}  # code → {trade_date: top_list_row}
 _NV2_TOP_INST_CACHE: dict[str, dict[str, list[dict]]] = {}  # code → {trade_date: [top_inst_rows]}
 _NV2_INTRADAY_CACHE: dict[str, dict[str, dict]] = {}       # code → {trade_date: intraday_metrics}
+_NV2_AUCTION_CACHE: dict[str, dict[str, dict]] = {}        # code → {trade_date: stk_auction_row}
 _NV2_DATE = ""
 
 
@@ -670,6 +671,21 @@ def _fetch_nv2_data(codes: list[str]):
     except Exception as e:
         print(f"  [NV2] intraday 加载失败: {e}")
 
+    # 5.5 集合竞价数据（T，供模型 auc_* 特征使用）
+    try:
+        from plays.limit_up.backtest.dataset import pull_auction_bars
+        print(f"  [NV2] auction ({today})...")
+        auc_df = pull_auction_bars(codes, today, today)
+        if not auc_df.empty:
+            _NV2_AUCTION_CACHE.clear()
+            for _, r in auc_df.iterrows():
+                code = r["ts_code"]
+                td = str(r["trade_date"])
+                _NV2_AUCTION_CACHE.setdefault(code, {})[td] = r.to_dict()
+            print(f"  [NV2] auction: {len(auc_df)} 条")
+    except Exception as e:
+        print(f"  [NV2] auction 加载失败: {e}")
+
     _NV2_DATE = today
 
 
@@ -734,7 +750,7 @@ def _extract_pit_features(code: str, pit_mode: bool) -> dict:
         daily_rows=daily_rows,
         basic_by_date=basic_by_date,
         moneyflow_by_date=moneyflow_by_date,
-        auction_by_date=None,
+        auction_by_date=_NV2_AUCTION_CACHE.get(code, {}),
         intraday_by_date=_NV2_INTRADAY_CACHE.get(code, {}),
         concept_momentum=concept_momentum,
         top_list_by_date=_NV2_TOP_LIST_CACHE.get(code, {}),
