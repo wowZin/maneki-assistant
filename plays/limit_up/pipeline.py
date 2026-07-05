@@ -377,8 +377,8 @@ def _get_l2_net_flow(code_short: str) -> float:
         resp = daemon_cmd(f"NETFLOW {code}")
         if resp and resp != "NULL":
             return float(resp)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"  [L2] {code_short} net_flow 获取失败: {e}")
     return 0.0
 
 
