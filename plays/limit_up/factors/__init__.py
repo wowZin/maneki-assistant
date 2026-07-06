@@ -18,7 +18,24 @@ row 可以是 pandas.Series 或 dict，两种都能读到面板/factor_ctx 的�
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Callable
+
+# 确保 .env 在判断模型开关前加载（cron 任务没有 shell 环境变量）
+_env_paths = [
+    Path(__file__).resolve().parent.parent.parent.parent / ".env",
+    Path("/root/maneki-agent/.env"),
+]
+for _p in _env_paths:
+    if _p.exists():
+        try:
+            for _line in _p.read_text().splitlines():
+                _line = _line.strip()
+                if _line and not _line.startswith("#") and "=" in _line:
+                    _k, _v = _line.split("=", 1)
+                    os.environ.setdefault(_k.strip(), _v.strip())
+        except Exception:
+            pass
 
 # ── fundamental ─────────────────────────────────────────
 from plays.limit_up.factors.fundamental.rebuilt import factor_fundamental_rebuilt

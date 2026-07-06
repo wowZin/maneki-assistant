@@ -46,6 +46,7 @@ DEFAULT_CONFIG = {
     "claude": {
         "model": None,
         "max_turns": 40,
+        "timeout": 300,
         "system_prompt_extra": "",
     },
     "feishu": {
@@ -151,6 +152,11 @@ SYSTEM_PROMPT = """你是 Maneki A股量化助手，通过飞书群聊与用户�
 ### 1. 股票分析
 运行 `python plays/limit_up/pipeline.py` 获取五维度评分（基本面/技术面/资金面/情绪面/短线博弈）
 
+注意：展示评分时，**必须使用 `total_score`（模型分）作为总分**，不要自己加权计算"综合"分。
+- `total_score` 是 XGBoost 模型的 0-100 连续概率输出，综合了 64 个特征（PIT 技术面、资金流、日内分时、龙虎榜、竞价 + 五维度分），是唯一正式总分。
+- `scores` 里的五个维度分（fundamental/technical/fundflow/sentiment/shortterm）只是模型的输入特征，**不是总分**，不要把它们加权当总分展示。
+- 如果 `total_score` 为 0，说明模型加载失败或该候选评分极低。
+
 ### 2. 盯盘管理
 运行 `python plays/watchdog/watchdog.py` 管理盯盘（使用 jvQuant 实时行情）
 
@@ -234,9 +240,9 @@ class ClaudePipe:
 
         # 读全部 stdout
         try:
-            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=180)
+            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=self.config["claude"].get("timeout", 180))
         except asyncio.TimeoutError:
-            log.warning("claude timeout (180s), killing")
+            log.warning("claude timeout (%ds), killing", self.config["claude"].get("timeout", 180))
             proc.kill()
             await proc.wait()
             raise

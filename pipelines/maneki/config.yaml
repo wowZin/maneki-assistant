@@ -1,4 +1,4 @@
 claude:
-  max_turns: null
+  max_turns: 40
   model: null
   system_prompt_extra: ""

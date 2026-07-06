@@ -44,6 +44,12 @@ AGENT_WEIGHTS = {
     "shortterm": float(CONFIG.get("AGENT_WEIGHT_SHORTTERM", "0.5")),
 }
 
+# ===== 多源扫描缓存（T-1 数据，每日一次，存磁盘跨进程复用）=====
+_SCAN_LIMITUP_CACHE: list[dict] | None = None
+_SCAN_TOP_LIST_CACHE: list[dict] | None = None
+_SCAN_SOURCE_DATE: str = ""
+_SCAN_CACHE_FILE = Path(__file__).resolve().parent / "data" / "scan_cache.json"
+
 # ===== 1. 扫描异动股 =====
 def scan_surge():
     """通过同花顺热门榜获取候选股（Cookie直连，无代理依赖）
@@ -88,7 +94,160 @@ def scan_surge():
         print(f"热门榜扫描: {len(items)}只 → {len(candidates)}只候选 (过滤ST/科创/创业板, 涨幅0-9.5%(排除当日涨停))")
     else:
         print(f"热门榜扫描: {len(items)}只 → 0只候选")
-    return candidates
+
+    # 合并 T-1 缓存（涨停回流 + 龙虎榜）
+    merged = _merge_scan_sources(candidates)
+    return merged
+
+
+def _ensure_scan_cache() -> None:
+    """加载 T-1 涨停/龙虎榜缓存（优先读磁盘，跨进程复用）。
+
+    cron 每次起新进程，模块变量不持久。所以存文件 scan_cache.json，
+    按交易日判断是否过期。每日首次调用拉 Tushare 后持久化，后续复用。
+    """
+    global _SCAN_LIMITUP_CACHE, _SCAN_TOP_LIST_CACHE, _SCAN_SOURCE_DATE
+    if _SCAN_LIMITUP_CACHE is not None:
+        return  # 本进程已缓存
+
+    from scripts.tu_share import call_tushare
+    from datetime import timedelta
+
+    # 确定目标 T-1 交易日
+    target_trade_date = ""
+    for offset in range(1, 8):
+        d = (datetime.now() - timedelta(days=offset)).strftime("%Y%m%d")
+        resp = call_tushare("limit_list_d", {"trade_date": d},
+                            "ts_code,name,pct_chg")
+        if resp.get("code") == 0 and resp.get("data", {}).get("items", []):
+            target_trade_date = d
+            break
+
+    if not target_trade_date:
+        print("  找不到前一交易日数据")
+        _SCAN_LIMITUP_CACHE = []
+        _SCAN_TOP_LIST_CACHE = []
+        return
+
+    # 尝试读磁盘缓存
+    disk_cache = _load_scan_cache(target_trade_date)
+    if disk_cache:
+        _SCAN_LIMITUP_CACHE = disk_cache["limitup"]
+        _SCAN_TOP_LIST_CACHE = disk_cache["toplist"]
+        _SCAN_SOURCE_DATE = target_trade_date
+        print(f"  [扫描源] 缓存命中: 涨停{len(_SCAN_LIMITUP_CACHE)}只 + 龙虎榜{len(_SCAN_TOP_LIST_CACHE)}只 ({target_trade_date})")
+        return
+
+    # 缓存未命中 -> 拉 Tushare
+    _SCAN_SOURCE_DATE = target_trade_date
+
+    # 1. 前一交易日涨停
+    limitup = []
+    resp = call_tushare("limit_list_d", {"trade_date": target_trade_date},
+                        "ts_code,name,pct_chg")
+    if resp.get("code") == 0:
+        fields = resp.get("data", {}).get("fields", [])
+        for row in resp.get("data", {}).get("items", []):
+            d = dict(zip(fields, row))
+            limitup.append({
+                "code": d.get("ts_code", ""),
+                "name": d.get("name", ""),
+                "pct_chg": float(d.get("pct_chg", 0)),
+            })
+    _SCAN_LIMITUP_CACHE = limitup
+    print(f"  [扫描源] 昨日涨停({target_trade_date}): {len(limitup)}只")
+
+    # 2. 龙虎榜
+    toplist = []
+    resp = call_tushare("top_list", {"trade_date": target_trade_date},
+                        "ts_code,name,pct_change")
+    if resp.get("code") == 0:
+        fields = resp.get("data", {}).get("fields", [])
+        for row in resp.get("data", {}).get("items", []):
+            d = dict(zip(fields, row))
+            toplist.append({
+                "code": d.get("ts_code", ""),
+                "name": d.get("name", ""),
+                "pct_chg": float(d.get("pct_change", 0)),
+            })
+    _SCAN_TOP_LIST_CACHE = toplist
+    print(f"  [扫描源] 龙虎榜({target_trade_date}): {len(toplist)}只")
+
+    # 3. 重叠统计
+    limit_codes = {s["code"] for s in limitup}
+    top_codes = {s["code"] for s in toplist}
+    print(f"  [扫描源] 涨停∩龙虎榜: {len(limit_codes & top_codes)}只")
+
+    # 4. 持久化到磁盘
+    _save_scan_cache(target_trade_date, limitup, toplist)
+
+
+def _load_scan_cache(trade_date: str) -> dict | None:
+    """读磁盘缓存，交易日不匹配则返回 None。"""
+    try:
+        if not _SCAN_CACHE_FILE.exists():
+            return None
+        c = json.loads(_SCAN_CACHE_FILE.read_text())
+        if c.get("trade_date") == trade_date:
+            return c
+    except Exception:
+        pass
+    return None
+
+
+def _save_scan_cache(trade_date: str, limitup: list, toplist: list) -> None:
+    """持久化到磁盘，供同一交易日后续进程复用。"""
+    try:
+        _SCAN_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _SCAN_CACHE_FILE.write_text(json.dumps({
+            "trade_date": trade_date,
+            "limitup": limitup,
+            "toplist": toplist,
+        }, ensure_ascii=False))
+    except Exception as e:
+        print(f"  [扫描源] 缓存写入失败: {e}")
+
+
+def _merge_scan_sources(hot_list: list[dict]) -> list[dict]:
+    """合并热门榜 + 昨日涨停 + 龙虎榜，去重 + 统一过滤。"""
+    _ensure_scan_cache()
+
+    seen = set()
+    merged = []
+
+    for src_name, src_list in [
+        ("热门榜", hot_list),
+        ("昨日涨停", _SCAN_LIMITUP_CACHE or []),
+        ("龙虎榜", _SCAN_TOP_LIST_CACHE or []),
+    ]:
+        added = 0
+        for s in src_list:
+            code = s.get("code", "")
+            name = s.get("name", "")
+            pct = float(s.get("pct_chg", 0))
+
+            # 统一过滤：ST/新股/创业板/科创板/北交所
+            if re.search(r"ST|\*ST|退|N", name or ""):
+                continue
+            if not code or "." not in code:
+                continue
+            prefix = code.split(".")[0]
+            if re.match(r"^(300|301|688|8|4|920)", prefix):
+                continue
+
+            # 排除当日已涨停（pct >= 9.5）
+            if pct >= 9.5:
+                continue
+
+            if code not in seen:
+                seen.add(code)
+                merged.append(s)
+                added += 1
+
+        if added:
+            print(f"  [合并] {src_name}: +{added}只 (共{len(merged)}只)")
+
+    return merged
 
 def load_from_file(filepath):
     """从已有文件加载信号"""
