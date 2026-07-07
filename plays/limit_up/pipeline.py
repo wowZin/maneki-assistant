@@ -1350,7 +1350,7 @@ def _run_pipeline(args):
         print(f"\n[2/5] 深度分析: {len(candidates)}只 (jvQuant 分层订阅, 无等待)")
         from scripts.jvquant_ws_client import subscribe_tiered
         subscribe_tiered(candidates, top_n_l1=len(candidates),
-                         top_n_l10=min(12, len(candidates)),
+                         top_n_l10=len(candidates),
                          top_n_l2=len(candidates))
         time.sleep(3)
     else:
