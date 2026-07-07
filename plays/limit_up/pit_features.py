@@ -220,10 +220,17 @@ def build_pit_features(
 
     i = _find_idx(dates, score_date)
     if i is None:
-        return feats
+        # 盘中扫描：daily 数据只有到 T-1，score_date（今天）不在数据中
+        # 回退到最后一条可用数据，直接用作特征日（不需要 T-1 偏移）
+        if dates:
+            i = len(dates) - 1
+            pit_i = i
+        else:
+            return feats
+    else:
+        # PIT 基准日：默认 T-1
+        pit_i = i - 1 if pit_mode and i >= 1 else i
 
-    # PIT 基准日：默认 T-1
-    pit_i = i - 1 if pit_mode and i >= 1 else i
     if pit_i < 0:
         pit_i = i
 
