@@ -204,13 +204,13 @@ class ClaudePipe:
         claude_cfg = self.config["claude"]
         args = [
             self.config.get("claude_bin", "claude"),
+            "--print",
             "--append-system-prompt", SYSTEM_PROMPT,
             "--allowedTools",
             "Read,Write,Edit,Glob,Grep,Bash,Skill,"
             "mcp__feishu__send_feishu_text,"
             "mcp__feishu__send_feishu_markdown,"
             "mcp__feishu__send_feishu_card",
-            "--permission-prompt-tool", "stdio",
         ]
         if claude_cfg.get("max_turns"):
             args.extend(["--max-turns", str(claude_cfg["max_turns"])])
@@ -348,6 +348,9 @@ async def feishu_webhook(req: Request):
         asyncio.create_task(_handle_slash_command(text, chat_id, message_id))
         return JSONResponse({"ok": True}, status_code=202)
 
+    # 异步发送"分析中"确认（不阻塞 webhook 响应，不用 _dedup 防止挡住后续结果）
+    asyncio.create_task(feishu.send_markdown(chat_id, "分析中，请稍候..."))
+
     await _queue.put({
         "text": text,
         "sender": sender,
@@ -373,6 +376,14 @@ async def _process_queue():
             log.info("query done: chat=%s", item["chat_id"][:16])
         except Exception as e:
             log.error("query error: %s", e, exc_info=True)
+            try:
+                await feishu.reply_markdown(
+                    item["message_id"],
+                    f"❌ 查询超时或出错，请重试或联系管理员。\n错误: {type(e).__name__}",
+                    _dedup,
+                )
+            except Exception:
+                pass
         finally:
             _queue.task_done()
 

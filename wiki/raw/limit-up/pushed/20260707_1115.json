@@ -1,0 +1,46 @@
+[
+  {
+    "code": "600110.SH",
+    "name": "诺德股份",
+    "scores": {
+      "fundamental": 90.0,
+      "technical": 0,
+      "fundflow": 31.0,
+      "sentiment": 52,
+      "shortterm": 40.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通250亿)+20; 高成长/亏损股(PE=0.0)+15; 扣非暴增+149%; 营收+80%; 共振:大盘+成长+10",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "[无][Tushare] 换手活跃14.0%+21; 成交一般36.8亿+5; 大盘活跃(流通250亿换手14.0%)+10; 资金净流出-8.31%-3; 主力流出-1.09‰-3",
+      "sentiment": "[-低] 涨停溢价10.8%+10; 最高6板+5; 发酵+5; 概念共振(+15); 梯队完整+4; 换手14.0%活跃+5; 20日涨停3次+3; 连板基因3连板+2",
+      "shortterm": "涨停基因23(20日1次/60日6次) | 开盘博弈0(跳空-1.0%/竞价换手0.14%) | 位置波动17(pos0.49/t10-6.8%/std5.4) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 47.5,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 47.5,
+    "pct_chg": 4.9,
+    "l2api": {
+      "last": 15.1,
+      "bid1_p": 15.1,
+      "ask1_p": 15.11,
+      "vwap": 15.1,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 56.64
+    },
+    "total_score": 56.64
+  }
+]

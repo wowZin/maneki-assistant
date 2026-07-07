@@ -923,18 +923,27 @@ def _extract_pit_features(code: str, pit_mode: bool) -> dict:
 
 
 # ===== 6. 飞书推送 =====
-# 推送状态：用于「首次推送 + 连续在榜升级推送」逻辑
-_PUSH_STATE_DATE = ""
-_PUSH_TRACKER: dict[str, int] = {}  # code -> 连续进入 Top-3 的轮次数
+# 推送降噪：从 pushed/ 文件读取上次推送分数，评分提高才再推
+_PUSHED_DIR = DATA_DIR / "pushed"
 
 
-def _reset_push_state_if_new_day():
-    """跨天时重置推送状态。"""
-    global _PUSH_STATE_DATE, _PUSH_TRACKER
+def _load_last_pushed_scores() -> dict:
+    """从今天已推送的记录文件读取每只股票上次推送时的最高分数。"""
     today = datetime.now().strftime("%Y%m%d")
-    if _PUSH_STATE_DATE != today:
-        _PUSH_STATE_DATE = today
-        _PUSH_TRACKER.clear()
+    scores: dict[str, float] = {}
+    if not _PUSHED_DIR.exists():
+        return scores
+    for f in sorted(_PUSHED_DIR.glob(f"{today}*.json")):
+        try:
+            items = json.loads(f.read_text())
+            for item in items if isinstance(items, list) else []:
+                code = item.get("code", "")
+                ts = item.get("total_score", 0)
+                if code and ts > scores.get(code, 0):
+                    scores[code] = ts
+        except Exception:
+            pass
+    return scores
 
 
 def _get_feishu_token():
@@ -952,15 +961,13 @@ def _get_feishu_token():
 
 
 def push_feishu(results):
-    """飞书推送：模型模式下采用「首次进入 Top-3 推送 + 连续第 2 轮再推」策略。
+    """飞书推送：评分提高才推的降噪策略。
 
+    - 读取 pushed/ 历史记录，股票评分高于上次推送时才重新推送
     - quality_combo 模式保持固定阈值 95；
-    - 模型模式默认阈值 55，且每天同一只股票首次进入 Top-3 推送一次，连续第 2
-      轮仍在 Top-3 时再推送一次，之后不再重复推送。
+    - 模型模式默认阈值 55，Top-3 内评分提高即推
     """
     import requests
-
-    _reset_push_state_if_new_day()
 
     model_mode = os.environ.get("LIMIT_UP_USE_MODEL", "").lower() in ("true", "1", "yes")
     default_thr = "55" if model_mode else "95"
@@ -972,6 +979,13 @@ def push_feishu(results):
         if total >= 70: return "⭐⭐⭐"
         if total >= 60: return "⭐⭐"
         return ""
+
+    # 从今日推送历史读取已推分数（降噪：评分提高才再推）
+    push_state = _load_last_pushed_scores()
+    if push_state:
+        print(f"  推送状态: {len(push_state)} 只已推送过")
+    else:
+        print("  推送状态: 今日无历史推送")
 
     sorted_results = sorted(results, key=lambda r: r.get("total_score", 0), reverse=True)
     if not sorted_results:
@@ -987,19 +1001,18 @@ def push_feishu(results):
     eligible = [r for r in sorted_results if r.get("total_score", 0) >= threshold][:3]
     top3_codes = {r["code"] for r in eligible}
 
-    # 首次进入 Top-3 或连续第 2 轮仍在 Top-3 才推送
+    # 分数提高才推：首次出现或评分高于上次推送时
     push_list = []
     for r in eligible:
         code = r["code"]
-        consecutive = _PUSH_TRACKER.get(code, 0)
-        if consecutive < 2:  # 0: 首次；1: 第 2 轮（再推一次）
+        current_score = r.get("total_score", 0)
+        last_score = push_state.get(code, 0)
+        if current_score > last_score:
             push_list.append(r)
-            _PUSH_TRACKER[code] = consecutive + 1
+        else:
+            print(f"  [跳过] {code}: 评分 {current_score} <= 上次推送 {last_score}")
 
-    # 掉出 Top-3 的股票重置连续计数
-    for code in list(_PUSH_TRACKER.keys()):
-        if code not in top3_codes:
-            del _PUSH_TRACKER[code]
+    # 掉出 Top-3 的下次重新进入时自然由分数比较决定是否再推
 
     print(f"  阈值 {threshold}: max_ts={max_ts:.1f}, 本轮 Top3={len(eligible)}只, 实际推送={len(push_list)}只")
     if not push_list:
@@ -1012,6 +1025,11 @@ def push_feishu(results):
     with open(pushed_file, "w") as f:
         json.dump(push_list, f, ensure_ascii=False, indent=2)
     print(f"  推送记录已保存: {pushed_file}")
+
+    # 更新推送状态内存（文件已存到 pushed/，不用另存）
+    for r in push_list:
+        push_state[r["code"]] = r.get("total_score", 0)
+    print(f"  推送状态跟进: {len(push_state)} 只")
 
     token = _get_feishu_token()
     if not token:
@@ -1288,29 +1306,9 @@ def _run_pipeline(args):
         return
 
     weights = dict(AGENT_WEIGHTS)
-
-    # 今日缓存：先 wiki/raw/limit-up/analysis，再 data/analysis
     today_str = datetime.now().strftime("%Y%m%d")
+    # scored_cache 已移除：每轮重新评分，确保维度分反映最新实时数据
     scored_cache = {}
-    for base in (
-        PROJECT_DIR / "wiki" / "raw" / "limit-up" / "analysis",
-        DATA_DIR / "analysis",
-    ):
-        if not base.exists():
-            continue
-        for f in sorted(base.glob(f"{today_str}*.json")):
-            try:
-                items = json.loads(f.read_text())
-                if isinstance(items, list):
-                    for item in items:
-                        if "code" in item and "scores" in item:
-                            scored_cache[item["code"]] = {
-                                dim: (item["scores"][dim], item.get("reasons", {}).get(dim, ""))
-                                for dim in item["scores"]
-                            }
-            except Exception:
-                pass
-    print(f"  scored_cache: {len(scored_cache)} 只缓存" if scored_cache else "  scored_cache: 无缓存")
 
     # 1.6 jvQuant WS 检查
     l2_available = False
