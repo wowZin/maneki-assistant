@@ -1349,9 +1349,9 @@ def _run_pipeline(args):
     if l2_available:
         print(f"\n[2/5] 深度分析: {len(candidates)}只 (jvQuant 分层订阅, 无等待)")
         from scripts.jvquant_ws_client import subscribe_tiered
-        subscribe_tiered(candidates, top_n_l1=min(15, len(candidates)),
-                         top_n_l10=min(6, len(candidates)),
-                         top_n_l2=min(2, len(candidates)))
+        subscribe_tiered(candidates, top_n_l1=len(candidates),
+                         top_n_l10=min(12, len(candidates)),
+                         top_n_l2=min(4, len(candidates)))
         time.sleep(3)
     else:
         print(f"\n[2/5] 深度分析: {len(candidates)}只 (无实时行情)")
