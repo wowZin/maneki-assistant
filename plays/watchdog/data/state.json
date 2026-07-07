@@ -1,8 +1,8 @@
 {
-  "002463.SZ": {
-    "code": "002463.SZ",
-    "name": "沪电股份",
-    "added_at": "2026-06-17T13:00:00",
+  "603906.SH": {
+    "code": "603906.SH",
+    "name": "龙蟠科技",
+    "added_at": "2026-07-07T09:42:05.340937",
     "status": "watching",
     "entry_price": 0.0,
     "entry_at": "",
@@ -12,30 +12,47 @@
     "signal_reason": "",
     "signal_at": "",
     "last_alert_at": "",
+    "last_abnormal_level": "",
+    "last_abnormal_pushed_at": 0.0,
+    "netflow_history": [],
     "daily_basic": {
-      "ts_code": "002463.SZ",
-      "trade_date": "20260702",
-      "pe": 65.7061,
-      "pb": 14.9583,
-      "circ_mv": 25094599.8355,
-      "turnover_rate": 4.5688,
-      "volume_ratio": 1.0
+      "ts_code": "603906.SH",
+      "trade_date": "20260706",
+      "pe": null,
+      "pb": 7.5353,
+      "circ_mv": 1632126.8535,
+      "turnover_rate": 6.7512,
+      "volume_ratio": 0.74
     },
     "dim_scores": {},
-    "last_daily_update": "20260703"
+    "last_daily_update": "20260707"
   },
-  "watchlist": [
-    {
-      "code": "002579.SZ",
-      "name": "中京电子",
-      "price": 12.65,
-      "added_at": "2026-07-03T15:30:25.793644"
+  "002579.SZ": {
+    "code": "002579.SZ",
+    "name": "中京电子",
+    "added_at": "2026-07-07T09:43:21.665997",
+    "status": "watching",
+    "entry_price": 0.0,
+    "entry_at": "",
+    "highest_since_entry": 0.0,
+    "bars_held": 0,
+    "signal_type": "",
+    "signal_reason": "",
+    "signal_at": "",
+    "last_alert_at": "",
+    "last_abnormal_level": "",
+    "last_abnormal_pushed_at": 0.0,
+    "netflow_history": [],
+    "daily_basic": {
+      "ts_code": "002579.SZ",
+      "trade_date": "20260706",
+      "pe": 400.8922,
+      "pb": 4.5664,
+      "circ_mv": 1044890.7129,
+      "turnover_rate": 13.268,
+      "volume_ratio": 0.65
     },
-    {
-      "code": "603906.SH",
-      "name": "龙蟠科技",
-      "price": 14.76,
-      "added_at": "2026-07-03T15:30:26.092671"
-    }
-  ]
+    "dim_scores": {},
+    "last_daily_update": "20260707"
+  }
 }

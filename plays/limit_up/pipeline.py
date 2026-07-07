@@ -117,7 +117,7 @@ def _ensure_scan_cache() -> None:
     target_trade_date = ""
     for offset in range(1, 8):
         d = (datetime.now() - timedelta(days=offset)).strftime("%Y%m%d")
-        resp = call_tushare("limit_list_d", {"trade_date": d},
+        resp = call_tushare("limit_list_d", {"trade_date": d, "limit_type": "U"},
                             "ts_code,name,pct_chg")
         if resp.get("code") == 0 and resp.get("data", {}).get("items", []):
             target_trade_date = d
@@ -143,7 +143,7 @@ def _ensure_scan_cache() -> None:
 
     # 1. 前一交易日涨停
     limitup = []
-    resp = call_tushare("limit_list_d", {"trade_date": target_trade_date},
+    resp = call_tushare("limit_list_d", {"trade_date": target_trade_date, "limit_type": "U"},
                         "ts_code,name,pct_chg")
     if resp.get("code") == 0:
         fields = resp.get("data", {}).get("fields", [])
@@ -1098,7 +1098,7 @@ def _score_one(stock: dict, l2_available: bool, weights: dict,
                             "shortterm": cached.get("shortterm", ("", ""))[1]},
                 "total": total, "top3_score": round(total, 1),
                 "resonance": {"count": rc, "threshold": 75, "is_resonance": rc >= 3},
-                "pct_chg": round(stock.get("pct_chg", 0), 1), "l2api": None}
+                "pct_chg": round(_REALTIME_PCT_CACHE.get(stock["code"].split(".")[0], stock.get("pct_chg", 0)), 1), "l2api": None}
 
     # 并行五维度评分
     funcs: dict[str, Callable] = {}
@@ -1183,7 +1183,7 @@ def _score_one(stock: dict, l2_available: bool, weights: dict,
                         "shortterm": reasons.get("shortterm", "")},
             "weights": {k: f"{v:.1f}" for k, v in weights.items()},
             "total": total, "resonance": {"count": rc, "threshold": 75, "is_resonance": rc >= 3},
-            "top3_score": round(total, 1), "pct_chg": round(stock.get("pct_chg", 0), 1),
+            "top3_score": round(total, 1), "pct_chg": round(_REALTIME_PCT_CACHE.get(stock["code"].split(".")[0], stock.get("pct_chg", 0)), 1),
             "l2api": l2data}
 
 
