@@ -1351,7 +1351,7 @@ def _run_pipeline(args):
         from scripts.jvquant_ws_client import subscribe_tiered
         subscribe_tiered(candidates, top_n_l1=len(candidates),
                          top_n_l10=min(12, len(candidates)),
-                         top_n_l2=len(candidates))
+                         top_n_l2=0)
         time.sleep(3)
     else:
         print(f"\n[2/5] 深度分析: {len(candidates)}只 (无实时行情)")
@@ -1369,9 +1369,9 @@ def _run_pipeline(args):
             print(f"  {code} 评分失败: {e}")
 
     # Top-3 升 L2 深度
-    all_results.sort(key=lambda x: x.get("total", 0), reverse=True)
+    all_results.sort(key=lambda x: x.get("total_score", x.get("total", 0)), reverse=True)
     if l2_available:
-        top_codes = [r["code"] for r in all_results[:3] if r.get("total", 0) >= 35]
+        top_codes = [r["code"] for r in all_results[:3] if r.get("total_score", r.get("total", 0)) >= 35]
         if top_codes:
             from scripts.jvquant_ws_client import daemon_subscribe_l2
             daemon_subscribe_l2(top_codes)
