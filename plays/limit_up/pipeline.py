@@ -1330,12 +1330,12 @@ def _run_pipeline(args):
     else:
         print("  [行情] 已跳过 (--no-l2 模式)")
 
-    # 1.7 预排 + 概念
-    print("\n[1.7/5] 涨停相关性预排...")
+    # 1.7 概念标签（用于策略评分）
+    print("\n[1.7/5] 概念标签...")
     _fetch_ths_hot_list()
     from scripts.tu_share import build_concept_map
     build_concept_map(_HOT_CONCEPT_CACHE)
-    candidates = _pre_rank(candidates, top_n=args.top)
+    print(f"  全量 {len(candidates)} 只进入深度评分（预排已取消）")
 
     # 1.8 THS 实时行情
     print("\n[1.8/5] 同花顺实时行情预取...")
