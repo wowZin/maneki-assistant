@@ -1071,7 +1071,9 @@ def _score_one(stock: dict, l2_available: bool, weights: dict,
                scored_cache: dict | None = None, cache_hit: bool = False) -> dict:
     """单只股票评分"""
     code = stock["code"]
+    code_short = code.split(".")[0]
     name = stock["name"]
+    realtime_pct = _REALTIME_PCT_CACHE.get(code_short, stock.get("pct_chg", 0))
 
     if cache_hit and scored_cache and code in scored_cache:
         cached = scored_cache[code]
@@ -1098,7 +1100,7 @@ def _score_one(stock: dict, l2_available: bool, weights: dict,
                             "shortterm": cached.get("shortterm", ("", ""))[1]},
                 "total": total, "top3_score": round(total, 1),
                 "resonance": {"count": rc, "threshold": 75, "is_resonance": rc >= 3},
-                "pct_chg": round(_REALTIME_PCT_CACHE.get(stock["code"].split(".")[0], stock.get("pct_chg", 0)), 1), "l2api": None}
+                "pct_chg": round(realtime_pct, 1), "l2api": None}
 
     # 并行五维度评分
     funcs: dict[str, Callable] = {}
@@ -1165,6 +1167,9 @@ def _score_one(stock: dict, l2_available: bool, weights: dict,
             kb = daemon_get_kline(code, n=5)
             if mkt:
                 last_val = float(mkt.get("last", 0))
+                pre_close = float(mkt.get("pre_close", 0))
+                if pre_close > 0:
+                    realtime_pct = (last_val - pre_close) / pre_close * 100
                 bid_prices = mkt.get("bid_price", [])
                 ask_prices = mkt.get("ask_price", [])
                 l2data = {"last": last_val,
@@ -1183,7 +1188,7 @@ def _score_one(stock: dict, l2_available: bool, weights: dict,
                         "shortterm": reasons.get("shortterm", "")},
             "weights": {k: f"{v:.1f}" for k, v in weights.items()},
             "total": total, "resonance": {"count": rc, "threshold": 75, "is_resonance": rc >= 3},
-            "top3_score": round(total, 1), "pct_chg": round(_REALTIME_PCT_CACHE.get(stock["code"].split(".")[0], stock.get("pct_chg", 0)), 1),
+            "top3_score": round(total, 1), "pct_chg": round(realtime_pct, 1),
             "l2api": l2data}
 
 
