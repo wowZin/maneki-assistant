@@ -135,7 +135,12 @@ systemctl start maneki-pipe
 systemctl start ngrok
 # 查看公网 URL: curl -s http://localhost:4040/api/tunnels | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['tunnels'][0]['public_url'])"
 
-# ===== 3. 涨停预测（手动/定时触发） =====
+# ===== 3. 盯盘引擎（可选） =====
+# 由 watchdog.service 管理，盘中每30秒自动扫描持仓股
+# 检测到异常自动推送飞书
+systemctl start watchdog
+
+# ===== 4. 涨停预测（手动/定时触发） =====
 # 由 crontab 自动调度，也可手动运行
 python3 plays/limit_up/pipeline.py
 python3 plays/limit_up/review.py
@@ -149,14 +154,19 @@ nohup python3 plays/watchdog/watchdog.py > data/logs/watchdog.log 2>&1 &
 升级/降配 ECS 后需要重启服务：
 
 ```bash
-# 1. 重启 maneki-pipe（systemd 自动保活）
-systemctl restart maneki-pipe
+# 1. 重启所有 maneki 服务
+systemctl restart maneki-pipe ngrok watchdog
 
-# 2. 确认启动正常
-systemctl status maneki-pipe --no-pager -l
+# 2. 确认全部启动正常
+for svc in maneki-pipe ngrok watchdog; do
+  echo "=== $svc ==="
+  systemctl is-active $svc
+done
+
+# 3. 查看详细状态
 journalctl -u maneki-pipe -n 20 --no-pager
 
-# 3. 重启 ngrok
+# 4. 重启 ngrok
 systemctl restart ngrok
 
 # 4. 验证 ngrok 公网 URL

@@ -400,6 +400,68 @@ def _score_holding_drop(row: dict, entry_price: float) -> tuple[int, str]:
     return 0, ""
 
 
+def _check_bear_trap(
+    row: dict,
+    scores: dict,
+    netflow: float,
+    prev_last: float,
+    prev_vwap: float,
+    prev_vol_ratio: float,
+) -> tuple[bool, str]:
+    """检测是否为诱空。
+
+    多扫描对比 + 单扫描特征综合判断。
+    返回: (is_bear_trap, reason)
+    """
+    current = row.get("last_price", 0.0)
+    vwap = row.get("vwap", 0.0)
+    vol_ratio = row.get("vol_ratio_proxy", 1.0)
+    pct = row.get("pct_chg_score_day", 0.0)
+    position = row.get("position_20d", 0.5)
+    pullback = row.get("pullback_10d", 0.1)
+    netflow_out = netflow < -5_000_000
+
+    reasons = []
+
+    # ── 双扫描确认：上一轮跌破VWAP，本轮拉回 ──
+    # 这是最强的诱空信号，不需要位置限制
+    if prev_last > 0 and prev_vwap > 0:
+        prev_vs_vwap = (prev_last / prev_vwap - 1) * 100
+        curr_vs_vwap = (current / vwap - 1) * 100 if vwap > 0 else 0
+        # 上一轮跌破VWAP(>1%)，本轮有显著回拉
+        if prev_vs_vwap <= -1.0 and (curr_vs_vwap - prev_vs_vwap) >= 0.8:
+            reasons.append(f"快速回拉VWAP({prev_vs_vwap:.1f}%→{curr_vs_vwap:.1f}%)")
+            if prev_vol_ratio > 0 and vol_ratio < prev_vol_ratio * 0.8:
+                reasons.append(f"缩量({prev_vol_ratio:.1f}→{vol_ratio:.1f})")
+            return True, "诱空: " + " | ".join(reasons[:3])
+
+    # ── 单扫描特征 ──
+    # 核心条件：从近期高点有明显回撤 + 跌幅不极端 + 量不大
+
+    # 先算 VWAP 价差：诱空不会远离VWAP，真破位会
+    vs_vwap = (current / vwap - 1) * 100 if vwap > 0 else 0
+
+    # 如果远离VWAP超过3%且没有回升迹象 → 真破位，不是诱空
+    if vs_vwap <= -3.0:
+        return False, ""
+
+    # 条件A：中低位大幅回踩缩量
+    if pct < -3.0 and position < 0.65 and pullback >= 0.03:
+        if vs_vwap > -3.0:  # 远离VWAP不超3%
+            if vol_ratio < 1.5:  # 没有异常放量
+                reasons.append(f"回踩缩量(pb={pullback:.0%} pos={position:.2f})")
+                if not netflow_out:
+                    reasons.append("资金无大量流出")
+                return True, "诱空: " + " | ".join(reasons[:3])
+
+    # 条件B：大幅急跌但缩量（跌停没封死，VWAP没远离）
+    if pct < -7.0 and vol_ratio < 1.0 and vs_vwap > -2.5:
+        reasons.append(f"急跌缩量(chg={pct:.0f}% vol={vol_ratio:.1f} vsVWAP={vs_vwap:.1f}%)")
+        return True, "诱空(分歧): " + " | ".join(reasons[:3])
+
+    return False, ""
+
+
 def check_abnormal(
     row: dict,
     scores: dict,
@@ -407,13 +469,15 @@ def check_abnormal(
     ask_bid_ratio: float,
     entry_price: float,
     netflow_history: list[float] | None = None,
+    prev_last: float = 0.0,
+    prev_vwap: float = 0.0,
+    prev_vol_ratio: float = 0.0,
     config: dict | None = None,
 ) -> tuple[bool, str, str]:
-    """多因子置信度检测异常状态（资金离场/抛压）。
+    """多因子置信度检测异常状态（资金离场/抛压/诱空）。
 
-    新增：factor_fundflow_rebuilt 替代部分手动打分。
     返回: (is_abnormal, level, reason)
-    level: "" | "warning" | "critical"
+    level: "" | "bear_trap" | "warning" | "critical"
     """
     cfg = config or ABNORMAL_CONFIG
     details: list[str] = []
@@ -468,6 +532,12 @@ def check_abnormal(
     if div >= 8:
         total += 8
         details.append(f"维度背离({div:.0f})")
+
+    # 8. 诱空检测：低位回拉 + 缩量 → 覆盖 warning，但不覆盖 critical
+    bear_trap, bt_reason = _check_bear_trap(row, scores, netflow,
+                                              prev_last, prev_vwap, prev_vol_ratio)
+    if bear_trap and total < cfg["critical_score"]:
+        return True, "bear_trap", bt_reason
 
     if total >= cfg["critical_score"]:
         return True, "critical", f"异常置信度{total}: {'; '.join(details[:5])}"

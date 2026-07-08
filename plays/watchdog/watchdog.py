@@ -134,6 +134,10 @@ class WatchState:
         self.daily_basic: dict = {}
         self.dim_scores: dict = {}
         self.last_daily_update: str = ""
+        # 上一轮扫描快照（用于诱空检测）
+        self.prev_last: float = 0.0
+        self.prev_vwap: float = 0.0
+        self.prev_vol_ratio: float = 0.0
 
     def to_dict(self) -> dict:
         return {
@@ -321,12 +325,15 @@ class WatchdogEngine:
     def _loop(self):
         logger.info("盯盘循环启动")
         trading_day_logged = False
+        self._state_mtime = self._get_state_mtime()
         while self._running:
             try:
                 if _is_trading_time():
                     if not trading_day_logged:
                         logger.info("进入交易时段，开始盯盘扫描")
                         trading_day_logged = True
+                    # 动态加载外部 state.json 变更（用户通过 client 添加/删除）
+                    self._reload_state_if_changed()
                     with self._lock:
                         codes = list(self._states.keys())
                     if codes:
@@ -346,6 +353,30 @@ class WatchdogEngine:
                 logger.error(f"盯盘循环异常: {e}")
                 time.sleep(SCAN_INTERVAL)
         logger.info("盯盘循环退出")
+
+    def _get_state_mtime(self) -> float:
+        try:
+            return STATE_FILE.stat().st_mtime if STATE_FILE.exists() else 0.0
+        except Exception:
+            return 0.0
+
+    def _reload_state_if_changed(self):
+        """检测 state.json 是否被外部修改（watchdog_client 写入），有变化则重新加载。"""
+        mtime = self._get_state_mtime()
+        if mtime > self._state_mtime:
+            logger.info("检测到 state.json 变更，重新加载")
+            old_codes = set(self._states.keys())
+            self._load_state()
+            new_codes = set(self._states.keys())
+            added = new_codes - old_codes
+            removed = old_codes - new_codes
+            if added:
+                logger.info(f"新增盯盘: {added}")
+                self._subscribe(list(added))
+            if removed:
+                logger.info(f"移除盯盘: {removed}")
+                self._unsubscribe(list(removed))
+            self._state_mtime = mtime
 
     def _scan_round(self, codes: list[str]):
         today = datetime.now().strftime("%Y%m%d")
@@ -388,34 +419,57 @@ class WatchdogEngine:
             if len(st.netflow_history) > 10:
                 st.netflow_history = st.netflow_history[-10:]
 
-            # ── 异常状态检测（资金离场 / 抛压）──
+            # ── 异常状态检测（资金离场 / 抛压 / 诱空）──
             ask_bid = self._ws.get_bid_ask_ratio(code) if self._ws else 1.0
             abnormal, level, abnormal_reason = check_abnormal(
                 row, scores, netflow, ask_bid,
                 entry_price=st.entry_price if st.status == "entered" else 0.0,
                 netflow_history=st.netflow_history,
+                prev_last=st.prev_last,
+                prev_vwap=st.prev_vwap,
+                prev_vol_ratio=st.prev_vol_ratio,
             )
+
+            # 保存本轮快照供下一轮诱空检测
+            st.prev_last = last
+            st.prev_vwap = vwap
+            st.prev_vol_ratio = row.get("vol_ratio_proxy", 1.0)
+
             if abnormal:
                 # 去重：同一 level 冷却期内不重复推送
                 should_push = (
                     level != st.last_abnormal_level
                     or (time.time() - st.last_abnormal_pushed_at) >= ABNORMAL_COOLDOWN_SECONDS
                 )
-                icon = "🚨" if level == "critical" else "⚠️"
-                msg = (
-                    f"{icon} {st.name}({code}) 异常状态 [{level}]\n"
-                    f"{abnormal_reason}\n"
-                    f"现价: {last:.2f} | VWAP: {vwap:.2f}"
-                )
-                if should_push:
-                    logger.info(msg)
-                    _push_feishu(msg)
-                    st.last_abnormal_level = level
-                    st.last_abnormal_pushed_at = time.time()
-                # critical 直接移出盯盘；warning 仅提醒
-                if level == "critical":
-                    self.remove([code])
-                    continue
+                if level == "bear_trap":
+                    icon = "🛟"
+                    msg = (
+                        f"{icon} {st.name}({code}) 疑似诱空\n"
+                        f"{abnormal_reason}\n"
+                        f"现价: {last:.2f} | VWAP: {vwap:.2f}"
+                    )
+                    if should_push:
+                        logger.info(msg)
+                        _push_feishu(msg)
+                        st.last_abnormal_level = level
+                        st.last_abnormal_pushed_at = time.time()
+                    # 诱空不移出盯盘
+                else:
+                    icon = "🚨" if level == "critical" else "⚠️"
+                    msg = (
+                        f"{icon} {st.name}({code}) 异常状态 [{level}]\n"
+                        f"{abnormal_reason}\n"
+                        f"现价: {last:.2f} | VWAP: {vwap:.2f}"
+                    )
+                    if should_push:
+                        logger.info(msg)
+                        _push_feishu(msg)
+                        st.last_abnormal_level = level
+                        st.last_abnormal_pushed_at = time.time()
+                    # critical 直接移出盯盘；warning 仅提醒
+                    if level == "critical":
+                        self.remove([code])
+                        continue
             else:
                 # 状态恢复正常，清空冷却记录（下次异常立即推送）
                 st.last_abnormal_level = ""
@@ -598,8 +652,12 @@ class WatchdogEngine:
             if STATE_FILE.exists():
                 with open(STATE_FILE) as f:
                     data = json.load(f)
+                # 重建 _states：state.json 中没有的 → 删除
+                new_states = {}
                 for code, d in data.items():
-                    self._states[code] = WatchState.from_dict(d)
+                    new_states[code] = WatchState.from_dict(d)
+                self._states.clear()
+                self._states.update(new_states)
                 logger.info(f"加载盯盘状态: {len(self._states)} 只")
         except Exception as e:
             logger.error(f"状态加载失败: {e}")
