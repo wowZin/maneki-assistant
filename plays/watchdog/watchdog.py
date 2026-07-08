@@ -380,7 +380,7 @@ class WatchdogEngine:
             row = realtime_row(code, market, vwap, klines, daily_features, st.daily_basic, st.dim_scores, st.daily_rows)
             scores = compute_factor_scores(row)
 
-            last = float(market.get("last", 0))
+            last = float(market.get("last") or 0)
 
             # 记录资金流向历史（最多保留 10 轮）
             netflow = self._get_netflow(code)
@@ -484,7 +484,7 @@ class WatchdogEngine:
         if not self._ws:
             return 0.0
         market = self._ws.get_market(code)
-        return float(market.get("last", 0)) if market else 0.0
+        return float(market.get("last") or 0) if market else 0.0
 
     def _get_netflow(self, code: str) -> float:
         """从 jvQuant 获取当日大单+中单净流向（元）。"""

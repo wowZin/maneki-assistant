@@ -117,35 +117,53 @@ plays/新玩法名/
 
 ### 环境要求
 - Python 3.10+
-- 2C4G 以上服务器
+- 4C8G 以上服务器（推荐；最低 2C4G）
 - 已配置 `.env`（Tushare Token、飞书凭证、代理）
 
 ### 全部服务启动
 
+当前使用 **systemd** 统一管理服务。
+
 ```bash
-cd /root/maneki-agent
+# ===== 1. 核心管道（必须）：飞书 webhook + Claude Pipe =====
+# 由 maneki-pipe.service 管理，接收飞书回调 → Claude 决策 → 回复
+systemctl start maneki-pipe
 
-# ===== 1. 飞书 Bot 回调服务（必须） =====
-# 接收飞书 webhook → 写入 inbox → 即时回复"请稍候"
-nohup python3 -m uvicorn feishu_bot.main:app --host 0.0.0.0 --port 8080 \
-  > data/logs/feishu_bot.log 2>&1 &
+# ===== 2. ngrok 内网穿透（必须）：飞书回调入口 =====
+# 由 ngrok.service 管理（snap 安装），随 maneki-pipe 自动启动
+# 公网 URL 需配置到飞书开发者后台的 Events Callback URL
+systemctl start ngrok
+# 查看公网 URL: curl -s http://localhost:4040/api/tunnels | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['tunnels'][0]['public_url'])"
 
-# ===== 2. Claude SDK 管道（必须） =====
-# 轮询 inbox → Claude 决策 → 调用评分/盯盘/查wiki → 回复飞书
-nohup python3 pipelines/maneki/maneki_pipe.py \
-  > data/logs/maneki_pipe.log 2>&1 &
-
-# ===== 3. 盯盘引擎（可选） =====
-# 持续监控标的，推送买卖信号
-nohup python3 plays/watchdog/watchdog.py \
-  > data/logs/watchdog.log 2>&1 &
-
-# ===== 4. 涨停预测（手动/定时触发） =====
-# 主流程: 异动扫描 → 五维评分 → 排序 → 飞书推送
+# ===== 3. 涨停预测（手动/定时触发） =====
+# 由 crontab 自动调度，也可手动运行
 python3 plays/limit_up/pipeline.py
-
-# 收盘复盘: 汇总当日预测 vs 实际涨停
 python3 plays/limit_up/review.py
+
+# ===== 4. 盯盘引擎（可选） =====
+nohup python3 plays/watchdog/watchdog.py > data/logs/watchdog.log 2>&1 &
+```
+
+#### 重启流程（ECS 升降配后）
+
+升级/降配 ECS 后需要重启服务：
+
+```bash
+# 1. 重启 maneki-pipe（systemd 自动保活）
+systemctl restart maneki-pipe
+
+# 2. 确认启动正常
+systemctl status maneki-pipe --no-pager -l
+journalctl -u maneki-pipe -n 20 --no-pager
+
+# 3. 重启 ngrok
+systemctl restart ngrok
+
+# 4. 验证 ngrok 公网 URL
+curl -s http://localhost:4040/api/tunnels | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['tunnels'][0]['public_url'])"
+
+# 5. 验证飞书 webhook 连通性
+curl -s http://localhost:8080/health  # 或 GET /
 ```
 
 ### 数据巡检
@@ -166,20 +184,25 @@ python3 scripts/health_check.py
 ### 服务状态检查
 
 ```bash
-# 检查各服务进程
-ps aux | grep -E "uvicorn|maneki_pipe|watchdog" | grep -v grep
+# 检查核心管道
+systemctl status maneki-pipe --no-pager -l
+journalctl -u maneki-pipe -n 30 --no-pager
 
-# 检查飞书 Bot 健康
-curl http://localhost:8080/
+# 检查 ngrok 公网地址
+curl -s http://localhost:4040/api/tunnels | python3 -c \
+  "import sys,json; print(json.load(sys.stdin)['tunnels'][0]['public_url'])"
+
+# 检查盯盘引擎
+ps aux | grep watchdog | grep -v grep
 
 # 检查 inbox 积压消息
 ls -la pipelines/maneki/inbox/
 
-# 查看巡检状态
-cat data/health_state.json
-
 # 查看最新分析记录
 ls -lt plays/limit_up/data/analysis/ | head -5
+
+# 查看巡检状态
+cat data/health_state.json
 ```
 
 ## 风险提示

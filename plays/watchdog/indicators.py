@@ -131,6 +131,25 @@ def price_features(daily_rows: list[dict]) -> dict:
     start60 = max(0, last - 59)
     feats["limit_up_count_60d"] = float(np.sum(pcts[start60:last + 1] >= 9.8))
 
+    # 连阳天数 + 5日平均涨幅（供 consecutive_strength 因子使用）
+    consecutive_up = 0
+    for i in range(last, -1, -1):
+        if pcts[i] > 0:
+            consecutive_up += 1
+        else:
+            break
+    feats["consecutive_up"] = float(consecutive_up)
+    feats["avg_pct_chg_5d"] = float(np.nanmean(pcts[last - 4:last + 1])) if len(pcts) >= 5 else 0.0
+
+    # 反转信号（供 reversal_signal 因子使用）
+    # 定义：昨日上涨 but 之前 5 日有 3+ 天下跌 → 可能反转
+    reversal = 0
+    if len(pcts) >= 7:
+        prev_5 = pcts[last - 6:last - 1]
+        if pcts[last - 1] > 0 and np.sum(prev_5 < 0) >= 3:
+            reversal = 1
+    feats["reversal_signal"] = float(reversal)
+
     return feats
 
 
@@ -148,9 +167,9 @@ def realtime_row(
 
     字段命名与 quality_combo / intraday_strength / vol_expansion / turnover_momentum 等因子对齐。
     """
-    last = float(market.get("last", 0))
-    open_price = float(market.get("open", market.get("open_price", 0)))
-    pre_close = float(market.get("pre_close", 0))
+    last = float(market.get("last") or 0)
+    open_price = float(market.get("open") or market.get("open_price") or 0)
+    pre_close = float(market.get("pre_close") or 0)
 
     # fallback：从日线取开盘价/昨收（非交易日测试数据常缺失）
     if daily_rows:
@@ -165,25 +184,25 @@ def realtime_row(
 
     # 量比代理：当日累计成交量 / 近20日同期均量
     vol_ratio_proxy = 1.0
-    today_volume = float(market.get("trade_volume", market.get("volume", 0)))
+    today_volume = float(market.get("trade_volume") or market.get("volume") or 0)
     if daily_features.get("avg_amount_5d") and today_volume > 0:
         # 用金额比近似量比（无历史分钟成交量时）
-        last_amount = float(market.get("trade_amount", market.get("amount", 0)))
+        last_amount = float(market.get("trade_amount") or market.get("amount") or 0)
         if last_amount > 0 and daily_features["avg_amount_5d"] > 0:
             vol_ratio_proxy = last_amount / daily_features["avg_amount_5d"]
 
     # 换手率代理：当日累计成交额 / 流通市值（%）
     # circ_mv 单位万元（Tushare daily_basic），trade_amount 单位元（L2）
     turnover_rate = 0.0
-    circ_mv = float(daily_basic.get("circ_mv", 0))
+    circ_mv = float(daily_basic.get("circ_mv") or 0)
     if circ_mv > 0:
-        last_amount = float(market.get("trade_amount", market.get("amount", 0)))
+        last_amount = float(market.get("trade_amount") or market.get("amount") or 0)
         turnover_rate = (last_amount / (circ_mv * 10000)) * 100
 
     # 成交额比
     amount_ratio = 1.0
     if daily_features.get("avg_amount_5d") and daily_features["avg_amount_5d"] > 0:
-        last_amount = float(market.get("trade_amount", market.get("amount", 0)))
+        last_amount = float(market.get("trade_amount") or market.get("amount") or 0)
         amount_ratio = last_amount / daily_features["avg_amount_5d"]
 
     row = {
@@ -211,13 +230,17 @@ def realtime_row(
         "limit_up_count_20d": daily_features.get("limit_up_count_20d", 0.0),
         "limit_up_count_60d": daily_features.get("limit_up_count_60d", 0.0),
         "circ_mv": circ_mv,
-        "pe": float(daily_basic.get("pe", 999.0)),
-        "pb": float(daily_basic.get("pb", 999.0)),
+        "pe": float(daily_basic.get("pe") if daily_basic.get("pe") is not None else 999.0),
+        "pb": float(daily_basic.get("pb") if daily_basic.get("pb") is not None else 999.0),
         "fundamental": dim_scores.get("fundamental", 0.0),
         "technical": dim_scores.get("technical", 0.0),
         "fundflow": dim_scores.get("fundflow", 0.0),
         "sentiment": dim_scores.get("sentiment", 0.0),
         "shortterm": dim_scores.get("shortterm", 0.0),
+        # 新字段（供 pattern/trailing 因子使用）
+        "reversal_signal": daily_features.get("reversal_signal", 0.0),
+        "consecutive_up": daily_features.get("consecutive_up", 0.0),
+        "avg_pct_chg_5d": daily_features.get("avg_pct_chg_5d", 0.0),
     }
     return row
 
@@ -233,12 +256,12 @@ def minute_momentum(klines: list[dict], n: int = 5) -> dict:
     recent = klines[-n:]
     prev = klines[-(n + 1):-1]
 
-    c0 = recent[0].get("open", recent[0].get("close", 0))
+    c0 = recent[0].get("open") or recent[0].get("close") or 0
     c1 = recent[-1].get("close", 0)
     chg_pct = ((c1 / c0 - 1) * 100) if c0 > 0 else 0.0
 
-    vol_recent = sum(float(b.get("volume", 0)) for b in recent)
-    vol_prev = sum(float(b.get("volume", 0)) for b in prev)
+    vol_recent = sum(float(b.get("volume") or 0) for b in recent)
+    vol_prev = sum(float(b.get("volume") or 0) for b in prev)
     vol_ratio = (vol_recent / vol_prev) if vol_prev > 0 else 1.0
 
     return {"chg_pct": chg_pct, "vol_ratio": vol_ratio, "bars": len(recent)}

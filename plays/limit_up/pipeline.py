@@ -235,8 +235,8 @@ def _merge_scan_sources(hot_list: list[dict]) -> list[dict]:
             if re.match(r"^(300|301|688|8|4|920)", prefix):
                 continue
 
-            # 排除当日已涨停（pct >= 9.5）
-            if pct >= 9.5:
+            # 排除当日已涨停（仅对热门榜实时数据，不误伤T-1涨停/龙虎榜）
+            if src_name == "热门榜" and pct >= 9.5:
                 continue
 
             if code not in seen:
@@ -635,7 +635,7 @@ def _fetch_nv2_data(codes: list[str]):
             except Exception:
                 return code, []
 
-        with ThreadPoolExecutor(max_workers=4) as pool:
+        with ThreadPoolExecutor(max_workers=8) as pool:
             futures = {pool.submit(_fetch_one_daily_basic, code): code for code in ts_codes_db}
             for future in as_completed(futures):
                 code, items = future.result()
@@ -1152,7 +1152,7 @@ def _score_one(stock: dict, l2_available: bool, weights: dict,
 
     scores: dict[str, int | float] = {}
     reasons: dict[str, str] = {}
-    with ThreadPoolExecutor(max_workers=5) as pool:
+    with ThreadPoolExecutor(max_workers=8) as pool:
         futures = {pool.submit(fn, code): name for name, fn in funcs.items()}
         for future in as_completed(futures):
             dim = futures[future]

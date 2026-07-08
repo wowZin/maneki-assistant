@@ -1,0 +1,90 @@
+[
+  {
+    "code": "603757.SH",
+    "name": "大元泵业",
+    "scores": {
+      "fundamental": 74.8,
+      "technical": 100,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 38.0
+    },
+    "reasons": {
+      "fundamental": "[中] 中大盘(流通138亿)+17; 高成长/亏损股(PE=95.6)+15; 偏高 PB(PB=6.5)+6; 扣非下滑-69%; 共振:大盘+成长+10",
+      "technical": "[高] 量比适中(1.54)+15; 换手活跃(11.3%)+10; 竞价平开0.0%+2; 放量确认(量>3日均+20%)+5; PIT换手动量+12; 强势>MA20(+16.2%)+8; MA20上倾+7; 5日微涨+1",
+      "fundflow": "否决: 龙虎榜净卖出30379万(2.20%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因16(20日2次/60日4次) | 开盘博弈10(跳空3.5%/竞价换手0.18%) | 位置波动12(pos0.73/t100.7%/std5.7) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 56.14666666666667,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 56.1,
+    "pct_chg": 0.6,
+    "l2api": {
+      "last": 74.6,
+      "bid1_p": 74.5,
+      "ask1_p": 74.64,
+      "vwap": 75.57,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 67.62
+    },
+    "total_score": 67.62
+  },
+  {
+    "code": "002354.SZ",
+    "name": "天娱数科",
+    "scores": {
+      "fundamental": 84.8,
+      "technical": 0,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 49.0
+    },
+    "reasons": {
+      "fundamental": "[高] 中大盘(流通142亿)+17; 高成长/亏损股(PE=0.0)+15; 高 PB 成长(PB=10.5)+10; 扣非暴增+459%; 共振:大盘+成长+10",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "否决: 龙虎榜净卖出19922万(1.41%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因30(20日6次/60日11次) | 开盘博弈2(跳空0.1%/竞价换手0.29%) | 位置波动17(pos0.53/t10-2.4%/std7.8) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 41.14666666666667,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 41.1,
+    "pct_chg": -4.7,
+    "l2api": {
+      "last": 8.3,
+      "bid1_p": 8.29,
+      "ask1_p": 8.3,
+      "vwap": 8.33,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 56.19
+    },
+    "total_score": 56.19
+  }
+]

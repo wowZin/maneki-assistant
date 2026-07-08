@@ -1,11 +1,11 @@
 """
-盯盘信号计算
-============
+盯盘信号计算（v3 — 全因子重构）
+============================
 
-复用 plays.limit_up.factors 中的因子函数，对实时构造的面板行计算：
-- 入场信号（突破 / 放量拉升 / 涨停冲刺）
-- 出场信号（止损 / 止盈 / 时间 / 反转）
-- 异常状态（资金离场 / 抛压）
+复用 plays.limit_up.factors 中全部 16 个可用因子，对实时构造的面板行计算：
+- 入场信号（模型验证 + 突破 / 放量拉升 / 涨停冲刺）
+- 出场信号（止损 / 止盈 / 回撤 / 反转 / 时间）
+- 异常状态（资金离场 / 抛压 / 背离）
 
 实时数据源：scripts.jvquant_ws_client.JvQuantWSClient
 资金流向：scripts.jvquant_client.JvQuantClient
@@ -13,31 +13,55 @@
 
 from __future__ import annotations
 
+# ── 基础因子 ──
 from plays.limit_up.factors.optimized.quality_combo import factor_quality_combo
 from plays.limit_up.factors.optimized.quality_gate import factor_quality_gate
+from plays.limit_up.factors.optimized.model_score import factor_model_score
+# ── 情绪面 ──
+from plays.limit_up.factors.sentiment.ensemble import factor_sentiment_ensemble
+# ── 长短线 ──
 from plays.limit_up.factors.shortterm.intraday import factor_intraday_strength
 from plays.limit_up.factors.shortterm.turnover import factor_turnover_momentum
+from plays.limit_up.factors.shortterm.trailing import factor_trailing_momentum
+from plays.limit_up.factors.shortterm.growth import factor_growth_momentum
+# ── 技术面 ──
 from plays.limit_up.factors.technical.breakout import factor_breakout_quality
 from plays.limit_up.factors.technical.volume import (
     factor_amount_acceleration,
     factor_amount_surge,
     factor_vol_expansion_quality,
 )
+from plays.limit_up.factors.technical.pullback import (
+    factor_pullback_quality,
+    factor_pullback_from_peak,
+    factor_position_optimal,
+)
+from plays.limit_up.factors.technical.pattern import (
+    factor_reversal_signal,
+    factor_gap_up_quality,
+    factor_consecutive_strength,
+)
+# ── 跨维度 ──
+from plays.limit_up.factors.crossdim.divergence import factor_dimension_divergence
+# ── 资金面/基本面 ──
+from plays.limit_up.factors.fundflow.rebuilt import factor_fundflow_rebuilt
+from plays.limit_up.factors.fundamental.rebuilt import factor_fundamental_rebuilt
+
 from plays.watchdog.indicators import minute_momentum
 
 
 # ── 入场信号配置 ──
 ENTRY_CONFIG = {
     "breakout": {
-        "min_gap_up": 0.0,        # 开盘缺口下限（%）
-        "min_pct": 2.0,           # 当前涨幅下限（%）
-        "min_vol_ratio": 1.3,     # 量比下限
-        "min_turnover": 5.0,      # 换手率下限（%）
+        "min_gap_up": 0.0,
+        "min_pct": 2.0,
+        "min_vol_ratio": 1.3,
+        "min_turnover": 5.0,
         "min_breakout_score": 10.0,
         "min_quality_combo": 0.0,
     },
     "surge": {
-        "min_minute_chg": 2.0,    # 近N分钟涨幅下限（%）
+        "min_minute_chg": 2.0,
         "min_minute_vol_ratio": 1.5,
         "min_intraday_score": 10.0,
         "min_turnover": 3.0,
@@ -46,50 +70,77 @@ ENTRY_CONFIG = {
         "min_pct": 7.0,
         "min_turnover": 12.0,
         "min_turnover_momentum": 12.0,
-        "min_technical": 30.0,
-        "min_shortterm": 25.0,
     },
+    # 模型分全局门槛：所有入场模式必须 >= 此值才允许触发
+    "min_model_score": 40.0,
 }
-
 
 # ── 出场信号配置 ──
 EXIT_CONFIG = {
-    "stop_loss_pct": 0.98,        # 固定止损：入场价 × 0.98
-    "trailing_stop_pct": 0.97,    # 移动止损：最高价 × 0.97
-    "take_profit_1": 0.05,        # 第一止盈位 +5%
-    "take_profit_2": 0.10,        # 第二止盈位 +10%
-    "time_stop_minutes": 30,      # 时间止损预警（分钟）
-    "time_force_exit_minutes": 60,  # 时间止损强制出场（分钟）
+    "stop_loss_pct": 0.98,          # 固定止损
+    "trailing_stop_pct": 0.97,      # 移动止损
+    "take_profit_1": 0.05,          # 第一止盈 +5%
+    "take_profit_2": 0.10,          # 第二止盈 +10%
+    "time_stop_minutes": 30,        # 时间止损预警（分钟）
+    "time_force_exit_minutes": 60,  # 强制出场（分钟）
+    # 回调出场
+    "pullback_entry_gain": 0.03,    # 入场后涨幅 >= 3% 才启用回调出场
+    "min_pullback_exit": 0.05,      # 从最高回撤 5% → 出场
+    "min_reversal_exit": 15.0,      # reversal_signal 阈值
 }
-
 
 # ── 异常状态配置 ──
 ABNORMAL_CONFIG = {
-    "critical_score": 70,         # critical 阈值
-    "warning_score": 45,          # warning 阈值
+    "critical_score": 70,
+    "warning_score": 45,
 }
 
 
 def compute_factor_scores(row: dict) -> dict:
-    """计算实时面板行的各因子得分。"""
+    """计算实时面板行的全部因子得分（16 个因子）。"""
     return {
+        # 优化组合
+        "model_score": factor_model_score(row),
         "quality_combo": factor_quality_combo(row),
         "quality_gate": factor_quality_gate(row),
+        # 短线
         "intraday_strength": factor_intraday_strength(row),
-        "vol_expansion": factor_vol_expansion_quality(row),
         "turnover_momentum": factor_turnover_momentum(row),
+        "trailing_momentum": factor_trailing_momentum(row),
+        "growth_momentum": factor_growth_momentum(row),
+        # 技术面
         "breakout_quality": factor_breakout_quality(row),
+        "vol_expansion": factor_vol_expansion_quality(row),
         "amount_acceleration": factor_amount_acceleration(row),
         "amount_surge": factor_amount_surge(row),
+        "pullback_quality": factor_pullback_quality(row),
+        "pullback_from_peak": factor_pullback_from_peak(row),
+        "position_optimal": factor_position_optimal(row),
+        "reversal_signal": factor_reversal_signal(row),
+        "gap_up_quality": factor_gap_up_quality(row),
+        "consecutive_strength": factor_consecutive_strength(row),
+        # 情绪 + 跨维度
+        "sentiment_ensemble": factor_sentiment_ensemble(row),
+        "dimension_divergence": factor_dimension_divergence(row),
+        # 资金 + 基本面
+        "fundflow_rebuilt": factor_fundflow_rebuilt(row),
+        "fundamental_rebuilt": factor_fundamental_rebuilt(row),
     }
 
 
 def check_entry(row: dict, scores: dict, klines: list[dict]) -> tuple[bool, str, str]:
     """检查是否触发入场信号。
 
+    全局前置条件：model_score >= min_model_score
     返回: (is_triggered, signal_type, reason)
     """
     cfg = ENTRY_CONFIG
+
+    # ── 全局模型分门槛 ──
+    model_score = scores.get("model_score", 0.0)
+    if model_score < cfg["min_model_score"]:
+        return False, "", ""
+
     pct = row.get("pct_chg_score_day", 0.0)
     turnover = row.get("turnover_rate", 0.0)
     vol_ratio = row.get("vol_ratio_proxy", 1.0)
@@ -106,10 +157,22 @@ def check_entry(row: dict, scores: dict, klines: list[dict]) -> tuple[bool, str,
         and scores.get("breakout_quality", 0.0) >= bc["min_breakout_score"]
         and quality_combo >= bc["min_quality_combo"]
     ):
-        return True, "breakout", (
-            f"突破: 涨幅{pct:.1f}% 换手{turnover:.1f}% 量比{vol_ratio:.2f} "
-            f"breakout={scores.get('breakout_quality', 0):.0f}"
+        extra = []
+        sent = scores.get("sentiment_ensemble", 0.0)
+        if sent < 10:
+            extra.append(f"情绪偏低({sent:.0f})")
+        elif sent >= 20:
+            extra.append(f"情绪支撑({sent:.0f})")
+        div = scores.get("dimension_divergence", 0.0)
+        if div >= 8:
+            extra.append(f"背离({div:.0f})")
+        reason = (
+            f"突破: {pct:.1f}% 换手{turnover:.1f}% 量比{vol_ratio:.2f} "
+            f"模型{model_score:.0f} breakout={scores.get('breakout_quality', 0):.0f}"
         )
+        if extra:
+            reason += " | " + " ".join(extra)
+        return True, "breakout", reason
 
     # 模式 B：放量拉升
     sc = cfg["surge"]
@@ -120,24 +183,45 @@ def check_entry(row: dict, scores: dict, klines: list[dict]) -> tuple[bool, str,
         and scores.get("intraday_strength", 0.0) >= sc["min_intraday_score"]
         and turnover >= sc["min_turnover"]
     ):
-        return True, "surge", (
+        extra = []
+        sent = scores.get("sentiment_ensemble", 0.0)
+        if sent >= 20:
+            extra.append(f"情绪支撑({sent:.0f})")
+        div = scores.get("dimension_divergence", 0.0)
+        if div >= 8:
+            extra.append(f"注意背离({div:.0f})")
+        reason = (
             f"放量拉升: 5分钟{mom['chg_pct']:.1f}% 5分钟量比{mom['vol_ratio']:.2f} "
-            f"intraday={scores.get('intraday_strength', 0):.0f}"
+            f"模型{model_score:.0f} intraday={scores.get('intraday_strength', 0):.0f}"
         )
+        if extra:
+            reason += " | " + " ".join(extra)
+        return True, "surge", reason
 
-    # 模式 C：涨停冲刺
+    # 模式 C：涨停冲刺（短线专用）
     sp = cfg["sprint"]
     if (
         pct >= sp["min_pct"]
         and turnover >= sp["min_turnover"]
         and scores.get("turnover_momentum", 0.0) >= sp["min_turnover_momentum"]
-        and row.get("technical", 0.0) >= sp["min_technical"]
-        and row.get("shortterm", 0.0) >= sp["min_shortterm"]
     ):
-        return True, "sprint", (
-            f"涨停冲刺: 涨幅{pct:.1f}% 换手{turnover:.1f}% "
-            f"turnover_momentum={scores.get('turnover_momentum', 0):.0f}"
+        extra = []
+        tr = scores.get("trailing_momentum", 0.0)
+        if tr >= 15:
+            extra.append(f"动量强({tr:.0f})")
+        gr = scores.get("growth_momentum", 0.0)
+        if gr >= 10:
+            extra.append(f"成长加速({gr:.0f})")
+        div = scores.get("dimension_divergence", 0.0)
+        if div >= 8:
+            extra.append(f"注意背离({div:.0f})")
+        reason = (
+            f"涨停冲刺: {pct:.1f}% 换手{turnover:.1f}% "
+            f"模型{model_score:.0f} turnover_momentum={scores.get('turnover_momentum', 0):.0f}"
         )
+        if extra:
+            reason += " | " + " ".join(extra)
+        return True, "sprint", reason
 
     return False, "", ""
 
@@ -153,12 +237,15 @@ def check_exit(
 ) -> tuple[bool, str]:
     """检查是否触发出场信号。
 
+    新增回调出场 + 反转出场。
     返回: (is_triggered, reason)
     """
     cfg = config or EXIT_CONFIG
 
     if entry_price <= 0 or current_price <= 0:
         return False, ""
+
+    gain_pct = (current_price / entry_price - 1)
 
     # 固定止损
     if current_price <= entry_price * cfg["stop_loss_pct"]:
@@ -174,21 +261,57 @@ def check_exit(
             )
 
     # 分批止盈
-    gain_pct = (current_price / entry_price - 1)
     if gain_pct >= cfg["take_profit_2"]:
         return True, f"止盈二档(+{gain_pct*100:.1f}%): 建议全平"
     if gain_pct >= cfg["take_profit_1"]:
-        # 第一档只提醒不平仓，由上层判断是否已提醒过
         return True, f"止盈一档(+{gain_pct*100:.1f}%): 建议平50%"
 
     # 时间止损
     if bars_held >= cfg["time_force_exit_minutes"]:
         return True, f"时间止损: 持仓{bars_held}分钟未达目标"
 
-    # 反转出场：盘中强度转负且跌破 VWAP
+    # ── 新增：回调出场（入场后已有盈利，从高点回落）──
+    if gain_pct >= cfg["pullback_entry_gain"] and highest_since_entry > entry_price:
+        pullback_pct = (highest_since_entry - current_price) / highest_since_entry
+        if pullback_pct >= cfg["min_pullback_exit"]:
+            # 结合 pullback_quality / pullback_from_peak / reversal_signal 判断
+            pb_quality = scores.get("pullback_quality", 0.0)
+            pb_peak = scores.get("pullback_from_peak", 0.0)
+            reversal = scores.get("reversal_signal", 0.0)
+            combined = pb_quality + pb_peak + reversal
+
+            # 只有因子信号也确认回调时才出场，避免假摔
+            if reversal >= cfg["min_reversal_exit"]:
+                return True, (
+                    f"反转回调: 回撤{pullback_pct*100:.1f}% "
+                    f"最高{highest_since_entry:.2f} 现价{current_price:.2f} "
+                    f"reversal={reversal:.0f}"
+                )
+            if combined >= 15 and pullback_pct >= cfg["min_pullback_exit"]:
+                return True, (
+                    f"回调出场: 回撤{pullback_pct*100:.1f}% "
+                    f"最高{highest_since_entry:.2f} 现价{current_price:.2f} "
+                    f"pb={pb_quality:.0f}+{pb_peak:.0f} reversal={reversal:.0f}"
+                )
+            # 大幅回撤无条件出场
+            if pullback_pct >= 0.10:
+                return True, (
+                    f"深度回撤: 回撤{pullback_pct*100:.1f}% "
+                    f"最高{highest_since_entry:.2f} 现价{current_price:.2f}"
+                )
+
+    # 反转出场：盘中强度转负 + 跌破 VWAP
     intraday = scores.get("intraday_strength", 0.0)
     if intraday < 0 and current_price < vwap:
         return True, f"日内反转: 强度转负且跌破VWAP({vwap:.2f})"
+
+    # 高位最优位置出场
+    pos_opt = scores.get("position_optimal", 0.0)
+    if pos_opt <= -10 and gain_pct >= 0.02:
+        return True, (
+            f"高位出场: position_optimal={pos_opt:.0f} "
+            f"入场{entry_price:.2f}→现价{current_price:.2f} (+{gain_pct*100:.1f}%)"
+        )
 
     return False, ""
 
@@ -236,32 +359,6 @@ def _score_price_action(row: dict) -> tuple[int, list[str]]:
     elif pct <= -3.0:
         score += 8
         reasons.append(f"下跌{pct:.1f}%")
-
-    return score, reasons
-
-
-def _score_position(row: dict) -> tuple[int, list[str]]:
-    """位置得分：高位更容易是真出货，低位更可能是诱空。"""
-    pos = row.get("position_20d", 0.5)
-    limit20 = row.get("limit_up_count_20d", 0.0)
-    pct = row.get("pct_chg_score_day", 0.0)
-    score = 0
-    reasons = []
-
-    if pos >= 0.85:
-        score += 15
-        reasons.append(f"高位pos{pos:.2f}")
-    elif pos >= 0.70:
-        score += 8
-        reasons.append(f"中高位pos{pos:.2f}")
-
-    if limit20 >= 2 and pct < -3.0:
-        score += 12
-        reasons.append(f"涨停基因{limit20:.0f}次后大跌")
-
-    if pos <= 0.30:
-        score -= 20
-        reasons.append("低位保护")
 
     return score, reasons
 
@@ -314,6 +411,7 @@ def check_abnormal(
 ) -> tuple[bool, str, str]:
     """多因子置信度检测异常状态（资金离场/抛压）。
 
+    新增：factor_fundflow_rebuilt 替代部分手动打分。
     返回: (is_abnormal, level, reason)
     level: "" | "warning" | "critical"
     """
@@ -321,21 +419,31 @@ def check_abnormal(
     details: list[str] = []
     total = 0
 
-    # 1. 资金流
+    # 1. 资金流（手动打分 + 因子分）
     nf_score = _score_netflow(netflow)
     if nf_score > 0:
         total += nf_score
         details.append(f"大单净流出{netflow/10000:.0f}万(-{nf_score})")
+
+    # 因子资金分 ≤ 10 且净流出来 → 强化信号
+    fundflow = scores.get("fundflow_rebuilt", 50.0)
+    if nf_score > 0 and fundflow <= 10:
+        total += 10
+        details.append(f"资金因子确认({fundflow:.0f})")
 
     # 2. 价格行为
     pa_score, pa_reasons = _score_price_action(row)
     total += pa_score
     details.extend(pa_reasons)
 
-    # 3. 位置
-    pos_score, pos_reasons = _score_position(row)
-    total += pos_score
-    details.extend(pos_reasons)
+    # 3. 位置（复用因子）
+    pos_opt = scores.get("position_optimal", 0.0)
+    if pos_opt <= -10:
+        total += 12
+        details.append(f"高位风险({pos_opt:.0f})")
+    elif pos_opt <= -5:
+        total += 6
+        details.append(f"偏高位置({pos_opt:.0f})")
 
     # 4. 盘口压力
     ab_score, ab_reason = _score_ask_bid(ask_bid_ratio)
@@ -355,6 +463,12 @@ def check_abnormal(
         total += hd_score
         details.append(hd_reason)
 
+    # 7. 维度背离 → 异常加分
+    div = scores.get("dimension_divergence", 0.0)
+    if div >= 8:
+        total += 8
+        details.append(f"维度背离({div:.0f})")
+
     if total >= cfg["critical_score"]:
         return True, "critical", f"异常置信度{total}: {'; '.join(details[:5])}"
     if total >= cfg["warning_score"]:
@@ -366,15 +480,16 @@ def check_abnormal(
 def is_worth_watching(row: dict, scores: dict) -> tuple[bool, str]:
     """判断一只股票是否值得进入盯盘候选池。
 
-    默认：quality_combo >= 85 或 turnover_momentum >= 12 且 intraday_strength >= 10
+    增强：加入 model_score 和 fundamental_rebuilt 作为辅助筛选。
     """
     qc = scores.get("quality_combo", 0.0)
     tm = scores.get("turnover_momentum", 0.0)
     is_ = scores.get("intraday_strength", 0.0)
+    ms = scores.get("model_score", 0.0)
 
     if qc >= 85:
-        return True, f"quality_combo={qc:.0f}"
+        return True, f"quality_combo={qc:.0f} model_score={ms:.0f}"
     if tm >= 12 and is_ >= 10:
-        return True, f"turnover_momentum={tm:.0f}, intraday_strength={is_:.0f}"
+        return True, f"turnover_momentum={tm:.0f} intraday_strength={is_:.0f} model_score={ms:.0f}"
 
-    return False, f"quality_combo={qc:.0f}, 活跃度不足"
+    return False, f"quality_combo={qc:.0f} model_score={ms:.0f} 活跃度不足"

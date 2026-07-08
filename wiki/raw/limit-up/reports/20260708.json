@@ -1,0 +1,157 @@
+{
+  "date": "20260708",
+  "pushed_count": 2,
+  "cumulative_limit_count": 52,
+  "hit_count": 0,
+  "hit_rate": 0.0,
+  "win_rate": 0.0,
+  "win_count": 0,
+  "win_total": 2,
+  "hit_codes": [],
+  "miss_codes": [
+    "002354.SZ",
+    "603757.SH"
+  ],
+  "hit_details": [],
+  "dim_performance": {
+    "fundamental": {
+      "total": 2,
+      "hit_avg": 0,
+      "miss_avg": 79.8
+    },
+    "technical": {
+      "total": 2,
+      "hit_avg": 0,
+      "miss_avg": 50.0
+    },
+    "fundflow": {
+      "total": 2,
+      "hit_avg": 0,
+      "miss_avg": 0.0
+    },
+    "sentiment": {
+      "total": 2,
+      "hit_avg": 0,
+      "miss_avg": 0.0
+    },
+    "shortterm": {
+      "total": 2,
+      "hit_avg": 0,
+      "miss_avg": 43.5
+    }
+  },
+  "confidence_dist": {
+    "high": 1,
+    "medium": 1,
+    "low": 0
+  },
+  "ab_comparison": {
+    "enabled": true,
+    "prev": {
+      "weights": {
+        "fundamental": 1.5,
+        "technical": 1.0,
+        "fundflow": 0.5,
+        "sentiment": 1.2,
+        "shortterm": 1.5
+      },
+      "pushed": 78,
+      "codes": [
+        "000938.SZ",
+        "600793.SH",
+        "002585.SZ",
+        "600791.SH",
+        "002842.SZ",
+        "600379.SH",
+        "600378.SH",
+        "603823.SH",
+        "002354.SZ",
+        "002329.SZ",
+        "600360.SH",
+        "002747.SZ",
+        "001206.SZ",
+        "002774.SZ",
+        "002767.SZ",
+        "600206.SH",
+        "600276.SH",
+        "002129.SZ",
+        "000962.SZ",
+        "002475.SZ",
+        "601138.SH",
+        "603757.SH",
+        "001229.SZ",
+        "001309.SZ",
+        "003009.SZ",
+        "002422.SZ",
+        "601678.SH",
+        "600094.SH",
+        "603019.SH",
+        "601869.SH",
+        "000636.SZ",
+        "002185.SZ",
+        "603861.SH",
+        "000973.SZ",
+        "600522.SH",
+        "002989.SZ",
+        "000301.SZ",
+        "000949.SZ",
+        "002931.SZ",
+        "600160.SH",
+        "601991.SH",
+        "002607.SZ",
+        "600487.SH",
+        "605118.SH",
+        "002409.SZ",
+        "000593.SZ",
+        "600521.SH",
+        "002141.SZ",
+        "002457.SZ",
+        "603778.SH",
+        "600183.SH",
+        "000007.SZ",
+        "002384.SZ",
+        "603629.SH",
+        "600376.SH",
+        "603538.SH",
+        "600118.SH",
+        "601872.SH",
+        "000725.SZ",
+        "603020.SH",
+        "600460.SH",
+        "600105.SH",
+        "600246.SH",
+        "603259.SH",
+        "002491.SZ",
+        "603986.SH",
+        "605399.SH",
+        "603356.SH",
+        "601121.SH",
+        "600288.SH",
+        "001311.SZ",
+        "600172.SH",
+        "603178.SH",
+        "002137.SZ",
+        "603065.SH",
+        "002951.SZ",
+        "603211.SH",
+        "003004.SZ"
+      ],
+      "hits": 3
+    },
+    "curr": {
+      "weights": {
+        "fundamental": 0.3,
+        "technical": 0.7,
+        "fundflow": 0.3,
+        "sentiment": 0.5,
+        "shortterm": 2.0
+      },
+      "pushed": 2,
+      "codes": [
+        "002354.SZ",
+        "603757.SH"
+      ],
+      "hits": 0
+    }
+  }
+}

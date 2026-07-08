@@ -1,0 +1,2272 @@
+[
+  {
+    "code": "603757.SH",
+    "name": "大元泵业",
+    "scores": {
+      "fundamental": 74.8,
+      "technical": 100,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 38.0
+    },
+    "reasons": {
+      "fundamental": "[中] 中大盘(流通138亿)+17; 高成长/亏损股(PE=95.6)+15; 偏高 PB(PB=6.5)+6; 扣非下滑-69%; 共振:大盘+成长+10",
+      "technical": "[高] 量比适中(1.54)+15; 换手活跃(11.3%)+10; 竞价平开0.0%+2; 放量确认(量>3日均+20%)+5; PIT换手动量+12; 强势>MA20(+16.2%)+8; MA20上倾+7; 5日微涨+1",
+      "fundflow": "否决: 龙虎榜净卖出30379万(2.20%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因16(20日2次/60日4次) | 开盘博弈10(跳空3.5%/竞价换手0.18%) | 位置波动12(pos0.73/t100.7%/std5.7) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 56.14666666666667,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 56.1,
+    "pct_chg": -0.8,
+    "l2api": {
+      "last": 73.6,
+      "bid1_p": 73.62,
+      "ask1_p": 73.72,
+      "vwap": 73.53,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 67.62
+    },
+    "total_score": 67.62
+  },
+  {
+    "code": "002354.SZ",
+    "name": "天娱数科",
+    "scores": {
+      "fundamental": 84.8,
+      "technical": 0,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 49.0
+    },
+    "reasons": {
+      "fundamental": "[高] 中大盘(流通142亿)+17; 高成长/亏损股(PE=0.0)+15; 高 PB 成长(PB=10.5)+10; 扣非暴增+459%; 共振:大盘+成长+10",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "否决: 龙虎榜净卖出19922万(1.41%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因30(20日6次/60日11次) | 开盘博弈2(跳空0.1%/竞价换手0.29%) | 位置波动17(pos0.53/t10-2.4%/std7.8) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 41.14666666666667,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 41.1,
+    "pct_chg": -6.3,
+    "l2api": {
+      "last": 8.16,
+      "bid1_p": 8.16,
+      "ask1_p": 8.17,
+      "vwap": 8.16,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 56.19
+    },
+    "total_score": 56.19
+  },
+  {
+    "code": "603211.SH",
+    "name": "晋拓股份",
+    "scores": {
+      "fundamental": 77.8,
+      "technical": 72,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 49.0
+    },
+    "reasons": {
+      "fundamental": "[高] 中大盘(流通101亿)+17; 高成长/亏损股(PE=146.3)+15; 高 PB 成长(PB=8.0)+10; 共振:大盘+成长+10",
+      "technical": "[中] 量比过高(3.01)+2; 换手偏高(12.1%)+5; 竞价低开-1.1%-2; 振幅过大16.1%-5; 上影过长(1.5:1)-5; PIT换手动量+12; 强势>MA20(+8.6%)+8; MA20上倾+7",
+      "fundflow": "否决: 龙虎榜净卖出19296万(1.92%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因30(20日5次/60日7次) | 开盘博弈2(跳空-1.0%/竞价换手0.25%) | 位置波动17(pos0.59/t102.3%/std6.6) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 57.24666666666667,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 57.2,
+    "pct_chg": -3.7,
+    "l2api": {
+      "last": 35.65,
+      "vwap": 35.67,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 53.76
+    },
+    "total_score": 53.76
+  },
+  {
+    "code": "600172.SH",
+    "name": "黄河旋风",
+    "scores": {
+      "fundamental": 86.0,
+      "technical": 0,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 42.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通234亿)+20; 高成长/亏损股(PE=0.0)+15; 高 PB 成长(PB=57.1)+10; 扣非增长+43%; 共振:大盘+成长+10",
+      "technical": "高位滞涨:涨幅63%,换手28.3%,长上影",
+      "fundflow": "否决: 龙虎榜净卖出90381万(3.86%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因30(20日4次/60日11次) | 开盘博弈-3(跳空-3.0%/竞价换手0.49%) | 位置波动15(pos0.82/t107.4%/std6.2) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 36.6,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 36.6,
+    "pct_chg": 2.0,
+    "l2api": {
+      "last": 18.72,
+      "bid1_p": 18.72,
+      "ask1_p": 18.77,
+      "vwap": 18.71,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 53.02
+    },
+    "total_score": 53.02
+  },
+  {
+    "code": "600160.SH",
+    "name": "巨化股份",
+    "scores": {
+      "fundamental": 83.0,
+      "technical": 73,
+      "fundflow": 9.0,
+      "sentiment": 0,
+      "shortterm": 23.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通1258亿)+20; 成长股(PE=33.2)+11; 偏高 PB(PB=5.8)+6; 扣非增长+48%; 共振:大盘+成长+10",
+      "technical": "[中] 量比略低(0.71)+5; 换手温和(3.1%)+7; 振幅温和5.4%+6; 收盘<MA20-8; MA20上倾+7; 5日累计-16.6%-3; PIT波动激活+20; 大市值(1258亿)+10",
+      "fundflow": "[无][Tushare] 换手温和3.1%+7; 成交一般39.4亿+5; 资金净流出-6.94%-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因11(20日1次/60日3次) | 开盘博弈-5(跳空-2.0%/竞价换手0.01%) | 位置波动17(pos0.46/t10-8.2%/std5.1) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 40.666666666666664,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 40.7,
+    "pct_chg": 2.0,
+    "l2api": {
+      "last": 47.52,
+      "bid1_p": 47.5,
+      "ask1_p": 47.52,
+      "vwap": 47.59,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 52.12
+    },
+    "total_score": 52.12
+  },
+  {
+    "code": "601678.SH",
+    "name": "滨化股份",
+    "scores": {
+      "fundamental": 82.8,
+      "technical": 70,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 36.0
+    },
+    "reasons": {
+      "fundamental": "[高] 中大盘(流通121亿)+17; 高成长/亏损股(PE=54.2)+15; 扣非高增+80%; 共振:大盘+成长+10",
+      "technical": "[中] 量比极端(0.66)+0; 换手活跃(10.0%)+10; 振幅温和7.5%+6; 收盘<MA20-8; MA20上倾+7; 5日累计-15.1%-3; PIT波动激活+20; 中市值(122亿)+6",
+      "fundflow": "否决: 龙虎榜净卖出58342万(4.81%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因19(20日1次/60日4次) | 开盘博弈0(跳空0.0%/竞价换手0.13%) | 位置波动17(pos0.33/t10-3.3%/std6.6) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 48.61333333333334,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 48.6,
+    "pct_chg": 0.5,
+    "l2api": {
+      "last": 5.97,
+      "bid1_p": 5.96,
+      "ask1_p": 5.97,
+      "vwap": 5.96,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 49.11
+    },
+    "total_score": 49.11
+  },
+  {
+    "code": "000962.SZ",
+    "name": "东方钽业",
+    "scores": {
+      "fundamental": 84.5,
+      "technical": 63,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 31.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通320亿)+20; 高成长/亏损股(PE=130.0)+15; 高 PB 成长(PB=8.4)+10; 营收+41%; 共振:大盘+成长+10",
+      "technical": "[中] 量比略低(0.80)+5; 换手活跃(6.5%)+10; 竞价平开0.6%+2; 振幅温和6.8%+6; 收盘<MA20-8; MA20上倾+7; 5日累计-26.2%-3; 中大盘(336亿)+8",
+      "fundflow": "否决: 龙虎榜净卖出58632万(1.83%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因24(20日2次/60日4次) | 开盘博弈-5(跳空-2.8%/竞价换手0.04%) | 位置波动12(pos0.28/t10-16.7%/std6.8) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 43.81666666666666,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 43.8,
+    "pct_chg": 4.0,
+    "l2api": {
+      "last": 66.22,
+      "bid1_p": 66.21,
+      "ask1_p": 66.22,
+      "vwap": 66.1,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 48.49
+    },
+    "total_score": 48.49
+  },
+  {
+    "code": "600378.SH",
+    "name": "昊华科技",
+    "scores": {
+      "fundamental": 89.5,
+      "technical": 65,
+      "fundflow": 27.0,
+      "sentiment": 0,
+      "shortterm": 40.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通703亿)+20; 高成长/亏损股(PE=58.6)+15; 扣非高增+79%; 营收+34%; 共振:大盘+成长+10",
+      "technical": "[中] 量比极端(0.63)+0; 换手活跃(6.5%)+10; 竞价低开-0.9%-2; 振幅温和6.4%+6; 上影过长(1.2:1)-5; 收盘<MA20-8; MA20上倾+7; 5日累计-19.0%-3",
+      "fundflow": "[无][Tushare] 换手中度活跃6.5%+14; 成交一般45.8亿+5; 中大盘活跃(流通703亿换手6.5%)+6; 资金净流入1.63%+5; 主力流出-1.96‰-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因28(20日2次/60日6次) | 开盘博弈-5(跳空-2.2%/竞价换手0.09%) | 位置波动17(pos0.42/t10-2.4%/std7.2) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 50.78333333333333,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 50.8,
+    "pct_chg": 0.5,
+    "l2api": {
+      "last": 65.88,
+      "bid1_p": 65.86,
+      "ask1_p": 65.88,
+      "vwap": 66.1,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 47.75
+    },
+    "total_score": 47.75
+  },
+  {
+    "code": "600105.SH",
+    "name": "永鼎股份",
+    "scores": {
+      "fundamental": 81.5,
+      "technical": 69,
+      "fundflow": 29.0,
+      "sentiment": 0,
+      "shortterm": 21.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通717亿)+20; 高成长/亏损股(PE=306.9)+15; 高 PB 成长(PB=21.6)+10; 扣非下滑-45%; 营收+42%; 共振:大盘+成长+10",
+      "technical": "[中] 量比适中(1.22)+15; 换手活跃(9.6%)+10; 竞价平开0.4%+2; 振幅温和7.9%+6; 放量确认(量>3日均+20%)+5; 上影极长(161.0:1)-8; PIT换手动量+5; 收盘<MA20-8",
+      "fundflow": "[无][Tushare] 换手中度活跃9.6%+14; 成交尚可68.1亿+10; 大盘活跃(流通717亿换手9.6%)+10; 资金净流出-1.15%-3; 主力流出-3.34‰-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因19(20日1次/60日3次) | 开盘博弈-5(跳空-2.0%/竞价换手0.06%) | 位置波动7(pos0.09/t10-28.6%/std7.0) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 38.25,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 38.2,
+    "pct_chg": 0.7,
+    "l2api": {
+      "last": 49.4,
+      "bid1_p": 49.4,
+      "ask1_p": 49.41,
+      "vwap": 49.4,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 45.86
+    },
+    "total_score": 45.86
+  },
+  {
+    "code": "601872.SH",
+    "name": "招商轮船",
+    "scores": {
+      "fundamental": 62.0,
+      "technical": 42,
+      "fundflow": 2.0,
+      "sentiment": 0,
+      "shortterm": 28.0
+    },
+    "reasons": {
+      "fundamental": "[中] 大盘(流通1308亿)+20; 均衡估值(PE=21.8)+6; 扣非暴增+223%; 营收+53%",
+      "technical": "[低] 量比略低(0.98)+5; 换手偏低(2.0%)+3; 竞价平开0.6%+2; PIT换手动量-5; 收盘<MA20-8; MA20上倾+7; 5日累计-4.0%-3; PIT波动激活+12",
+      "fundflow": "[无][Tushare] 换手偏低2.0%+2; 成交一般26.4亿+5; 资金净流出-9.09%-3; 主力流出-0.56‰-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因16(20日1次/60日2次) | 开盘博弈0(跳空-1.0%/竞价换手0.01%) | 位置波动12(pos0.28/t10-26.1%/std5.7) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 34.666666666666664,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 34.7,
+    "pct_chg": 1.4,
+    "l2api": {
+      "last": 16.42,
+      "bid1_p": 16.41,
+      "ask1_p": 16.42,
+      "vwap": 16.42,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 45.75
+    },
+    "total_score": 45.75
+  },
+  {
+    "code": "603629.SH",
+    "name": "利通电子",
+    "scores": {
+      "fundamental": 90.0,
+      "technical": 61,
+      "fundflow": 27.0,
+      "sentiment": 0,
+      "shortterm": 26.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通401亿)+20; 高成长/亏损股(PE=139.2)+15; 高 PB 成长(PB=18.1)+10; 扣非暴增+860%; 营收+42%; 共振:大盘+成长+10",
+      "technical": "[中] 量比正常(1.18)+10; 换手活跃(7.9%)+10; 竞价平开0.8%+2; 放量确认(量>3日均+20%)+5; PIT换手动量+5; 收盘<MA20-8; 5日累计-42.6%-3; 中大盘(407亿)+8",
+      "fundflow": "[无][Tushare] 换手中度活跃7.9%+14; 成交一般32.4亿+5; 中大盘活跃(流通401亿换手7.9%)+6; 资金净流入2.86%+5; 主力流出-5.82‰-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因19(20日1次/60日3次) | 开盘博弈0(跳空0.2%/竞价换手0.04%) | 位置波动7(pos0.00/t10-49.3%/std6.9) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 40.56666666666666,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 40.6,
+    "pct_chg": 4.4,
+    "l2api": {
+      "last": 115.96,
+      "bid1_p": 115.96,
+      "ask1_p": 115.97,
+      "vwap": 115.97,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 44.79
+    },
+    "total_score": 44.79
+  },
+  {
+    "code": "002842.SZ",
+    "name": "翔鹭钨业",
+    "scores": {
+      "fundamental": 84.8,
+      "technical": 61,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 37.0
+    },
+    "reasons": {
+      "fundamental": "[高] 中大盘(流通101亿)+17; 高成长/亏损股(PE=85.8)+15; 高 PB 成长(PB=8.4)+10; 扣非暴增+6196%; 营收+139%; 共振:大盘+成长+10",
+      "technical": "[中] 量比极端(0.69)+0; 换手偏高(14.0%)+5; 竞价平开0.0%+2; 振幅温和7.6%+6; 收盘<MA20-8; MA20上倾+7; 5日累计-17.4%-3; PIT波动激活+12",
+      "fundflow": "否决: 龙虎榜净卖出32669万(3.23%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因30(20日5次/60日7次) | 开盘博弈-5(跳空-3.2%/竞价换手0.17%) | 位置波动12(pos0.26/t10-19.4%/std6.9) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 47.379999999999995,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 47.4,
+    "pct_chg": -1.5,
+    "l2api": {
+      "last": 37.13,
+      "bid1_p": 37.12,
+      "ask1_p": 37.13,
+      "vwap": 37.13,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 44.4
+    },
+    "total_score": 44.4
+  },
+  {
+    "code": "002989.SZ",
+    "name": "中天精装",
+    "scores": {
+      "fundamental": 67.8,
+      "technical": 0,
+      "fundflow": 20.0,
+      "sentiment": 0,
+      "shortterm": 37.0
+    },
+    "reasons": {
+      "fundamental": "[中] 中盘(流通60亿)+13; 高成长/亏损股(PE=0.0)+15; 扣非下滑-51%; 共振:大盘+成长+10",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "[无][Tushare] 换手温和5.4%+7; 成交不足3.3亿+0; 中盘活跃(流通60亿换手5.4%)+3; 资金净流入6.93%+5; 主力流入1.73‰+5",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因25(20日3次/60日5次) | 开盘博弈0(跳空-0.1%/竞价换手0.14%) | 位置波动12(pos0.27/t10-20.1%/std5.7) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 38.5923076923077,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 38.6,
+    "pct_chg": -8.5,
+    "l2api": {
+      "last": 27.6,
+      "bid1_p": 27.57,
+      "ask1_p": 27.58,
+      "vwap": 27.59,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 44.19
+    },
+    "total_score": 44.19
+  },
+  {
+    "code": "002491.SZ",
+    "name": "通鼎互联",
+    "scores": {
+      "fundamental": 90.0,
+      "technical": 0,
+      "fundflow": 26.0,
+      "sentiment": 0,
+      "shortterm": 37.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通272亿)+20; 高成长/亏损股(PE=0.0)+15; 高 PB 成长(PB=11.3)+10; 扣非暴增+765%; 营收+61%; 共振:大盘+成长+10",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "[无][Tushare] 换手中度活跃8.9%+14; 成交一般24.5亿+5; 大盘活跃(流通272亿换手8.9%)+10; 主力流出-8.38‰-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因30(20日3次/60日7次) | 开盘博弈0(跳空-0.5%/竞价换手0.12%) | 位置波动7(pos0.04/t10-37.5%/std5.8) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 41.846153846153854,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 41.8,
+    "pct_chg": 0.5,
+    "l2api": {
+      "last": 23.27,
+      "bid1_p": 23.26,
+      "ask1_p": 23.28,
+      "vwap": 23.27,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 43.96
+    },
+    "total_score": 43.96
+  },
+  {
+    "code": "003009.SZ",
+    "name": "中天火箭",
+    "scores": {
+      "fundamental": 77.8,
+      "technical": 0,
+      "fundflow": 14.0,
+      "sentiment": 0,
+      "shortterm": 31.0
+    },
+    "reasons": {
+      "fundamental": "[高] 中盘(流通95亿)+13; 高成长/亏损股(PE=0.0)+15; 扣非暴增+107%; 营收+76%; 共振:大盘+成长+10",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "[无][Tushare] 换手温和5.5%+7; 成交不足5.3亿+0; 中盘活跃(流通95亿换手5.5%)+3; 资金净流出-9.27%-3; 主力流出-3.53‰-3; 龙虎榜净买0.5亿+6",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因19(20日1次/60日4次) | 开盘博弈-5(跳空-3.7%/竞价换手0.06%) | 位置波动17(pos0.44/t101.4%/std5.9) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 34.438461538461546,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 34.4,
+    "pct_chg": -4.4,
+    "l2api": {
+      "last": 55.4,
+      "bid1_p": 55.33,
+      "ask1_p": 55.4,
+      "vwap": 55.39,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 43.08
+    },
+    "total_score": 43.08
+  },
+  {
+    "code": "002931.SZ",
+    "name": "锋龙股份",
+    "scores": {
+      "fundamental": 74.8,
+      "technical": 78,
+      "fundflow": 28.0,
+      "sentiment": 0,
+      "shortterm": 40.0
+    },
+    "reasons": {
+      "fundamental": "[中] 中大盘(流通144亿)+17; 高成长/亏损股(PE=689.9)+15; 高 PB 成长(PB=16.4)+10; 扣非下滑-59%; 共振:大盘+成长+10",
+      "technical": "[高] 量比略低(0.72)+5; 换手活跃(8.8%)+10; 竞价大幅低开-4.7%-8; 振幅温和7.4%+6; 站上MA20+5; MA20上倾+7; 5日累计+10.6%+5; PIT波动激活+20",
+      "fundflow": "[无][Tushare] 换手中度活跃8.8%+14; 成交不足13.0亿+0; 大盘活跃(流通144亿换手8.8%)+10; 资金净流出-4.10%-3; 主力流出-3.90‰-3; 龙虎榜净买0.8亿+6",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因28(20日2次/60日7次) | 开盘博弈-5(跳空-3.2%/竞价换手0.14%) | 位置波动17(pos0.47/t10-3.7%/std7.5) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 52.346666666666664,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 52.3,
+    "pct_chg": -10.0,
+    "l2api": {
+      "last": 64.43,
+      "bid1_p": 0,
+      "ask1_p": 64.43,
+      "vwap": 64.43,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 42.15
+    },
+    "total_score": 42.15
+  },
+  {
+    "code": "002774.SZ",
+    "name": "快意电梯",
+    "scores": {
+      "fundamental": 49.0,
+      "technical": 83,
+      "fundflow": 9.0,
+      "sentiment": 0,
+      "shortterm": 42.0
+    },
+    "reasons": {
+      "fundamental": "[低] 中小盘(流通40亿)+8; 高成长/亏损股(PE=66.9)+15; 扣非下滑-146%",
+      "technical": "[高] 量比偏高(2.69)+7; 换手活跃(6.9%)+10; 竞价低开-0.8%-2; 振幅过大17.4%-5; 放量确认(量>3日均+20%)+5; PIT换手动量+5; 强势>MA20(+8.9%)+8; MA20上倾+7",
+      "fundflow": "[无][Tushare] 换手中度活跃6.9%+14; 成交不足3.0亿+0; 中盘活跃(流通40亿换手6.9%)+3; 资金净流出-3.29%-3; 主力流出-1.85‰-3; 上榜净卖率10.7%-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因8(20日1次/60日2次) | 开盘博弈17(跳空6.8%/竞价换手0.24%) | 位置波动17(pos0.57/t103.9%/std4.8) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 52.26666666666666,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 52.3,
+    "pct_chg": -2.9,
+    "l2api": {
+      "last": 13.84,
+      "bid1_p": 13.84,
+      "ask1_p": 13.85,
+      "vwap": 13.82,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 41.98
+    },
+    "total_score": 41.98
+  },
+  {
+    "code": "002141.SZ",
+    "name": "贤丰控股",
+    "scores": {
+      "fundamental": 77.8,
+      "technical": 75.68,
+      "fundflow": 39.6,
+      "sentiment": 0,
+      "shortterm": 45.0
+    },
+    "reasons": {
+      "fundamental": "[高] 中盘(流通60亿)+13; 高成长/亏损股(PE=385.0)+15; 偏高 PB(PB=7.5)+6; 扣非暴增+356%; 共振:大盘+成长+10",
+      "technical": "[高] 量比适中(1.54)+15; 换手过热(24.9%)-5; 竞价低开-0.9%-2; 放量确认(量>3日均+20%)+5; PIT换手动量+12; 强势>MA20(+27.4%)+8; MA20上倾+7; PIT波动激活+6",
+      "fundflow": "[低][Tushare] 换手极度活跃24.9%+35; 成交不足14.7亿+0; 中大盘活跃(流通60亿换手24.9%)+6; 资金净流入3.11%+5; 主力流出-14.19‰-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因30(20日7次/60日10次) | 开盘博弈5(跳空-0.9%/竞价换手0.54%) | 位置波动10(pos0.92/t1022.9%/std7.5) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 55.43866666666667,
+    "resonance": {
+      "count": 2,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 55.4,
+    "pct_chg": -2.7,
+    "l2api": {
+      "last": 5.69,
+      "bid1_p": 5.69,
+      "ask1_p": 5.7,
+      "vwap": 5.69,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 41.61
+    },
+    "total_score": 41.61
+  },
+  {
+    "code": "000938.SZ",
+    "name": "紫光股份",
+    "scores": {
+      "fundamental": 89.5,
+      "technical": 83.6,
+      "fundflow": 29.0,
+      "sentiment": 0,
+      "shortterm": 36.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通900亿)+20; 高成长/亏损股(PE=53.4)+15; 偏高 PB(PB=5.8)+6; 扣非高增+52%; 营收+35%; 共振:大盘+成长+10",
+      "technical": "[高] 量比正常(1.09)+10; 换手活跃(9.8%)+10; 振幅温和5.3%+6; 上影极长(5.6:1)-8; PIT换手动量+5; 强势>MA20(+13.2%)+8; MA20上倾+7; 5日累计+5.2%+5",
+      "fundflow": "[无][Tushare] 换手中度活跃9.8%+14; 成交尚可89.2亿+10; 大盘活跃(流通900亿换手9.8%)+10; 资金净流出-3.08%-3; 主力流出-8.44‰-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因21(20日2次/60日2次) | 开盘博弈-5(跳空-5.0%/竞价换手0.19%) | 位置波动20(pos0.78/t1013.8%/std6.0) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 52.456666666666656,
+    "resonance": {
+      "count": 2,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 52.5,
+    "pct_chg": 8.6,
+    "l2api": {
+      "last": 34.2,
+      "bid1_p": 34.2,
+      "ask1_p": 34.21,
+      "vwap": 34.21,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 41.01
+    },
+    "total_score": 41.01
+  },
+  {
+    "code": "000949.SZ",
+    "name": "新乡化纤",
+    "scores": {
+      "fundamental": 70.2,
+      "technical": 34,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 7.0
+    },
+    "reasons": {
+      "fundamental": "[中] 中盘(流通92亿)+13; 成长股(PE=46.5)+11; 扣非暴增+480%; 共振:大盘+成长+10",
+      "technical": "[无] 量比适中(1.39)+15; 换手温和(4.9%)+7; 竞价低开-0.2%-2; 放量确认(量>3日均+20%)+5; 收盘<MA20-8; 5日累计-15.1%-3; 中小市值(92亿)+3; PIT大市值涨停基因+3",
+      "fundflow": "[无][Tushare] 换手温和4.9%+7; 成交不足4.6亿+0; 资金净流出-9.33%-3; 主力流出-3.95‰-3; 上榜净卖率7.8%-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因0(20日0次/60日0次) | 开盘博弈0(跳空-0.3%/竞价换手0.01%) | 位置波动7(pos0.00/t10-23.2%/std5.1) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 19.62,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 19.6,
+    "pct_chg": 0.5,
+    "l2api": {
+      "last": 5.59,
+      "bid1_p": 5.58,
+      "ask1_p": 5.59,
+      "vwap": 5.59,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 40.89
+    },
+    "total_score": 40.89
+  },
+  {
+    "code": "603458.SH",
+    "name": "勘设股份",
+    "scores": {
+      "fundamental": 53.5,
+      "technical": 0,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 18.0
+    },
+    "reasons": {
+      "fundamental": "[低] 中小盘(流通27亿)+8; 高成长/亏损股(PE=0.0)+15",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "否决: 龙虎榜净卖出15097万(5.50%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因14(20日0次/60日3次) | 开盘博弈-3(跳空-4.2%/竞价换手0.43%) | 位置波动7(pos0.00/t10-36.5%/std5.9) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 17.349999999999998,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 17.3,
+    "pct_chg": 0.9,
+    "l2api": {
+      "last": 9.04,
+      "bid1_p": 9.04,
+      "ask1_p": 9.05,
+      "vwap": 9.05,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 40.87
+    },
+    "total_score": 40.87
+  },
+  {
+    "code": "603019.SH",
+    "name": "中科曙光",
+    "scores": {
+      "fundamental": 88.0,
+      "technical": 65,
+      "fundflow": 16.0,
+      "sentiment": 0,
+      "shortterm": 41.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通1368亿)+20; 高成长/亏损股(PE=62.9)+15; 偏高 PB(PB=6.1)+6; 扣非高增+53%; 共振:大盘+成长+10",
+      "technical": "[中] 量比极端(0.55)+0; 换手温和(4.1%)+7; 竞价高开4.7%+5; 振幅温和4.2%+6; 上影极长(107.0:1)-8; 站上MA20+5; MA20上倾+7; 5日累计-8.7%-3",
+      "fundflow": "[无][Tushare] 换手温和4.1%+7; 成交尚可56.8亿+10; 资金净流出-5.50%-3; 主力流入0.23‰+2",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因21(20日2次/60日2次) | 开盘博弈-5(跳空-1.1%/竞价换手0.02%) | 位置波动25(pos0.48/t105.1%/std5.4) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 51.300000000000004,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 51.3,
+    "pct_chg": 6.0,
+    "l2api": {
+      "last": 99.1,
+      "bid1_p": 99.05,
+      "ask1_p": 99.09,
+      "vwap": 99.11,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 39.05
+    },
+    "total_score": 39.05
+  },
+  {
+    "code": "600379.SH",
+    "name": "宝光股份",
+    "scores": {
+      "fundamental": 67.8,
+      "technical": 73.14999999999999,
+      "fundflow": 25.0,
+      "sentiment": 0,
+      "shortterm": 35.0
+    },
+    "reasons": {
+      "fundamental": "[中] 中盘(流通56亿)+13; 高成长/亏损股(PE=108.8)+15; 偏高 PB(PB=7.1)+6; 扣非下滑-54%; 共振:大盘+成长+10",
+      "technical": "[中] 量比正常(1.07)+10; 换手偏高(12.6%)+5; 竞价大幅低开-3.8%-8; PIT换手动量+5; 强势>MA20(+22.2%)+8; MA20上倾+7; 5日累计+9.9%+5; PIT波动激活+6",
+      "fundflow": "[无][Tushare] 换手活跃12.6%+21; 成交不足6.8亿+0; 中大盘活跃(流通56亿换手12.6%)+6; 资金净流出-1.83%-3; 主力流出-1.04‰-3; 上榜净买率0.4%+3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因30(20日3次/60日5次) | 开盘博弈-5(跳空-4.3%/竞价换手0.10%) | 位置波动10(pos0.89/t1011.9%/std5.3) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 47.181666666666665,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 47.2,
+    "pct_chg": -7.7,
+    "l2api": {
+      "last": 15.6,
+      "bid1_p": 15.58,
+      "ask1_p": 15.6,
+      "vwap": 15.31,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 38.02
+    },
+    "total_score": 38.02
+  },
+  {
+    "code": "600522.SH",
+    "name": "中天科技",
+    "scores": {
+      "fundamental": 87.5,
+      "technical": 41,
+      "fundflow": 22.0,
+      "sentiment": 0,
+      "shortterm": 7.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通1613亿)+20; 高成长/亏损股(PE=55.6)+15; 扣非增长+38%; 营收+35%; 共振:大盘+成长+10",
+      "technical": "[低] 量比极端(0.69)+0; 换手活跃(5.7%)+10; 竞价高开1.5%+5; 振幅温和4.2%+6; 上影过长(1.1:1)-5; 收盘<MA20-8; 5日累计-14.7%-3; 大市值(1613亿)+10",
+      "fundflow": "[无][Tushare] 换手温和5.7%+7; 成交尚可92.2亿+10; 中盘活跃(流通1613亿换手5.7%)+3; 资金净流入4.51%+5; 主力流出-2.08‰-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因0(20日0次/60日0次) | 开盘博弈0(跳空-0.2%/竞价换手0.07%) | 位置波动7(pos0.03/t10-23.6%/std5.6) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 22.983333333333334,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 23.0,
+    "pct_chg": 0.3,
+    "l2api": {
+      "last": 47.42,
+      "bid1_p": 47.41,
+      "ask1_p": 47.42,
+      "vwap": 47.42,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 36.98
+    },
+    "total_score": 36.98
+  },
+  {
+    "code": "600791.SH",
+    "name": "京能置业",
+    "scores": {
+      "fundamental": 55.0,
+      "technical": 0,
+      "fundflow": 25.0,
+      "sentiment": 0,
+      "shortterm": 23.0
+    },
+    "reasons": {
+      "fundamental": "[低] 中小盘(流通36亿)+8; 高成长/亏损股(PE=0.0)+15; 扣非增长+26%",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "[无][Tushare] 换手中度活跃9.8%+14; 成交不足3.7亿+0; 中盘活跃(流通36亿换手9.8%)+3; 资金净流出-2.94%-3; 主力流入8.97‰+5; 龙虎榜净买2054万+3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因16(20日2次/60日3次) | 开盘博弈0(跳空0.9%/竞价换手0.08%) | 位置波动7(pos0.03/t10-23.9%/std5.9) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 26.923076923076927,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 26.9,
+    "pct_chg": -5.0,
+    "l2api": {
+      "last": 7.63,
+      "bid1_p": 7.63,
+      "ask1_p": 7.64,
+      "vwap": 7.63,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 34.58
+    },
+    "total_score": 34.58
+  },
+  {
+    "code": "002475.SZ",
+    "name": "立讯精密",
+    "scores": {
+      "fundamental": 62.5,
+      "technical": 30,
+      "fundflow": 22.0,
+      "sentiment": 0,
+      "shortterm": 7.0
+    },
+    "reasons": {
+      "fundamental": "[中] 大盘(流通4621亿)+20; 均衡估值(PE=27.9)+6; 偏高 PB(PB=5.2)+6; 营收+36%",
+      "technical": "[无] 量比极端(0.68)+0; 换手偏低(1.9%)+3; 竞价低开-0.4%-2; 振幅温和4.6%+6; 上影极长(2.2:1)-8; PIT换手动量-5; 收盘<MA20-8; 5日累计-4.5%-3",
+      "fundflow": "[无][Tushare] 换手偏低1.9%+2; 成交尚可87.1亿+10; 资金净流入8.04%+5; 主力流入1.18‰+5",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因0(20日0次/60日0次) | 开盘博弈0(跳空-0.5%/竞价换手0.01%) | 位置波动7(pos0.17/t10-15.7%/std5.9) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 17.916666666666668,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 17.9,
+    "pct_chg": 1.2,
+    "l2api": {
+      "last": 64.07,
+      "bid1_p": 64.06,
+      "ask1_p": 64.07,
+      "vwap": 64.06,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 33.38
+    },
+    "total_score": 33.38
+  },
+  {
+    "code": "601138.SH",
+    "name": "工业富联",
+    "scores": {
+      "fundamental": 87.0,
+      "technical": 25,
+      "fundflow": 15.0,
+      "sentiment": 0,
+      "shortterm": 10.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通12657亿)+20; 成长股(PE=35.9)+11; 偏高 PB(PB=7.2)+6; 扣非暴增+109%; 营收+57%; 共振:大盘+成长+10",
+      "technical": "[无] 量比极端(0.62)+0; 换手极低(0.5%)-5; 竞价高开1.9%+5; 振幅温和3.4%+6; 上影过长(1.4:1)-5; PIT换手动量-5; 收盘<MA20-8; 5日累计-8.9%-3",
+      "fundflow": "[无][Tushare] 换手极低0.5%+0; 成交尚可61.2亿+10; 资金净流入3.58%+5",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因3(20日0次/60日1次) | 开盘博弈0(跳空-0.7%/竞价换手0.00%) | 位置波动7(pos0.12/t10-16.9%/std4.1) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 21.2,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 21.2,
+    "pct_chg": 5.8,
+    "l2api": {
+      "last": 67.45,
+      "bid1_p": 67.43,
+      "ask1_p": 67.45,
+      "vwap": 67.49,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 32.74
+    },
+    "total_score": 32.74
+  },
+  {
+    "code": "002409.SZ",
+    "name": "雅克科技",
+    "scores": {
+      "fundamental": 83.0,
+      "technical": 78,
+      "fundflow": 29.0,
+      "sentiment": 0,
+      "shortterm": 50.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通592亿)+20; 高成长/亏损股(PE=88.4)+15; 高 PB 成长(PB=10.9)+10; 共振:大盘+成长+10",
+      "technical": "[高] 量比极端(0.66)+0; 换手活跃(9.1%)+10; 竞价高开1.7%+5; 振幅温和6.6%+6; 上影极长(4.6:1)-8; 强势>MA20(+9.5%)+8; MA20上倾+7; 5日累计-21.3%-3",
+      "fundflow": "[无][Tushare] 换手中度活跃9.1%+14; 成交尚可54.5亿+10; 大盘活跃(流通592亿换手9.1%)+10; 资金净流出-1.59%-3; 主力流出-4.16‰-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因30(20日3次/60日7次) | 开盘博弈-5(跳空-1.2%/竞价换手0.14%) | 位置波动25(pos0.57/t107.4%/std6.9) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 59.833333333333336,
+    "resonance": {
+      "count": 2,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 59.8,
+    "pct_chg": 5.5,
+    "l2api": {
+      "last": 195.9,
+      "vwap": 196.01,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 32.38
+    },
+    "total_score": 32.38
+  },
+  {
+    "code": "000725.SZ",
+    "name": "京东方A",
+    "scores": {
+      "fundamental": 77.0,
+      "technical": 77,
+      "fundflow": 40.0,
+      "sentiment": 0,
+      "shortterm": 26.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通2681亿)+20; 成长股(PE=47.9)+11; 共振:大盘+成长+10",
+      "technical": "[高] 量比极端(0.60)+0; 换手活跃(8.0%)+10; 竞价高开1.5%+5; 振幅温和5.0%+6; 上影极长(2.2:1)-8; 强势>MA20(+5.6%)+8; MA20上倾+7; 5日累计-13.6%-3",
+      "fundflow": "[低][Tushare] 换手中度活跃8.0%+14; 成交充沛215.8亿+20; 中大盘活跃(流通2681亿换手8.0%)+6; 资金净流入0.46%+3; 主力流出-3.55‰-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因6(20日0次/60日4次) | 开盘博弈-5(跳空-1.3%/竞价换手0.11%) | 位置波动25(pos0.51/t107.2%/std5.3) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 43.0,
+    "resonance": {
+      "count": 2,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 43.0,
+    "pct_chg": 4.0,
+    "l2api": {
+      "last": 7.88,
+      "bid1_p": 7.87,
+      "ask1_p": 7.88,
+      "vwap": 7.88,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 32.04
+    },
+    "total_score": 32.04
+  },
+  {
+    "code": "603538.SH",
+    "name": "美诺华",
+    "scores": {
+      "fundamental": 80.8,
+      "technical": 68.64,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 36.0
+    },
+    "reasons": {
+      "fundamental": "[高] 中大盘(流通105亿)+17; 高成长/亏损股(PE=103.8)+15; 扣非增长+48%; 共振:大盘+成长+10",
+      "technical": "[中] 量比略高(2.09)+12; 换手过热(33.2%)-5; 竞价低开-0.4%-2; 振幅温和7.3%+6; 放量确认(量>3日均+20%)+5; 上影极长(2.0:1)-8; PIT换手动量+12; 强势>MA20(+16.7%)+8",
+      "fundflow": "否决: 龙虎榜净卖出34495万(3.28%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因16(20日2次/60日3次) | 开盘博弈10(跳空2.7%/竞价换手0.61%) | 位置波动10(pos0.86/t1023.1%/std6.4) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 48.096000000000004,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 48.1,
+    "pct_chg": -9.8,
+    "l2api": {
+      "last": 39.4,
+      "bid1_p": 39.4,
+      "ask1_p": 39.42,
+      "vwap": 39.4,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 31.08
+    },
+    "total_score": 31.08
+  },
+  {
+    "code": "600183.SH",
+    "name": "生益科技",
+    "scores": {
+      "fundamental": 89.5,
+      "technical": 65,
+      "fundflow": 14.0,
+      "sentiment": 0,
+      "shortterm": 30.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通3610亿)+20; 高成长/亏损股(PE=109.9)+15; 高 PB 成长(PB=20.4)+10; 扣非高增+94%; 营收+45%; 共振:大盘+成长+10",
+      "technical": "[中] 量比略低(0.70)+5; 换手偏低(2.0%)+3; 竞价高开2.0%+5; 振幅温和6.3%+6; 收盘<MA20-8; MA20上倾+7; 5日累计-8.5%-3; PIT波动激活+12",
+      "fundflow": "[无][Tushare] 换手偏低2.0%+2; 成交尚可73.2亿+10; 资金净流入2.18%+5; 主力流出-0.73‰-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因18(20日0次/60日6次) | 开盘博弈0(跳空-0.1%/竞价换手0.01%) | 位置波动12(pos0.25/t10-15.0%/std4.8) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 44.11666666666667,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 44.1,
+    "pct_chg": 0.5,
+    "l2api": {
+      "last": 151.58,
+      "bid1_p": 151.59,
+      "ask1_p": 151.61,
+      "vwap": 151.59,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 30.82
+    },
+    "total_score": 30.82
+  },
+  {
+    "code": "002747.SZ",
+    "name": "埃斯顿",
+    "scores": {
+      "fundamental": 90.0,
+      "technical": 43.52000000000001,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 34.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通383亿)+20; 高成长/亏损股(PE=1054.5)+15; 高 PB 成长(PB=14.6)+10; 扣非暴增+365%; 共振:大盘+成长+10",
+      "technical": "[低] 量比适中(1.42)+15; 换手过热(22.5%)-5; 竞价暴跌-6.9%-15; PIT换手动量+12; 强势>MA20(+30.1%)+8; MA20上倾+7; PIT波动激活+6; 中大盘(474亿)+8",
+      "fundflow": "否决: 龙虎榜净卖出58367万(1.52%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因30(20日5次/60日7次) | 开盘博弈2(跳空-0.7%/竞价换手0.45%) | 位置波动2(pos1.00/t1030.2%/std5.7) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 41.821333333333335,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 41.8,
+    "pct_chg": -10.0,
+    "l2api": {
+      "last": 44.1,
+      "bid1_p": 0,
+      "ask1_p": 44.1,
+      "vwap": 44.1,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 30.71
+    },
+    "total_score": 30.71
+  },
+  {
+    "code": "600376.SH",
+    "name": "首开股份",
+    "scores": {
+      "fundamental": 73.8,
+      "technical": 0,
+      "fundflow": 28.0,
+      "sentiment": 0,
+      "shortterm": 28.0
+    },
+    "reasons": {
+      "fundamental": "[中] 中盘(流通92亿)+13; 高成长/亏损股(PE=0.0)+15; 扣非增长+32%; 共振:大盘+成长+10",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "[无][Tushare] 换手中度活跃6.1%+14; 成交不足5.8亿+0; 中大盘活跃(流通92亿换手6.1%)+6; 资金净流出-17.42%-3; 主力流入2.44‰+5; 龙虎榜净买1711万+3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因8(20日1次/60日2次) | 开盘博弈-5(跳空-3.0%/竞价换手0.16%) | 位置波动25(pos0.39/t108.2%/std5.0) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 33.28461538461539,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 33.3,
+    "pct_chg": -6.7,
+    "l2api": {
+      "last": 3.33,
+      "bid1_p": 3.32,
+      "ask1_p": 3.33,
+      "vwap": 3.32,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 30.45
+    },
+    "total_score": 30.45
+  },
+  {
+    "code": "002767.SZ",
+    "name": "先锋电子",
+    "scores": {
+      "fundamental": 49.0,
+      "technical": 75,
+      "fundflow": 11.0,
+      "sentiment": 0,
+      "shortterm": 66.0
+    },
+    "reasons": {
+      "fundamental": "[低] 中小盘(流通24亿)+8; 高成长/亏损股(PE=99.9)+15; 扣非下滑-187%",
+      "technical": "[高] 量比极端(6.20)+0; 换手偏高(12.7%)+5; 竞价低开-0.1%-2; 振幅过大15.5%-5; PIT换手动量+12; 强势>MA20(+4.9%)+8; MA20微倾+4; 5日累计+10.8%+5",
+      "fundflow": "[无][Tushare] 换手活跃12.7%+21; 成交不足3.3亿+0; 中盘活跃(流通24亿换手12.7%)+3; 资金净流出-8.19%-3; 主力流出-4.47‰-3; 龙虎榜净卖0.7亿-5",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因21(20日2次/60日2次) | 开盘博弈20(跳空8.0%/竞价换手1.16%) | 位置波动25(pos0.44/t105.1%/std5.1) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 66.39999999999999,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 66.4,
+    "pct_chg": -2.7,
+    "l2api": {
+      "last": 17.95,
+      "vwap": 17.95,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 29.05
+    },
+    "total_score": 29.05
+  },
+  {
+    "code": "002457.SZ",
+    "name": "青龙管业",
+    "scores": {
+      "fundamental": 46.0,
+      "technical": 57.0,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 36.0
+    },
+    "reasons": {
+      "fundamental": "[低] 中小盘(流通50亿)+8; 成长股(PE=38.6)+11",
+      "technical": "[中] 量比过高(3.15)+2; 换手过热(27.7%)-5; 竞价低开-0.4%-2; 振幅温和7.8%+6; 上影极长(2.0:1)-8; PIT换手动量+12; 强势>MA20(+15.5%)+8; MA20上倾+7",
+      "fundflow": "否决: 龙虎榜净卖出18990万(3.80%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因11(20日1次/60日3次) | 开盘博弈15(跳空4.8%/竞价换手0.78%) | 位置波动10(pos0.87/t1018.0%/std4.5) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 41.9,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 41.9,
+    "pct_chg": -2.6,
+    "l2api": {
+      "last": 14.6,
+      "bid1_p": 14.6,
+      "ask1_p": 14.61,
+      "vwap": 14.61,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 28.86
+    },
+    "total_score": 28.86
+  },
+  {
+    "code": "603978.SH",
+    "name": "深圳新星",
+    "scores": {
+      "fundamental": 77.8,
+      "technical": 0,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 2.0
+    },
+    "reasons": {
+      "fundamental": "[高] 中盘(流通54亿)+13; 高成长/亏损股(PE=0.0)+15; 扣非暴增+3933%; 共振:大盘+成长+10",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "否决: 龙虎榜净卖出29199万(5.36%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因0(20日0次/60日0次) | 开盘博弈-5(跳空-4.2%/竞价换手0.11%) | 位置波动7(pos0.17/t10-11.3%/std6.1) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 9.113333333333333,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 9.1,
+    "pct_chg": -3.4,
+    "l2api": {
+      "last": 24.92,
+      "bid1_p": 24.92,
+      "ask1_p": 24.94,
+      "vwap": 24.95,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 28.8
+    },
+    "total_score": 28.8
+  },
+  {
+    "code": "603986.SH",
+    "name": "兆易创新",
+    "scores": {
+      "fundamental": 90.0,
+      "technical": 52,
+      "fundflow": 42.0,
+      "sentiment": 0,
+      "shortterm": 31.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通4145亿)+20; 高成长/亏损股(PE=264.0)+15; 高 PB 成长(PB=17.2)+10; 扣非暴增+530%; 营收+119%; 共振:大盘+成长+10",
+      "technical": "[低] 量比略低(0.97)+5; 换手活跃(7.7%)+10; 竞价高开1.6%+5; 振幅温和6.0%+6; 上影极长(4.2:1)-8; 收盘<MA20-8; MA20上倾+7; 5日累计-19.7%-3",
+      "fundflow": "[低][Tushare] 换手中度活跃7.7%+14; 成交充沛322.7亿+20; 中大盘活跃(流通4145亿换手7.7%)+6; 资金净流入5.39%+5; 主力流出-3.38‰-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因19(20日1次/60日3次) | 开盘博弈-5(跳空-4.5%/竞价换手0.12%) | 位置波动17(pos0.40/t10-12.1%/std6.8) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 41.800000000000004,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 41.8,
+    "pct_chg": 2.9,
+    "l2api": {
+      "last": 637.71,
+      "bid1_p": 637.48,
+      "ask1_p": 638.0,
+      "vwap": 637.36,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 28.26
+    },
+    "total_score": 28.26
+  },
+  {
+    "code": "000593.SZ",
+    "name": "德龙汇能",
+    "scores": {
+      "fundamental": 77.8,
+      "technical": 64.8,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 28.0
+    },
+    "reasons": {
+      "fundamental": "[高] 中盘(流通94亿)+13; 高成长/亏损股(PE=462.9)+15; 高 PB 成长(PB=10.6)+10; 扣非暴增+320%; 共振:大盘+成长+10",
+      "technical": "[中] 量比略高(2.26)+12; 换手偏高(14.2%)+5; 竞价大幅低开-5.0%-8; 振幅过大15.1%-5; 放量确认(量>3日均+20%)+5; PIT换手动量+12; 强势>MA20(+13.8%)+8; MA20上倾+7",
+      "fundflow": "否决: 龙虎榜净卖出13377万(1.42%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因8(20日1次/60日2次) | 开盘博弈10(跳空3.0%/竞价换手0.11%) | 位置波动10(pos0.93/t109.1%/std6.0) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 41.56666666666666,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 41.6,
+    "pct_chg": -8.1,
+    "l2api": {
+      "last": 24.13,
+      "bid1_p": 24.11,
+      "ask1_p": 24.13,
+      "vwap": 24.17,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 28.25
+    },
+    "total_score": 28.25
+  },
+  {
+    "code": "600630.SH",
+    "name": "龙头股份",
+    "scores": {
+      "fundamental": 55.0,
+      "technical": 40,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 10.0
+    },
+    "reasons": {
+      "fundamental": "[低] 中小盘(流通33亿)+8; 高成长/亏损股(PE=70.3)+15; 扣非增长+38%",
+      "technical": "[低] 量比略低(0.97)+5; 换手活跃(8.3%)+10; 竞价大幅低开-3.1%-8; 振幅温和3.8%+6; 收盘<MA20-8; 5日累计-19.9%-3; 小市值(33亿)+0; 换手中度8.3%+3",
+      "fundflow": "否决: 龙虎榜净卖出13848万(4.18%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因8(20日1次/60日1次) | 开盘博弈-5(跳空-8.0%/竞价换手0.20%) | 位置波动7(pos0.00/t10-18.8%/std6.3) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 21.5,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 21.5,
+    "pct_chg": -8.7,
+    "l2api": {
+      "last": 7.11,
+      "bid1_p": 7.11,
+      "ask1_p": 7.12,
+      "vwap": 7.11,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 28.24
+    },
+    "total_score": 28.24
+  },
+  {
+    "code": "600521.SH",
+    "name": "华海药业",
+    "scores": {
+      "fundamental": 80.0,
+      "technical": 84,
+      "fundflow": 2.0,
+      "sentiment": 0,
+      "shortterm": 12.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通242亿)+20; 高成长/亏损股(PE=90.7)+15; 扣非下滑-52%; 共振:大盘+成长+10",
+      "technical": "[高] 量比适中(1.67)+15; 换手温和(4.6%)+7; 竞价平开0.4%+2; 振幅温和4.3%+6; 放量确认(量>3日均+20%)+5; 上影过长(1.8:1)-5; 强势>MA20(+9.4%)+8; MA20上倾+7",
+      "fundflow": "[无][Tushare] 换手温和4.6%+7; 成交不足11.2亿+0; 资金净流出-11.64%-3; 主力流出-0.59‰-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因0(20日0次/60日0次) | 开盘博弈-5(跳空-2.5%/竞价换手0.09%) | 位置波动17(pos0.75/t109.6%/std3.9) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 35.6,
+    "resonance": {
+      "count": 2,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 35.6,
+    "pct_chg": 0.0,
+    "l2api": {
+      "last": 16.13,
+      "bid1_p": 16.13,
+      "ask1_p": 16.14,
+      "vwap": 16.15,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 26.93
+    },
+    "total_score": 26.93
+  },
+  {
+    "code": "603020.SH",
+    "name": "爱普股份",
+    "scores": {
+      "fundamental": 55.0,
+      "technical": 76,
+      "fundflow": 20.0,
+      "sentiment": 0,
+      "shortterm": 35.0
+    },
+    "reasons": {
+      "fundamental": "[低] 中小盘(流通50亿)+8; 高成长/亏损股(PE=57.2)+15; 扣非增长+25%",
+      "technical": "[高] 量比略高(2.16)+12; 换手活跃(5.5%)+10; 竞价大幅低开-2.8%-8; 放量确认(量>3日均+20%)+5; PIT换手动量+5; 收盘<MA20-8; MA20上倾+7; 5日累计-5.7%-3",
+      "fundflow": "[无][Tushare] 换手温和5.5%+7; 成交不足2.8亿+0; 中盘活跃(流通50亿换手5.5%)+3; 资金净流入9.24%+5; 主力流入1.70‰+5",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因23(20日1次/60日5次) | 开盘博弈-5(跳空-1.0%/竞价换手0.06%) | 位置波动17(pos0.57/t10-10.1%/std5.0) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 46.56666666666666,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 46.6,
+    "pct_chg": -2.4,
+    "l2api": {
+      "last": 12.9,
+      "bid1_p": 12.9,
+      "ask1_p": 12.91,
+      "vwap": 12.89,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 26.92
+    },
+    "total_score": 26.92
+  },
+  {
+    "code": "000301.SZ",
+    "name": "东方盛虹",
+    "scores": {
+      "fundamental": 90.0,
+      "technical": 71,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 25.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通821亿)+20; 高成长/亏损股(PE=614.4)+15; 扣非暴增+350%; 共振:大盘+成长+10",
+      "technical": "[中] 量比适中(1.91)+15; 换手极低(1.3%)-5; 竞价平开0.1%+2; 放量确认(量>3日均+20%)+5; PIT换手动量-5; 强势>MA20(+3.3%)+8; MA20上倾+7; 5日累计+3.4%+3",
+      "fundflow": "[无][Tushare] 换手偏低1.3%+2; 成交不足11.3亿+0; 资金净流出-14.52%-3; 主力流出-0.67‰-3; 龙虎榜净卖0.6亿-5",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因8(20日1次/60日1次) | 开盘博弈0(跳空0.6%/竞价换手0.05%) | 位置波动17(pos0.53/t103.3%/std5.1) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 42.23333333333333,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 42.2,
+    "pct_chg": 2.5,
+    "l2api": {
+      "last": 12.74,
+      "bid1_p": 12.73,
+      "ask1_p": 12.74,
+      "vwap": 12.74,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 25.16
+    },
+    "total_score": 25.16
+  },
+  {
+    "code": "603778.SH",
+    "name": "国晟科技",
+    "scores": {
+      "fundamental": 73.8,
+      "technical": 0,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 26.0
+    },
+    "reasons": {
+      "fundamental": "[中] 中盘(流通70亿)+13; 高成长/亏损股(PE=0.0)+15; 高 PB 成长(PB=25.6)+10; 扣非增长+21%; 共振:大盘+成长+10",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "否决: 龙虎榜净卖出21990万(3.12%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因19(20日1次/60日3次) | 开盘博弈0(跳空-0.6%/竞价换手0.15%) | 位置波动7(pos0.08/t10-18.7%/std5.9) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 24.713333333333335,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 24.7,
+    "pct_chg": 2.8,
+    "l2api": {
+      "last": 11.26,
+      "bid1_p": 11.25,
+      "ask1_p": 11.26,
+      "vwap": 11.25,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 24.47
+    },
+    "total_score": 24.47
+  },
+  {
+    "code": "002384.SZ",
+    "name": "东山精密",
+    "scores": {
+      "fundamental": 90.0,
+      "technical": 73,
+      "fundflow": 50.0,
+      "sentiment": 0,
+      "shortterm": 20.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通3284亿)+20; 高成长/亏损股(PE=313.0)+15; 高 PB 成长(PB=19.2)+10; 扣非暴增+167%; 营收+53%; 共振:大盘+成长+10",
+      "technical": "[中] 量比正常(1.12)+10; 换手活跃(6.7%)+10; 竞价低开-1.6%-2; PIT换手动量+5; 收盘<MA20-8; MA20上倾+7; 5日累计-3.8%-3; PIT波动激活+20",
+      "fundflow": "[低][Tushare] 换手中度活跃6.7%+14; 成交充沛214.9亿+20; 中大盘活跃(流通3284亿换手6.7%)+6; 资金净流入8.86%+5; 主力流入4.09‰+5",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因3(20日0次/60日2次) | 开盘博弈0(跳空0.0%/竞价换手0.04%) | 位置波动17(pos0.45/t10-7.9%/std5.7) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 39.36666666666667,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 39.4,
+    "pct_chg": 1.0,
+    "l2api": {
+      "last": 239.25,
+      "bid1_p": 239.25,
+      "ask1_p": 239.48,
+      "vwap": 239.18,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 23.31
+    },
+    "total_score": 23.31
+  },
+  {
+    "code": "002607.SZ",
+    "name": "中公教育",
+    "scores": {
+      "fundamental": 80.8,
+      "technical": 0,
+      "fundflow": 35.9,
+      "sentiment": 0,
+      "shortterm": 31.0
+    },
+    "reasons": {
+      "fundamental": "[高] 中大盘(流通125亿)+17; 高成长/亏损股(PE=285.1)+15; 高 PB 成长(PB=17.3)+10; 扣非增长+26%; 共振:大盘+成长+10",
+      "technical": "竞价跌停开盘:竞价-9.7%",
+      "fundflow": "[低][Tushare] 换手活跃14.4%+21; 成交不足17.3亿+0; 大盘活跃(流通125亿换手14.4%)+10; 资金净流入29.73%+5; 主力流出-4.64‰-3; 龙虎榜净买2689万+3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因21(20日2次/60日2次) | 开盘博弈0(跳空-4.3%/竞价换手0.62%) | 位置波动10(pos0.94/t1021.5%/std5.1) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 37.31153846153846,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 37.3,
+    "pct_chg": -7.1,
+    "l2api": {
+      "last": 2.1,
+      "bid1_p": 2.1,
+      "ask1_p": 2.11,
+      "vwap": 2.1,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 21.95
+    },
+    "total_score": 21.95
+  },
+  {
+    "code": "002185.SZ",
+    "name": "华天科技",
+    "scores": {
+      "fundamental": 90.0,
+      "technical": 97,
+      "fundflow": 64.0,
+      "sentiment": 0,
+      "shortterm": 31.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通729亿)+20; 高成长/亏损股(PE=102.6)+15; 扣非暴增+114%; 营收+34%; 共振:大盘+成长+10",
+      "technical": "[高] 量比适中(1.34)+15; 竞价高开4.7%+5; 放量确认(量>3日均+20%)+5; PIT换手动量+12; 强势>MA20(+11.1%)+8; MA20上倾+7; 5日微涨+1; PIT波动激活+6",
+      "fundflow": "[中][Tushare] 换手非常活跃16.9%+28; 成交充足120.0亿+15; 大盘活跃(流通729亿换手16.9%)+10; 资金净流出-6.31%-3; 主力流入48.28‰+5; 龙虎榜净买23.4亿+6",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因11(20日1次/60日3次) | 开盘博弈0(跳空-0.5%/竞价换手0.05%) | 位置波动12(pos0.75/t104.5%/std5.2) | 连板溢价8(昨日涨停1/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 52.29999999999999,
+    "resonance": {
+      "count": 2,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 52.3,
+    "pct_chg": 0.1,
+    "l2api": {
+      "last": 21.96,
+      "bid1_p": 21.96,
+      "ask1_p": 21.97,
+      "vwap": 21.95,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 20.87
+    },
+    "total_score": 20.87
+  },
+  {
+    "code": "000007.SZ",
+    "name": "全新好",
+    "scores": {
+      "fundamental": 49.0,
+      "technical": 42,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 17.0
+    },
+    "reasons": {
+      "fundamental": "[低] 中小盘(流通40亿)+8; 高成长/亏损股(PE=2083.5)+15; 高 PB 成长(PB=22.4)+10; 扣非下滑-231%",
+      "technical": "[低] 量比适中(1.87)+15; 换手温和(4.8%)+7; 竞价高开1.9%+5; 放量确认(量>3日均+20%)+5; 收盘<MA20-8; 5日累计-5.7%-3; 小市值(40亿)+0; PIT成长动量+10",
+      "fundflow": "[无][Tushare] 换手温和4.8%+7; 成交不足2.0亿+0; 资金净流出-26.18%-3; 主力流出-0.82‰-3; 龙虎榜净卖0.5亿-5; 上榜净卖率13.3%-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因0(20日0次/60日0次) | 开盘博弈10(跳空4.8%/竞价换手0.09%) | 位置波动7(pos0.00/t10-15.0%/std4.2) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 26.03333333333333,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 26.0,
+    "pct_chg": -1.1,
+    "l2api": {
+      "last": 11.46,
+      "bid1_p": 11.46,
+      "ask1_p": 11.49,
+      "vwap": 11.46,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 20.0
+    },
+    "total_score": 20.0
+  },
+  {
+    "code": "600843.SH",
+    "name": "上工申贝",
+    "scores": {
+      "fundamental": 52.0,
+      "technical": 0,
+      "fundflow": 2.0,
+      "sentiment": 0,
+      "shortterm": 25.0
+    },
+    "reasons": {
+      "fundamental": "[低] 中小盘(流通38亿)+8; 高成长/亏损股(PE=0.0)+15",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "[无][Tushare] 换手温和5.3%+7; 成交不足2.1亿+0; 中盘活跃(流通38亿换手5.3%)+3; 资金净流出-24.05%-3; 主力流出-2.23‰-3; 上榜净卖率5.9%-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因8(20日1次/60日2次) | 开盘博弈0(跳空-0.3%/竞价换手0.02%) | 位置波动17(pos0.35/t10-8.8%/std4.0) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 25.46153846153846,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 25.5,
+    "pct_chg": -2.2,
+    "l2api": null,
+    "factors": {
+      "model_score": 16.69
+    },
+    "total_score": 16.69
+  },
+  {
+    "code": "603903.SH",
+    "name": "中持股份",
+    "scores": {
+      "fundamental": 59.0,
+      "technical": 0,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 20.0
+    },
+    "reasons": {
+      "fundamental": "[中] 中小盘(流通40亿)+8; 高成长/亏损股(PE=0.0)+15; 扣非暴增+593%",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "否决: 龙虎榜净卖出16704万(4.14%流通市值)（极端撤离）",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因16(20日2次/60日4次) | 开盘博弈2(跳空0.1%/竞价换手0.26%) | 位置波动2(pos0.93/t1031.7%/std4.6) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 19.233333333333334,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 19.2,
+    "pct_chg": 2.8,
+    "l2api": {
+      "last": 16.26,
+      "bid1_p": 16.25,
+      "ask1_p": 16.26,
+      "vwap": 16.27,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 15.07
+    },
+    "total_score": 15.07
+  },
+  {
+    "code": "002329.SZ",
+    "name": "皇氏集团",
+    "scores": {
+      "fundamental": 49.0,
+      "technical": 0,
+      "fundflow": 49.7,
+      "sentiment": 0,
+      "shortterm": 30.0
+    },
+    "reasons": {
+      "fundamental": "[低] 中小盘(流通23亿)+8; 高成长/亏损股(PE=0.0)+15; 偏高 PB(PB=5.8)+6; 扣非下滑-462%",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "[低][Tushare] 换手极度活跃22.1%+35; 成交不足4.9亿+0; 中盘活跃(流通23亿换手22.1%)+3; 资金净流入3.77%+5; 主力流入20.23‰+5; 龙虎榜净买2140万+3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因21(20日2次/60日2次) | 开盘博弈7(跳空2.1%/竞价换手0.46%) | 位置波动2(pos0.94/t1026.2%/std4.9) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 34.46538461538462,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 34.5,
+    "pct_chg": -6.3,
+    "l2api": {
+      "last": 3.25,
+      "bid1_p": 3.25,
+      "ask1_p": 3.26,
+      "vwap": 3.26,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 14.54
+    },
+    "total_score": 14.54
+  },
+  {
+    "code": "000636.SZ",
+    "name": "风华高科",
+    "scores": {
+      "fundamental": 86.0,
+      "technical": 57,
+      "fundflow": 30.0,
+      "sentiment": 0,
+      "shortterm": 30.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通709亿)+20; 高成长/亏损股(PE=250.2)+15; 偏高 PB(PB=5.7)+6; 扣非增长+33%; 共振:大盘+成长+10",
+      "technical": "[中] 量比略低(0.98)+5; 换手活跃(7.1%)+10; 竞价平开1.0%+2; 收盘<MA20-8; MA20微倾+4; 5日累计-17.7%-3; PIT波动激活+6; 大市值(709亿)+10",
+      "fundflow": "[无][Tushare] 换手中度活跃7.1%+14; 成交一般49.4亿+5; 中大盘活跃(流通709亿换手7.1%)+6; 资金净流入13.66%+5",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因23(20日1次/60日8次) | 开盘博弈-5(跳空-1.2%/竞价换手0.11%) | 位置波动12(pos0.25/t10-15.4%/std6.5) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 41.9,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 41.9,
+    "pct_chg": 2.5,
+    "l2api": {
+      "last": 62.78,
+      "bid1_p": 62.78,
+      "ask1_p": 62.8,
+      "vwap": 62.77,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 13.58
+    },
+    "total_score": 13.58
+  },
+  {
+    "code": "603937.SH",
+    "name": "丽岛新材",
+    "scores": {
+      "fundamental": 59.0,
+      "technical": 0,
+      "fundflow": 23.0,
+      "sentiment": 0,
+      "shortterm": 8.0
+    },
+    "reasons": {
+      "fundamental": "[中] 中小盘(流通32亿)+8; 高成长/亏损股(PE=0.0)+15; 扣非暴增+255%",
+      "technical": "竞价跌停开盘:竞价-9.3%",
+      "fundflow": "[无][Tushare] 换手活跃12.9%+21; 成交不足4.0亿+0; 中盘活跃(流通32亿换手12.9%)+3; 资金净流出-5.34%-3; 主力流入1.80‰+5; 上榜净卖率5.5%-3",
+      "sentiment": "情绪熔断:炸板率41.1%>40%+跌停30家",
+      "shortterm": "涨停基因0(20日0次/60日0次) | 开盘博弈0(跳空-0.6%/竞价换手0.01%) | 位置波动8(pos0.84/t1010.4%/std2.0) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 15.615384615384619,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 15.6,
+    "pct_chg": -10.0,
+    "l2api": null,
+    "factors": {
+      "model_score": 12.68
+    },
+    "total_score": 12.68
+  }
+]
