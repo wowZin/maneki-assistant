@@ -1,0 +1,46 @@
+[
+  {
+    "code": "002467.SZ",
+    "name": "二六三",
+    "scores": {
+      "fundamental": 67.8,
+      "technical": 0,
+      "fundflow": 27.0,
+      "sentiment": 45,
+      "shortterm": 25.0
+    },
+    "reasons": {
+      "fundamental": "[中] 中盘(流通64亿)+13; 高成长/亏损股(PE=0.0)+15; 扣非下滑-91%; 共振:大盘+成长+10",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "[无][Tushare] 换手中度活跃6.4%+14; 成交不足4.0亿+0; 中大盘活跃(流通64亿换手6.4%)+6; 资金净流出-22.07%-3; 主力流入14.99‰+5; 封单14207.2%流通+3",
+      "sentiment": "[-低] 涨停溢价11.7%+10; 炸板率23.0%+7; 最高7板+5; 概念共振(+15); 梯队完整+4; 换手6.4%温和+3; 20日涨停+1",
+      "shortterm": "涨停基因8(20日1次/60日1次) | 开盘博弈0(跳空0.0%/竞价换手0.01%) | 位置波动17(pos0.35/t10-3.3%/std4.3) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 33.15714285714286,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 33.2,
+    "pct_chg": 10.1,
+    "l2api": {
+      "last": 4.69,
+      "bid1_p": 4.69,
+      "ask1_p": 0,
+      "vwap": 4.69,
+      "kline_bars": 0
+    },
+    "factors": {
+      "model_score": 29.29
+    },
+    "total_score": 29.29
+  }
+]

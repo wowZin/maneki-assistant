@@ -1,0 +1,116 @@
+[
+  {
+    "code": "002354.SZ",
+    "name": "天娱数科",
+    "scores": {
+      "fundamental": 84.8,
+      "technical": 0,
+      "fundflow": 45.0,
+      "sentiment": 52,
+      "shortterm": 44.0
+    },
+    "reasons": {
+      "fundamental": "[高] 中大盘(流通130亿)+17; 高成长/亏损股(PE=0.0)+15; 高 PB 成长(PB=9.6)+10; 扣非暴增+459%; 共振:大盘+成长+10",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "[低][Tushare] 换手极度活跃21.3%+35; 成交一般28.3亿+5; 大盘活跃(流通130亿换手21.3%)+10; 资金净流出-9.75%-3; 主力流出-4.32‰-3",
+      "sentiment": "[-低] 涨停溢价11.7%+10; 炸板率23.0%+7; 最高7板+5; 概念共振(+15); 梯队完整+4; 换手21.3%高活+3; 20日涨停6次+3; 连板基因4连板+2",
+      "shortterm": "涨停基因30(20日5次/60日11次) | 开盘博弈-3(跳空-2.4%/竞价换手0.27%) | 位置波动17(pos0.34/t10-0.1%/std7.6) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 49.800000000000004,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 49.8,
+    "pct_chg": 0.8,
+    "l2api": null,
+    "factors": {
+      "model_score": 67.83
+    },
+    "total_score": 67.83
+  },
+  {
+    "code": "002428.SZ",
+    "name": "云南锗业",
+    "scores": {
+      "fundamental": 80.0,
+      "technical": 78,
+      "fundflow": 39.0,
+      "sentiment": 52,
+      "shortterm": 40.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通647亿)+20; 高成长/亏损股(PE=3209.5)+15; 高 PB 成长(PB=44.0)+10; 扣非下滑-32%; 共振:大盘+成长+10",
+      "technical": "[高] 量比正常(1.01)+10; 换手活跃(10.0%)+10; 竞价高开1.1%+5; PIT换手动量+5; 收盘<MA20-8; MA20上倾+7; 5日累计-7.4%-3; PIT波动激活+12",
+      "fundflow": "[低][Tushare] 换手活跃10.0%+21; 成交尚可67.0亿+10; 大盘活跃(流通647亿换手10.0%)+10; 资金净流出-6.69%-3; 主力流出-9.68‰-3; 上榜净买率1.0%+3",
+      "sentiment": "[-低] 涨停溢价11.7%+10; 炸板率23.0%+7; 最高7板+5; 概念共振(+15); 梯队完整+4; 换手10.0%活跃+5; 20日涨停3次+3; 竞价跳空-2.7%[熊市态×0.9]→0分",
+      "shortterm": "涨停基因28(20日2次/60日6次) | 开盘博弈-5(跳空-2.7%/竞价换手0.05%) | 位置波动17(pos0.37/t10-23.9%/std5.0) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 50.18749999999999,
+    "resonance": {
+      "count": 2,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 50.2,
+    "pct_chg": -0.9,
+    "l2api": null,
+    "factors": {
+      "model_score": 59.99
+    },
+    "total_score": 59.99
+  },
+  {
+    "code": "600172.SH",
+    "name": "黄河旋风",
+    "scores": {
+      "fundamental": 86.0,
+      "technical": 0,
+      "fundflow": 0.0,
+      "sentiment": 52,
+      "shortterm": 44.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通224亿)+20; 高成长/亏损股(PE=0.0)+15; 高 PB 成长(PB=54.7)+10; 扣非增长+43%; 共振:大盘+成长+10",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "否决: 龙虎榜净卖出63243万(2.82%流通市值)（极端撤离）",
+      "sentiment": "[-低] 涨停溢价11.7%+10; 炸板率23.0%+7; 最高7板+5; 概念共振(+15); 梯队完整+4; 换手24.9%高活+3; 20日涨停4次+3; 连板基因3连板+2",
+      "shortterm": "涨停基因30(20日4次/60日11次) | 开盘博弈2(跳空0.3%/竞价换手0.29%) | 位置波动12(pos0.73/t10-3.7%/std6.4) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 49.92857142857144,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 49.9,
+    "pct_chg": 2.4,
+    "l2api": null,
+    "factors": {
+      "model_score": 59.19
+    },
+    "total_score": 59.19
+  }
+]
