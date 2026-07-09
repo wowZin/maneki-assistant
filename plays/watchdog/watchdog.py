@@ -189,6 +189,8 @@ class WatchdogEngine:
         self._thread: Optional[threading.Thread] = None
         self._scan_count = 0
         self._ws: Optional[JvQuantWSClient] = None
+        self._ws_fail_count = 0  # 连续无数据次数，>=5 强制重连
+        self._state_mtime: float = 0.0
         self._load_state()
 
     # ---- 生命周期 ----
@@ -333,8 +335,10 @@ class WatchdogEngine:
                         logger.info("进入交易时段，开始盯盘扫描")
                         trading_day_logged = True
 
-                    # WS 断线重连
-                    if not self._ws or not self._ws.is_connected():
+                    # WS 健康检测：断线 或 连续5次无数据 → 强制重连
+                    ws_dead = not self._ws or not self._ws.is_connected()
+                    ws_dead = ws_dead or self._ws_fail_count >= 5
+                    if ws_dead:
                         logger.warning("WS 断线，尝试重连...")
                         try:
                             from scripts.jvquant_ws_client import _get_ws
@@ -420,9 +424,11 @@ class WatchdogEngine:
 
             market = self._ws.get_market(code) if self._ws else None
             if not market:
+                self._ws_fail_count += 1
                 if self._scan_count % 10 == 0:
-                    logger.warning(f"{code} 无行情数据（WS可能断线）")
+                    logger.warning(f"{code} 无行情数据（WS失败{self._ws_fail_count}次）")
                 continue
+            self._ws_fail_count = 0  # 有数据了，重置
 
             vwap = self._ws.get_vwap(code) or 0.0
             klines = self._ws.get_kline(code, n=10) if self._ws else []
