@@ -332,6 +332,24 @@ class WatchdogEngine:
                     if not trading_day_logged:
                         logger.info("进入交易时段，开始盯盘扫描")
                         trading_day_logged = True
+
+                    # WS 断线重连
+                    if not self._ws or not self._ws.is_connected():
+                        logger.warning("WS 断线，尝试重连...")
+                        try:
+                            from scripts.jvquant_ws_client import _get_ws
+                            self._ws = _get_ws()
+                            # 重新订阅现有标的
+                            with self._lock:
+                                codes = list(self._states.keys())
+                            if codes:
+                                shorts = [_short(c) for c in codes]
+                                self._ws.subscribe_l1(shorts)
+                                logger.info(f"WS 重连成功，重新订阅 {len(shorts)} 只")
+                        except Exception as e:
+                            logger.error(f"WS 重连失败: {e}")
+                            time.sleep(SCAN_INTERVAL)
+                            continue
                     # 动态加载外部 state.json 变更（用户通过 client 添加/删除）
                     self._reload_state_if_changed()
                     with self._lock:
