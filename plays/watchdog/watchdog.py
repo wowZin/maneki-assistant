@@ -420,6 +420,8 @@ class WatchdogEngine:
 
             market = self._ws.get_market(code) if self._ws else None
             if not market:
+                if self._scan_count % 10 == 0:
+                    logger.warning(f"{code} 无行情数据（WS可能断线）")
                 continue
 
             vwap = self._ws.get_vwap(code) or 0.0
