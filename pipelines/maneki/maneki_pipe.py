@@ -20,6 +20,7 @@ import subprocess
 import sys
 import time
 import uuid
+from collections import defaultdict
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -222,6 +223,12 @@ class ClaudePipe:
         args = self._build_args()
         log.info("spawning claude for query: %s", text[:60])
 
+        # ── 加载对话记忆 ──
+        history = _load_chat_history(chat_id)
+        if history:
+            history_text = "\n".join(f"[{h['role']}] {h['content'][:200]}" for h in history[-4:])
+            text = f"{text}\n\n[对话历史]\n{history_text}"
+
         global _current_proc
         proc = await asyncio.create_subprocess_exec(
             *args,
@@ -254,6 +261,44 @@ class ClaudePipe:
         # 发送到飞书
         if output:
             await feishu.reply_markdown(message_id, output, dedup_set)
+
+        # 保存对话记忆
+        _save_chat_history(chat_id, text, output)
+
+
+# ── 对话记忆 ──
+
+def _chat_history_path(chat_id: str) -> Path:
+    """对话记忆文件路径。"""
+    return REPO_ROOT / "pipelines" / "maneki" / "inbox" / f"history_{chat_id}.json"
+
+
+def _load_chat_history(chat_id: str) -> list[dict]:
+    """加载最近对话历史。"""
+    path = _chat_history_path(chat_id)
+    if path.exists():
+        try:
+            data = json.loads(path.read_text())
+            if isinstance(data, list):
+                return data[-20:]  # 最多保留20轮
+        except Exception:
+            pass
+    return []
+
+
+def _save_chat_history(chat_id: str, user_msg: str, assistant_msg: str):
+    """保存本轮对话。"""
+    history = _load_chat_history(chat_id)
+    history.append({"role": "user", "content": user_msg})
+    if assistant_msg:
+        history.append({"role": "assistant", "content": assistant_msg[:1000]})
+    history = history[-20:]  # 最多20轮
+    try:
+        path = _chat_history_path(chat_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(history, ensure_ascii=False, indent=2))
+    except Exception as e:
+        log.warning("保存对话记忆失败: %s", e)
 
 
 # ═══════════════════════════════════════════════════════════
