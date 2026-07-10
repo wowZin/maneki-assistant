@@ -348,6 +348,45 @@ def analyze(code: str) -> dict:
     code = _norm(code)
     name = _code_name(code)
 
+    # Step 0: 先拉 Tushare 日线数据（供 factor_ctx 初始化 + 后面模型复用）
+    try:
+        from scripts.tu_share import call_tushare
+        daily_resp = call_tushare(
+            "daily", {"ts_code": code, "limit": 120},
+            "trade_date,open,high,low,close,pre_close,vol,amount,pct_chg",
+        )
+        daily_items = daily_resp.get("data", {}).get("items", [])
+        daily_fields = daily_resp.get("data", {}).get("fields", [])
+        _daily_rows = [dict(zip(daily_fields, row)) for row in daily_items]
+        _daily_rows.sort(key=lambda x: x.get("trade_date", ""))
+
+        basic_resp = call_tushare(
+            "daily_basic", {"ts_code": code, "limit": 1},
+            "ts_code,trade_date,pe,pb,circ_mv,turnover_rate,volume_ratio",
+        )
+        basic_items = basic_resp.get("data", {}).get("items", [])
+        basic_fields = basic_resp.get("data", {}).get("fields", [])
+        _basic_by_date = {}
+        if basic_items:
+            row = dict(zip(basic_fields, basic_items[0]))
+            _basic_by_date[row.get("trade_date", "")] = row
+
+        # 初始化 factor_ctx（供 scoring 使用）
+        from plays.limit_up.strategies import factor_ctx
+        factor_ctx.set_daily(code, _daily_rows)
+        factor_ctx.set_daily_basic(code, _basic_by_date)
+        # 涨停基因
+        pcts = [float(r.get("pct_chg", 0)) for r in _daily_rows]
+        limit_20d = sum(1 for p in pcts[-20:] if p >= 9.8)
+        limit_60d = sum(1 for p in pcts[-60:] if p >= 9.8)
+        factor_ctx.set_limit_counts(code, limit_20d, limit_60d)
+        if factor_ctx._CONCEPT_DAILY_CACHE is None:
+            factor_ctx.load_concept_data_from_cache()
+    except Exception as e:
+        logger.warning("factor_ctx 初始化失败: %s", e)
+        _daily_rows = []
+        _basic_by_date = {}
+
     # Step 1: 五维度评分（用已加载的函数，不重导入）
     from plays.limit_up.strategies.fundamental import score_fundamental
     from plays.limit_up.strategies.technical import score_technical
