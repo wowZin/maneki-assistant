@@ -458,6 +458,17 @@ def main_loop():
             print(f"    候选池 {len(pool)} 只 ✓")
             pool_built = True
 
+            # 预热 THS 热门榜缓存（sentiment/first_board 依赖）
+            try:
+                from plays.limit_up.pipeline_feishu import _fetch_ths_hot_list as _fth
+                _fth()
+                from plays.limit_up import pipeline_feishu as _pfs
+                _POPULARITY_RANK_CACHE.update(_pfs._POPULARITY_RANK_CACHE)
+                _HOT_CONCEPT_CACHE.update(_pfs._HOT_CONCEPT_CACHE)
+                _HOT_LIST_ITEMS[:] = _pfs._HOT_LIST_ITEMS
+            except Exception:
+                pass
+
         # ── 交易时段 ──
         trading = (TRADE_START <= hhmm < TRADE_END) or (1300 <= hhmm < 1500)
         if not trading or not pool_built:
