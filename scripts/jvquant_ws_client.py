@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 import jvQuant
+import websocket
 
 from scripts.audit import record as _audit_record, format_error as _audit_format_error
 
@@ -184,6 +185,28 @@ class JvQuantWSClient:
 
     # ── 连接管理 ──
 
+    def _ensure_connection(self) -> bool:
+        """Verify connection is alive; reconnect if dropped.
+
+        The jvQuant WS can silently disconnect during long idle periods
+        (e.g. Tushare data fetch).  _running stays True even after drop.
+        We test with a lightweight "list" command to detect dead sockets.
+        """
+        if not self._running:
+            return self.connect()
+        try:
+            if self._ws:
+                # Probe: "list" is a noop if connected, raises if dead
+                self._ws.cmd("list")
+            return True
+        except websocket.WebSocketConnectionClosedException:
+            print(f"[jvQuant WS] 连接已断开，重新连接...")
+            self._running = False
+            self._l1_codes.clear()
+            self._l10_codes.clear()
+            self._l2_codes.clear()
+            return self.connect()
+
     def connect(self) -> bool:
         """建立 WebSocket 连接"""
         if self._running:
@@ -251,7 +274,12 @@ class JvQuantWSClient:
         self._unsubscribe("l2", codes)
 
     def _subscribe(self, level: str, codes: list[str]) -> int:
-        """内部订阅方法"""
+        """内部订阅方法（自动重连 WAL-RETRY: 1次）"""
+        return self._subscribe_with_retry(level, codes, retry_count=0)
+
+    def _subscribe_with_retry(self, level: str, codes: list[str],
+                               retry_count: int) -> int:
+        max_retries = 1
         if not self._running:
             self.connect()
         if not self._running:
@@ -280,6 +308,21 @@ class JvQuantWSClient:
             _audit_record("jvquant_ws", "subscribe", ok=True,
                           items=len(new_codes), latency_ms=latency,
                           extra=f"level={level}")
+        except (websocket.WebSocketConnectionClosedException, OSError) as e:
+            latency = (time.perf_counter() - t0) * 1000
+            _audit_record("jvquant_ws", "subscribe", ok=False, items=0,
+                          latency_ms=latency,
+                          extra=_audit_format_error(e, {"level": level}))
+            if retry_count < max_retries:
+                print(f"[jvQuant WS] 订阅失败({type(e).__name__}), 重连重试...")
+                self._running = False
+                self._l1_codes.clear()
+                self._l10_codes.clear()
+                self._l2_codes.clear()
+                self.connect()
+                return self._subscribe_with_retry(level, codes,
+                                                  retry_count + 1)
+            raise
         except Exception as e:
             latency = (time.perf_counter() - t0) * 1000
             _audit_record("jvquant_ws", "subscribe", ok=False, items=0,
@@ -474,6 +517,9 @@ def _get_ws() -> JvQuantWSClient:
     if _ws_client is None:
         _ws_client = JvQuantWSClient()
         _ws_client.connect()
+    else:
+        # Reconnect if the underlying WebSocket is dead but _running is still True
+        _ws_client._ensure_connection()
     return _ws_client
 
 

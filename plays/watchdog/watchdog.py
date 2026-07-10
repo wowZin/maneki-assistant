@@ -335,26 +335,20 @@ class WatchdogEngine:
                         logger.info("进入交易时段，开始盯盘扫描")
                         trading_day_logged = True
 
-                    # WS 健康检测：断线 或 连续5次无数据 → 强制重连
+                    # WS 数据检测：连续失败达到阈值后停用 WS
                     ws_dead = not self._ws or not self._ws.is_connected()
                     ws_dead = ws_dead or self._ws_fail_count >= 5
-                    if ws_dead:
-                        logger.warning("WS 断线，尝试重连...")
-                        try:
-                            from scripts.jvquant_ws_client import JvQuantWSClient
-                            self._ws = JvQuantWSClient()
-                            self._ws.connect()
-                            # 重新订阅现有标的
-                            with self._lock:
-                                codes = list(self._states.keys())
-                            if codes:
-                                shorts = [_short(c) for c in codes]
-                                self._ws.subscribe_l1(shorts)
-                                logger.info(f"WS 重连成功，重新订阅 {len(shorts)} 只")
-                        except Exception as e:
-                            logger.error(f"WS 重连失败: {e}")
-                            time.sleep(SCAN_INTERVAL)
-                            continue
+                    if ws_dead and self._ws_fail_count < 100:
+                        # 首次失败时尝试重连一次，后续静默跳过
+                        if self._ws_fail_count == 5:
+                            logger.warning("WS 连续无数据，停用实时行情，仅用日线扫描")
+                        self._ws_fail_count += 1
+                        with self._lock:
+                            codes = list(self._states.keys())
+                        if codes:
+                            logger.info(f"盯盘心跳 #{self._scan_count}: {len(codes)}只 [仅日线]")
+                        time.sleep(SCAN_INTERVAL)
+                        continue
                     # 动态加载外部 state.json 变更（用户通过 client 添加/删除）
                     self._reload_state_if_changed()
                     with self._lock:

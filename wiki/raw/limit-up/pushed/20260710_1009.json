@@ -1,0 +1,134 @@
+[
+  {
+    "code": "002354.SZ",
+    "name": "天娱数科",
+    "scores": {
+      "fundamental": 84.8,
+      "technical": 0,
+      "fundflow": 45.0,
+      "sentiment": 59,
+      "shortterm": 49.0
+    },
+    "reasons": {
+      "fundamental": "[高] 中大盘(流通131亿)+17; 高成长/亏损股(PE=0.0)+15; 高 PB 成长(PB=9.7)+10; 扣非暴增+459%; 共振:大盘+成长+10",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "[低][Tushare] 换手极度活跃22.0%+35; 成交一般28.9亿+5; 大盘活跃(流通131亿换手22.0%)+10; 资金净流出-4.15%-3; 主力流出-13.02‰-3",
+      "sentiment": "[-中] 涨停溢价11.5%+10; 炸板率18.5%+7; 最高8板+5; 题材第4+2; 发酵+5; 概念共振(+15); 梯队完整+4; 换手22.0%高活+3",
+      "shortterm": "涨停基因30(20日4次/60日11次) | 开盘博弈2(跳空-0.2%/竞价换手0.26%) | 位置波动17(pos0.35/t10-8.5%/std6.9) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 54.621428571428574,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 54.6,
+    "pct_chg": 10.0,
+    "l2api": {
+      "last": 8.89,
+      "bid1_p": 8.89,
+      "ask1_p": 0,
+      "vwap": 8.89,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 64.2
+    },
+    "total_score": 64.2
+  },
+  {
+    "code": "603757.SH",
+    "name": "大元泵业",
+    "scores": {
+      "fundamental": 74.8,
+      "technical": 80,
+      "fundflow": 37.0,
+      "sentiment": 57,
+      "shortterm": 45.0
+    },
+    "reasons": {
+      "fundamental": "[中] 中大盘(流通144亿)+17; 高成长/亏损股(PE=99.4)+15; 偏高 PB(PB=6.8)+6; 扣非下滑-69%; 共振:大盘+成长+10",
+      "technical": "[高] 量比略低(0.99)+5; 换手活跃(8.6%)+10; 强势>MA20(+16.6%)+8; MA20上倾+7; 5日累计+7.1%+5; PIT波动激活+6; 中市值(144亿)+6; 换手中度8.6%+3",
+      "fundflow": "[低][Tushare] 换手中度活跃8.6%+14; 成交不足11.7亿+0; 大盘活跃(流通144亿换手8.6%)+10; 资金净流入2.42%+5; 主力流入2.73‰+5; 封单7635.1%流通+3",
+      "sentiment": "[-中] 涨停溢价11.5%+10; 炸板率18.5%+7; 最高8板+5; 概念共振(+15); 梯队完整+4; 换手8.6%温和+3; 20日涨停3次+3; 连板基因2连板+2",
+      "shortterm": "涨停基因30(20日3次/60日5次) | 开盘博弈0(跳空-0.4%/竞价换手0.09%) | 位置波动7(pos0.80/t103.9%/std6.2) | 连板溢价8(昨日涨停1/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 54.53125,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 54.5,
+    "pct_chg": 2.7,
+    "l2api": {
+      "last": 79.2,
+      "bid1_p": 79.05,
+      "ask1_p": 79.06,
+      "vwap": 79.07,
+      "kline_bars": 2
+    },
+    "factors": {
+      "model_score": 60.53
+    },
+    "total_score": 60.53
+  },
+  {
+    "code": "002057.SZ",
+    "name": "中钢天源",
+    "scores": {
+      "fundamental": 64.8,
+      "technical": 69,
+      "fundflow": 7.0,
+      "sentiment": 47,
+      "shortterm": 15.0
+    },
+    "reasons": {
+      "fundamental": "[中] 中盘(流通73亿)+13; 成长股(PE=41.5)+11; 共振:大盘+成长+10",
+      "technical": "[中] 量比适中(1.44)+15; 换手活跃(8.2%)+10; 竞价平开0.2%+2; 放量确认(量>3日均+20%)+5; PIT换手动量+5; 收盘<MA20-8; 5日累计-22.6%-3; 中小市值(73亿)+3",
+      "fundflow": "[无][Tushare] 换手中度活跃8.2%+14; 成交不足6.2亿+0; 中大盘活跃(流通73亿换手8.2%)+6; 资金净流出-5.83%-3; 主力流出-12.05‰-3; 龙虎榜净卖0.7亿-5",
+      "sentiment": "[-低] 涨停溢价11.5%+10; 炸板率18.5%+7; 最高8板+5; 概念共振(+15); 梯队完整+4; 换手8.2%温和+3; 20日涨停+1; 竞价关注度较高(量比0.6)+1",
+      "shortterm": "涨停基因8(20日1次/60日2次) | 开盘博弈0(跳空0.0%/竞价换手0.05%) | 位置波动7(pos0.00/t10-20.5%/std5.1) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 31.812499999999996,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 31.8,
+    "pct_chg": -1.5,
+    "l2api": {
+      "last": 9.55,
+      "bid1_p": 9.54,
+      "ask1_p": 9.55,
+      "vwap": 9.55,
+      "kline_bars": 3
+    },
+    "factors": {
+      "model_score": 57.32
+    },
+    "total_score": 57.32
+  }
+]

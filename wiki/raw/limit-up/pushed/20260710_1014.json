@@ -1,0 +1,46 @@
+[
+  {
+    "code": "600172.SH",
+    "name": "黄河旋风",
+    "scores": {
+      "fundamental": 86.0,
+      "technical": 0,
+      "fundflow": 0.0,
+      "sentiment": 59,
+      "shortterm": 40.0
+    },
+    "reasons": {
+      "fundamental": "[高] 大盘(流通239亿)+20; 高成长/亏损股(PE=0.0)+15; 高 PB 成长(PB=58.2)+10; 扣非增长+43%; 共振:大盘+成长+10",
+      "technical": "评分异常: '>' not supported between instances of 'NoneType' and 'int'",
+      "fundflow": "否决: 龙虎榜净卖出125834万(5.27%流通市值)（极端撤离）",
+      "sentiment": "[-中] 涨停溢价11.5%+10; 炸板率18.5%+7; 最高8板+5; 发酵+5; 概念共振(+15); 梯队完整+4; 换手25.1%高活+3; 20日涨停4次+3",
+      "shortterm": "涨停基因30(20日4次/60日11次) | 开盘博弈0(跳空-1.4%/竞价换手0.51%) | 位置波动10(pos0.86/t1012.3%/std6.4) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 48.32142857142858,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 48.3,
+    "pct_chg": -1.4,
+    "l2api": {
+      "last": 18.43,
+      "bid1_p": 18.43,
+      "ask1_p": 18.46,
+      "vwap": 18.46,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 57.54
+    },
+    "total_score": 57.54
+  }
+]
