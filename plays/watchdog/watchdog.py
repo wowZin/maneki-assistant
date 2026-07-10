@@ -341,8 +341,9 @@ class WatchdogEngine:
                     if ws_dead:
                         logger.warning("WS 断线，尝试重连...")
                         try:
-                            from scripts.jvquant_ws_client import _get_ws
-                            self._ws = _get_ws()
+                            from scripts.jvquant_ws_client import JvQuantWSClient
+                            self._ws = JvQuantWSClient()
+                            self._ws.connect()
                             # 重新订阅现有标的
                             with self._lock:
                                 codes = list(self._states.keys())
