@@ -196,6 +196,8 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
         return 0, f"竞价跌停开盘:竞价{auc_gap:.1f}%"
 
     # ── PIT 特征提取（用于新增因子融合） ─────────────────
+    # 懒初始化：独立调用时 factor_ctx 缓存为空，按需拉取
+    factor_ctx.ensure_data(code)
     pit_feats = factor_ctx.get_price_features(code)
     basic = factor_ctx.get_daily_basic(code)
     if basic:

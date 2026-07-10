@@ -249,6 +249,91 @@ def get_concept_momentum(code_short: str, trade_date: str | None = None) -> dict
     return result
 
 
+def ensure_data(code: str) -> bool:
+    """独立调用时的懒初始化：为单只股票拉取 daily/daily_basic/limit 数据。
+
+    当 score_technical 等策略函数在 pipeline 外部被独立调用时，
+    factor_ctx 的模块级缓存为空，需要按需填充。
+
+    Returns:
+        True 如果数据拉取成功或缓存已存在，False 如果拉取失败。
+    """
+    # 若已有该股票的日线数据，说明已初始化
+    if code in _DAILY_CACHE:
+        return True
+
+    from datetime import datetime as _dt, timedelta as _td
+    from pathlib import Path as _Path
+    import sys as _sys
+
+    _project_dir = _Path(__file__).resolve().parent.parent.parent.parent
+    _sys.path.insert(0, str(_project_dir))
+    from scripts.tu_share import call_tushare as _call_tushare
+
+    today = _dt.now().strftime("%Y%m%d")
+    start70 = (_dt.now() - _td(days=70)).strftime("%Y%m%d")
+    start60 = (_dt.now() - _td(days=60)).strftime("%Y%m%d")
+
+    success = False
+
+    # 1. daily (日线)
+    try:
+        resp = _call_tushare("daily", {
+            "ts_code": code, "start_date": start70, "end_date": today,
+        }, "ts_code,trade_date,open,pre_close,close,high,low,vol,amount,pct_chg")
+        if resp.get("code") == 0:
+            items = resp.get("data", {}).get("items", [])
+            fields = resp.get("data", {}).get("fields", [])
+            rows = [dict(zip(fields, row)) for row in items]
+            if rows:
+                set_daily(code, rows)
+                success = True
+    except Exception:
+        pass
+
+    # 2. daily_basic (PE/PB/市值/换手/量比)
+    try:
+        resp = _call_tushare("daily_basic", {
+            "ts_code": code, "start_date": start70, "end_date": today,
+        }, "ts_code,trade_date,pe,pb,circ_mv,turnover_rate,volume_ratio")
+        if resp.get("code") == 0:
+            items = resp.get("data", {}).get("items", [])
+            fields = resp.get("data", {}).get("fields", [])
+            by_date: dict[str, dict] = {}
+            for row in items:
+                d = dict(zip(fields, row))
+                td = str(d.get("trade_date", ""))
+                if td:
+                    by_date[td] = d
+            if by_date:
+                set_daily_basic(code, by_date)
+    except Exception:
+        pass
+
+    # 3. limit_list (涨停基因)
+    try:
+        resp = _call_tushare("limit_list_d", {
+            "ts_code": code, "start_date": start60, "end_date": today, "limit_type": "U",
+        }, "ts_code,trade_date")
+        if resp.get("code") == 0:
+            items = resp.get("data", {}).get("items", [])
+            fields = resp.get("data", {}).get("fields", [])
+            dates = []
+            for row in items:
+                d = dict(zip(fields, row))
+                td = str(d.get("trade_date", ""))
+                if td:
+                    dates.append(td)
+            cutoff20 = (_dt.now() - _td(days=20)).strftime("%Y%m%d")
+            count20 = sum(1 for d in dates if d >= cutoff20)
+            count60 = len(dates)
+            set_limit_counts(code, count20, count60)
+    except Exception:
+        set_limit_counts(code, 0, 0)
+
+    return success
+
+
 def load_concept_data_from_cache(cache_dir: str | Path | None = None):
     """从概念缓存目录加载概念数据（pipeline 初始化时调用）。
 
