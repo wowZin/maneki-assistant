@@ -82,6 +82,15 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
     low = safe_float(today.get("low"))
     vol_ratio = safe_float(today.get("vol_ratio"))
     turnover = safe_float(today.get("turnover_rate"))
+
+    # 实时增强：用 batch_quotes 数据替代 T-1（盘中有就走实时）
+    from plays.limit_up.strategies.realtime_ctx import get_vol_ratio as _rt_vol, get_turnover as _rt_tr
+    rt_vol = _rt_vol(code)
+    rt_tr = _rt_tr(code)
+    if rt_vol is not None:
+        vol_ratio = rt_vol
+    if rt_tr is not None:
+        turnover = rt_tr
     ma20 = safe_float(today.get("ma_bfq_20"))
     boll_mid = safe_float(today.get("boll_mid_bfq"))
     total_mv = safe_float(today.get("total_mv"))  # 万元

@@ -104,7 +104,15 @@ def score_shortterm(code: str, fundflow_data: dict = None, trade_date: str | Non
     """短线博弈评分 (0-100)
 
     四因子：涨停基因 30 + 开盘博弈 25 + 位置波动 25 + 连板溢价 20
+
+    实时数据增强：
+      - 开盘博弈用实时 pct_chg 替代 T-1（盘中看当前涨幅比昨收更有意义）
+      - 内外盘比作为尾盘量比代理（IC 0.129 的最强实时信号）
     """
+    from plays.limit_up.strategies.realtime_ctx import (
+        get_realtime_pct, get_inner_outer_ratio, get_turnover,
+    )
+
     old = _TODAY_OVERRIDE
     _set_trade_date(trade_date)
 
@@ -122,6 +130,14 @@ def score_shortterm(code: str, fundflow_data: dict = None, trade_date: str | Non
         pre_c = safe_float(dr.get("pre_close", 0))
         op = safe_float(dr.get("open", 0))
         open_pct = ((op / pre_c) - 1) * 100 if pre_c > 0 else 0
+
+        # 实时增强：用实时 pct_chg 替代 T-1（盘中有就走实时）
+        realtime_pct = get_realtime_pct(code)
+        if realtime_pct is not None:
+            pct = realtime_pct  # 盘中用实时涨跌幅
+
+        # 内外盘比（proxy for tail_vol_ratio）
+        io_ratio = get_inner_outer_ratio(code)
 
         feats = _extract_pit_features(code)
         position = feats["position_20d"]
@@ -188,8 +204,22 @@ def score_shortterm(code: str, fundflow_data: dict = None, trade_date: str | Non
             d2 += 2
 
         d2 = max(-10, min(25, d2))
+
+        # 实时增强：内外盘比（proxy for buying pressure）
+        io_note = ""
+        if io_ratio is not None:
+            if io_ratio < 0.8:
+                d2 += 5
+                io_note = f" 内外盘{io_ratio:.2f}(外盘强+5)"
+            elif io_ratio > 1.2:
+                d2 -= 5
+                io_note = f" 内外盘{io_ratio:.2f}(内盘强-5)"
+            else:
+                io_note = f" 内外盘{io_ratio:.2f}"
+
+        d2 = max(-10, min(25, d2))
         score += d2
-        reasons.append(f"开盘博弈{d2:.0f}(跳空{open_pct:.1f}%/竞价换手{auc_turnover:.2f}%)")
+        reasons.append(f"开盘博弈{d2:.0f}(跳空{open_pct:.1f}%/竞价换手{auc_turnover:.2f}%){io_note}")
 
         # ── 3. 位置波动 25分 ──
         d3 = 0.0
