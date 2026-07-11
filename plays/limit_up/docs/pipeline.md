@@ -74,8 +74,9 @@ python plays/limit_up/pipeline.py
    d. pop_top(STAGE1_TOP_N) 取栈顶 N 只
    e. stage1_rough() 五维度并行评分
    f. stage2_deep() 灰区 L2 确认
-   g. save_analysis() 写入 analysis
-   h. check_and_push() 触发飞书推送
+   g. save_analysis() 写入 analysis（所有进入评分的股票均存档）
+   h. check_and_push() 触发飞书推送（仅 ≥55 或 L2 通过的股票）
+   i. save_queue() 持久化栈
    i. save_queue() 持久化栈
    j. _write_heartbeat() 写入心跳
 4. 收到 SIGINT/SIGTERM 时优雅退出，关闭 WS

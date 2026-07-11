@@ -409,9 +409,12 @@ def _raw_score(code: str, name: str, realtime: dict | None = None,
 def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
                     iter_count: int | None = None,
                     stack: ScoreStack | None = None) -> tuple[list[dict], ScoreStack]:
-    """执行一轮完整流程：扫描 → 过滤 → 栈排序 → 粗评 → 精评 → 返回推送列表。
+    """执行一轮完整流程：扫描 → 过滤 → 栈排序 → 粗评 → 精评决策。
 
     供 main_loop（daemon 模式）和 _run_once（单次模式）复用。
+
+    所有进入粗评的股票都会存档（save_analysis），但只有满足推送条件的
+    （≥PUSH_THRESHOLD 或 L2 灰区确认通过）才会触发飞书推送（check_and_push）。
 
     Args:
         pool_codes: 候选股代码列表。
@@ -421,10 +424,11 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
             不传则内部新建，适用于 _run_once。
 
     Returns:
-        (deep_results, stack)
+        (all_results, stack) — all_results 包含所有进入粗评的股票。
     """
     if stack is None:
         stack = ScoreStack()
+    if iter_count is not None:
         print(f"\n[{_now().strftime('%H:%M')}] 第{iter_count}轮 ① batch_quotes {len(pool_codes)}只...")
     quotes = scan_batch(pool_codes)
     filtered_quotes = {}
@@ -435,6 +439,7 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
         if not vetoed:
             filtered_quotes[code] = q
 
+    stack.update(filtered_quotes, name_map=pool_name_map)
     if iter_count is not None:
         print(f"    栈: {stack.size}只待评分 | batch {len(quotes)}只 ✓")
 
@@ -442,7 +447,7 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
     if not to_score:
         if iter_count is not None:
             print(f"  ② 粗评: 无待评分股票")
-        return []
+        return [], stack
 
     if iter_count is not None:
         print(f"  ② 粗评 {len(to_score)}只(L1)...")
@@ -457,16 +462,19 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
     current_shorts = {item.code for item in to_score}
     _sync_subscriptions(current_shorts)
 
-    deep_results = []
+    all_results = []      # 所有进入评分的都存档
+    push_candidates = []  # 只有满足推送条件的才推
+
     for r in rough_results:
         score = r.get("total_score", 0)
         if score >= PUSH_THRESHOLD:
             if iter_count is not None:
-                print(f"    ≥55 {r['code']} {r['name']} total_score={score:.1f} → 推送")
-            deep_results.append(r)
+                print(f"    ≥{PUSH_THRESHOLD:.0f} {r['code']} {r['name']} total_score={score:.1f} → 推送")
+            all_results.append(r)
+            push_candidates.append(r)
         elif score >= L2_GREY_LOW:
             if iter_count is not None:
-                print(f"    [45,55) {r['code']} {r['name']} total_score={score:.1f} → L2确认...")
+                print(f"    [{L2_GREY_LOW},{PUSH_THRESHOLD:.0f}) {r['code']} {r['name']} total_score={score:.1f} → L2确认...")
             confirmed = stage2_deep(r["code"], r["name"], score)
             if confirmed:
                 confirmed["scores"] = r.get("scores", {})
@@ -476,15 +484,21 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
                 confirmed["score_mode"] = "daemon_weighted"
                 if iter_count is not None:
                     print(f"      L2通过 → 推送")
-                deep_results.append(confirmed)
-            elif iter_count is not None:
-                print(f"      L2拒绝")
-        elif iter_count is not None:
-            print(f"    <45 {r['code']} {r['name']} total_score={score:.1f} → 丢弃")
+                all_results.append(confirmed)
+                push_candidates.append(confirmed)
+            else:
+                # L2 拒绝：仍然存档原始粗评结果，但不推送
+                if iter_count is not None:
+                    print(f"      L2拒绝 (存档不推送)")
+                all_results.append(r)
+        else:
+            if iter_count is not None:
+                print(f"    <{L2_GREY_LOW} {r['code']} {r['name']} total_score={score:.1f} → 存档不推送")
+            all_results.append(r)
 
-    save_analysis(deep_results)
-    check_and_push(deep_results, DATA_DIR)
-    return deep_results, stack
+    save_analysis(all_results)
+    check_and_push(push_candidates, DATA_DIR)
+    return all_results, stack
 
 
 def stage1_rough(codes_with_names: list[tuple[str, str, dict]]) -> list[dict]:
