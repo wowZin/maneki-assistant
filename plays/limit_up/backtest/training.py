@@ -276,15 +276,14 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
     """为单个交易日构建训练样本（正样本 + 负样本 + 特征 + 标签）。"""
     print(f"[build] {trade_date}")
 
-    # 1. 正负样本股票列表
+    # 1. 候选池：当日被扫描到且当日未涨停的股票
+    #    训练目标与生产推送目标一致：预测“今天还没涨停的票，未来 3 日会不会涨停”。
     scanned = get_scanned_codes(trade_date)
     limit_up = get_limit_up_codes(trade_date)
-    positives = limit_up  # label=1
-    negatives = scanned - limit_up  # label=0（扫描到但没涨停）
-    all_codes = positives | negatives
-    print(f"  正样本={len(positives)} 负样本={len(negatives)} 合计={len(all_codes)}")
+    candidates = scanned - limit_up
+    print(f"  扫描候选={len(scanned)} 当日涨停={len(limit_up)} 未涨停候选={len(candidates)}")
 
-    if not all_codes:
+    if not candidates:
         return pd.DataFrame()
 
     # 0. 加载概念缓存（PIT 动量特征依赖）
@@ -305,7 +304,7 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
     end = (d_dt + timedelta(days=10)).strftime("%Y%m%d")
     dates_all = _trade_dates(start, end)
 
-    codes_list = sorted(all_codes)
+    codes_list = sorted(candidates)
     print(f"  拉/读 daily ({start}~{end})...")
     daily = pull_daily_bars(codes_list, start, end)
     print(f"  拉/读 daily_basic ({start}~{end})...")
@@ -375,7 +374,7 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
             limit_by_date.setdefault(date, set()).add(code)
     limit_by_code = _build_limit_gene_index(limit_by_date)
 
-    # 4. 逐股提取样本
+    # 4. 逐股提取样本并打标签
     rows_out = []
     for code in codes_list:
         row = _extract_row(code, trade_date, daily_by_code, dbasic_by_code_date,
@@ -384,7 +383,13 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
                             top_inst_by_code_date, limit_by_code, dim_scores, dates_all)
         if row is None:
             continue
-        row["label"] = 1 if code in positives else 0
+        # 正样本：当日未涨停，但未来 3 日内涨停
+        # 负样本：当日未涨停，未来 3 日也未涨停
+        # 数据不足导致 hit_limit_3 缺失则跳过
+        hit = row.get("hit_limit_3")
+        if hit is None:
+            continue
+        row["label"] = 1 if hit == 1 else 0
         rows_out.append(row)
 
     df = pd.DataFrame(rows_out)
@@ -445,8 +450,11 @@ def build(dates: list[str], force: bool = False):
 
     new_df = pd.concat(new_frames, ignore_index=True)
 
-    # 合并到 CSV：去重 (code, trade_date)
+    # 合并到 CSV：force 时先删除旧日期，再追加新日期；非 force 时按 (code, trade_date) 去重
     all_df = load_all()
+    if force:
+        to_remove = set(to_build)
+        all_df = all_df[~all_df["trade_date"].astype(str).isin(to_remove)].copy()
     combined = pd.concat([all_df, new_df], ignore_index=True)
     combined = combined.drop_duplicates(subset=["code", "trade_date"], keep="last")
     combined = combined.sort_values(["trade_date", "code"]).reset_index(drop=True)
