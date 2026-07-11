@@ -20,8 +20,13 @@ from unittest.mock import patch
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
-from plays.limit_up.pipeline import push_feishu
+from plays.limit_up.pipeline_feishu import push_feishu
 from plays.limit_up.backtest.data import fetch_data
+
+
+def _get_score_field(candidate: dict) -> float:
+    """兼容旧 analysis 文件的 total 和新文件的 total_score。"""
+    return candidate.get("total_score", candidate.get("total", 0))
 
 
 def validate(weights_path: str | Path, start: str | None = None, end: str | None = None):
@@ -72,12 +77,12 @@ def validate(weights_path: str | Path, start: str | None = None, end: str | None
         if candidates[0].get("_empty"):
             continue
 
-        # 排序按现有 total
-        candidates.sort(key=lambda x: x.get("total", 0), reverse=True)
-        max_total = candidates[0].get("total", 0)
+        # 排序按总分（兼容旧 total 和新 total_score）
+        candidates.sort(key=lambda x: _get_score_field(x), reverse=True)
+        max_total = _get_score_field(candidates[0])
         threshold = max_total * gap
 
-        pushed = [c for c in candidates if c.get("total", 0) >= threshold][:5]
+        pushed = [c for c in candidates if _get_score_field(c) >= threshold][:5]
 
         if not pushed:
             continue
@@ -100,7 +105,7 @@ def validate(weights_path: str | Path, start: str | None = None, end: str | None
                 "date": date_str,
                 "code": code,
                 "name": r.get("name", ""),
-                "total": r.get("total", 0),
+                "total_score": _get_score_field(r),
                 "hit": hit,
                 "win": win,
             })

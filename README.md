@@ -4,6 +4,10 @@ A 股量化策略集合。当前包含 **涨停预测(V2)**、**买卖盯盘** �
 
 ```
 用户 → 飞书Bot(统一入口) → 路由到 plays/xxx/pipeline.py → 评分→推送
+
+limit_up 当前路径：
+plays/limit_up/pipeline.py --daemon  ← 常驻 daemon（盘中自动扫描推送）
+plays/limit_up/pipeline_feishu.py    ← 旧版一次性流程（保留回退/手动分析）
 ```
 
 ## 顶层结构
@@ -36,17 +40,17 @@ maneki-agent/
 09:15  → daily_basic(20积分) 构建候选池 1195只
          池筛选: 主板 + 非ST + 非次新 + 市值50-200亿
 
-09:30~15:00 → 盘中循环（每 ~30s 一轮）:
+09:30~15:00 → 盘中循环（每轮扫描+评分耗时取决于 RPS 设置，默认约 40s）:
 
-  ① batch_quotes(1195只) → 涨幅+涨速 → 栈排序         ← 免费
-     THS 同花顺免费接口，~19s
+  ① scanner.scan_batch(1195只) → 涨幅+涨速 → 栈排序    ← 同花顺免费
+     默认 RPS=30，可通过 LIMIT_UP_SCAN_RPS 调整
 
   ② 栈顶20只 → WS L1订阅(免费) → 五维度并行评分       ← 免费
-     实时 pct_chg + 内外盘比 + bid/ask 注入评分策略
+     实时 pct_chg + 内外盘比 + vol_ratio/turnover 注入评分策略
 
-  ③ 评分≥55:   直接推送
-    评分[45,55): WS L2/L10确认 → VWAP诱多检查 → 推送/拒绝
-    评分<45:    丢弃
+  ③ total_score≥55:   直接推送
+    total_score[45,55): WS L2/L10确认 → VWAP诱多检查 → 推送/拒绝
+    total_score<45:    丢弃
 ```
 
 ### 模块
@@ -54,7 +58,13 @@ maneki-agent/
 ```
 plays/limit_up/
 ├── docs/                   ← 设计文档
-│   └── v2-architecture.md  ← V2架构说明
+│   ├── architecture.md     ← V2 架构说明
+│   ├── scanner.md          ← 扫描限流说明
+│   ├── pusher.md           ← 推送阈值与去重
+│   ├── score.md            ← 总分聚合规则
+│   ├── filter.md           ← 实时过滤规则
+│   ├── shortterm.md        ← 短线博弈维度
+│   └── technical.md        ← 技术面维度
 ├── strategies/             ← 五维度评分
 │   ├── fundamental.py      ← 基本面
 │   ├── technical.py        ← 技术面
@@ -62,12 +72,14 @@ plays/limit_up/
 │   ├── sentiment.py        ← 情绪面
 │   ├── shortterm.py        ← 短线博弈（实时pct_chg+内外盘比增强）
 │   └── realtime_ctx.py     ← 实时数据桥接（评分与行情之间的桥梁）
-├── pipeline_daemon.py      ← 主循环 daemon（常驻服务）
+├── pipeline.py             ← 主循环 daemon（常驻服务，支持 --daemon）
+├── pipeline_feishu.py      ← 旧版一次性流程（保留作为回退/手动分析）
+├── scanner.py              ← 候选池批量扫描（RPS 限流）
+├── pusher.py               ← 推送判断与去重
 ├── pool_builder.py         ← 候选池构建（daily_basic全市场扫描）
 ├── stack.py                ← 待评分栈（涨速排序/去重/持久化）
 ├── filter.py               ← 实时过滤（一字板判断）
-├── pipeline.py             ← 旧版(保留作为回退)
-├── score.py                ← 总分聚合
+├── total.py                ← 正式总分聚合（XGBoost/quality_combo）
 ├── review.py               ← 收盘复盘
 ├── backtest/               ← 回测框架
 │   ├── backtest.py         ← 回测主入口
@@ -79,6 +91,7 @@ plays/limit_up/
     ├── queue/              ← 待评分栈（持久化，防进程崩溃）
     ├── analysis/           ← 每轮评分结果
     ├── pushed/             ← 推送记录
+    ├── health/             ← daemon 心跳/pidfile
     └── signals/            ← 信号（review/compile 用）
 ```
 
@@ -102,9 +115,9 @@ plays/limit_up/
  │     实时pct_chg + 内外盘比 增强评分      │
  └──────────────────────────────────────────┘
          ↓
-         评分≥55 → 推送
-         评分[45,55) → L2确认(VWAP/卖压) → 推送/拒绝
-         评分<45 → 丢弃
+         total_score≥55 → 推送
+         total_score[45,55) → L2确认(VWAP/卖压) → 推送/拒绝
+         total_score<45 → 丢弃
 ```
 
 ## 数据源
@@ -124,15 +137,20 @@ plays/limit_up/
 
 ```bash
 # 涨停预测 daemon（常驻）
-systemctl enable maneki-pipeline-daemon
-systemctl start maneki-pipeline-daemon
+# 注意：仓库内未提供 systemd unit 文件，需自行配置
+python plays/limit_up/pipeline.py --daemon
 
 # 飞书 Bot（接收飞书回调 → Claude 决策 → 回复）
-systemctl start maneki-pipe
-systemctl start ngrok
+uvicorn feishu_bot.main:app --host 0.0.0.0 --port 8080
 
 # 盯盘引擎（可选）
-systemctl start watchdog
+python plays/watchdog/watchdog.py
+```
+
+### 手动候选池构建
+
+```bash
+python plays/limit_up/pool_builder.py
 ```
 
 ### 定时任务（独立，非 pipeline）
@@ -148,8 +166,11 @@ systemctl start watchdog
 ### 服务状态
 
 ```bash
-systemctl status maneki-pipeline-daemon --no-pager -l
+# 若使用 systemd，查看 daemon 日志
 journalctl -u maneki-pipeline-daemon -n 30 --no-pager
+
+# 健康巡检（不杀 daemon，仅检查心跳）
+python plays/limit_up/health_patrol.py --dry-run
 ```
 
 ## 新旧对比

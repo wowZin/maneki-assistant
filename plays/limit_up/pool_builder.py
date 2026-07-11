@@ -90,7 +90,10 @@ def build_pool(trade_date: str | None = None) -> list[dict]:
     market_data = _load_market_data(td)
 
     pool = []
-    today = datetime.now().date()
+    try:
+        today = datetime.strptime(td, "%Y%m%d").date()
+    except (ValueError, TypeError):
+        today = datetime.now().date()
 
     for row in market_data:
         code = row["ts_code"]
@@ -128,9 +131,10 @@ def build_pool(trade_date: str | None = None) -> list[dict]:
         pool.append({
             "code": code,
             "name": name,
+            "circ_mv": circ_mv,
         })
 
-    pool.sort(key=lambda x: x["code"])
+    pool.sort(key=lambda x: x.get("circ_mv", 0), reverse=True)
     return pool
 
 

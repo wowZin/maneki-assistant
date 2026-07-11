@@ -8,6 +8,15 @@
 
 专注首板/连板博弈的短线维度。不与资金、情绪维度重复，只保留涨停基因、开盘动能、位置波动、连板溢价四类因子。
 
+## 实时数据增强
+
+在 daemon 盘中运行时，`score_shortterm` 通过 `realtime_ctx` 读取：
+
+- `get_realtime_pct(code)`: 盘中用实时涨跌幅替代 T-1 日线 pct_chg
+- `get_inner_outer_ratio(code)`: 内外盘比作为买入积极性代理
+
+这些增强只在 `pipeline.py --daemon` 运行且 `scanner.py` 已注入实时数据时生效；独立调用或盘后走 Tushare 日线数据。
+
 ## 四因子权重
 
 | 因子 | 权重 | 核心逻辑 |

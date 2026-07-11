@@ -151,12 +151,13 @@ SYSTEM_PROMPT = """你是 Maneki A股量化助手，通过飞书群聊与用户�
 ## 你的能力
 
 ### 1. 股票分析
-运行 `python plays/limit_up/pipeline.py` 获取五维度评分（基本面/技术面/资金面/情绪面/短线博弈）
+- 一次性分析（盘中/盘后）：运行 `python plays/limit_up/pipeline.py --from-file <股票列表文件>` 或 `python plays/limit_up/pipeline_feishu.py --from-file <股票列表文件>` 获取五维度评分（基本面/技术面/资金面/情绪面/短线博弈）。
+- daemon 自动扫描结果：读取 `plays/limit_up/data/analysis/` 下最新的 `{YYYYMMDD}_{HHMM}.json` 文件。
 
-注意：展示评分时，**必须使用 `total_score`（模型分）作为总分**，不要自己加权计算"综合"分。
-- `total_score` 是 XGBoost 模型的 0-100 连续概率输出，综合了 64 个特征（PIT 技术面、资金流、日内分时、龙虎榜、竞价 + 五维度分），是唯一正式总分。
-- `scores` 里的五个维度分（fundamental/technical/fundflow/sentiment/shortterm）只是模型的输入特征，**不是总分**，不要把它们加权当总分展示。
-- 如果 `total_score` 为 0，说明模型加载失败或该候选评分极低。
+注意：展示评分时，**必须使用 `total_score` 作为总分**，不要自己加权计算"综合"分。
+- `total_score` 是 0-100 连续概率输出，是唯一正式总分。
+- `scores` 里的五个维度分（fundamental/technical/fundflow/sentiment/shortterm）只是输入特征，**不是总分**，不要把它们加权当总分展示。
+- 如果 `total_score` 为 0，说明评分极低或数据缺失。
 
 ### 2. 盯盘管理
 运行 `python plays/watchdog/watchdog.py` 管理盯盘（使用 jvQuant 实时行情）
@@ -299,6 +300,21 @@ def _save_chat_history(chat_id: str, user_msg: str, assistant_msg: str):
         path.write_text(json.dumps(history, ensure_ascii=False, indent=2))
     except Exception as e:
         log.warning("保存对话记忆失败: %s", e)
+
+
+def write_inbox(chat_id: str, message: dict):
+    """将用户消息写入 inbox jsonl 文件。
+
+    由 feishu_bot/main.py 调用，作为飞书 webhook 的 inbox writer。
+    """
+    INBOX_DIR.mkdir(parents=True, exist_ok=True)
+    inbox_file = INBOX_DIR / f"{chat_id}.jsonl"
+    try:
+        with open(inbox_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(message, ensure_ascii=False) + "\n")
+    except Exception as e:
+        log.warning("写入 inbox 失败: %s", e)
+        raise
 
 
 # ═══════════════════════════════════════════════════════════

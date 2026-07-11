@@ -42,7 +42,12 @@ def filter_realtime(quote: dict[str, Any]) -> tuple[bool, str]:
     return False, ""
 
 
-# 向后兼容
+# 向后兼容：旧 pipeline 会调用 filter_candidates 做静态过滤。
+# 这些规则已迁移到 pool_builder.py（候选池构建阶段），
+# 因此本函数不再重复实现。如需静态过滤，请使用 pool_builder.ensure_pool()。
 def filter_candidates(candidates: list[dict]) -> list[dict]:
-    """保持旧接口兼容（简化版本，不执行旧的逐股API查询）。"""
+    """保持旧接口兼容，但仅做恒等返回。
+
+    静态过滤（ST/次新/板块/市值）已在候选池构建时完成。
+    """
     return candidates

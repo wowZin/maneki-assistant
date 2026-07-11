@@ -4,6 +4,7 @@
 签名: score_shortterm(code: str, trade_date: str | None = None) -> tuple
 """
 import sys
+import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -16,18 +17,18 @@ from plays.limit_up.utils import safe_float
 
 # ── 日期工具 ─────────────────────────────────────
 
-_TODAY_OVERRIDE: str | None = None
+_DATE_LOCAL = threading.local()
 
 
 def _today() -> str:
-    if _TODAY_OVERRIDE:
-        return _TODAY_OVERRIDE
+    override = getattr(_DATE_LOCAL, "override", None)
+    if override:
+        return override
     return datetime.now().strftime("%Y%m%d")
 
 
 def _set_trade_date(trade_date: str | None):
-    global _TODAY_OVERRIDE
-    _TODAY_OVERRIDE = trade_date
+    _DATE_LOCAL.override = trade_date
 
 
 def _to_df(api: str, params: dict, fields: str = ""):
@@ -113,7 +114,7 @@ def score_shortterm(code: str, fundflow_data: dict = None, trade_date: str | Non
         get_realtime_pct, get_inner_outer_ratio, get_turnover,
     )
 
-    old = _TODAY_OVERRIDE
+    old = getattr(_DATE_LOCAL, "override", None)
     _set_trade_date(trade_date)
 
     try:

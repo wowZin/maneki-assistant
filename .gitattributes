@@ -2,3 +2,4 @@
 *.parquet filter=lfs diff=lfs merge=lfs -text
 *.pkl filter=lfs diff=lfs merge=lfs -text
 plays/limit_up/data/backtest/bulk_cache.json filter=lfs diff=lfs merge=lfs -text
+*.csv filter=lfs diff=lfs merge=lfs -text

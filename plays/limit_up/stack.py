@@ -69,17 +69,22 @@ class ScoreStack:
         self.items: dict[str, "ScoreStack.Item"] = {}
         self.prev_pct: dict[str, float] = {}
 
-    def update(self, quotes: dict[str, dict]):
+    def update(self, quotes: dict[str, dict], name_map: dict[str, str] | None = None):
         """用 batch_quotes 结果更新栈。
 
         Args:
             quotes: {code: {pct_chg, name, ...}} 来自 THS get_batch_quotes
+            name_map: {code: name} 候选池名称映射，用于 quote 中无 name 时回填。
         """
         now = time.time()
+        name_map = name_map or {}
+        seen_codes: set[str] = set()
 
         for code, q in quotes.items():
             pct_chg = float(q.get("pct_chg", 0) or 0)
-            name = q.get("name", "") or q.get("f_name", "") or ""
+            name = q.get("name", "") or q.get("f_name", "") or name_map.get(code, "")
+
+            seen_codes.add(code)
 
             # 死票：涨幅<=0，踢出栈
             if pct_chg <= 0:
@@ -112,6 +117,11 @@ class ScoreStack:
                 )
 
             self.prev_pct[code] = pct_chg
+
+        # 本轮未返回的股票：淘汰 stale  prev_pct，避免跨多轮涨速失真
+        for code in list(self.prev_pct.keys()):
+            if code not in seen_codes and code not in self.items:
+                self.prev_pct.pop(code, None)
 
     def pop_top(self, n: int = 20) -> list[Item]:
         """取评分最高的 N 只（不移除，仅返回副本）。"""

@@ -94,7 +94,7 @@ try:
 
     if model_mode:
         # 需要完整的 NV2 数据
-        from plays.limit_up.pipeline import _fetch_nv2_data, _extract_pit_features
+        from plays.limit_up.pipeline_feishu import _fetch_nv2_data, _extract_pit_features
         _fetch_nv2_data([code])
         feats = _extract_pit_features(code, pit_mode=True)
         feats["sentiment"] = scores.get("sentiment", 0)

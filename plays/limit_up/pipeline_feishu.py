@@ -969,6 +969,15 @@ def push_feishu(results):
     """
     import requests
 
+    # 兼容旧结果中的 total 字段
+    normalized = []
+    for r in results:
+        nr = dict(r)
+        if "total_score" not in nr and "total" in nr:
+            nr["total_score"] = nr["total"]
+        normalized.append(nr)
+    results = normalized
+
     model_mode = os.environ.get("LIMIT_UP_USE_MODEL", "").lower() in ("true", "1", "yes")
     default_thr = "55" if model_mode else "95"
     threshold = float(CONFIG.get("ULTIMATE_PUSH_THRESHOLD", default_thr))

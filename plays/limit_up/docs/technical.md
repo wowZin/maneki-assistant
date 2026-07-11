@@ -8,7 +8,16 @@
 
 专注A股T+1~T+3周期涨停潜力预判的纯技术面分析。六维度量化评分，含一票否决规则（动态阈值）、板块弱势天花板、时间因子。
 
-数据源：Tushare stk_factor_pro（T-1）+ 同花顺实时量比。盘中优先使用同花顺实时量比覆盖（从 fund_cache 获取），替代 T-1 vol_ratio。
+数据源：Tushare stk_factor_pro（T-1）+ 同花顺实时行情。盘中优先使用 `realtime_ctx` 的实时 `vol_ratio` / `turnover` 覆盖 T-1 数据；实时数据缺失时降级到 `factor_ctx.get_daily_basic()` 或 Tushare `daily_basic`。
+
+## 实时数据增强
+
+在 daemon 盘中运行时，`score_technical` 通过 `realtime_ctx` 读取：
+
+- `get_vol_ratio(code)`: 实时量比
+- `get_turnover(code)`: 实时换手率
+
+优先级：`realtime_ctx` > `factor_ctx` > Tushare T-1。
 
 ## 六维度权重
 
