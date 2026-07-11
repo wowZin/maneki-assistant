@@ -32,7 +32,8 @@ def scan_batch(
     Args:
         pool_codes: 候选股代码列表，支持短代码或带后缀代码。
         max_rps: 每秒最大请求数（实际为 chunk 间间隔控制）。
-        inject_realtime: 是否将结果注入 realtime_ctx。
+        inject_realtime: 是否将结果注入全局 realtime_ctx 缓存。
+            注意：默认 True，调用方若不需要副作用可显式传 False。
 
     Returns:
         {short_code: quote_dict}

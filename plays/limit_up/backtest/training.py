@@ -78,14 +78,20 @@ def get_scanned_codes(trade_date: str) -> set[str]:
                 for r in recs:
                     if isinstance(r, dict) and r.get("code"):
                         codes.add(r["code"])
-            except Exception:
-                continue
+            except json.JSONDecodeError as e:
+                print(f"  [warn] 解析 analysis 文件失败 {f}: {e}")
+            except OSError as e:
+                print(f"  [warn] 读取 analysis 文件失败 {f}: {e}")
+            except Exception as e:
+                print(f"  [warn] 处理 analysis 文件异常 {f}: {e}")
     return codes
 
 
 def get_limit_up_codes(trade_date: str) -> set[str]:
     """当日全市场涨停股（主板 + 非 ST），从 Tushare limit_list_d 拉取。"""
     from scripts.tu_share import call_tushare
+    from plays.limit_up.utils import is_tradable_stock
+
     resp = call_tushare(
         "limit_list_d",
         {"trade_date": trade_date, "limit_type": "U"},
@@ -98,14 +104,8 @@ def get_limit_up_codes(trade_date: str) -> set[str]:
         d = dict(zip(fields, row))
         code = d.get("ts_code", "")
         name = d.get("name", "") or ""
-        # 过滤 ST/退市/N开头
-        if any(x in name for x in ("ST", "*ST", "退", "N")):
-            continue
-        # 过滤 科创板 / 创业板 / 北交所
-        pure = code.split(".")[0]
-        if pure.startswith(("300", "301", "688", "8", "4", "920")):
-            continue
-        codes.add(code)
+        if is_tradable_stock(code, name):
+            codes.add(code)
     return codes
 
 

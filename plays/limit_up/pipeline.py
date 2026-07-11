@@ -181,14 +181,15 @@ def _ensure_ws_connected() -> bool:
     ws = _ensure_ws()
     try:
         if ws.is_connected():
-            ws._ensure_connection()
             _WS_CONNECTED_TODAY = True
             return True
     except Exception:
-        pass
+        # is_connected() 本身失败时，降级为重新创建连接
+        _WS_CLIENT = None
 
     print(f"[pipeline] WS 重连中...")
     try:
+        ws = _ensure_ws()
         ws.connect()
         _WS_CONNECTED_TODAY = True
         _WS_L1_CODES.clear()
@@ -210,6 +211,17 @@ def _close_ws():
         except Exception as e:
             print(f"[pipeline] WS 关闭异常: {e}")
         _WS_CLIENT = None
+
+
+def _close_pool():
+    """关闭评分线程池。daemon 退出时调用。"""
+    global _SCORE_POOL
+    if _SCORE_POOL is not None:
+        try:
+            _SCORE_POOL.shutdown(wait=True)
+            print("[pipeline] 评分线程池已关闭")
+        except Exception as e:
+            print(f"[pipeline] 评分线程池关闭异常: {e}")
 
 
 def _subscribe_l1(codes_short: list[str]):
@@ -394,6 +406,87 @@ def _raw_score(code: str, name: str, realtime: dict | None = None,
     return result
 
 
+def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
+                    iter_count: int | None = None,
+                    stack: ScoreStack | None = None) -> tuple[list[dict], ScoreStack]:
+    """执行一轮完整流程：扫描 → 过滤 → 栈排序 → 粗评 → 精评 → 返回推送列表。
+
+    供 main_loop（daemon 模式）和 _run_once（单次模式）复用。
+
+    Args:
+        pool_codes: 候选股代码列表。
+        pool_name_map: {code: name} 映射。
+        iter_count: 轮次编号，用于打印；None 时不打印详细日志。
+        stack: 外部传入的 ScoreStack，main_loop 需要跨轮复用并保存队列。
+            不传则内部新建，适用于 _run_once。
+
+    Returns:
+        (deep_results, stack)
+    """
+    if stack is None:
+        stack = ScoreStack()
+        print(f"\n[{_now().strftime('%H:%M')}] 第{iter_count}轮 ① batch_quotes {len(pool_codes)}只...")
+    quotes = scan_batch(pool_codes)
+    filtered_quotes = {}
+    for code, q in quotes.items():
+        if q is None:
+            continue
+        vetoed, reason = filter_realtime(q)
+        if not vetoed:
+            filtered_quotes[code] = q
+
+    if iter_count is not None:
+        print(f"    栈: {stack.size}只待评分 | batch {len(quotes)}只 ✓")
+
+    to_score = stack.pop_top(STAGE1_TOP_N)
+    if not to_score:
+        if iter_count is not None:
+            print(f"  ② 粗评: 无待评分股票")
+        return []
+
+    if iter_count is not None:
+        print(f"  ② 粗评 {len(to_score)}只(L1)...")
+    score_data = [
+        (item.code, item.name or pool_name_map.get(item.code, ""),
+         quotes.get(item.code, {"pct_chg": item.pct_chg, "speed": item.speed}))
+        for item in to_score
+    ]
+    rough_results = stage1_rough(score_data)
+
+    # 同步 WS 订阅：只保留当前栈顶
+    current_shorts = {item.code for item in to_score}
+    _sync_subscriptions(current_shorts)
+
+    deep_results = []
+    for r in rough_results:
+        score = r.get("total_score", 0)
+        if score >= PUSH_THRESHOLD:
+            if iter_count is not None:
+                print(f"    ≥55 {r['code']} {r['name']} total_score={score:.1f} → 推送")
+            deep_results.append(r)
+        elif score >= L2_GREY_LOW:
+            if iter_count is not None:
+                print(f"    [45,55) {r['code']} {r['name']} total_score={score:.1f} → L2确认...")
+            confirmed = stage2_deep(r["code"], r["name"], score)
+            if confirmed:
+                confirmed["scores"] = r.get("scores", {})
+                confirmed["reasons"] = r.get("reasons", {})
+                confirmed["pct_chg"] = r.get("pct_chg", 0)
+                confirmed["resonance"] = r.get("resonance", {})
+                confirmed["score_mode"] = "daemon_weighted"
+                if iter_count is not None:
+                    print(f"      L2通过 → 推送")
+                deep_results.append(confirmed)
+            elif iter_count is not None:
+                print(f"      L2拒绝")
+        elif iter_count is not None:
+            print(f"    <45 {r['code']} {r['name']} total_score={score:.1f} → 丢弃")
+
+    save_analysis(deep_results)
+    check_and_push(deep_results, DATA_DIR)
+    return deep_results, stack
+
+
 def stage1_rough(codes_with_names: list[tuple[str, str, dict]]) -> list[dict]:
     """粗评。"""
     from plays.limit_up.strategies.realtime_ctx import set_l1_snapshots
@@ -568,63 +661,10 @@ def main_loop():
                 print(f"[{now.strftime('%H:%M')}] ② 开始盘中扫描")
                 trading_started = True
 
-            # ── ① 全量扫描 ──
+            # ── 执行一轮扫描评分 ──
             iter_count += 1
             t0 = time.time()
-            print(f"\n[{now.strftime('%H:%M')}] 第{iter_count}轮 ① batch_quotes {len(pool_codes)}只...")
-            quotes = scan_batch(pool_codes)
-            filtered_quotes = {}
-            for code, q in quotes.items():
-                if q is None:
-                    continue
-                vetoed, reason = filter_realtime(q)
-                if not vetoed:
-                    filtered_quotes[code] = q
-            stack.update(filtered_quotes, name_map=pool_name_map)
-            print(f"    栈: {stack.size}只待评分 | batch {len(quotes)}只 ✓")
-
-            # ── ② 粗评 ──
-            to_score = stack.pop_top(STAGE1_TOP_N)
-            if to_score:
-                print(f"  ② 粗评 {len(to_score)}只(L1)...")
-                score_data = [
-                    (item.code, item.name or pool_name_map.get(item.code, ""),
-                     quotes.get(item.code, {"pct_chg": item.pct_chg, "speed": item.speed}))
-                    for item in to_score
-                ]
-                rough_results = stage1_rough(score_data)
-
-                # 同步 WS 订阅：只保留当前栈顶
-                current_shorts = {item.code for item in to_score}
-                _sync_subscriptions(current_shorts)
-
-                # ── ③ 精评决策 ──
-                deep_results = []
-                for r in rough_results:
-                    score = r.get("total_score", 0)
-                    if score >= PUSH_THRESHOLD:
-                        print(f"    ≥55 {r['code']} {r['name']} total_score={score:.1f} → 推送")
-                        deep_results.append(r)
-                    elif score >= L2_GREY_LOW:
-                        print(f"    [45,55) {r['code']} {r['name']} total_score={score:.1f} → L2确认...")
-                        confirmed = stage2_deep(r["code"], r["name"], score)
-                        if confirmed:
-                            confirmed["scores"] = r.get("scores", {})
-                            confirmed["reasons"] = r.get("reasons", {})
-                            confirmed["pct_chg"] = r.get("pct_chg", 0)
-                            confirmed["resonance"] = r.get("resonance", {})
-                            confirmed["score_mode"] = "daemon_weighted"
-                            print(f"      L2通过 → 推送")
-                            deep_results.append(confirmed)
-                        else:
-                            print(f"      L2拒绝")
-                    else:
-                        print(f"    <45 {r['code']} {r['name']} total_score={score:.1f} → 丢弃")
-
-                save_analysis(deep_results)
-                check_and_push(deep_results, DATA_DIR)
-            else:
-                print(f"  ② 粗评: 无待评分股票")
+            deep_results, stack = _run_one_round(pool_codes, pool_name_map, iter_count=iter_count, stack=stack)
 
             save_queue(stack, _today_str())
             _write_heartbeat()
@@ -641,6 +681,7 @@ def main_loop():
             _sim_sleep(10 if _SIM_TIME is not None else 10)
 
     _close_ws()
+    _close_pool()
     _remove_pidfile()
     print("[pipeline] 已停止")
 
@@ -707,45 +748,7 @@ def _run_once():
     pool_codes = [s["code"] for s in pool]
     pool_name_map = build_name_map(pool)
 
-    quotes = scan_batch(pool_codes)
-    filtered_quotes = {}
-    for code, q in quotes.items():
-        if q is None:
-            continue
-        vetoed, reason = filter_realtime(q)
-        if not vetoed:
-            filtered_quotes[code] = q
-
-    stack = ScoreStack()
-    stack.update(filtered_quotes, name_map=pool_name_map)
-    to_score = stack.pop_top(STAGE1_TOP_N)
-    if not to_score:
-        print("[pipeline] 无待评分股票")
-        return
-
-    score_data = [
-        (item.code, item.name or pool_name_map.get(item.code, ""),
-         quotes.get(item.code, {"pct_chg": item.pct_chg, "speed": item.speed}))
-        for item in to_score
-    ]
-    rough_results = stage1_rough(score_data)
-    deep_results = []
-    for r in rough_results:
-        score = r.get("total_score", 0)
-        if score >= PUSH_THRESHOLD:
-            deep_results.append(r)
-        elif score >= L2_GREY_LOW:
-            confirmed = stage2_deep(r["code"], r["name"], score)
-            if confirmed:
-                confirmed["scores"] = r.get("scores", {})
-                confirmed["reasons"] = r.get("reasons", {})
-                confirmed["pct_chg"] = r.get("pct_chg", 0)
-                confirmed["resonance"] = r.get("resonance", {})
-                confirmed["score_mode"] = "daemon_weighted"
-                deep_results.append(confirmed)
-
-    save_analysis(deep_results)
-    check_and_push(deep_results, DATA_DIR)
+    deep_results, _ = _run_one_round(pool_codes, pool_name_map)
     print(f"[pipeline] 单次扫描完成，分析 {len(deep_results)} 只")
 
 
