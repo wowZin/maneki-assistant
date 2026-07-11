@@ -137,8 +137,11 @@ plays/limit_up/
 
 ```bash
 # 涨停预测 daemon（常驻）
-# 注意：仓库内未提供 systemd unit 文件，需自行配置
-python plays/limit_up/pipeline.py --daemon
+systemctl enable maneki-pipeline-daemon
+systemctl start maneki-pipeline-daemon
+
+# 手动启动（测试用）
+python3 plays/limit_up/pipeline.py --daemon
 
 # 飞书 Bot（接收飞书回调 → Claude 决策 → 回复）
 uvicorn feishu_bot.main:app --host 0.0.0.0 --port 8080
