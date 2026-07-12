@@ -25,7 +25,7 @@
 
 | 数据 | 位置 | 格式 | 更新频率 | 说明 |
 |------|------|------|---------|------|
-| **候选池** | `data/pool/pool_{date}.json` | `list[{code,name,circ_mv}]` | 每日1次(开盘) | 50-200亿主板非ST非次新，~1195只 |
+| **候选池** | `data/pool/pool_{date}.json` | `list[{code,name,circ_mv}]` | 每日1次(开盘) | 50-300亿主板非ST非次新 |
 | **栈(待评分)** | `data/queue/queue_{date}.json` | `dict{items, prev_pct}` | 每分钟覆写 | 内存为主，文件做持久化(防重启丢失) |
 | **评分结果** | `data/analysis/{date}_{time}.json` | `list[{code,name,scores,total_score}]` | 每次评分写入 | 供复盘/飞书推送读取 |
 | **推送记录** | `data/pushed/{date}_{time}.json` | `list[{code,name,total_score}]` | 推送时写入 | 沿用现有格式 |
@@ -40,7 +40,7 @@
 输出: data/pool/pool_{date}.json
 流程:
   1. call_tushare('daily_basic') — 全市场，20积分
-  2. 过滤: 主板(00/60) + 非ST + 非次新(>120天) + 市值50-200亿
+  2. 过滤: 主板(00/60) + 非ST + 非次新(>120天) + 市值50-300亿
   3. 按流通市值降序写入 pool.json
 ```
 
@@ -48,7 +48,7 @@
 - ✓ 返回list且>=500只
 - ✓ 不含ST股
 - ✓ 不含创业板/科创板/北交所
-- ✓ 市值在50-200亿区间
+- ✓ 市值在50-300亿区间
 
 ### 2. stack.py — 待评分栈管理
 
@@ -133,7 +133,7 @@ python plays/limit_up/pipeline.py --daemon
 
 原静态规则拆分：
 - 规则1(ST)/2(次新)/3(板块)/5(市值) → 移到 pool_builder
-- 规则6(换手率) → 旧T-1数据，全部弃用（候选池已50-200亿起步）
+- 规则6(换手率) → 旧T-1数据，全部弃用（候选池已50-300亿起步）
 - 规则4(停牌) → batch_quotes无数据自动忽略
 - 规则7(一字板) → 保留，从实时涨幅+换手判断
 

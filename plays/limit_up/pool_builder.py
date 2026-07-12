@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""候选池构建 — 每日一次，开盘前拉 daily_basic 全市场数据，筛选 50-200亿 主板候选股。
+"""候选池构建 — 每日一次，开盘前拉 daily_basic 全市场数据，筛选 50-300亿 主板候选股。
 
 用法：
     python plays/limit_up/pool_builder.py              # 构建当日池
@@ -12,7 +12,7 @@
     1. 主板 (00/60 开头)
     2. 非 ST / *ST
     3. 上市满 120 天（非次新）
-    4. 流通市值 50-200 亿
+    4. 流通市值 50-300 亿
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ POOL_DIR = PLAY_DIR / "data" / "pool"
 POOL_DIR.mkdir(parents=True, exist_ok=True)
 
 MARKET_CAP_MIN = 500000  # 万元 (50亿)
-MARKET_CAP_MAX = 2000000  # 万元 (200亿)
+MARKET_CAP_MAX = 3000000  # 万元 (300亿)
 MIN_LISTING_DAYS = 120  # 非次新
 MAIN_BOARD_PREFIXES = ("00", "60")
 EXCLUDED_PREFIXES = ("300", "301", "688", "8", "4", "920", "430")
@@ -123,7 +123,7 @@ def build_pool(trade_date: str | None = None) -> list[dict]:
             except (ValueError, TypeError):
                 pass
 
-        # 规则: 流通市值 50-200亿
+        # 规则: 流通市值 50-300亿
         circ_mv = float(row.get("circ_mv", 0) or 0)
         if circ_mv < MARKET_CAP_MIN or circ_mv > MARKET_CAP_MAX:
             continue
