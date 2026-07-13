@@ -399,6 +399,7 @@ def _raw_score(code: str, name: str, realtime: dict | None = None,
 
 
 def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
+                    pool_extras: dict[str, dict] | None = None,
                     iter_count: int | None = None,
                     stack: ScoreStack | None = None) -> tuple[list[dict], ScoreStack]:
     """执行一轮完整流程：扫描 → 过滤 → 栈排序 → 粗评 → 精评决策。
@@ -462,26 +463,33 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
     try:
         from plays.limit_up.factors.optimized.model_score import factor_model_score_batch
         from plays.limit_up.strategies import factor_ctx
-        from plays.limit_up.utils import safe_float
         import pandas as pd
-        # 预热 factor_ctx 缓存（逐只懒加载 daily/daily_basic/limit_list_d）
+        # 轻量预取 PIT 特征数据（只拉 daily+limit_list_d，跳过每日皆的 daily_basic）
         code_list = [r["code"] for r in rough_results]
         for c in code_list:
-            factor_ctx.ensure_data(c)
+            factor_ctx._ensure_daily_limit(c)  # 只拉 daily + limit_list_d
         feats_list = []
         for r in rough_results:
             code = r["code"]
-            # PIT 特征
+            # PIT 特征（daily 行情衍生）
             feats = factor_ctx.get_price_features(code)
-            basic = factor_ctx.get_daily_basic(code)
-            if basic:
-                feats["turnover_rate"] = safe_float(basic.get("turnover_rate", 5.0))
-                feats["volume_ratio"] = safe_float(basic.get("volume_ratio", 1.0))
-                feats["circ_mv"] = safe_float(basic.get("circ_mv", 0.0))
-                feats["pe"] = safe_float(basic.get("pe", 999.0))
-                feats["pb"] = safe_float(basic.get("pb", 999.0))
+            # 涨停基因（limit_list_d 缓存）
             feats["limit_up_count_20d"] = float(factor_ctx.get_limit_up_count(code, 20))
             feats["limit_up_count_60d"] = float(factor_ctx.get_limit_up_count(code, 60))
+            # 实时换手/量比（THS batch_quotes，比 T-1 daily_basic 更新）
+            from plays.limit_up.strategies.realtime_ctx import get_turnover, get_vol_ratio
+            _tr = get_turnover(code)
+            _vr = get_vol_ratio(code)
+            if _tr is not None:
+                feats["turnover_rate"] = _tr
+            if _vr is not None:
+                feats["volume_ratio"] = _vr
+            # 静态估值（pe/pb/circ_mv 从 pool 缓存读）
+            if pool_extras and code in pool_extras:
+                _pe = pool_extras[code]
+                feats["circ_mv"] = _pe.get("circ_mv", 0)
+                feats["pe"] = _pe.get("pe", 999.0)
+                feats["pb"] = _pe.get("pb", 999.0)
             # 策略维度分
             for dim in ("sentiment", "shortterm", "technical", "fundflow", "fundamental"):
                 feats[dim] = r["scores"].get(dim, 0)
@@ -673,6 +681,8 @@ def main_loop():
     print(f"[pipeline] 启动，当前时间 {_now().strftime('%H:%M')}")
     print(f"[pipeline] 节点: {POOL_TIME//100:02d}:{POOL_TIME%100:02d} 建池 | {TRADE_START//100:02d}:{TRADE_START%100:02d} 开扫")
 
+    pool_extras: dict[str, dict] = {}
+
     while _running:
         try:
             now = _now()
@@ -690,6 +700,9 @@ def main_loop():
                 pool = ensure_pool(_today_str())
                 pool_codes = [s["code"] for s in pool]
                 pool_name_map = build_name_map(pool)
+                pool_extras = {s["code"]: {"circ_mv": s.get("circ_mv", 0),
+                                             "pe": s.get("pe", 999.0),
+                                             "pb": s.get("pb", 999.0)} for s in pool}
                 print(f"    候选池 {len(pool)} 只 ✓")
                 pool_built = True
 
@@ -706,7 +719,7 @@ def main_loop():
             # ── 执行一轮扫描评分 ──
             iter_count += 1
             t0 = time.time()
-            deep_results, stack = _run_one_round(pool_codes, pool_name_map, iter_count=iter_count, stack=stack)
+            deep_results, stack = _run_one_round(pool_codes, pool_name_map, pool_extras=pool_extras, iter_count=iter_count, stack=stack)
 
             save_queue(stack, _today_str())
             _write_heartbeat()

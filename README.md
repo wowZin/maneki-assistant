@@ -187,6 +187,33 @@ python plays/limit_up/health_patrol.py --dry-run
 | 部署 | cron触发 | systemd常驻 |
 | 成本 | Tushare逐股查询(高) | daily_basic 20积分/天 |
 
+## 重启 daemon
+
+代码变更后需要重启才能生效。Python 缓存已编译的 `.pyc`，保险做法是清缓存再重启：
+
+```bash
+# 1. 杀旧进程
+pkill -f "pipeline.py --daemon"
+
+# 2. 清 Python 缓存（避免用旧 `.pyc`）
+find plays/limit_up/__pycache__ -name "*.pyc" -delete 2>/dev/null
+find plays/limit_up/strategies/__pycache__ -name "*.pyc" -delete 2>/dev/null
+find scripts/__pycache__ -name "*.pyc" -delete 2>/dev/null
+
+# 3. 清理健康标记（否则新 daemon 日志显示旧 PID 可能误导）
+rm -f plays/limit_up/data/health/pipeline_daemon.pid
+rm -f plays/limit_up/data/health/pipeline_heartbeat.json
+
+# 4. 启动
+cd /root/maneki-agent && python3 plays/limit_up/pipeline.py --daemon
+```
+
+如果只想检查 daemon 是否活着：
+```bash
+ps aux | grep "pipeline.py --daemon" | grep -v grep
+ls -t plays/limit_up/data/analysis/  # 看最新轮次的时间戳
+```
+
 ## 风险提示
 
 - 本系统仅供研究参考，不构成投资建议

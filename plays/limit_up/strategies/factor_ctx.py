@@ -334,6 +334,51 @@ def ensure_data(code: str) -> bool:
     return success
 
 
+def _ensure_daily_limit(code: str) -> bool:
+    """轻量预取：只拉 daily + limit_list_d，跳过 daily_basic。
+
+    供 model_score 路径使用（daily_basic 字段由模型 fill_values 兜底）。
+    """
+    if code in _DAILY_CACHE:
+        return True
+    from datetime import datetime as _dt, timedelta as _td
+    from pathlib import Path as _Path
+    import sys as _sys
+    _project_dir = _Path(__file__).resolve().parent.parent.parent.parent
+    _sys.path.insert(0, str(_project_dir))
+    from scripts.tu_share import call_tushare as _call_tushare
+    today = _dt.now().strftime("%Y%m%d")
+    start70 = (_dt.now() - _td(days=70)).strftime("%Y%m%d")
+    start60 = (_dt.now() - _td(days=60)).strftime("%Y%m%d")
+    success = False
+    # 1. daily
+    try:
+        resp = _call_tushare("daily", {"ts_code": code, "start_date": start70, "end_date": today},
+                             "ts_code,trade_date,open,pre_close,close,high,low,vol,amount,pct_chg")
+        if resp.get("code") == 0:
+            items = resp.get("data", {}).get("items", [])
+            fields = resp.get("data", {}).get("fields", [])
+            rows = [dict(zip(fields, row)) for row in items]
+            if rows:
+                set_daily(code, rows)
+                success = True
+    except Exception:
+        pass
+    # 2. limit_list_d
+    try:
+        resp = _call_tushare("limit_list_d", {"ts_code": code, "start_date": start60, "end_date": today, "limit_type": "U"},
+                             "ts_code,trade_date")
+        if resp.get("code") == 0:
+            items = resp.get("data", {}).get("items", [])
+            fields = resp.get("data", {}).get("fields", [])
+            dates = [str(dict(zip(fields, row)).get("trade_date", "")) for row in items]
+            cutoff20 = (_dt.now() - _td(days=20)).strftime("%Y%m%d")
+            set_limit_counts(code, sum(1 for d in dates if d >= cutoff20), len(dates))
+    except Exception:
+        set_limit_counts(code, 0, 0)
+    return success
+
+
 def load_concept_data_from_cache(cache_dir: str | Path | None = None):
     """从概念缓存目录加载概念数据（pipeline 初始化时调用）。
 
