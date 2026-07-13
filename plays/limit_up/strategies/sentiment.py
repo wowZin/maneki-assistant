@@ -25,14 +25,14 @@ sys.path.insert(0, str(PROJECT_DIR / "scripts"))
 from scripts.tu_share import call_tushare  # noqa: E402
 from plays.limit_up.utils import safe_float_none, safe_int_none, list_to_dict  # noqa: E402
 
-# 玩法级缓存（与 pipeline 共享，由 pipeline 批量预取填充）
-from plays.limit_up.pipeline import (  # noqa: E402
-    _get_popularity_rank,
-    _get_realtime_fund_cache,
-    _THS_QUOTE_CACHE,
-    _HOT_CONCEPT_CACHE,
-    _HOT_LIST_ITEMS,
+# 实时概念热点缓存（替代 THS 热门榜）
+from plays.limit_up.strategies.concept_cache import (  # noqa: E402
+    get_concept_limit_ups,
+    get_best_concept,
+    get_total_limit_up_count,
 )
+
+# 移除 _get_popularity_rank 依赖（热榜仅 100 只，无意义）
 
 
 def score_sentiment(code: str, trade_date: str | None = None) -> tuple[int | float, str]:
@@ -60,8 +60,12 @@ def score_sentiment(code: str, trade_date: str | None = None) -> tuple[int | flo
     # 1. 数据获取
     # ═══════════════════════════════════════════════════════════
 
-    # 1.1 概念板块（同花顺缓存）
-    concept_names = _HOT_CONCEPT_CACHE.get(code_short, []) if _HOT_CONCEPT_CACHE else []
+    # 1.1 概念热点（基于实时涨停 + 全量概念映射）
+    clu = get_concept_limit_ups(code)
+    concept_names = [k for k in clu if not k.startswith("_")]
+    concept_ul_cnt = {k: v for k, v in clu.items() if not k.startswith("_")}
+    total_limit_ups = clu.get("_total_limit_ups", 0)
+    total_limit_concepts = clu.get("_total_concepts", 0)
 
     # 1.2 全市场涨跌停数据
     limit_fields = ["trade_date", "ts_code", "name", "close", "pct_chg", "limit",
@@ -86,22 +90,12 @@ def score_sentiment(code: str, trade_date: str | None = None) -> tuple[int | flo
     except Exception:
         pass
 
-    # 1.4 概念涨停统计（同花顺版，与 sentiment v1 一致）
-    concept_ul_cnt = {}
-    if _HOT_CONCEPT_CACHE and _HOT_LIST_ITEMS:
-        for s in _HOT_LIST_ITEMS:
-            pct = float(s.get('pct_chg', 0))
-            tags = s.get('tag', {}).get('concept_tag', [])
-            if pct >= 9.5:
-                for tag in tags:
-                    concept_ul_cnt[tag] = concept_ul_cnt.get(tag, 0) + 1
-        for s in _HOT_LIST_ITEMS:
-            pct = float(s.get('pct_chg', 0))
-            if 5 <= pct < 9.5:
-                tags = s.get('tag', {}).get('concept_tag', [])
-                for tag in tags:
-                    if tag not in concept_ul_cnt:
-                        concept_ul_cnt[tag] = concept_ul_cnt.get(tag, 0) + 1
+    # 1.4 概念热点（基于实时涨停 + 全量概念映射）
+    clu = get_concept_limit_ups(code)
+    concept_names = [k for k in clu if not k.startswith("_")]
+    concept_ul_cnt = {k: v for k, v in clu.items() if not k.startswith("_")}
+    total_limit_ups = clu.get("_total_limit_ups", 0)
+    total_limit_concepts = clu.get("_total_concepts", 0)
 
     def _get_ul_cnt(concept_name):
         return concept_ul_cnt.get(concept_name, 0)
@@ -576,39 +570,6 @@ def score_sentiment(code: str, trade_date: str | None = None) -> tuple[int | flo
                 popular_reasons.append(f"连板基因{max_nums_60d}连板+2")
     except Exception:
         pass
-
-    # D.  新增: 纯跟风弱势扣分（优雅降级，非否决）
-    popularity_rank = _get_popularity_rank(code)
-    if popularity_rank is not None:
-        # 有人气排名数据时才评估
-        stock_pct = 0
-        if code_short in _THS_QUOTE_CACHE:
-            stock_pct = _THS_QUOTE_CACHE[code_short].get("pct_chg", 0) or 0
-            if abs(stock_pct) > 30:
-                stock_pct = 0
-        if stock_pct == 0:
-            try:
-                resp_stock = call_tushare("daily", {
-                    "ts_code": code,
-                    "start_date": today_str,
-                    "end_date": today_str,
-                }, "trade_date,pct_chg")
-                stock_items = resp_stock.get("data", {}).get("items", [])
-                if stock_items:
-                    stock_pct = safe_float(stock_items[0][1]) or 0
-            except Exception:
-                pass
-        if limit_data and stock_pct == 0:
-            for item in limit_data:
-                if item.get("ts_code", "") == code:
-                    stock_pct = safe_float(item.get("pct_chg", 0)) or 0
-                    break
-
-        # 人气排名 >= 500 且涨幅 < 5% → 跟风弱势扣分
-        if popularity_rank >= 500 and stock_pct < 5:
-            popular_score -= 4
-            popular_reasons.append(f"跟风弱势(人气{popularity_rank}名)-4")
-    # 无人气排名数据时静默跳过（优雅降级）
 
     score += max(0, min(10, popular_score))
     reasons.extend(popular_reasons)

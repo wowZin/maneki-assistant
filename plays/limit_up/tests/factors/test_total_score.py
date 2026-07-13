@@ -1,4 +1,4 @@
-"""total_score 唯一总分测试。"""
+"""total_score 唯一总分测试 — model_score 模式。"""
 
 from __future__ import annotations
 
@@ -37,14 +37,17 @@ def tier95_row():
     })
 
 
-def test_total_score_equals_quality_combo(tier100_row, tier95_row):
-    """total_score 当前唯一组件为 quality_combo，两者结果一致。"""
-    assert total_score(tier100_row) == REGISTRY["quality_combo"](tier100_row) == 100.0
-    assert total_score(tier95_row) == REGISTRY["quality_combo"](tier95_row) == 95.0
+def test_total_score_deterministic_and_non_negative(tier100_row, tier95_row):
+    """model_score 模式下多次调用结果一致且非负。"""
+    a = total_score(tier100_row)
+    b = total_score(tier100_row)
+    assert a == b  # 确定性的
+    assert a >= 0
+    assert total_score(tier95_row) >= 0
 
 
 def test_total_score_excludes_chasing():
-    """trailing 过高（追高）时 quality_combo 为 0，total_score 亦为 0。"""
+    """trailing 过高时追高护栏应降低评分（不要求严格为0）。"""
     chasing = pd.Series({
         "turnover_rate": 20.0,
         "trailing_10": 0.50,
@@ -55,7 +58,17 @@ def test_total_score_excludes_chasing():
         "fundflow": 15.0,
         "limit_up_count_20d": 3,
     })
-    assert total_score(chasing) == 0.0
+    normal = pd.Series({
+        "turnover_rate": 20.0,
+        "trailing_10": 0.12,
+        "position_20d": 0.60,
+        "pct_chg_score_day": 4.0,
+        "technical": 35.0,
+        "shortterm": 32.0,
+        "fundflow": 15.0,
+        "limit_up_count_20d": 3,
+    })
+    assert total_score(chasing) < total_score(normal)
 
 
 def test_total_score_never_negative():
@@ -68,6 +81,7 @@ def test_total_score_components_are_deterministic(tier100_row):
     a = total_score(tier100_row)
     b = total_score(tier100_row)
     assert a == b
-    assert set(TOTAL_SCORE_COMPONENTS) == {"quality_combo"}
+    assert "model_score" in TOTAL_SCORE_COMPONENTS
+    assert "model_score" in REGISTRY
     for name in TOTAL_SCORE_COMPONENTS:
         assert name in REGISTRY

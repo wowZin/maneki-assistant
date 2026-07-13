@@ -52,48 +52,97 @@ _SCAN_CACHE_FILE = Path(__file__).resolve().parent / "data" / "scan_cache.json"
 
 # ===== 1. 扫描异动股 =====
 def scan_surge():
-    """通过同花顺热门榜获取候选股（Cookie直连，无代理依赖）
+    """通过同花顺涨幅榜获取候选股（替代原热门榜）
 
-    数据源: dq.10jqka.com.cn 热门搜索榜 (100只)
+    数据源: data.10jqka.com.cn 涨幅榜 (分页，全市场)
     过滤: ST/新股/创业板/科创板，涨幅0%-9.5%(排除当日涨停)
     Returns: list[dict] - [{code, name, pct_chg}] 候选股列表，或None
     """
+    from plays.limit_up.utils import is_trading_time
     if not is_trading_time():
         print(f"跳过扫描: 非交易时段 ({datetime.now().strftime('%H:%M')})")
         return None
 
-    from scripts.ths_client import get_ths_client
-    ths = get_ths_client()
-    if not ths.has_cookie:
+    MAX_CANDIDATES = 200  # 限制候选数量，避免全市场几千条
+
+    cookie = ""
+    for line in Path(".env").read_text().splitlines():
+        if line.startswith("THS_COOKIE="):
+            cookie = line.split("=", 1)[1]
+            break
+    if not cookie:
         print("扫描失败: 同花顺 Cookie 未配置")
         return None
 
-    items = ths.get_hot_list()
-    if not items:
-        print("扫描失败: 热门榜无数据")
-        return None
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Cookie": cookie,
+    }
+    s = requests.Session()
+    s.headers.update(headers)
+    # 先访问主页面建立 session
+    s.get("https://data.10jqka.com.cn/market/zdfph/", timeout=10)
 
     candidates = []
-    for s in items:
-        code = s.get("code", "")
-        name = s.get("name", "")
-        pct = float(s.get("pct_chg", 0))
+    page = 1
+    while True:
+        url = f"https://data.10jqka.com.cn/market/zdfph/field/zdf/order/desc/ajax/{page}/"
+        try:
+            r = s.get(url, timeout=10)
+            r.encoding = "gbk"
+            if r.status_code != 200:
+                break
+        except Exception:
+            break
 
-        # 过滤: ST/新股/创业板/科创板，涨幅0%-9.5%(排除当日涨停)
-        if re.search(r"ST|\*ST|退|N", name or ""):
-            continue
-        if re.match(r"^(300|301|688|8|4|920)", code):
-            continue
-        if pct < 0 or pct >= 9.5:  # 放宽下限0%但排除当日已涨停(不可交易)
-            continue
-        if "." not in code:
-            code = f"{code}.SH" if code.startswith("6") else f"{code}.SZ"
-        candidates.append({"code": code, "name": name, "pct_chg": pct})
+        rows = re.findall(r"<tr[^>]*>(.*?)</tr>", r.text, re.DOTALL)
+        page_added = 0
+        for row in rows:
+            cells = re.findall(r"<td[^>]*>(.*?)</td>", row, re.DOTALL)
+            if len(cells) < 5:
+                continue
+            code = re.sub(r"<[^>]+>", "", cells[1]).strip()
+            name = re.sub(r"<[^>]+>", "", cells[2]).strip()
+            pct_str = re.sub(r"<[^>]+>", "", cells[4]).strip()
+            try:
+                pct = float(pct_str)
+            except ValueError:
+                continue
+            if not code or not name:
+                continue
+            # 过滤: ST/新股/创业板/科创板
+            if re.search(r"ST|\*ST|退|N", name):
+                continue
+            if re.match(r"^(300|301|688|8|4|920)", code):
+                continue
+            if pct < 0 or pct >= 9.5:
+                continue
+            if "." not in code:
+                code = f"{code}.SH" if code.startswith("6") else f"{code}.SZ"
+            candidates.append({"code": code, "name": name, "pct_chg": pct})
+            page_added += 1
+            if len(candidates) >= MAX_CANDIDATES:
+                break
+
+        if len(candidates) >= MAX_CANDIDATES:
+            break
+
+        # 翻页判断：最后一只涨幅 < 9.9 则不再有 0-9.5% 的股票
+        last_cells = re.findall(r"<td[^>]*>(.*?)</td>", rows[-1], re.DOTALL)
+        if len(last_cells) >= 5:
+            lp = re.sub(r"<[^>]+>", "", last_cells[4]).strip()
+            try:
+                if float(lp) < 9.9:
+                    break
+            except ValueError:
+                break
+        page += 1
 
     if candidates:
-        print(f"热门榜扫描: {len(items)}只 → {len(candidates)}只候选 (过滤ST/科创/创业板, 涨幅0-9.5%(排除当日涨停))")
+        print(f"涨幅榜扫描: {len(candidates)}只候选 (涨幅0-9.5%)")
     else:
-        print(f"热门榜扫描: {len(items)}只 → 0只候选")
+        print(f"涨幅榜扫描: 0只候选")
+        return None
 
     # 合并 T-1 缓存（涨停回流 + 龙虎榜）
     merged = _merge_scan_sources(candidates)
@@ -216,7 +265,7 @@ def _merge_scan_sources(hot_list: list[dict]) -> list[dict]:
     merged = []
 
     for src_name, src_list in [
-        ("热门榜", hot_list),
+        ("涨幅榜", hot_list),
         ("昨日涨停", _SCAN_LIMITUP_CACHE or []),
         ("龙虎榜", _SCAN_TOP_LIST_CACHE or []),
     ]:
@@ -327,9 +376,6 @@ def score_fundflow(code, trade_date: str | None = None):
 _REALTIME_PCT_CACHE = {}   # {code_short: pct_chg}  兼容旧接口
 _THS_QUOTE_CACHE = {}       # {code_short: {...}}    完整同花顺行情
 _REALTIME_PCT_TS = ""
-_POPULARITY_RANK_CACHE: dict[str, int] = {}  # {code_short: rank} 同花顺热门榜排名
-_HOT_CONCEPT_CACHE: dict[str, list] = {}    # {code_short: [concept_name, ...]}
-_HOT_LIST_ITEMS: list[dict] = []            # 热门榜原始数据（含 pct_chg, tag 等）
 
 
 def _batch_fetch_ths_for_candidates(candidates: list[dict]) -> dict[str, dict]:
@@ -417,59 +463,6 @@ def _batch_fetch_realtime_pct():
     print("  [同花顺] 涨幅缓存为空，请在评分前调用 _batch_fetch_ths_for_candidates")
     return _REALTIME_PCT_CACHE
 
-
-def _fetch_ths_hot_list():
-    """获取同花顺热门榜数据（替代原人气排名方式）
-
-    填充 _POPULARITY_RANK_CACHE 和 _HOT_CONCEPT_CACHE。
-    """
-    global _POPULARITY_RANK_CACHE, _HOT_CONCEPT_CACHE, _HOT_LIST_ITEMS
-    today = datetime.now().strftime("%Y%m%d")
-    if _POPULARITY_RANK_CACHE and getattr(_fetch_ths_hot_list, '_date', '') == today:
-        return
-
-    from scripts.ths_client import get_ths_client
-    ths = get_ths_client()
-    if not ths.has_cookie:
-        return
-
-    items = ths.get_hot_list()
-    if not items:
-        print("  [热门榜] 获取失败")
-        return
-
-    _POPULARITY_RANK_CACHE.clear()
-    _POPULARITY_RANK_CACHE.update({item["code"]: item.get("hot_rank", 0) for item in items})
-    _HOT_CONCEPT_CACHE.clear()
-    _HOT_CONCEPT_CACHE.update({
-        item["code"]: item.get("tag", {}).get("concept_tag", [])
-        for item in items if item.get("code")
-    })
-    _HOT_LIST_ITEMS.clear()
-    _HOT_LIST_ITEMS.extend(items)
-    _fetch_ths_hot_list._date = today
-    zt = sum(1 for i in items if i.get('pct_chg', 0) >= 9.5)
-    print(f"  [同花顺] 热门榜: {len(items)} 只, 涨停{zt}")
-
-
-def _get_popularity_rank(code: str) -> int | None:
-    """获取个股人气排名（同花顺热门榜，兼容旧接口）
-
-    返回: 排名(1-based) 或 None(不在榜单)
-    """
-    if not _POPULARITY_RANK_CACHE:
-        _fetch_ths_hot_list()
-    code_short = code.split('.')[0]
-    rank = _POPULARITY_RANK_CACHE.get(code_short)
-    return rank if rank and rank > 0 else None
-
-
-def _get_hot_concept_tags(code: str) -> list[str]:
-    """获取个股概念标签（来自同花顺热门榜）"""
-    if not _HOT_CONCEPT_CACHE:
-        _fetch_ths_hot_list()
-    code_short = code.split('.')[0]
-    return _HOT_CONCEPT_CACHE.get(code_short, [])
 
 # 实时资金流缓存（同花顺 + L2 + Tushare 三级降级）
 _REALTIME_FUND_CACHE = {}  # code_short → {net_flow, vol_ratio, turnover, amount}
@@ -1221,34 +1214,7 @@ def _score_one(stock: dict, l2_available: bool, weights: dict,
             "l2api": l2data}
 
 
-def _pre_rank(candidates, top_n=50):
-    """涨停相关性预排：涨速 + 涨幅 + 人气排名"""
-    pop_cache = _POPULARITY_RANK_CACHE
-    scored = []
-    for stock in candidates:
-        surge = stock.get("surge", 0)
-        pct = stock.get("pct_chg", 0)
-        short = stock["code"].split(".")[0]
-        score = 0
-        if surge >= 5: score += 3  # noqa: E701
-        elif surge >= 3: score += 2  # noqa: E701
-        elif surge >= 2: score += 1  # noqa: E701
-        if pct >= 7: score += 3  # noqa: E701
-        elif pct >= 5: score += 2  # noqa: E701
-        elif pct >= 3: score += 1  # noqa: E701
-        rank = pop_cache.get(short)
-        if rank is not None:
-            if rank <= 100: score += 4  # noqa: E701
-            elif rank <= 200: score += 3  # noqa: E701
-            elif rank <= 300: score += 2  # noqa: E701
-            elif rank <= 500: score += 1  # noqa: E701
-        scored.append((score, stock))
-    scored.sort(key=lambda x: x[0], reverse=True)
-    ranked = [s for _, s in scored[:top_n]]
-    print(f"[预排] {len(candidates)}只 -> Top{len(ranked)} (涨速+涨幅+人气)")
-    for i, (sc, st) in enumerate(scored[:10]):
-        print(f"  {i+1}. {st['code']} {st['name']} 分{sc} (涨速{st.get('surge',0):.1f} 涨幅{st.get('pct_chg',0):.1f})")
-    return ranked
+    # ── 1.3 滤除卖出/中性（保持与 script_trade.py 一致）───
 
 
 def main():
@@ -1339,16 +1305,29 @@ def _run_pipeline(args):
     else:
         print("  [行情] 已跳过 (--no-l2 模式)")
 
-    # 1.7 概念标签（用于策略评分）
-    print("\n[1.7/5] 概念标签...")
-    _fetch_ths_hot_list()
-    from scripts.tu_share import build_concept_map
-    build_concept_map(_HOT_CONCEPT_CACHE)
+    # 1.7 概念标签（用于实时涨停概念热点）
+    print("\n[1.7/5] 概念热点...")
+    from plays.limit_up.strategies.concept_cache import refresh_concept_limit_ups
+    refresh_concept_limit_ups()
+    print(f"  概念热点缓存已刷新")
+
     print(f"  全量 {len(candidates)} 只进入深度评分（预排已取消）")
 
     # 1.8 THS 实时行情
     print("\n[1.8/5] 同花顺实时行情预取...")
     _batch_fetch_ths_for_candidates(candidates)
+
+    # 填充 realtime_ctx（供 shortterm/technical 策略取实时 pct_chg/换手/内外盘）
+    from plays.limit_up.strategies.realtime_ctx import set_realtime_quotes
+    _rt_data = {}
+    for _c in candidates:
+        _short = _c["code"].replace(".SH", "").replace(".SZ", "")
+        _q = _THS_QUOTE_CACHE.get(_short)
+        if _q:
+            _rt_data[_c["code"]] = _q
+    if _rt_data:
+        set_realtime_quotes(_rt_data)
+    del _rt_data
 
     # 1.9 预取 total_score 所需的历史面板数据
     print("\n[1.9/5] Tushare 面板数据预取（daily/daily_basic/limit_list_d）...")

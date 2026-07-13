@@ -36,7 +36,7 @@ def scan_batch(
             注意：默认 True，调用方若不需要副作用可显式传 False。
 
     Returns:
-        {short_code: quote_dict}
+        {full_code: quote_dict} — 与 pool_codes 传入的代码格式一致。
     """
     from plays.limit_up.strategies.realtime_ctx import set_realtime_quotes
 
@@ -47,11 +47,13 @@ def scan_batch(
     for i in range(0, len(pool_codes), chunk_size):
         chunk = pool_codes[i : i + chunk_size]
         batch = ths.get_batch_quotes(chunk)
-        for code, quote in batch.items():
+        # THS 内部归一化为短码 key，映射回原始全码
+        _short_to_full = {c.replace(".SH","").replace(".SZ",""): c for c in chunk}
+        for short_code, quote in batch.items():
             if quote is None:
                 continue
-            short = _short_code(code)
-            results[short] = quote
+            full_code = _short_to_full.get(short_code, short_code)
+            results[full_code] = quote
 
         # 限流：chunk 之间 sleep，最后一批不需要
         if i + chunk_size < len(pool_codes):
@@ -65,11 +67,11 @@ def scan_batch(
 
 
 def build_name_map(pool: list[dict]) -> dict[str, str]:
-    """从候选池构建 {short_code: name} 映射。"""
+    """从候选池构建 {code: name} 映射（保留交易所后缀）。"""
     name_map: dict[str, str] = {}
     for item in pool:
         code = item.get("code", "")
         name = item.get("name", "")
         if code:
-            name_map[_short_code(code)] = name
+            name_map[code] = name
     return name_map

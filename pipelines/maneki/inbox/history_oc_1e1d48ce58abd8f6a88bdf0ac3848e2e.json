@@ -14,5 +14,37 @@
   {
     "role": "assistant",
     "content": "✅ 已停止盯盘 **龙蟠科技（603906.SH）** 和 **南天信息（000948.SZ）**，当前盯盘列表已清空。\n\n需要重新盯盘时说「盯 CODE」即可。"
+  },
+  {
+    "role": "user",
+    "content": "帮我看看pipeline是不是出bug了\n\n[对话历史]\n[user] 把黄河旋风移除盯盘\n[assistant] 黄河旋风（600172.SH）**不在当前盯盘列表中**，无需移除。\n\n当前盯盘共 2 只：\n- 龙蟠科技（603906.SH）\n- 南天信息（000948.SZ）\n\n需要盯其他股票可以说\"盯 CODE\"～\n[user] 把龙蟠科技、南天信息 也移除盯盘\n\n[对话历史]\n[user] 把黄河旋风移除盯盘\n[assistant] 黄河旋风（600172.SH）**不在当前盯盘列表中**，无需移除。\n\n当前盯盘共 2 只：\n- 龙蟠科技（603906.SH）\n- 南天信息（000948.SZ）\n\n需要盯其他股票可以说\"盯 CODE\"～\n[assistant] ✅ 已停止盯盘 **龙蟠科技（603906.SH）** 和 **南天信息（000948.SZ）**，当前盯盘列表已清空。\n\n需要重新盯盘时说「盯 CODE」即可。"
+  },
+  {
+    "role": "assistant",
+    "content": "## 🔴 Pipeline Bug 诊断报告：发现 3 个严重 bug\n\n经过完整代码审查，pipeline 评分确实有大问题。**5 个维度中有 3 个（fundflow/sentiment/shortterm）永远返回 0 分**，导致所有股票 total_score 只有 ~17 分。\n\n---\n\n### Bug 1: 代码格式丢失 — `scan_batch` 丢弃了交易所后缀 🔴\n\n**根因**: `scanner.py:53` 的 `scan_batch()` 将所有代码从 `\"600664.SH\"` 截断为 `\"600664\"`，但整条 pipeline 原封不动地把短代码传给了策略函数。\n\n**影响链**:\n```\npool_codes = [\"600664.SH\", ...]\n  → scan_batch() 返回 keys: {\"600664\": quote, ...}   ← 后缀丢了！\n  → stack.update() 存储 item.code = \"600664\"\n  → stage1_rough() 传 code=\"600664\" 给 _raw_score()\n  → _raw_score() 用 code=\"600664\" 调所有策略\n  → 策略调 tushare API 时 ts_code=\"600664\" → API 返回空！\n```\n\n**各策略影响**:\n| 策略 | 表现 | 原因 |\n|------|------|------|\n| `fundflow` | 总是 0 | tushare `moneyflow/daily_basic/daily` 全部失败 |\n| `sentiment` | 总是 0 | tushare `daily/stk_auction` 失败 + Bug 2 |\n| `shortterm` | 总是 0 | `_get_daily()` 返回空 → `return 0, \"无日线数据\"` |\n| `technical` | 总是 50 | `stk_factor_pro` 失败 → 返回默认 50 |\n| `fundamental` | 33-38 | `factor_ctx.get_daily_basic` 可能处理了短码，部分工作 |\n\n---\n\n### Bug 2: 双导入缓存隔离 — s"
+  },
+  {
+    "role": "user",
+    "content": "好的\n\n[对话历史]\n[user] 把龙蟠科技、南天信息 也移除盯盘\n\n[对话历史]\n[user] 把黄河旋风移除盯盘\n[assistant] 黄河旋风（600172.SH）**不在当前盯盘列表中**，无需移除。\n\n当前盯盘共 2 只：\n- 龙蟠科技（603906.SH）\n- 南天信息（000948.SZ）\n\n需要盯其他股票可以说\"盯 CODE\"～\n[assistant] ✅ 已停止盯盘 **龙蟠科技（603906.SH）** 和 **南天信息（000948.SZ）**，当前盯盘列表已清空。\n\n需要重新盯盘时说「盯 CODE」即可。\n[user] 帮我看看pipeline是不是出bug了\n\n[对话历史]\n[user] 把黄河旋风移除盯盘\n[assistant] 黄河旋风（600172.SH）**不在当前盯盘列表中**，无需移除。\n\n当前盯盘共 2 只：\n- 龙蟠科技（603906.SH）\n- 南天信息（000948.SZ）\n\n需要盯其他股票可以说\"盯 CODE\"～\n[user] 把龙蟠科技、南天信息 也移除盯盘\n\n[对话历史]\n[user]\n[assistant] ## 🔴 Pipeline Bug 诊断报告：发现 3 个严重 bug\n\n经过完整代码审查，pipeline 评分确实有大问题。**5 个维度中有 3 个（fundflow/sentiment/shortterm）永远返回 0 分**，导致所有股票 total_score 只有 ~17 分。\n\n---\n\n### Bug 1: 代码格式丢失 — `scan_batch` 丢弃了交易所后缀 🔴\n\n**"
+  },
+  {
+    "role": "assistant",
+    "content": "Error: Reached max turns (20)"
+  },
+  {
+    "role": "user",
+    "content": "把通富微电加入盯盘\n\n[对话历史]\n[user] 帮我看看pipeline是不是出bug了\n\n[对话历史]\n[user] 把黄河旋风移除盯盘\n[assistant] 黄河旋风（600172.SH）**不在当前盯盘列表中**，无需移除。\n\n当前盯盘共 2 只：\n- 龙蟠科技（603906.SH）\n- 南天信息（000948.SZ）\n\n需要盯其他股票可以说\"盯 CODE\"～\n[user] 把龙蟠科技、南天信息 也移除盯盘\n\n[对话历史]\n[user]\n[assistant] ## 🔴 Pipeline Bug 诊断报告：发现 3 个严重 bug\n\n经过完整代码审查，pipeline 评分确实有大问题。**5 个维度中有 3 个（fundflow/sentiment/shortterm）永远返回 0 分**，导致所有股票 total_score 只有 ~17 分。\n\n---\n\n### Bug 1: 代码格式丢失 — `scan_batch` 丢弃了交易所后缀 🔴\n\n**\n[user] 好的\n\n[对话历史]\n[user] 把龙蟠科技、南天信息 也移除盯盘\n\n[对话历史]\n[user] 把黄河旋风移除盯盘\n[assistant] 黄河旋风（600172.SH）**不在当前盯盘列表中**，无需移除。\n\n当前盯盘共 2 只：\n- 龙蟠科技（603906.SH）\n- 南天信息（000948.SZ）\n\n需要盯其他股票可以说\"盯 CODE\"～\n[assistant] ✅ 已停止盯盘 **龙蟠\n[assistant] Error: Reached max turns (20)"
+  },
+  {
+    "role": "assistant",
+    "content": "✅ 已开始盯盘 **通富微电（002156.SZ）**\n\n当前盯盘共 1 只：\n- 通富微电（002156.SZ）"
+  },
+  {
+    "role": "user",
+    "content": "格林达可以追吗\n\n[对话历史]\n[user] 好的\n\n[对话历史]\n[user] 把龙蟠科技、南天信息 也移除盯盘\n\n[对话历史]\n[user] 把黄河旋风移除盯盘\n[assistant] 黄河旋风（600172.SH）**不在当前盯盘列表中**，无需移除。\n\n当前盯盘共 2 只：\n- 龙蟠科技（603906.SH）\n- 南天信息（000948.SZ）\n\n需要盯其他股票可以说\"盯 CODE\"～\n[assistant] ✅ 已停止盯盘 **龙蟠\n[assistant] Error: Reached max turns (20)\n[user] 把通富微电加入盯盘\n\n[对话历史]\n[user] 帮我看看pipeline是不是出bug了\n\n[对话历史]\n[user] 把黄河旋风移除盯盘\n[assistant] 黄河旋风（600172.SH）**不在当前盯盘列表中**，无需移除。\n\n当前盯盘共 2 只：\n- 龙蟠科技（603906.SH）\n- 南天信息（000948.SZ）\n\n需要盯其他股票可以说\"盯 CODE\"～\n[user] 把龙蟠科技、\n[assistant] ✅ 已开始盯盘 **通富微电（002156.SZ）**\n\n当前盯盘共 1 只：\n- 通富微电（002156.SZ）"
+  },
+  {
+    "role": "assistant",
+    "content": "## 📊 格林达（603931.SH）分析结果\n\n| 指标 | 数值 |\n|------|------|\n| **模型总分 (total_score)** | **28.1** （阈值 55，未达推送标准） |\n| 评级 | ⭐ 不推荐追 |\n\n### 五维度详情\n\n| 维度 | 分数 | 简评 |\n|------|------|------|\n| 基本面 | 78 | 中大盘，流通市值 116 亿 |\n| 技术面 | 92 | 量比 2.05，偏活跃 |\n| 资金面 | 38 | 换手 8.2%，中度活跃 |\n| 情绪面 | **0** | ⚠️ 市场退潮，炸板率 49.7% |\n| 短线博弈 | **25** | 涨停基因弱（20日仅1次），连板溢价为 0 |\n\n### 结论\n\n**不建议追。** 主要原因：\n\n1. **模型总分仅 28.1**，远低于 55 分的推送阈值，XGBoost 模型综合 64 个特征后给出了较低评价\n2. **情绪面归零** — 当前市场退潮，炸板率接近 50%，追涨停的成功率大幅下降\n3. **短线博弈弱** — 近 20 日仅 1 次涨停，缺乏连板基因，没有追涨的动量基础\n4. 虽然基本面和技术面分数不错，但在当前市场环境下，这两个维度不足以支撑短线追涨逻辑\n\n建议等市场情绪回暖（炸板率回落至 35% 以下）再考虑。"
   }
 ]

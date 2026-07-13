@@ -319,6 +319,18 @@ def score_fundflow(code: str, trade_date: str = None,
             if amount_yuan == 0:
                 amount_yuan = safe_float(dl.get("amount", 0)) * 1000
 
+    # 实时数据覆盖（从 realtime_ctx 获取盘中换手/量比，覆盖 T-1 Tushare）
+    try:
+        from plays.limit_up.strategies.realtime_ctx import get_turnover as _rt_tr, get_vol_ratio as _rt_vr
+        _rt_tr_val = _rt_tr(code)
+        _rt_vr_val = _rt_vr(code)
+        if _rt_tr_val is not None:
+            turnover = _rt_tr_val
+        if _rt_vr_val is not None:
+            vol_ratio = _rt_vr_val
+    except Exception:
+        pass
+
     # 0.4 归一化指标：净额 / 成交额 (%)
     if amount_yuan > 0:
         main_pct = (main_net * 10000) / amount_yuan * 100  # 万元→元→%

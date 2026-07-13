@@ -43,7 +43,7 @@ from plays.limit_up.utils import is_trading_time
 from scripts.ths_client import get_ths_client
 
 # ── 配置（可被环境变量覆盖，方便测试）──
-STAGE1_TOP_N = int(os.environ.get("STAGE1_TOP_N", "20"))
+STAGE1_TOP_N = int(os.environ.get("STAGE1_TOP_N", "100"))
 PUSH_THRESHOLD = float(os.environ.get("ULTIMATE_PUSH_THRESHOLD", "55"))
 L2_GREY_LOW = int(os.environ.get("L2_GREY_LOW", "45"))
 POOL_TIME = int(os.environ.get("POOL_TIME", "915"))        # 建池时间
@@ -136,18 +136,10 @@ def _get_realtime_fund_cache():
     return cache or {}
 
 
-# 向后兼容：THS 行情/热门榜缓存（旧策略引用）
+# 向后兼容：THS 行情缓存（旧策略引用）
 _THS_QUOTE_CACHE: dict = {}
-_HOT_CONCEPT_CACHE: dict[str, list] = {}
-_HOT_LIST_ITEMS: list[dict] = []
 _REALTIME_PCT_CACHE: dict = {}
-_POPULARITY_RANK_CACHE: dict[str, int] = {}
 _REALTIME_PCT_TS: str = ""
-
-
-def _get_popularity_rank(code_short: str) -> int:
-    """兼容旧策略。返回人气排名，没有返回 999。"""
-    return _POPULARITY_RANK_CACHE.get(code_short, 999)
 
 
 # ===== WS 管理 =====
@@ -432,6 +424,14 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
         print(f"\n[{_now().strftime('%H:%M')}] 第{iter_count}轮 ① batch_quotes {len(pool_codes)}只...")
     quotes = scan_batch(pool_codes)
     filtered_quotes = {}
+
+    # 刷新概念热点缓存（基于涨幅榜 API）
+    try:
+        from plays.limit_up.strategies.concept_cache import refresh_concept_limit_ups
+        refresh_concept_limit_ups()
+    except Exception:
+        pass
+
     for code, q in quotes.items():
         if q is None:
             continue
@@ -458,8 +458,46 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
     ]
     rough_results = stage1_rough(score_data)
 
-    # 同步 WS 订阅：只保留当前栈顶
-    current_shorts = {item.code for item in to_score}
+    # ── 模型分覆盖：用 XGBoost 替代老的加权总分 ──
+    try:
+        from plays.limit_up.factors.optimized.model_score import factor_model_score_batch
+        from plays.limit_up.strategies import factor_ctx
+        from plays.limit_up.utils import safe_float
+        import pandas as pd
+        # 预热 factor_ctx 缓存（逐只懒加载 daily/daily_basic/limit_list_d）
+        code_list = [r["code"] for r in rough_results]
+        for c in code_list:
+            factor_ctx.ensure_data(c)
+        feats_list = []
+        for r in rough_results:
+            code = r["code"]
+            # PIT 特征
+            feats = factor_ctx.get_price_features(code)
+            basic = factor_ctx.get_daily_basic(code)
+            if basic:
+                feats["turnover_rate"] = safe_float(basic.get("turnover_rate", 5.0))
+                feats["volume_ratio"] = safe_float(basic.get("volume_ratio", 1.0))
+                feats["circ_mv"] = safe_float(basic.get("circ_mv", 0.0))
+                feats["pe"] = safe_float(basic.get("pe", 999.0))
+                feats["pb"] = safe_float(basic.get("pb", 999.0))
+            feats["limit_up_count_20d"] = float(factor_ctx.get_limit_up_count(code, 20))
+            feats["limit_up_count_60d"] = float(factor_ctx.get_limit_up_count(code, 60))
+            # 策略维度分
+            for dim in ("sentiment", "shortterm", "technical", "fundflow", "fundamental"):
+                feats[dim] = r["scores"].get(dim, 0)
+            feats_list.append(feats)
+        model_scores = factor_model_score_batch(pd.DataFrame(feats_list))
+        for i, r in enumerate(rough_results):
+            ms = round(float(model_scores.iloc[i]), 2)
+            r["factors"] = {"model_score": ms}
+            r["total_score"] = ms
+            r["score_mode"] = "model_score"
+        print(f"    模型分 ✓")
+    except Exception as e:
+        print(f"    模型分失败, 回退加权总分: {e}")
+
+    # 同步 WS 订阅：只保留当前栈顶（WS 使用短代码）
+    current_shorts = {item.code.split(".")[0] for item in to_score}
     _sync_subscriptions(current_shorts)
 
     all_results = []      # 所有进入评分的都存档
@@ -481,7 +519,8 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
                 confirmed["reasons"] = r.get("reasons", {})
                 confirmed["pct_chg"] = r.get("pct_chg", 0)
                 confirmed["resonance"] = r.get("resonance", {})
-                confirmed["score_mode"] = "daemon_weighted"
+                confirmed["score_mode"] = r.get("score_mode", "model_score")
+                confirmed["factors"] = r.get("factors", {})
                 if iter_count is not None:
                     print(f"      L2通过 → 推送")
                 all_results.append(confirmed)
@@ -653,17 +692,6 @@ def main_loop():
                 pool_name_map = build_name_map(pool)
                 print(f"    候选池 {len(pool)} 只 ✓")
                 pool_built = True
-
-                # 预热 THS 热门榜缓存（sentiment/first_board 依赖）
-                try:
-                    from plays.limit_up.pipeline_feishu import _fetch_ths_hot_list as _fth
-                    _fth()
-                    from plays.limit_up import pipeline_feishu as _pfs
-                    _POPULARITY_RANK_CACHE.update(_pfs._POPULARITY_RANK_CACHE)
-                    _HOT_CONCEPT_CACHE.update(_pfs._HOT_CONCEPT_CACHE)
-                    _HOT_LIST_ITEMS[:] = _pfs._HOT_LIST_ITEMS
-                except Exception:
-                    pass
 
             # ── 交易时段 ──
             trading = _is_trading_session(hhmm)

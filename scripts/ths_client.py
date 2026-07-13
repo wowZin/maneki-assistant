@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 同花顺 Web 实时行情客户端
 =========================
@@ -92,6 +93,7 @@ class THSClient:
         self._cookie = cookie or _load_ths_cookie()
         self._cache: dict[str, dict] = {}
         self._cache_date: str = ""
+        self._cache_ts: float = 0.0
         self._session = requests.Session()
         self._session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -170,7 +172,7 @@ class THSClient:
             record("ths", "quote", ok=ok, items=items, latency_ms=(time.time()-t0)*1000)
 
     def get_batch_quotes(self, codes: list[str]) -> dict[str, dict]:
-        """批量获取实时行情（逐只请求，自动缓存当日）
+        """批量获取实时行情（逐只请求，自动缓存，缓存 TTL 过期自动刷新）
 
         Args:
             codes: 股票代码列表
@@ -178,12 +180,16 @@ class THSClient:
         Returns:
             {code: {price, pct_chg, turnover, ...}}
         """
-        today = datetime.now().strftime("%Y%m%d")
+        now = time.time()
 
-        # 当日缓存刷新
-        if self._cache_date != today:
+        # 缓存 TTL 判断（盘内每轮重新拉取）
+        if not self._cache_date:
+            self._cache_date = datetime.now().strftime("%Y%m%d")
+        # 每天首次或缓存超过 30 秒，刷新
+        if self._cache_date != datetime.now().strftime("%Y%m%d") or now - self._cache_ts > 30:
             self._cache = {}
-            self._cache_date = today
+            self._cache_date = datetime.now().strftime("%Y%m%d")
+            self._cache_ts = now
 
         results = {}
         new_codes = []
@@ -231,7 +237,6 @@ class THSClient:
         """
         logger.warning("get_fund_cache 已废弃，换手率/量比用 get_quote, 主力净流入用 L2")
         return {}
-
 
     def get_hot_list(self, stock_type: str = "a", list_type: str = "value") -> list[dict]:
         """获取同花顺热门搜索榜单（人气排名）

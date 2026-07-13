@@ -199,11 +199,13 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
     pit_feats = factor_ctx.get_price_features(code)
     basic = factor_ctx.get_daily_basic(code)
     if basic:
-        pit_feats["circ_mv"] = basic.get("circ_mv", 0.0)
-        pit_feats["pe"] = basic.get("pe", 999.0)
-        pit_feats["pb"] = basic.get("pb", 999.0)
-        pit_feats["turnover_rate"] = basic.get("turnover_rate", pit_feats.get("turnover_rate", 5.0))
-        pit_feats["volume_ratio"] = basic.get("volume_ratio", pit_feats.get("volume_ratio", 1.0))
+        pit_feats["circ_mv"] = basic.get("circ_mv") if basic.get("circ_mv") is not None else 0.0
+        pit_feats["pe"] = basic.get("pe") if basic.get("pe") is not None else 999.0
+        pit_feats["pb"] = basic.get("pb") if basic.get("pb") is not None else 999.0
+        tr_val = basic.get("turnover_rate")
+        pit_feats["turnover_rate"] = tr_val if tr_val is not None else pit_feats.get("turnover_rate", 5.0)
+        vr_val = basic.get("volume_ratio")
+        pit_feats["volume_ratio"] = vr_val if vr_val is not None else pit_feats.get("volume_ratio", 1.0)
 
     gene20 = factor_ctx.get_limit_up_count(code, 20)
     gene60 = factor_ctx.get_limit_up_count(code, 60)

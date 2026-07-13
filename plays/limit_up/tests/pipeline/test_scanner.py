@@ -27,7 +27,7 @@ def _make_quote(code: str, pct_chg: float = 3.0, **kwargs) -> dict:
 
 
 @patch("plays.limit_up.scanner.get_ths_client")
-def test_scan_batch_returns_short_code_keys(mock_get_client):
+def test_scan_batch_preserves_full_code_keys(mock_get_client):
     mock_ths = MagicMock()
     mock_ths.get_batch_quotes.return_value = {
         "000001.SZ": _make_quote("000001.SZ"),
@@ -38,8 +38,8 @@ def test_scan_batch_returns_short_code_keys(mock_get_client):
     realtime_ctx.set_realtime_quotes({})  # reset
     results = scanner.scan_batch(["000001.SZ", "600519.SH"], max_rps=1000)
 
-    assert set(results.keys()) == {"000001", "600519"}
-    assert results["000001"]["pct_chg"] == 3.0
+    assert set(results.keys()) == {"000001.SZ", "600519.SH"}
+    assert results["000001.SZ"]["pct_chg"] == 3.0
     mock_ths.get_batch_quotes.assert_called_once()
 
 
@@ -54,10 +54,10 @@ def test_scan_batch_injects_realtime_ctx(mock_get_client):
     realtime_ctx.set_realtime_quotes({})
     scanner.scan_batch(["000001.SZ"], max_rps=1000)
 
-    assert realtime_ctx.get_realtime_pct("000001") == 5.0
-    assert realtime_ctx.get_vol_ratio("000001") == 1.5
-    assert realtime_ctx.get_turnover("000001") == 5.0
-    assert realtime_ctx.get_inner_outer_ratio("000001") == 0.5
+    assert realtime_ctx.get_realtime_pct("000001.SZ") == 5.0
+    assert realtime_ctx.get_vol_ratio("000001.SZ") == 1.5
+    assert realtime_ctx.get_turnover("000001.SZ") == 5.0
+    assert realtime_ctx.get_inner_outer_ratio("000001.SZ") == 0.5
 
 
 @patch("plays.limit_up.scanner.get_ths_client")
@@ -83,4 +83,4 @@ def test_build_name_map():
         {"code": "600519.SH", "name": "贵州茅台"},
     ]
     name_map = scanner.build_name_map(pool)
-    assert name_map == {"000001": "平安银行", "600519": "贵州茅台"}
+    assert name_map == {"000001.SZ": "平安银行", "600519.SH": "贵州茅台"}

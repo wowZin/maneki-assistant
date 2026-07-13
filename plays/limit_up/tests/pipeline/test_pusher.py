@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
@@ -43,7 +44,8 @@ def test_check_and_push_deduplicates(mock_push, mock_trading, tmp_path):
     pushed_dir = tmp_path / "pushed"
     pushed_dir.mkdir()
     # 已推送 000001
-    (pushed_dir / "20260711_1000.json").write_text(
+    _today = datetime.now().strftime("%Y%m%d")
+    (pushed_dir / f"{_today}_1000.json").write_text(
         json.dumps([{"code": "000001.SZ", "total_score": 55}])
     )
 
