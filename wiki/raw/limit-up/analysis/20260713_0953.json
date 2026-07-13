@@ -1,0 +1,542 @@
+[
+  {
+    "code": "600664",
+    "name": "哈药股份",
+    "scores": {
+      "shortterm": 0.0,
+      "technical": 50.0,
+      "fundamental": 38.0,
+      "fundflow": 0.0,
+      "sentiment": 0.0
+    },
+    "reasons": {
+      "shortterm": "无日线数据",
+      "technical": "技术数据不足",
+      "fundamental": "[低] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0",
+      "sentiment": "市场退潮:炸板率49.7%>45%"
+    },
+    "total_score": 17.6,
+    "top3_score": 17.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 10.09,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "603065",
+    "name": "宿迁联盛",
+    "scores": {
+      "shortterm": 0.0,
+      "technical": 50.0,
+      "sentiment": 0.0,
+      "fundamental": 33.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "shortterm": "无日线数据",
+      "technical": "技术数据不足",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[无] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15; 概念缺失",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 16.6,
+    "top3_score": 16.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 10.03,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "605090",
+    "name": "九丰能源",
+    "scores": {
+      "technical": 50.0,
+      "shortterm": 0.0,
+      "sentiment": 0.0,
+      "fundamental": 38.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "technical": "技术数据不足",
+      "shortterm": "无日线数据",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[低] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 17.6,
+    "top3_score": 17.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 10.01,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "600428",
+    "name": "中远海特",
+    "scores": {
+      "shortterm": 0.0,
+      "technical": 50.0,
+      "sentiment": 0.0,
+      "fundamental": 33.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "shortterm": "无日线数据",
+      "technical": "技术数据不足",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[无] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15; 概念缺失",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 16.6,
+    "top3_score": 16.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 10.01,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "002396",
+    "name": "星网锐捷",
+    "scores": {
+      "technical": 50.0,
+      "shortterm": 0.0,
+      "sentiment": 0.0,
+      "fundamental": 38.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "technical": "技术数据不足",
+      "shortterm": "无日线数据",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[低] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 17.6,
+    "top3_score": 17.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 10.01,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "601608",
+    "name": "中信重工",
+    "scores": {
+      "shortterm": 0.0,
+      "technical": 50.0,
+      "sentiment": 0.0,
+      "fundamental": 38.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "shortterm": "无日线数据",
+      "technical": "技术数据不足",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[低] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 17.6,
+    "top3_score": 17.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 9.92,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "002674",
+    "name": "兴业科技",
+    "scores": {
+      "shortterm": 0.0,
+      "technical": 50.0,
+      "sentiment": 0.0,
+      "fundamental": 33.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "shortterm": "无日线数据",
+      "technical": "技术数据不足",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[无] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15; 概念缺失",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 16.6,
+    "top3_score": 16.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 9.87,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "603031",
+    "name": "安孚科技",
+    "scores": {
+      "shortterm": 0.0,
+      "technical": 50.0,
+      "sentiment": 0.0,
+      "fundamental": 33.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "shortterm": "无日线数据",
+      "technical": "技术数据不足",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[无] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15; 概念缺失",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 16.6,
+    "top3_score": 16.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 8.35,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "600777",
+    "name": "新潮能源",
+    "scores": {
+      "technical": 50.0,
+      "shortterm": 0.0,
+      "sentiment": 0.0,
+      "fundamental": 33.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "technical": "技术数据不足",
+      "shortterm": "无日线数据",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[无] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15; 概念缺失",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 16.6,
+    "top3_score": 16.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 7.97,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "000989",
+    "name": "九芝堂",
+    "scores": {
+      "shortterm": 0.0,
+      "technical": 50.0,
+      "sentiment": 0.0,
+      "fundamental": 33.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "shortterm": "无日线数据",
+      "technical": "技术数据不足",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[无] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15; 概念缺失",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 16.6,
+    "top3_score": 16.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 7.97,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "002430",
+    "name": "杭氧股份",
+    "scores": {
+      "shortterm": 0.0,
+      "technical": 50.0,
+      "sentiment": 0.0,
+      "fundamental": 33.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "shortterm": "无日线数据",
+      "technical": "技术数据不足",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[无] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15; 概念缺失",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 16.6,
+    "top3_score": 16.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 7.73,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "002603",
+    "name": "以岭药业",
+    "scores": {
+      "technical": 50.0,
+      "shortterm": 0.0,
+      "sentiment": 0.0,
+      "fundamental": 33.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "technical": "技术数据不足",
+      "shortterm": "无日线数据",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[无] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15; 概念缺失",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 16.6,
+    "top3_score": 16.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 7.22,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "000059",
+    "name": "华锦股份",
+    "scores": {
+      "technical": 50.0,
+      "shortterm": 0.0,
+      "sentiment": 0.0,
+      "fundamental": 33.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "technical": "技术数据不足",
+      "shortterm": "无日线数据",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[无] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15; 概念缺失",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 16.6,
+    "top3_score": 16.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 6.4,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "603127",
+    "name": "昭衍新药",
+    "scores": {
+      "shortterm": 0.0,
+      "technical": 50.0,
+      "sentiment": 0.0,
+      "fundamental": 38.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "shortterm": "无日线数据",
+      "technical": "技术数据不足",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[低] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 17.6,
+    "top3_score": 17.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 6.25,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "002038",
+    "name": "双鹭药业",
+    "scores": {
+      "shortterm": 0.0,
+      "technical": 50.0,
+      "sentiment": 0.0,
+      "fundamental": 33.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "shortterm": "无日线数据",
+      "technical": "技术数据不足",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[无] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15; 概念缺失",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 16.6,
+    "top3_score": 16.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 6.11,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "002549",
+    "name": "凯美特气",
+    "scores": {
+      "shortterm": 0.0,
+      "technical": 50.0,
+      "sentiment": 0.0,
+      "fundamental": 33.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "shortterm": "无日线数据",
+      "technical": "技术数据不足",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[无] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15; 概念缺失",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 16.6,
+    "top3_score": 16.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 6.07,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "600129",
+    "name": "太极集团",
+    "scores": {
+      "shortterm": 0.0,
+      "technical": 50.0,
+      "sentiment": 0.0,
+      "fundamental": 38.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "shortterm": "无日线数据",
+      "technical": "技术数据不足",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[低] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 17.6,
+    "top3_score": 17.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 5.73,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "002842",
+    "name": "翔鹭钨业",
+    "scores": {
+      "shortterm": 0.0,
+      "technical": 50.0,
+      "sentiment": 0.0,
+      "fundamental": 33.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "shortterm": "无日线数据",
+      "technical": "技术数据不足",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[无] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15; 概念缺失",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 16.6,
+    "top3_score": 16.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 5.6,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "600801",
+    "name": "华新建材",
+    "scores": {
+      "technical": 50.0,
+      "shortterm": 0.0,
+      "sentiment": 0.0,
+      "fundamental": 33.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "technical": "技术数据不足",
+      "shortterm": "无日线数据",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[无] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15; 概念缺失",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 16.6,
+    "top3_score": 16.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 5.58,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  },
+  {
+    "code": "600267",
+    "name": "海正药业",
+    "scores": {
+      "shortterm": 0.0,
+      "technical": 50.0,
+      "sentiment": 0.0,
+      "fundamental": 33.0,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "shortterm": "无日线数据",
+      "technical": "技术数据不足",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[无] 袖珍盘(流通0.0亿)+0; 高成长/亏损股(PE=999.0)+15; 概念缺失",
+      "fundflow": "[无][Tushare] 换手极低0.0%+0; 成交不足0.0亿+0"
+    },
+    "total_score": 16.6,
+    "top3_score": 16.6,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 5.39,
+    "resonance": {
+      "count": 0,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  }
+]

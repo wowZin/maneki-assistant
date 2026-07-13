@@ -1,0 +1,44 @@
+[
+  {
+    "code": "603931.SH",
+    "name": "格林达",
+    "scores": {
+      "fundamental": 77.8,
+      "technical": 95,
+      "fundflow": 0.0,
+      "sentiment": 0,
+      "shortterm": 25.0
+    },
+    "reasons": {
+      "fundamental": "[高] 中大盘(流通116亿)+17; 高成长/亏损股(PE=94.4)+15; 偏高 PB(PB=5.8)+6; 共振:大盘+成长+10",
+      "technical": "[高] 量比适中(1.50)+15; 换手活跃(8.2%)+10; 竞价低开-1.0%-2; 振幅过大19.0%-5; 放量确认(量>3日均+20%)+5; 上影过长(1.5:1)-5; PIT换手动量+12; 站上MA20+5",
+      "fundflow": "否决: 龙虎榜净卖出24402万(2.11%流通市值)（极端撤离）",
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "shortterm": "涨停基因8(20日1次/60日2次) | 开盘博弈0(跳空0.6%/竞价换手0.03%) 内外盘1.11 | 位置波动17(pos0.60/t101.2%/std5.5) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 46.61333333333334,
+    "resonance": {
+      "count": 2,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 46.6,
+    "pct_chg": -0.4,
+    "l2api": {
+      "last": 57.76,
+      "vwap": 57.79,
+      "kline_bars": 1
+    },
+    "factors": {
+      "model_score": 28.13
+    },
+    "total_score": 28.13
+  }
+]

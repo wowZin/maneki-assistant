@@ -1,0 +1,29 @@
+[
+  {
+    "code": "600288.SH",
+    "name": "大恒科技",
+    "scores": {
+      "sentiment": 0.0,
+      "fundamental": 77.8,
+      "shortterm": 30.0,
+      "technical": 58.400000000000006,
+      "fundflow": 0.0
+    },
+    "reasons": {
+      "sentiment": "市场退潮:炸板率49.7%>45%",
+      "fundamental": "[高] 中盘(流通72亿)+13; 高成长/亏损股(PE=69.4)+15; 扣非暴增+677%; 共振:大盘+成长+10",
+      "shortterm": "涨停基因21(20日3次/60日3次) | 开盘博弈-3(跳空-1.5%/竞价换手0.42%) 内外盘1.03 | 位置波动12(pos0.79/t1033.8%/std5.5) | 连板溢价0(昨日涨停0/连板0板)",
+      "technical": "[中] 量比正常(1.11)+10; 竞价低开-0.2%-2; 上影极长(119.0:1)-8; PIT换手动量+12; 强势>MA20(+20.9%)+8; MA20上倾+7; PIT波动激活+6; 中小市值(72亿)+3",
+      "fundflow": "否决: 龙虎榜净卖出38102万(5.27%流通市值)（极端撤离）"
+    },
+    "total_score": 55.4,
+    "top3_score": 55.4,
+    "score_mode": "daemon_weighted",
+    "pct_chg": 3.14,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    }
+  }
+]

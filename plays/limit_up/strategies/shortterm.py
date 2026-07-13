@@ -130,6 +130,13 @@ def score_shortterm(code: str, fundflow_data: dict = None, trade_date: str | Non
         pct = safe_float(dr.get("pct_chg", 0))
         pre_c = safe_float(dr.get("pre_close", 0))
         op = safe_float(dr.get("open", 0))
+        # 竞价数据覆盖今日真实跳空（盘中 daily_rows[0] 是 T-1）
+        auction = _get_auction(code)
+        if auction.get("price") and auction.get("pre_close"):
+            auc_pc = safe_float(auction.get("pre_close", 0))
+            if auc_pc > 0:
+                op = safe_float(auction.get("price", 0))
+                pre_c = auc_pc
         open_pct = ((op / pre_c) - 1) * 100 if pre_c > 0 else 0
 
         # 实时增强：用实时 pct_chg 替代 T-1（盘中有就走实时）

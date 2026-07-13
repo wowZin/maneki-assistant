@@ -118,24 +118,6 @@ def _is_trade_day(date_str: str) -> bool:
 
 # ===== 向后兼容（旧策略引用） =====
 
-_REALTIME_FUND_CACHE: dict = {}
-_REALTIME_FUND_TS: str = ""
-
-
-def _get_realtime_fund_cache():
-    """兼容旧策略 import。盘后用 Tushare 兜底。"""
-    global _REALTIME_FUND_CACHE, _REALTIME_FUND_TS
-    td = _today_str()
-    if _REALTIME_FUND_CACHE and _REALTIME_FUND_TS == td:
-        return _REALTIME_FUND_CACHE
-    from plays.limit_up.utils import batch_get_fundflow_tushare
-    cache = batch_get_fundflow_tushare(td)
-    if cache:
-        _REALTIME_FUND_CACHE = cache
-        _REALTIME_FUND_TS = td
-    return cache or {}
-
-
 # 向后兼容：THS 行情缓存（旧策略引用）
 _THS_QUOTE_CACHE: dict = {}
 _REALTIME_PCT_CACHE: dict = {}
