@@ -28,11 +28,7 @@ from plays.limit_up.utils import safe_float_none, safe_int_none, list_to_dict  #
 # 实时概念热点缓存（替代 THS 热门榜）
 from plays.limit_up.strategies.concept_cache import (  # noqa: E402
     get_concept_limit_ups,
-    get_best_concept,
-    get_total_limit_up_count,
 )
-
-# 移除 _get_popularity_rank 依赖（热榜仅 100 只，无意义）
 
 
 def score_sentiment(code: str, trade_date: str | None = None) -> tuple[int | float, str]:
@@ -60,14 +56,7 @@ def score_sentiment(code: str, trade_date: str | None = None) -> tuple[int | flo
     # 1. 数据获取
     # ═══════════════════════════════════════════════════════════
 
-    # 1.1 概念热点（基于实时涨停 + 全量概念映射）
-    clu = get_concept_limit_ups(code)
-    concept_names = [k for k in clu if not k.startswith("_")]
-    concept_ul_cnt = {k: v for k, v in clu.items() if not k.startswith("_")}
-    total_limit_ups = clu.get("_total_limit_ups", 0)
-    total_limit_concepts = clu.get("_total_concepts", 0)
-
-    # 1.2 全市场涨跌停数据
+    # 1.1 全市场涨跌停数据
     limit_fields = ["trade_date", "ts_code", "name", "close", "pct_chg", "limit",
                     "limit_times", "up_stat"]
     limit_data = []
@@ -79,7 +68,7 @@ def score_sentiment(code: str, trade_date: str | None = None) -> tuple[int | flo
     except Exception:
         pass
 
-    # 1.3 连板天梯
+    # 1.2 连板天梯
     step_fields = ["trade_date", "ts_code", "name", "nums"]
     step_data = []
     try:
@@ -90,12 +79,10 @@ def score_sentiment(code: str, trade_date: str | None = None) -> tuple[int | flo
     except Exception:
         pass
 
-    # 1.4 概念热点（基于实时涨停 + 全量概念映射）
+    # 1.3 概念热点（基于实时涨停 + 全量概念映射）
     clu = get_concept_limit_ups(code)
     concept_names = [k for k in clu if not k.startswith("_")]
     concept_ul_cnt = {k: v for k, v in clu.items() if not k.startswith("_")}
-    total_limit_ups = clu.get("_total_limit_ups", 0)
-    total_limit_concepts = clu.get("_total_concepts", 0)
 
     def _get_ul_cnt(concept_name):
         return concept_ul_cnt.get(concept_name, 0)
@@ -103,7 +90,7 @@ def score_sentiment(code: str, trade_date: str | None = None) -> tuple[int | flo
     def _has_concept_data(concept_name):
         return concept_name in concept_ul_cnt
 
-    # 1.5 个股昨日涨幅（用于 was_limit_yesterday + 动量信号）
+    # 1.4 个股昨日涨幅（用于 was_limit_yesterday + 动量信号）
     yesterday_pct = None
     yesterday_was_limit = False
     try:
@@ -129,7 +116,7 @@ def score_sentiment(code: str, trade_date: str | None = None) -> tuple[int | flo
     except Exception:
         pass
 
-    # 1.6 个股昨日成交量（集合竞价的 CallVolRatio 量纲分母）
+    # 1.5 个股昨日成交量（集合竞价的 CallVolRatio 量纲分母）
     yesterday_vol = 0
     try:
         end_dt = datetime.now() - timedelta(days=5)
@@ -151,7 +138,7 @@ def score_sentiment(code: str, trade_date: str | None = None) -> tuple[int | flo
     except Exception:
         pass
 
-    # 1.7 市场状态判定（牛/熊/震荡 + 乘数）
+    # 1.6 市场状态判定（牛/熊/震荡 + 乘数）
     market_state = "震荡"
     market_state_multiplier = 1.0
     mkt_amount_20d_avg = 0
@@ -496,17 +483,19 @@ def score_sentiment(code: str, trade_date: str | None = None) -> tuple[int | flo
     # A. 换手活跃度（分档升级，占 0-5 分）
     turnover = None
     try:
-        rt_fund = _get_realtime_fund_cache()
-        rt_turnover = rt_fund.get(code_short, {}).get("turnover", 0)
+        # 1) 实时换手（pipeline 注入的 batch_quotes）
+        from plays.limit_up.strategies import realtime_ctx
+        rt_turnover = realtime_ctx.get_turnover(code)
         if rt_turnover and rt_turnover > 0:
             turnover = rt_turnover
         else:
-            # 优先从 pipeline 预取缓存读取，避免重复调 daily_basic
+            # 2) pipeline 预取的 daily_basic 缓存
             from plays.limit_up.strategies import factor_ctx
             basic = factor_ctx.get_daily_basic(code)
             if basic:
                 turnover = safe_float(basic.get("turnover_rate", 0))
             else:
+                # 3) Tushare 兜底
                 resp = call_tushare("daily_basic", {"ts_code": code},
                                     "turnover_rate,volume_ratio")
                 daily_basic = resp.get("data", {}).get("items", [])
