@@ -540,15 +540,13 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
             _daily_rows = sorted(_raw, key=lambda x: x.get("trade_date", ""))
             _pit_date = _daily_rows[-1]["trade_date"] if _daily_rows else today_str
 
-            # 构建 basic_by_date（pool 缓存中的 daily_basic）
+            # 构建 basic_by_date（pool 缓存中 T-1 daily_basic，不要混入实时数据）
             _basic_ent = {}
             if pool_extras and code in pool_extras:
                 _pe = pool_extras[code]
-                _tr = get_turnover(code)
-                _vr = get_vol_ratio(code)
                 _basic_ent = {
-                    "turnover_rate": _tr if _tr is not None else _pe.get("prev_turnover", 5.0),
-                    "volume_ratio": _vr if _vr is not None else _pe.get("prev_vol_ratio", 1.0),
+                    "turnover_rate": _pe.get("prev_turnover", 5.0),
+                    "volume_ratio": _pe.get("prev_vol_ratio", 1.0),
                     "circ_mv": _pe.get("circ_mv", 0),
                     "pe": _pe.get("pe", 999.0),
                     "pb": _pe.get("pb", 999.0),
