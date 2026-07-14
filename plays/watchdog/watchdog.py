@@ -331,12 +331,14 @@ class WatchdogEngine:
         except Exception:
             pass
 
+        # 强制创建新 WS 连接（而非 _get_ws 的保活，确保彻底重连）
+        from scripts.jvquant_ws_client import JvQuantWSClient
         try:
-            self._ws = _get_ws()
-            if not self._ws.is_connected():
-                self._ws.connect()
+            new_ws = JvQuantWSClient()
+            new_ws.connect()
+            self._ws = new_ws
         except Exception as e:
-            logger.error(f"WS 重连异常: {e}")
+            logger.error(f"WS 新连接失败: {e}")
             return False
 
         if self._ws.is_connected():
@@ -363,6 +365,16 @@ class WatchdogEngine:
                     if not trading_day_logged:
                         logger.info("进入交易时段，开始盯盘扫描")
                         trading_day_logged = True
+
+                    # 日切检测：交易日变更时重新订阅
+                    _today_str = datetime.now().strftime("%Y%m%d")
+                    if getattr(self, "_trade_date", "") != _today_str:
+                        self._trade_date = _today_str
+                        with self._lock:
+                            _codes = list(self._states.keys())
+                        if _codes:
+                            self._subscribe(_codes)
+                            logger.info(f"新交易日 {_today_str}，重新订阅 {len(_codes)} 只")
 
                     # WS 数据检测：连接断开或连续无数据时尝试重连
                     ws_dead = not self._ws or not self._ws.is_connected()

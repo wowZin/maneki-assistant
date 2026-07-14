@@ -443,22 +443,70 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
 
     # ── 模型分覆盖：用 XGBoost 替代老的加权总分 ──
     try:
-        from plays.limit_up.factors.optimized.model_score import factor_model_score_batch
+        from plays.limit_up.factors.optimized.model_score import factor_model_score_batch, _load_model
         from plays.limit_up.strategies import factor_ctx
         import pandas as pd
-        # 轻量预取 PIT 特征数据（只拉 daily+limit_list_d，跳过每日皆的 daily_basic）
+        from plays.limit_up.strategies.realtime_ctx import get_turnover, get_vol_ratio
+        _model = _load_model()
+        _feat_cols = _model.feature_cols if _model else []
+        
+        # 轻量预取 PIT 特征数据（只拉 daily+limit_list_d）
         code_list = [r["code"] for r in rough_results]
         for c in code_list:
-            factor_ctx._ensure_daily_limit(c)  # 只拉 daily + limit_list_d
+            factor_ctx._ensure_daily_limit(c)
+        
+        # 批量预取 moneyflow + 龙虎榜（1 call 覆盖所有 stock） + 日内数据
+        _MF_CACHE: dict[str, dict] = {}  # {code: {net_mf_amount, ...}}
+        _TL_CACHE: dict[str, dict] = {}  # {code: {net_amount, net_rate, ...}}
+        _TI_CACHE: dict[str, list] = {}  # {code: [{buy, sell, net_buy, side}]}
+        _ID_CACHE: dict[str, dict] = {}  # {short: {vwap, morning_vol_ratio, ...}}
+        today_str = _today_str()
+        try:
+            from scripts.tu_share import call_tushare as _ct
+            from plays.limit_up.utils import safe_float as _sf
+            # moneyflow
+            _codes_str = ",".join(code_list[:50])  # 分两批拉（Tushare 限制）
+            for _batch in [code_list[:50], code_list[50:]]:
+                if not _batch:
+                    continue
+                _r = _ct("moneyflow", {"ts_code": ",".join(_batch), "trade_date": today_str},
+                          "ts_code,buy_elg_amount,sell_elg_amount,buy_lg_amount,sell_lg_amount,net_mf_amount")
+                for _item in _r.get("data", {}).get("items", []):
+                    _f = _r["data"]["fields"]
+                    _d = dict(zip(_f, _item))
+                    _MF_CACHE[_d["ts_code"]] = _d
+            # top_list
+            _r = _ct("top_list", {"trade_date": today_str},
+                      "ts_code,name,amount,net_amount,buy,buy_rate,sell,sell_rate,net_rate")
+            for _item in _r.get("data", {}).get("items", []):
+                _f = _r["data"]["fields"]
+                _d = dict(zip(_f, _item))
+                _TL_CACHE[_d["ts_code"]] = _d
+            # top_inst
+            _r = _ct("top_inst", {"trade_date": today_str},
+                      "ts_code,name,buy,buy_rate,sell,sell_rate,net_buy,side")
+            for _item in _r.get("data", {}).get("items", []):
+                _f = _r["data"]["fields"]
+                _d = dict(zip(_f, _item))
+                _c = _d["ts_code"]
+                _TI_CACHE.setdefault(_c, []).append(_d)
+            if _MF_CACHE or _TL_CACHE:
+                print(f"    资金流{len(_MF_CACHE)}只 龙虎榜{len(_TL_CACHE)}只 ✓")
+        except Exception as _e:
+            print(f"    资金流/龙虎榜预取失败: {_e}")
+        
         feats_list = []
         for r in rough_results:
             code = r["code"]
             # PIT 特征（daily 行情衍生）
             feats = factor_ctx.get_price_features(code)
+            # 补全日线衍生特征（从 _DAILY_CACHE 无额外 API 计算）
+            for k, v in factor_ctx.get_model_pit_features(code).items():
+                feats[k] = v
             # 涨停基因（limit_list_d 缓存）
             feats["limit_up_count_20d"] = float(factor_ctx.get_limit_up_count(code, 20))
             feats["limit_up_count_60d"] = float(factor_ctx.get_limit_up_count(code, 60))
-            # 实时换手/量比（THS batch_quotes，比 T-1 daily_basic 更新）
+            # 实时换手/量比（THS batch_quotes，比 T-1 daily_basic 新）
             from plays.limit_up.strategies.realtime_ctx import get_turnover, get_vol_ratio
             _tr = get_turnover(code)
             _vr = get_vol_ratio(code)
@@ -466,17 +514,123 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
                 feats["turnover_rate"] = _tr
             if _vr is not None:
                 feats["volume_ratio"] = _vr
+            # 昨日换手/量比（pool 建池时缓存，T-1 daily_basic）
+            if pool_extras and code in pool_extras:
+                _pe = pool_extras[code]
+                feats["prev_turnover"] = _pe.get("prev_turnover", 0.0)
+                feats["prev_vol_ratio"] = _pe.get("prev_vol_ratio", 0.0)
+                cur_tr = feats.get("turnover_rate", 0)
+                prv_tr = feats["prev_turnover"]
+                feats["vol_accel"] = cur_tr / prv_tr - 1 if prv_tr > 0 else 0.0
             # 静态估值（pe/pb/circ_mv 从 pool 缓存读）
             if pool_extras and code in pool_extras:
                 _pe = pool_extras[code]
                 feats["circ_mv"] = _pe.get("circ_mv", 0)
+                feats["cmv_yi"] = float(feats.get("circ_mv", 0)) / 10000.0
                 feats["pe"] = _pe.get("pe", 999.0)
                 feats["pb"] = _pe.get("pb", 999.0)
+            # 竞价特征（stk_auction 1 次调用/股）
+            try:
+                from plays.limit_up.strategies.shortterm import _get_auction
+                auc = _get_auction(code)
+                if auc:
+                    auc_amt = float(auc.get("amount", 0) or 0)
+                    auc_vol = float(auc.get("vol", 0) or 0)
+                    feats["auc_amount"] = auc_amt
+                    feats["auc_vol"] = auc_vol
+                    feats["auc_amt_ratio"] = auc_amt / max(feats.get("avg_amount_5d", 1), 1)
+                    feats["auc_vol_ratio"] = auc_vol / max(feats.get("avg_amount_5d", 1), 1)
+            except Exception:
+                pass
+            # 概念热度（concept_cache，零网络）
+            try:
+                from plays.limit_up.strategies.concept_cache import get_concept_limit_ups
+                _clu = get_concept_limit_ups(code)
+                _concepts = [k for k in _clu if not k.startswith("_")]
+                feats["n_concepts"] = float(len(_concepts))
+                if _concepts and _clu.get("_total_concepts", 0) > 0:
+                    best_cnt = max(_clu.get(n, 0) for n in _concepts)
+                    feats["sector_heat"] = float(best_cnt)
+                    feats["sector_rank"] = float(best_cnt) / max(_clu["_total_concepts"], 1) * 100
+            except Exception:
+                pass
+            # 资金流特征（批量预取 _MF_CACHE）
+            _mf = _MF_CACHE.get(code)
+            if _mf:
+                _sf = lambda v: float(v) if v else 0.0
+                be = _sf(_mf.get("buy_elg_amount"))
+                se = _sf(_mf.get("sell_elg_amount"))
+                bl = _sf(_mf.get("buy_lg_amount"))
+                sl = _sf(_mf.get("sell_lg_amount"))
+                nm = _sf(_mf.get("net_mf_amount"))
+                feats["buy_elg_ratio"] = be / max(be + se, 1) * 100
+                feats["buy_lg_ratio"] = bl / max(bl + sl, 1) * 100
+                feats["net_mf_amount"] = nm
+                feats["net_mf_ratio"] = nm / max((be + se + bl + sl), 1) * 100
+                feats["mf_net"] = nm
+                feats["mf_accel"] = nm / max(_sf(feats.get("avg_amount_5d", 0)), 1)
+                feats["mf_pct"] = nm / max((be + se + bl + sl), 1) * 100
+            # 龙虎榜特征（批量预取 _TL_CACHE + _TI_CACHE）
+            _tl = _TL_CACHE.get(code)
+            if _tl:
+                _sf = lambda v: float(v) if v else 0.0
+                feats["dt_is_listed"] = 1.0
+                feats["dt_net_amount"] = _sf(_tl.get("net_amount"))
+                feats["dt_net_rate"] = _sf(_tl.get("net_rate"))
+                feats["dt_l_buy_ratio"] = _sf(_tl.get("buy_rate"))
+                # 游资/机构数据（top_inst）
+                _insts = _TI_CACHE.get(code, [])
+                _inst_net = sum(_sf(i.get("net_buy")) for i in _insts)
+                _inst_buy = sum(_sf(i.get("buy")) for i in _insts if i.get("side") == "买")
+                _inst_sell = sum(_sf(i.get("sell")) for i in _insts if i.get("side") == "卖")
+                feats["dt_inst_net_buy"] = _inst_net
+                feats["dt_inst_sell_ratio"] = _inst_sell / max(_inst_buy + _inst_sell, 1) * 100
+                feats["dt_n_exalter"] = float(len([i for i in _insts if _sf(i.get("net_buy")) > 0]))
+                # 热点资金（近似为机构净买）
+                feats["dt_hot_net_buy"] = _inst_net
+            # 日内特征（批量预取+THS 数据兜底）
+            try:
+                _sf = lambda v: float(v) if v else 0.0
+                _short = code.replace(".SH", "").replace(".SZ", "")
+                _im = _ID_CACHE.get(_short, {})
+                if _im:
+                    _close = _sf(_im.get("close", 0))
+                    _vwap = _sf(_im.get("vwap", 0))
+                    feats["id_vwap_dev"] = _close / _vwap - 1 if _vwap > 0 else 0
+                    feats["id_morning_vol_ratio"] = _sf(_im.get("morning_vol_ratio", 0))
+                    feats["id_afternoon_strength"] = _sf(_im.get("afternoon_strength", 0))
+                    feats["id_tail_vol_ratio"] = _sf(_im.get("tail_vol_ratio", 0))
+                else:
+                    feats["id_vwap_dev"] = 0.0
+                    feats["id_morning_vol_ratio"] = 0.5
+                    feats["id_afternoon_strength"] = 0.5
+                    feats["id_tail_vol_ratio"] = 0.15
+                # 以下从 THS 实时行情计算，不依赖 jvQuant
+                _q_short = code.replace(".SH", "").replace(".SZ", "")
+                from plays.limit_up.strategies.realtime_ctx import _REALTIME_CACHE as _rc
+                _q_ths = _rc.get(code)
+                if _q_ths:
+                    _hi = _sf(_q_ths.get("high", 0))
+                    _lo = _sf(_q_ths.get("low", 0))
+                    _pc = _sf(_q_ths.get("pre_close", 0))
+                    _amt = _sf(_q_ths.get("amount", 0))
+                    feats["id_range"] = (_hi - _lo) / _pc if _pc > 0 else 0
+                    _avg5d = _sf(feats.get("avg_amount_5d", 1))
+                    feats["id_amount_ratio"] = _amt / _avg5d if _avg5d > 0 else 0
+            except Exception:
+                pass
             # 策略维度分
             for dim in ("sentiment", "shortterm", "technical", "fundflow", "fundamental"):
                 feats[dim] = r["scores"].get(dim, 0)
             feats_list.append(feats)
-        model_scores = factor_model_score_batch(pd.DataFrame(feats_list))
+        _df = pd.DataFrame(feats_list)
+        if _feat_cols:
+            _fill = sum(1 for c in _feat_cols if c not in _df.columns)
+            if _fill > 0:
+                print(f"    模型特征: {len(_feat_cols)-_fill}/{len(_feat_cols)} 填充, fill_values({_fill})")
+                _missing = [c for c in _feat_cols if c not in _df.columns]
+                print(f"    缺: {','.join(_missing)}")
+        model_scores = factor_model_score_batch(_df)
         for i, r in enumerate(rough_results):
             ms = round(float(model_scores.iloc[i]), 2)
             r["factors"] = {"model_score": ms}
@@ -684,7 +838,9 @@ def main_loop():
                 pool_name_map = build_name_map(pool)
                 pool_extras = {s["code"]: {"circ_mv": s.get("circ_mv", 0),
                                              "pe": s.get("pe", 999.0),
-                                             "pb": s.get("pb", 999.0)} for s in pool}
+                                             "pb": s.get("pb", 999.0),
+                                             "prev_turnover": s.get("turnover_rate", 0.0),
+                                             "prev_vol_ratio": s.get("volume_ratio", 0.0)} for s in pool}
                 print(f"    候选池 {len(pool)} 只 ✓")
                 pool_built = True
 

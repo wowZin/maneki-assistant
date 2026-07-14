@@ -155,6 +155,72 @@ def get_price_features(code: str) -> dict:
     return feats
 
 
+def get_model_pit_features(code: str) -> dict:
+    """补全模型需要的 PIT 特征（从 _DAILY_CACHE 现有数据计算，零额外 API）。
+
+    包括: max_step/was_limit/avg_amount_5d/close_pos/body_ratio 等 12 个特征。
+    """
+    rows = sorted(_DAILY_CACHE.get(code, []), key=lambda x: x.get("trade_date", ""), reverse=True)
+    f: dict = {}
+
+    def _sf(val, default=0.0) -> float:
+        if val is None:
+            return default
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return default
+
+    if len(rows) < 2:
+        return f
+
+    r0 = rows[0]
+    c0 = _sf(r0.get("close"))
+    o0 = _sf(r0.get("open"))
+    h0 = _sf(r0.get("high"))
+    l0 = _sf(r0.get("low"))
+    pc0 = _sf(r0.get("pre_close"))
+    pct0 = _sf(r0.get("pct_chg"))
+    v0 = _sf(r0.get("vol"))
+    amt0 = _sf(r0.get("amount"))
+
+    # was_limit: 昨日是否涨停（≈pct_chg >= 9.5）
+    f["was_limit"] = 1.0 if pct0 >= 9.5 else 0.0
+    # prev_pct: 昨日涨跌幅
+    f["prev_pct"] = pct0
+    # pct_chg_score_day: 当日涨跌幅（盘中用实时数据会在 pipeline 覆盖）
+    f["pct_chg_score_day"] = pct0
+
+    # K线形态特征
+    if h0 > l0:
+        f["close_pos"] = (c0 - l0) / (h0 - l0)
+        f["body_ratio"] = abs(c0 - o0) / (h0 - l0)
+        f["upper_ratio"] = (h0 - max(c0, o0)) / (h0 - l0)
+        f["lower_ratio"] = (min(c0, o0) - l0) / (h0 - l0)
+    if pc0 > 0:
+        f["amplitude"] = (h0 - l0) / pc0 * 100
+
+    # 5日均额/5日涨跌幅/5日涨幅计数
+    if len(rows) >= 5:
+        amts = [_sf(r.get("amount")) for r in rows[:5]]
+        f["avg_amount_5d"] = sum(amts) / max(len([a for a in amts if a > 0]), 1)
+        pcts = [_sf(r.get("pct_chg")) for r in rows[:5]]
+        f["pct_5d"] = sum(pcts)
+        f["positive_5d"] = sum(1 for p in pcts if p > 0)
+
+    # max_step: 连板次数（从最近的连续涨停天数算）
+    if len(rows) >= 2:
+        step = 0
+        for r in rows:
+            if _sf(r.get("pct_chg")) >= 9.5:
+                step += 1
+            else:
+                break
+        f["max_step"] = float(step)
+
+    return f
+
+
 def get_concept_momentum(code_short: str, trade_date: str | None = None) -> dict:
     """获取股票所属概念的最新动量（使用 concept_daily 最近日期）。
 

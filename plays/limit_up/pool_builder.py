@@ -59,7 +59,7 @@ def _load_market_data(trade_date: str) -> list[dict]:
     resp = call_tushare(
         "daily_basic",
         {"trade_date": trade_date},
-        "ts_code,trade_date,circ_mv,pe,pb",
+        "ts_code,trade_date,circ_mv,pe,pb,turnover_rate,volume_ratio",
     )
     items = resp.get("data", {}).get("items", [])
     fields = resp.get("data", {}).get("fields", [])
@@ -134,6 +134,8 @@ def build_pool(trade_date: str | None = None) -> list[dict]:
             "circ_mv": circ_mv,
             "pe": float(row.get("pe", 0) or 0),
             "pb": float(row.get("pb", 0) or 0),
+            "turnover_rate": float(row.get("turnover_rate", 0) or 0),
+            "volume_ratio": float(row.get("volume_ratio", 0) or 0),
         })
 
     pool.sort(key=lambda x: x.get("circ_mv", 0), reverse=True)
