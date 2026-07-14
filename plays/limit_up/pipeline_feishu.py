@@ -924,8 +924,10 @@ def push_feishu(results):
         print("  无可推送股票")
         return False
 
+    # L2 确认通过的灰区股跳过阈值检查
+    l2_bypass = any(r.get("l2_confirmed", False) for r in results)
     max_ts = sorted_results[0].get("total_score", 0)
-    if max_ts < threshold:
+    if max_ts < threshold and not l2_bypass:
         print(f"  最高 total_score={max_ts:.1f} 低于阈值 {threshold}，不推送")
         return False
 

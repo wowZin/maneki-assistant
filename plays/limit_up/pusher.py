@@ -44,6 +44,7 @@ def check_and_push(results: list[dict], data_dir: Path) -> list[dict]:
 
     Args:
         results: 评分结果列表，每个结果必须含 code/name/total_score。
+                 灰区(45-55) L2 通过的结果也在此传入（带 l2_confirmed=True）。
         data_dir: plays/limit_up/data 目录路径。
 
     Returns:
@@ -60,8 +61,10 @@ def check_and_push(results: list[dict], data_dir: Path) -> list[dict]:
     pushed_dir = data_dir / "pushed"
     pushed_dir.mkdir(parents=True, exist_ok=True)
 
-    # 阈值过滤
-    to_push = [r for r in results if r.get("total_score", 0) >= PUSH_THRESHOLD]
+    # 阈值过滤：L2 确认通过的灰区股(score<55)直接放行
+    to_push = [r for r in results 
+               if r.get("total_score", 0) >= PUSH_THRESHOLD
+               or r.get("l2_confirmed", False)]
     if not to_push:
         return []
 
