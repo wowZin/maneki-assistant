@@ -931,8 +931,11 @@ def push_feishu(results):
         print(f"  最高 total_score={max_ts:.1f} 低于阈值 {threshold}，不推送")
         return False
 
-    # 本轮 Top-3 候选（已按分数排序）
-    eligible = [r for r in sorted_results if r.get("total_score", 0) >= threshold][:3]
+    # 本轮候选：直接推的 ≥threshold，灰区 L2 通过的也放行
+    if l2_bypass:
+        eligible = sorted_results[:3]
+    else:
+        eligible = [r for r in sorted_results if r.get("total_score", 0) >= threshold][:3]
     top3_codes = {r["code"] for r in eligible}
 
     # 分数提高才推：首次出现或评分高于上次推送时

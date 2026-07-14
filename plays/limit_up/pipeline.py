@@ -447,6 +447,7 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
         from plays.limit_up.strategies import factor_ctx
         import pandas as pd
         import math
+        from concurrent.futures import ThreadPoolExecutor, as_completed
         from plays.limit_up.strategies.realtime_ctx import get_turnover, get_vol_ratio, _REALTIME_CACHE as _rc
         _model = _load_model()
         _feat_cols = _model.feature_cols if _model else []
@@ -509,168 +510,130 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
         except Exception as _e:
             print(f"    资金流/龙虎榜预取失败: {_e}")
 
+        # 并行预取竞价数据（100 次 stk_auction → ~21s → ~3s）
+        _AUC_CACHE: dict[str, dict] = {}
+        try:
+            from plays.limit_up.strategies.shortterm import _get_auction as _auc_fn
+            with ThreadPoolExecutor(max_workers=16) as _p:
+                _futs = {_p.submit(_auc_fn, c): c for c in code_list}
+                for _fut in as_completed(_futs):
+                    _c = _futs[_fut]
+                    try:
+                        _r = _fut.result()
+                        if _r:
+                            _AUC_CACHE[_c] = _r
+                    except Exception:
+                        pass
+            if _AUC_CACHE:
+                print(f"    竞价{len(_AUC_CACHE)}只 ✓")
+        except Exception:
+            pass
+
         feats_list = []
         for r in rough_results:
             code = r["code"]
-            short = code.replace(".SH", "").replace(".SZ", "")
+            short = code.split(".")[0]
             _sf = lambda v: float(v) if v else 0.0
 
-            # ── 1. 日线衍生特征（对齐 pit_features.py） ──
-            feats = factor_ctx.get_price_features(code)
-            mpf = factor_ctx.get_model_pit_features(code)
+            # 从 DAILY_CACHE 构建 daily_rows + 确定 PIT 基准日
+            _raw = factor_ctx._DAILY_CACHE.get(code, [])
+            _daily_rows = sorted(_raw, key=lambda x: x.get("trade_date", ""))
+            _pit_date = _daily_rows[-1]["trade_date"] if _daily_rows else today_str
 
-            # 修复 avg_amount_5d：千元→元（pit_features:275）
-            _amt5d = _sf(mpf.get("avg_amount_5d", 0))
-            if _amt5d:
-                mpf["avg_amount_5d"] = _amt5d * 1000.0
-
-            # 修复 amplitude：rng/c 小数（pit_features:107）
-            mpf["amplitude"] = feats.get("amplitude", _sf(mpf.get("amplitude")))
-
-            # 修复 was_limit/max_step：阈值 9.8（pit_features:75,305）
-            mpf["was_limit"] = 1.0 if _sf(mpf.get("prev_pct")) >= 9.8 else 0.0
-            # max_step 在 get_model_pit_features 中用 9.5，也要修正
-            # 但这里重算即可
-            rows = factor_ctx._DAILY_CACHE.get(code, [])  # may not exist
-            _daily_rows = sorted(rows, key=lambda x: x.get("trade_date",""), reverse=True)
-            _step = 0
-            for _r_ in _daily_rows:
-                if _sf(_r_.get("pct_chg")) >= 9.8:
-                    _step += 1
-                else:
-                    break
-            mpf["max_step"] = float(_step)
-
-            # limit_up_count 也用 9.8 阈值？pit_features 也是 9.8，但 factor_ctx 用 9.5
-            # 保留 factor_ctx 的值，偏差较小
-            for k, v in mpf.items():
-                feats[k] = v
-
-            # 涨停基因（limit_list_d cache，9.5 阈值 vs 9.8 → 偏差小，保留）
-            feats["limit_up_count_20d"] = float(factor_ctx.get_limit_up_count(code, 20))
-            feats["limit_up_count_60d"] = float(factor_ctx.get_limit_up_count(code, 60))
-
-            # ── 2. 实时换手/量比（THS batch_quotes） ──
-            _tr = get_turnover(code)
-            _vr = get_vol_ratio(code)
-            if _tr is not None:
-                feats["turnover_rate"] = _tr
-            if _vr is not None:
-                feats["volume_ratio"] = _vr
-
-            # ── 3. daily_basic 字段（pool 建池缓存，T-1） ──
+            # 构建 basic_by_date（pool 缓存中的 daily_basic）
+            _basic_ent = {}
             if pool_extras and code in pool_extras:
                 _pe = pool_extras[code]
-                feats["prev_turnover"] = _pe.get("prev_turnover", 0.0)
-                feats["prev_vol_ratio"] = _pe.get("prev_vol_ratio", 0.0)
-                feats["circ_mv"] = _pe.get("circ_mv", 0)
-                feats["cmv_yi"] = float(feats.get("circ_mv", 0)) / 10000.0
-                feats["pe"] = _pe.get("pe", 999.0)
-                feats["pb"] = _pe.get("pb", 999.0)
-                # vol_accel = volume_ratio / prev_vol_ratio - 1（pit_features:292）
-                _cvr = feats.get("volume_ratio", 1.0)
-                _pvr = feats["prev_vol_ratio"]
-                feats["vol_accel"] = _cvr / _pvr - 1 if _pvr > 0 else 0.0
+                _tr = get_turnover(code)
+                _vr = get_vol_ratio(code)
+                _basic_ent = {
+                    "turnover_rate": _tr if _tr is not None else _pe.get("prev_turnover", 5.0),
+                    "volume_ratio": _vr if _vr is not None else _pe.get("prev_vol_ratio", 1.0),
+                    "circ_mv": _pe.get("circ_mv", 0),
+                    "pe": _pe.get("pe", 999.0),
+                    "pb": _pe.get("pb", 999.0),
+                }
 
-            # ── 4. pct_chg_score_day：保持 pit_features 口径 = 昨日涨幅 ──
-            # 训练侧 pct_chg_score_day = daily_rows 中最近一天（T-1）的 pct_chg
-            # 不要用实时 THS 覆盖，会导致分布偏移
-
-            # ── 5. 竞价特征（stk_auction）对齐 pit_features:405-414 ──
-            try:
-                from plays.limit_up.strategies.shortterm import _get_auction as _auc_fn
-                _auc = _auc_fn(code)
-                if _auc:
-                    _auc_amt = _sf(_auc.get("amount", 0))  # 元
-                    _auc_vol = _sf(_auc.get("vol", 0))      # 股
-                    feats["auc_amount"] = _auc_amt
-                    feats["auc_vol"] = _auc_vol
-                    # auc_amt_ratio = auc_amount(元) / avg_amount_5d(元)（pit_features:411）
-                    _a5d = _sf(feats.get("avg_amount_5d", 1))
-                    feats["auc_amt_ratio"] = _auc_amt / _a5d if _a5d > 0 else 0.0
-                    # auc_vol_ratio = auc_vol(股) / t1_vol(股)（pit_features:412-414）
-                    _t1_vol = 0.0
-                    _daily_r = sorted(rows, key=lambda x: x.get("trade_date",""), reverse=True)
-                    if len(_daily_r) >= 2:
-                        _t1_vol = _sf(_daily_r[1].get("vol", 0))  # 前一交易日成交量
-                    feats["auc_vol_ratio"] = _auc_vol / _t1_vol if _t1_vol > 0 else 0.0
-            except Exception:
-                pass
-
-            # ── 6. 概念热度（pit_features:353-359）→ 用 get_concept_momentum 匹配训练侧 ret1_avg ──
-            try:
-                _cm = factor_ctx.get_concept_momentum(short, today_str)
-                feats["n_concepts"] = float(_cm.get("n_concepts", 0))
-                feats["sector_heat"] = float(_cm.get("ret1_avg", 0.0))
-                feats["sector_rank"] = math.tanh(float(_cm.get("ret1_avg", 0.0)) / 5.0)
-            except Exception:
-                pass
-
-            # ── 7. 资金流特征（pit_features:325-348） ──
-            _nm = _MF_CACHE.get(code, 0.0)  # 万元
-            _sf_nm = float(_nm) if _nm else 0.0
-            feats["net_mf_amount"] = _sf_nm
-            feats["mf_net"] = _sf_nm
-            # moneyflow 只有 net_mf_amount（万元），buy_elg/buy_lg 不再预取
-            feats["buy_elg_ratio"] = 0.5  # pit_features default
-            feats["buy_lg_ratio"] = 0.5   # pit_features default
-            # net_mf_ratio = (nm*10000)/t1_amount_yuan（pit_features:341）
-            _t1_amt_yuan = _sf(feats.get("avg_amount_5d", 0))
-            if _t1_amt_yuan > 0:
-                feats["net_mf_ratio"] = (_sf_nm * 10000.0) / _t1_amt_yuan
-                feats["mf_pct"] = _sf_nm / (_t1_amt_yuan / 1000.0) if _t1_amt_yuan > 0 else 0.0
-            # mf_accel = (net_mf - prev_net_mf) / |prev_net_mf|（pit_features:348）
+            # 构建 moneyflow_by_date（两天数据，丁斐 mf_accel）
+            _mf_ent = {}
+            _nm = _MF_CACHE.get(code, 0.0)
+            _nm = float(_nm) if _nm else 0.0
+            if _nm:
+                _mf_ent = {"net_mf_amount": _nm, "buy_elg_amount": 0,
+                           "sell_elg_amount": 0, "buy_lg_amount": 0, "sell_lg_amount": 0}
             _nm_prev = float(_MF_PREV_CACHE.get(code, 0.0)) if _MF_PREV_CACHE.get(code) else 0.0
-            _denom = abs(_nm_prev) if _nm_prev else 1.0
-            feats["mf_accel"] = (_sf_nm - _nm_prev) / _denom
+            _mf_by_date = {_pit_date: _mf_ent} if _mf_ent else None
+            if _nm_prev and len(_daily_rows) >= 2:
+                _prev2 = _daily_rows[-2].get("trade_date", "")
+                if _prev2:
+                    _mf_by_date = _mf_by_date or {}
+                    _mf_by_date[_prev2] = {"net_mf_amount": _nm_prev, "buy_elg_amount": 0,
+                                           "sell_elg_amount": 0, "buy_lg_amount": 0, "sell_lg_amount": 0}
 
-            # ── 8. 龙虎榜特征（pit_features:364-400） ──
-            _tl = _TL_CACHE.get(code)
-            if _tl:
-                feats["dt_is_listed"] = 1.0
-                feats["dt_net_amount"] = _sf(_tl.get("net_amount"))
-                feats["dt_net_rate"] = _sf(_tl.get("net_rate"))
-                # dt_l_buy_ratio = l_buy / l_amount（pit_features:375）
-                _l_buy = _sf(_tl.get("l_buy"))
-                _l_amt = _sf(_tl.get("l_amount"))
-                feats["dt_l_buy_ratio"] = _l_buy / _l_amt if _l_amt > 0 else 0.0
+            # 构建 auction_by_date
+            _auc_ent = _AUC_CACHE.get(code, {})
 
-                _insts = _TI_CACHE.get(code, [])
-                _inst_net = _hot_net = 0.0
-                _inst_sell = 0.0
-                for _i in _insts:
-                    _ex = str(_i.get("exalter", ""))
-                    _nb = _sf(_i.get("net_buy"))
-                    if "机构" in _ex or "专用" in _ex:
-                        _inst_net += _nb
-                        if _nb < 0:
-                            _inst_sell += abs(_nb)
-                    else:
-                        _hot_net += _nb
-                feats["dt_inst_net_buy"] = _inst_net
-                feats["dt_hot_net_buy"] = _hot_net
-                feats["dt_n_exalter"] = float(len(_insts))
-                _tl_amt = _sf(_tl.get("amount", 0))
-                feats["dt_inst_sell_ratio"] = _inst_sell / _tl_amt if _tl_amt > 0 else 0.0
+            # 构建概念动量
+            _cm = factor_ctx.get_concept_momentum(short)
+            if not _cm.get("n_concepts", 0):
+                # concept_cache 实时数据兜底
+                from plays.limit_up.strategies.concept_cache import get_concept_limit_ups as _gclu
+                _clu = _gclu(code)
+                _cnames = [k for k in _clu if not k.startswith("_")]
+                _best = max((_clu.get(n, 0) for n in _cnames), default=0)
+                _cm["n_concepts"] = float(len(_cnames))
+                _cm["ret1_avg"] = float(_best)
+                _cm["ret3_max"] = float(_best * 2)
 
-            # ── 9.日内特征（保留已实现部分，_ID_CACHE 暂不预取以避免过慢） ──
-            feats["id_vwap_dev"] = 0.0
-            feats["id_morning_vol_ratio"] = 0.5
-            feats["id_afternoon_strength"] = 1.0  # pit_features default
-            feats["id_tail_vol_ratio"] = 0.1       # pit_features default
-            # id_range: high/low - 1（pit_features:429）
+            # 构建 top_list/top_inst by_date
+            _tl_ent = _TL_CACHE.get(code, {})
+            _ti_list = _TI_CACHE.get(code, [])
+
+            # 统一调用 build_pit_features
+            from plays.limit_up.pit_features import build_pit_features as _bpf
+            feats = _bpf(
+                code=code,
+                score_date=today_str,
+                daily_rows=_daily_rows,
+                basic_by_date={_pit_date: _basic_ent} if _basic_ent else None,
+                moneyflow_by_date=_mf_by_date,
+                auction_by_date={_pit_date: _auc_ent} if _auc_ent else None,
+                concept_momentum=_cm,
+                top_list_by_date={_pit_date: _tl_ent} if _tl_ent else None,
+                top_inst_by_date={_pit_date: _ti_list} if _ti_list else None,
+                pit_mode=True,
+            )
+
+            # ── 事后覆盖：实时数据替换 stale default ──
+            # pct_chg_score_day：THS 实时涨幅
+            try:
+                _rt_pct = _rc.get(code, {}).get("pct_chg")
+                if _rt_pct is not None:
+                    feats["pct_chg_score_day"] = float(_rt_pct)
+            except Exception:
+                pass
+            # 实时换手/量比（比 T-1 daily_basic 新）
+            _tr2 = get_turnover(code)
+            _vr2 = get_vol_ratio(code)
+            if _tr2 is not None:
+                feats["turnover_rate"] = _tr2
+            if _vr2 is not None:
+                feats["volume_ratio"] = _vr2
+            # 日内特征从 THS 实时行情计算 id_range/id_amount_ratio
             try:
                 _rc2 = _rc.get(code, {})
-                _hi = _sf(_rc2.get("high"))
-                _lo = _sf(_rc2.get("low"))
-                feats["id_range"] = _hi / _lo - 1 if _lo > 0 else 0.0
-                _amt_t = _sf(_rc2.get("amount"))
-                _a5d = _sf(feats.get("avg_amount_5d", 1))
-                feats["id_amount_ratio"] = _amt_t / _a5d if _a5d > 0 else 0.0
+                _h = _sf(_rc2.get("high"))
+                _l = _sf(_rc2.get("low"))
+                if _h and _l and _l > 0:
+                    feats["id_range"] = _h / _l - 1.0
+                _amt = _sf(_rc2.get("amount"))
+                _a5 = _sf(feats.get("avg_amount_5d", 1))
+                if _amt and _a5 > 0:
+                    feats["id_amount_ratio"] = _amt / _a5
             except Exception:
                 pass
 
-            # ── 10. 策略维度分 ──
+            # 策略维度分（stage1_rough 产出，不属于 pit_features）
             for dim in ("sentiment", "shortterm", "technical", "fundflow", "fundamental"):
                 feats[dim] = r["scores"].get(dim, 0)
             feats_list.append(feats)
