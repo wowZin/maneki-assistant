@@ -189,7 +189,8 @@ class WatchdogEngine:
         self._thread: Optional[threading.Thread] = None
         self._scan_count = 0
         self._ws: Optional[JvQuantWSClient] = None
-        self._ws_fail_count = 0  # 连续无数据次数，>=5 强制重连
+        self._ws_fail_count = 0  # 连续无数据次数，>=5 触发重连
+        self._ws_last_reconnect: float = 0.0  # 上次重连时间戳（退避控制）
         self._state_mtime: float = 0.0
         self._load_state()
 
@@ -322,6 +323,34 @@ class WatchdogEngine:
                 lines.append(f"  {icon} {st.name}({st.code}) [{st.status}]")
             return "\n".join(lines)
 
+    def _reconnect_ws(self) -> bool:
+        """强制重连 WebSocket 并恢复订阅。返回是否成功。"""
+        try:
+            if self._ws:
+                self._ws.disconnect()
+        except Exception:
+            pass
+
+        try:
+            self._ws = _get_ws()
+            if not self._ws.is_connected():
+                self._ws.connect()
+        except Exception as e:
+            logger.error(f"WS 重连异常: {e}")
+            return False
+
+        if self._ws.is_connected():
+            with self._lock:
+                codes = list(self._states.keys())
+            if codes:
+                self._subscribe(codes)
+            self._ws_fail_count = 0
+            logger.info(f"WS 重连成功，恢复 {len(codes)} 只订阅")
+            return True
+        else:
+            logger.warning("WS 重连失败，将退避后重试")
+            return False
+
     # ---- 循环 ----
 
     def _loop(self):
@@ -335,18 +364,23 @@ class WatchdogEngine:
                         logger.info("进入交易时段，开始盯盘扫描")
                         trading_day_logged = True
 
-                    # WS 数据检测：连续失败达到阈值后停用 WS
+                    # WS 数据检测：连接断开或连续无数据时尝试重连
                     ws_dead = not self._ws or not self._ws.is_connected()
                     ws_dead = ws_dead or self._ws_fail_count >= 5
-                    if ws_dead and self._ws_fail_count < 100:
-                        # 首次失败时尝试重连一次，后续静默跳过
-                        if self._ws_fail_count == 5:
-                            logger.warning("WS 连续无数据，停用实时行情，仅用日线扫描")
-                        self._ws_fail_count += 1
+                    if ws_dead:
+                        now_ts = time.time()
+                        ws_reason = "断开" if not self._ws or not self._ws.is_connected() else f"无数据({self._ws_fail_count}轮)"
+                        # 退避：每 120 秒尝试重连一次，避免频繁重连
+                        if now_ts - self._ws_last_reconnect > 120:
+                            logger.warning(f"WS {ws_reason}，尝试重连...")
+                            self._ws_last_reconnect = now_ts
+                            if self._reconnect_ws():
+                                continue  # 重连成功，进入正常扫描
+                            # 重连失败，退避等待
                         with self._lock:
                             codes = list(self._states.keys())
                         if codes:
-                            logger.info(f"盯盘心跳 #{self._scan_count}: {len(codes)}只 [仅日线]")
+                            logger.info(f"盯盘心跳 #{self._scan_count}: {len(codes)}只 [WS离线，{int(now_ts - self._ws_last_reconnect)}s后重试]")
                         time.sleep(SCAN_INTERVAL)
                         continue
                     # 动态加载外部 state.json 变更（用户通过 client 添加/删除）

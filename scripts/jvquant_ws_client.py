@@ -199,7 +199,9 @@ class JvQuantWSClient:
                 # Probe: "list" is a noop if connected, raises if dead
                 self._ws.cmd("list")
             return True
-        except websocket.WebSocketConnectionClosedException:
+        except (websocket.WebSocketConnectionClosedException,
+                websocket.WebSocketTimeoutException,
+                ConnectionError, OSError, TimeoutError, Exception):
             print(f"[jvQuant WS] 连接已断开，重新连接...")
             self._running = False
             self._l1_codes.clear()
