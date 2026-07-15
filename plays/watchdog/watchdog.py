@@ -35,7 +35,26 @@ sys.path.insert(0, str(PROJECT_DIR))
 from plays.watchdog.indicators import price_features, realtime_row, sma, atr
 from plays.watchdog.signals import check_entry, check_exit, check_abnormal, compute_factor_scores, is_worth_watching
 from scripts.tu_share import call_tushare  # noqa: E402
-from scripts.jvquant_ws_client import _get_ws, JvQuantWSClient  # noqa: E402
+
+# WS 数据通过 ws_daemon 共享内存读取
+SHM_DIR = Path("/dev/shm")
+WS_SUB = SHM_DIR / "ws_sub.json"
+WS_SNAP = SHM_DIR / "ws_snap.json"
+
+
+def _read_ws_snap(code: str) -> dict:
+    try:
+        snap = json.loads(WS_SNAP.read_text())
+        return snap.get(code, {})
+    except Exception:
+        return {}
+
+
+def _write_ws_sub(shorts: list[str]):
+    try:
+        WS_SUB.write_text(json.dumps({"shorts": shorts, "l2_shorts": []}))
+    except Exception:
+        pass
 
 
 def _norm(code: str) -> str:
@@ -188,9 +207,7 @@ class WatchdogEngine:
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._scan_count = 0
-        self._ws: Optional[JvQuantWSClient] = None
-        self._ws_fail_count = 0  # 连续无数据次数，>=5 触发重连
-        self._ws_last_reconnect: float = 0.0  # 上次重连时间戳（退避控制）
+        self._subscribed: set[str] = set()
         self._state_mtime: float = 0.0
         self._load_state()
 
@@ -199,21 +216,12 @@ class WatchdogEngine:
     def start(self):
         if self._running:
             return
-        try:
-            self._ws = _get_ws()
-            if not self._ws.is_connected():
-                self._ws.connect()
-        except Exception as e:
-            logger.error(f"jvQuant WS 连接失败: {e}")
-            return
-
         self._running = True
-        # 同步订阅历史标的
+        # 同步历史标的订阅到 ws_daemon
         with self._lock:
             codes = list(self._states.keys())
         if codes:
             self._subscribe(codes)
-
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
         logger.info("盯盘引擎已启动")
@@ -226,16 +234,16 @@ class WatchdogEngine:
         logger.info("盯盘引擎已停止")
 
     def _subscribe(self, codes: list[str]):
-        if not self._ws:
-            return
-        # Watchdog 不再订阅 WS（pipeline 独占）, 改用 THS
-        self._subscribed.update([_short(c) for c in codes])
+        """订阅标的到 ws_daemon。"""
+        shorts = [_short(c) for c in codes]
+        self._subscribed.update(shorts)
+        _write_ws_sub(list(self._subscribed))
 
     def _unsubscribe(self, codes: list[str]):
-        if not self._ws:
-            return
+        """从 ws_daemon 取消订阅。"""
         shorts = [_short(c) for c in codes]
         self._subscribed.difference_update(shorts)
+        _write_ws_sub(list(self._subscribed))
 
     # ---- 指令 ----
 
@@ -317,32 +325,10 @@ class WatchdogEngine:
             return "\n".join(lines)
 
     def _reconnect_ws(self) -> bool:
-        """重连 WebSocket 并恢复订阅（使用 _get_ws 单例，不创建新实例）。"""
-        try:
-            if self._ws:
-                self._ws.disconnect()
-        except Exception:
-            pass
+        """不再直连 WS，由 ws_daemon 负责。检测共享内存是否可用。"""
+        return WS_SNAP.exists()
 
-        from scripts.jvquant_ws_client import _get_ws
-        try:
-            self._ws = _get_ws()
-            self._ws.connect()
-        except Exception as e:
-            logger.error(f"WS 重连失败: {e}")
-            return False
-
-        if self._ws.is_connected():
-            with self._lock:
-                codes = list(self._states.keys())
-            if codes:
-                self._subscribe(codes)
-            self._ws_fail_count = 0
-            logger.info(f"WS 重连成功，恢复 {len(codes)} 只订阅")
-            return True
-        else:
-            logger.warning("WS 重连失败，将退避后重试")
-            return False
+    # ---- 指令 ----
 
     # ---- 循环 ----
 
@@ -367,24 +353,11 @@ class WatchdogEngine:
                             self._subscribe(_codes)
                             logger.info(f"新交易日 {_today_str}，重新订阅 {len(_codes)} 只")
 
-                    # WS 数据检测：连接断开或连续无数据时尝试重连
-                    ws_dead = not self._ws or not self._ws.is_connected()
-                    ws_dead = ws_dead or self._ws_fail_count >= 5
-                    if ws_dead:
-                        now_ts = time.time()
-                        ws_reason = "断开" if not self._ws or not self._ws.is_connected() else f"无数据({self._ws_fail_count}轮)"
-                        # 退避：每 120 秒尝试重连一次，避免频繁重连
-                        if now_ts - self._ws_last_reconnect > 120:
-                            logger.warning(f"WS {ws_reason}，尝试重连...")
-                            self._ws_last_reconnect = now_ts
-                            if self._reconnect_ws():
-                                continue  # 重连成功，进入正常扫描
-                            # 重连失败，退避等待
-                        with self._lock:
-                            codes = list(self._states.keys())
-                        if codes:
-                            logger.info(f"盯盘心跳 #{self._scan_count}: {len(codes)}只 [WS离线，{int(now_ts - self._ws_last_reconnect)}s后重试]")
-                        time.sleep(SCAN_INTERVAL)
+                    # 共享内存数据检测
+                    snap_ok = WS_SNAP.exists()
+                    if not snap_ok:
+                        logger.warning(f"ws_daemon 共享内存未就绪")
+                        time.sleep(5)
                         continue
                     # 动态加载外部 state.json 变更（用户通过 client 添加/删除）
                     self._reload_state_if_changed()
@@ -454,17 +427,23 @@ class WatchdogEngine:
             if not st.daily_rows:
                 continue
 
-            market = self._ws.get_market(code) if self._ws else None
-            if not market:
+            market = _read_ws_snap(_short(code))
+            if not market or not market.get("last"):
                 self._ws_fail_count += 1
                 if self._scan_count % 10 == 0:
-                    logger.warning(f"{code} 无行情数据（WS失败{self._ws_fail_count}次）")
+                    logger.warning(f"{code} 无行情数据（共享内存无数据{self._ws_fail_count}次）")
                 continue
             self._ws_fail_count = 0  # 有数据了，重置
 
-            vwap = self._ws.get_vwap(code) or 0.0
-            klines = self._ws.get_kline(code, n=10) if self._ws else []
+            vwap_data = _read_ws_snap(f"{_short(code)}_vwap")
+            vwap = float(vwap_data) if isinstance(vwap_data, (int, float)) else 0.0
+            klines = []  # Kline 数据目前由 ws_daemon 暂不提供，不影响评分
 
+            bid_price = market.get("bid_price", [None] * 10)
+            ask_price = market.get("ask_price", [None] * 10)
+            bid1 = float(bid_price[0]) if bid_price and bid_price[0] else 0
+            ask1 = float(ask_price[0]) if ask_price and ask_price[0] else 0
+            ask_bid = bid1 / ask1 if ask1 > 0 else 1.0
             daily_features = price_features(st.daily_rows)
             row = realtime_row(code, market, vwap, klines, daily_features, st.daily_basic, st.dim_scores, st.daily_rows)
             scores = compute_factor_scores(row)
@@ -478,7 +457,6 @@ class WatchdogEngine:
                 st.netflow_history = st.netflow_history[-10:]
 
             # ── 异常状态检测（资金离场 / 抛压 / 诱空）──
-            ask_bid = self._ws.get_bid_ask_ratio(code) if self._ws else 1.0
             abnormal, level, abnormal_reason = check_abnormal(
                 row, scores, netflow, ask_bid,
                 entry_price=st.entry_price if st.status == "entered" else 0.0,
@@ -593,9 +571,7 @@ class WatchdogEngine:
             self._save_state()
 
     def _last_price(self, code: str) -> float:
-        if not self._ws:
-            return 0.0
-        market = self._ws.get_market(code)
+        market = _read_ws_snap(_short(code))
         return float(market.get("last") or 0) if market else 0.0
 
     def _get_netflow(self, code: str) -> float:
