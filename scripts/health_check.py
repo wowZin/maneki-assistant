@@ -504,32 +504,27 @@ def check_realtime_caches() -> list[HealthStatus]:
 # 3. jvQuant WebSocket 行情巡检
 
 def check_jvquant_ws() -> list[HealthStatus]:
-    """检查 jvQuant WebSocket 连接状态"""
+    """检查 ws_daemon 共享内存（不直连 WS，避免互踢）"""
     results = []
     t0 = time.time()
     try:
-        from scripts.jvquant_ws_client import daemon_alive, daemon_stats
-        if daemon_alive():
-            s = daemon_stats()
+        snap_path = Path("/dev/shm/ws_snap.json")
+        alive = snap_path.exists() and (time.time() - snap_path.stat().st_mtime) < 10
+        sub_path = Path("/dev/shm/ws_sub.json")
+        subs = json.loads(sub_path.read_text()) if sub_path.exists() else {}
+        n_sub = len(subs.get("shorts", []))
+        if alive:
             results.append(HealthStatus(
-                source="jvquant:ws", severity=Severity.OK,
-                message=(f"已连接 | L1={s['l1_count']} L10={s['l10_count']} "
-                         f"L2={s['l2_count']} | "
-                         f"今日{s['total_subscribed_today']}只={s['daily_cost']}元"),
-                latency_ms=(time.time()-t0)*1000, detail=s))
+                source="jvquant:ws_daemon", severity=Severity.OK,
+                message=f"共享内存活动 | 订阅{n_sub}只", latency_ms=(time.time()-t0)*1000))
         else:
             results.append(HealthStatus(
-                source="jvquant:ws", severity=Severity.WARNING,
-                message="jvQuant WebSocket 未连接",
-                latency_ms=(time.time()-t0)*1000))
-    except ImportError:
-        results.append(HealthStatus(
-            source="jvquant:ws", severity=Severity.WARNING,
-            message="jvQuant 模块未安装", latency_ms=(time.time()-t0)*1000))
+                source="jvquant:ws_daemon", severity=Severity.WARNING,
+                message=f"ws_daemon 共享内存未更新(>10s)", latency_ms=(time.time()-t0)*1000))
     except Exception as e:
         results.append(HealthStatus(
-            source="jvquant:ws", severity=Severity.CRITICAL,
-            message=f"jvQuant 检查异常: {e}", latency_ms=(time.time()-t0)*1000))
+            source="jvquant:ws_daemon", severity=Severity.CRITICAL,
+            message=f"ws_daemon 共享内存异常: {e}", latency_ms=(time.time()-t0)*1000))
     return results
 
 # 4. 代理 (已废弃, 全量迁移到同花顺+jvQuant)

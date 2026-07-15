@@ -73,6 +73,11 @@ def main():
     shorts, l2_shorts = _read_sub()
     print(f"[ws_daemon] 启动, 初始订阅 L1={len(shorts)} L2={len(l2_shorts)}")
 
+    # 引入交易日判断
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from plays.limit_up.pipeline import _is_trading_session, _is_trade_day
+
     ws = JvQuantWSClient()
     ws.connect()
     if shorts:
@@ -88,6 +93,11 @@ def main():
 
     while _running:
         now = time.time()
+        # 非交易时段自动退出
+        _hhmm = int(datetime.now().strftime("%H%M"))
+        if not _is_trade_day(datetime.now().strftime("%Y%m%d")) or not _is_trading_session(_hhmm):
+            print(f"[ws_daemon] 非交易时段({_hhmm}), 退出")
+            break
         # 检查新订阅（每秒）
         if now - last_sub_check >= 2:
             new_shorts, new_l2 = _read_sub()
