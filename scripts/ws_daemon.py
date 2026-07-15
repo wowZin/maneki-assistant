@@ -44,9 +44,9 @@ def _read_sub() -> tuple[list[str], list[str]]:
 
 
 def _write_snap(shorts: list[str], ws_client):
-    """快照写入共享内存。"""
+    """快照写入共享内存（原子写入：tempfile + rename）。"""
     snap: dict = {}
-    for short in shorts:
+    for short in shorts[:400]:  # 最多400只，超限也不影响排序
         try:
             mkt = ws_client.get_market(short)
             if mkt:
@@ -57,7 +57,9 @@ def _write_snap(shorts: list[str], ws_client):
         except Exception:
             pass
     try:
-        SNAP_FILE.write_text(json.dumps(snap, default=str))
+        tmp = SNAP_FILE.with_name("ws_snap.tmp")
+        tmp.write_text(json.dumps(snap, default=str))
+        tmp.rename(SNAP_FILE)  # 原子 rename
     except Exception:
         pass
     return len(snap)
@@ -82,6 +84,7 @@ def main():
     snap_interval = 1.0  # 快照刷新间隔(秒)
     last_snap = 0.0
     last_sub_check = 0.0
+    last_health_check = 0.0
 
     while _running:
         now = time.time()
@@ -111,6 +114,21 @@ def main():
                     except Exception:
                         pass
             last_sub_check = now
+
+        # WS 连接检测（每 30s）
+        if now - last_health_check >= 30:
+            try:
+                if not ws.is_connected():
+                    print(f"[ws_daemon] WS 断连，尝试重连...")
+                    ws.disconnect()
+                    ws = JvQuantWSClient()
+                    ws.connect()
+                    # 恢复订阅
+                    if shorts: ws.subscribe_l1(shorts)
+                    if l2_shorts: ws.subscribe_l2(l2_shorts)
+            except Exception as e:
+                print(f"[ws_daemon] WS 重连失败: {e}")
+            last_health_check = now
 
         # 快照
         if now - last_snap >= snap_interval and shorts:

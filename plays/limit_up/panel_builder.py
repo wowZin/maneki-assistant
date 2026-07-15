@@ -328,10 +328,16 @@ def _add_strategy_scores(df: pd.DataFrame, fi_cache: dict[str, dict],
     """从已有缓存数据计算 5 策略分（不调 Tushare）。"""
     t0 = __import__("time").time()
     codes = df["code"].tolist()
+
+    # 预计算（避免循环内 O(n²)）
+    conc_dict = dict(zip(df["code"], df["n_concepts"]))
+    row_dict = df.set_index("code")[["close_pos", "amplitude", "volume_ratio",
+                                      "turnover_rate", "positive_5d", "auc_amt_ratio"]].to_dict("index")
     fund_scores, tech_scores, flow_scores, sent_scores, short_scores = [], [], [], [], []
 
     for code in codes:
         short = code.split(".")[0]
+        row = row_dict.get(code, {})
 
         # ── fundamental: circ_mv(30%) + pe/pb(25%) + profit_yoy(25%) + concept(20%) ──
         bd = basic_cache.get(code, {})
@@ -354,22 +360,17 @@ def _add_strategy_scores(df: pd.DataFrame, fi_cache: dict[str, dict],
         if profit > 50: f += 15; r.append(f"扣非高增{profit:.0f}%+15")
         elif profit > 20: f += 10; r.append(f"扣非增长{profit:.0f}%+10")
         # concept count from pit features
-        cc = int(df.loc[df["code"] == code, "n_concepts"].iloc[0]) if len(df) > 0 else 0
+        cc = int(conc_dict.get(code, 0))
         if cc >= 10: f += 10; r.append(f"多概念{cc}个+10")
         elif cc >= 5: f += 5; r.append(f"概念{cc}个+5")
         fund_scores.append(min(100, round(f)))
 
         # ── technical: 从 PIT 特征中的昨收位置/振幅/量价计算 ──
-        row = df[df["code"] == code]
-        if len(row) > 0:
-            row = row.iloc[0]
-            cp = float(row.get("close_pos", 0.5) or 0.5)
-            amp = float(row.get("amplitude", 0) or 0) * 100
-            vr = float(row.get("volume_ratio", 1) or 1)
-            tr = float(row.get("turnover_rate", 5) or 5)
-            nt = float(row.get("positive_5d", 0) or 0)
-        else:
-            cp, amp, vr, tr, nt = 0.5, 5, 1, 5, 0
+        cp = float(row.get("close_pos", 0.5) or 0.5)
+        amp = float(row.get("amplitude", 0) or 0) * 100
+        vr = float(row.get("volume_ratio", 1) or 1)
+        tr = float(row.get("turnover_rate", 5) or 5)
+        nt = float(row.get("positive_5d", 0) or 0)
         t = 15.0
         if cp > 0.7: t += 16
         elif cp > 0.5: t += 10

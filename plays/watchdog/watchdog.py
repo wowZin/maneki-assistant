@@ -325,10 +325,6 @@ class WatchdogEngine:
                 lines.append(f"  {icon} {st.name}({st.code}) [{st.status}]")
             return "\n".join(lines)
 
-    def _reconnect_ws(self) -> bool:
-        """不再直连 WS，由 ws_daemon 负责。检测共享内存是否可用。"""
-        return WS_SNAP.exists()
-
     # ---- 指令 ----
 
     # ---- 循环 ----
