@@ -519,18 +519,7 @@ def stage1_rough(codes_with_names: list[tuple[str, str, dict]]) -> list[dict]:
     """粗评（纯策略评分，不依赖 WS L1 订阅）。"""
     results = []
     for code, name, realtime in codes_with_names:
-        scores, reasons, total_score, top3_score, rc = _raw_score(code, name, realtime)
-        result = {
-            "code": code,
-            "name": name,
-            "scores": scores,
-            "reasons": reasons,
-            "total_score": total_score,
-            "top3_score": top3_score,
-            "score_mode": "daemon_weighted",
-            "pct_chg": round(float(realtime.get("pct_chg", 0) or 0), 2) if realtime else 0,
-            "resonance": {"count": rc, "threshold": 75, "is_resonance": rc >= 3},
-        }
+        result = _raw_score(code, name, realtime=realtime)
         results.append(result)
     return results
 
