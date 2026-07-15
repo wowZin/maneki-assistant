@@ -256,10 +256,18 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
         stack = ScoreStack()
     quotes: dict[str, dict] = {}
 
-    # 栈空或接近空时才 batch_quotes 刷新
-    if stack.size < 10:
+    _now_ts = __import__("time").time()
+    _should_scan = stack.size < 10
+    if not _should_scan:
+        try:
+            _should_scan = _now_ts - getattr(_run_one_round, "last_scan", 0) > 60
+        except Exception:
+            _should_scan = True
+
+    if _should_scan:
         if iter_count is not None:
-            print(f"\n[{_now().strftime('%H:%M')}] ① batch_quotes {len(pool_codes)}只(栈将空)...")
+            print(f"\n[{_now().strftime('%H:%M')}] ① batch_quotes {len(pool_codes)}只({stack.size}只栈中)...")
+        _run_one_round.last_scan = _now_ts
         quotes = scan_batch(pool_codes)
         filtered_quotes = {}
 

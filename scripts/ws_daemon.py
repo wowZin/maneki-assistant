@@ -105,12 +105,20 @@ def main():
                         ws.subscribe_l2([s])
                     except Exception:
                         pass
-            # 清理退订
+            # 清理退订 L1
             for s in shorts[:]:
                 if s not in new_shorts:
                     shorts.remove(s)
                     try:
                         ws.unsubscribe_l1([s])
+                    except Exception:
+                        pass
+            # 清理退订 L2
+            for s in l2_shorts[:]:
+                if s not in new_l2:
+                    l2_shorts.remove(s)
+                    try:
+                        ws.unsubscribe_l2([s])
                     except Exception:
                         pass
             last_sub_check = now
