@@ -1,0 +1,38 @@
+[
+  {
+    "code": "603538.SH",
+    "name": "美诺华",
+    "total_score": 47.89,
+    "score_mode": "model_score",
+    "l2api": {
+      "last": 35.87,
+      "bid1": 0,
+      "ask1": 0,
+      "vwap": 35.8
+    },
+    "scores": {
+      "technical": 0.0,
+      "fundamental": 80.8,
+      "fundflow": 0.0,
+      "shortterm": 38.0,
+      "sentiment": 37.0
+    },
+    "reasons": {
+      "technical": "放量破位:收盘35.45<MA20=36.16,量比6.98>2.5",
+      "fundamental": "[高] 中大盘(流通119亿)+17; 高成长/亏损股(PE=117.9)+15; 偏高 PB(PB=5.2)+6; 扣非增长+48%; 共振:大盘+成长+10",
+      "fundflow": "否决: 龙虎榜净卖出50990万(4.27%流通市值)（极端撤离）",
+      "shortterm": "涨停基因29(20日3次/60日4次) | 开盘博弈-8(跳空-5.5%/竞价换手0.26%) 内外盘1.23(内盘强-5) | 位置波动17(pos0.50/t10-1.0%/std6.1) | 连板溢价0(昨日涨停0/连板0板)",
+      "sentiment": "[-低] 涨停溢价11.6%+10; 炸板率20.6%+7; 最高5板+5; 梯队完整+4; 换手8.5%温和+3; 20日涨停3次+3; 连板基因2连板+2; 竞价跳空-5.5%[熊市态×0.9]→0分"
+    },
+    "pct_chg": 4.57,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "factors": {
+      "model_score": 47.89
+    },
+    "l2_confirmed": true
+  }
+]
