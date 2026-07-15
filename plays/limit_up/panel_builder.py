@@ -231,7 +231,7 @@ def batch_prefetch(codes: list[str], today: str, prev_date: str,
 
 
 def build_features(codes: list[str], today: str, prev_date: str,
-                   basic_cache: dict[str, dict],
+                   basic_cache: dict[str, dict], basic_prev_cache: dict[str, dict],
                    mf_cache, mf_prev_cache, tl_cache, ti_cache, auc_cache,
                    fi_cache: dict[str, dict]) -> pd.DataFrame:
     """调用 build_pit_features 逐只构建64特征。"""
@@ -252,8 +252,9 @@ def build_features(codes: list[str], today: str, prev_date: str,
             continue
         pit_date = daily_rows[-1].get("trade_date", today)
 
-        # basic_by_date (从 daily_basic 预取缓存)
+        # basic_by_date（从 daily_basic 预取缓存，含前日）
         basic_ent = {}
+        prev_basic_ent = {}
         bd = basic_cache.get(code, {})
         if bd:
             basic_ent = {
@@ -263,6 +264,18 @@ def build_features(codes: list[str], today: str, prev_date: str,
                 "pe": float(bd.get("pe", 0) or 999.0),
                 "pb": float(bd.get("pb", 0) or 0),
             }
+        bd_prev = basic_prev_cache.get(code, {})
+        if bd_prev:
+            prev_basic_ent = {
+                "turnover_rate": float(bd_prev.get("turnover_rate", 0)),
+                "volume_ratio": float(bd_prev.get("volume_ratio", 0) or 0),
+            }
+        basic_by_date = {}
+        if basic_ent:
+            basic_by_date[pit_date] = basic_ent
+        if prev_basic_ent:
+            prev_pit = (datetime.strptime(pit_date, "%Y%m%d") - timedelta(days=1)).strftime("%Y%m%d")
+            basic_by_date[prev_pit] = prev_basic_ent
 
         # moneyflow
         mf = mf_cache.get(code, {})
@@ -281,19 +294,24 @@ def build_features(codes: list[str], today: str, prev_date: str,
                 mf_bd[p2] = {"net_mf_amount": nm_prev, "buy_elg_amount": 0,
                              "sell_elg_amount": 0, "buy_lg_amount": 0, "sell_lg_amount": 0}
 
-        # concept
-        cm = factor_ctx.get_concept_momentum(short)
-        if not cm.get("n_concepts", 0):
-            try:
-                from plays.limit_up.strategies.concept_cache import get_concept_limit_ups as gclu
-                clu = gclu(code)
-                cn = [k for k in clu if not k.startswith("_")]
-                best = max((clu.get(n, 0) for n in cn), default=0)
-                cm["n_concepts"] = float(len(cn))
-                cm["ret1_avg"] = float(best)
-                cm["ret3_max"] = float(best * 2)
-            except Exception:
-                pass
+        # concept（从 _STOCK_CONCEPTS 直接取，不依赖实时涨停数据）
+        short = code.split(".")[0]
+        try:
+            from plays.limit_up.strategies.concept_cache import _STOCK_CONCEPTS, ensure_loaded
+            ensure_loaded()
+            cc_names = _STOCK_CONCEPTS.get(short, [])
+            n_c = float(len(cc_names))
+            cm = {"n_concepts": n_c,
+                  "ret1_max": 0.0, "ret1_avg": 0.0,
+                  "ret3_max": 0.0, "ret3_avg": 0.0,
+                  "up_ratio": 0.5, "up_streak_max": 0,
+                  "turn_5d_max": 0.0, "turn_5d_avg": 0.0}
+        except Exception:
+            cm = {"n_concepts": 0.0,
+                  "ret1_max": 0.0, "ret1_avg": 0.0,
+                  "ret3_max": 0.0, "ret3_avg": 0.0,
+                  "up_ratio": 0.5, "up_streak_max": 0,
+                  "turn_5d_max": 0.0, "turn_5d_avg": 0.0}
 
         auc_ent = auc_cache.get(code, {})
         tl_ent = tl_cache.get(code, {})
@@ -304,7 +322,7 @@ def build_features(codes: list[str], today: str, prev_date: str,
                 code=code,
                 score_date=today,
                 daily_rows=daily_rows,
-                basic_by_date={pit_date: basic_ent} if basic_ent else None,
+                basic_by_date=basic_by_date if basic_by_date else None,
                 moneyflow_by_date=mf_bd,
                 auction_by_date={pit_date: auc_ent} if auc_ent else None,
                 concept_momentum=cm,
@@ -396,7 +414,8 @@ def _add_strategy_scores(df: pd.DataFrame, fi_cache: dict[str, dict],
 
         # ── sentiment: 涨停概念热度 ──
         try:
-            from plays.limit_up.strategies.concept_cache import get_concept_limit_ups
+            from plays.limit_up.strategies.concept_cache import get_concept_limit_ups, ensure_loaded
+            ensure_loaded()
             clu = get_concept_limit_ups(code)
             cn = [k for k in clu if not k.startswith("_")]
             best = max((clu.get(n, 0) for n in cn), default=0)
@@ -509,6 +528,18 @@ def main():
     codes = list(basic_cache.keys())
     print(f"    daily_basic: {time.time()-t0:.1f}s ({len(codes)}只, 过滤ST={len(st_codes)})")
 
+    # 补前日 daily_basic（供 prev_vol_ratio / prev_turnover）
+    prev2 = (datetime.strptime(prev_date, "%Y%m%d") - timedelta(days=1)).strftime("%Y%m%d")
+    basic_prev_cache: dict[str, dict] = {}
+    try:
+        r = call_tushare("daily_basic", {"trade_date": prev2},
+                         "ts_code,turnover_rate,volume_ratio")
+        for it in r.get("data", {}).get("items", []):
+            basic_prev_cache[it[0]] = dict(zip(r["data"]["fields"], it))
+    except Exception:
+        pass
+    print(f"    daily_basic(前日{prev2}): {time.time()-t0:.1f}s ({len(basic_prev_cache)}只)")
+
     if args.quick:
         codes = codes[:100]
         print(f"  [panel] 快验模式: 取前100只")
@@ -519,9 +550,22 @@ def main():
     mf_cache, mf_prev_cache, tl_cache, ti_cache, auc_cache, fi_cache = batch_prefetch(
         codes, today, prev_date, basic_cache)
 
+    # 前日 daily_basic
+    prev2 = (datetime.strptime(prev_date, "%Y%m%d") - timedelta(days=1)).strftime("%Y%m%d")
+    basic_prev_cache: dict[str, dict] = {}
+    try:
+        r = call_tushare("daily_basic", {"trade_date": prev2},
+                         "ts_code,turnover_rate,volume_ratio")
+        for it in r.get("data", {}).get("items", []):
+            basic_prev_cache[it[0]] = dict(zip(r["data"]["fields"], it))
+    except Exception:
+        pass
+    print(f"    daily_basic(前日{prev2}): {time.time()-t0:.1f}s ({len(basic_prev_cache)}只)")
+
     # 构建特征
     df = build_features(codes, today, prev_date,
-                        basic_cache, mf_cache, mf_prev_cache, tl_cache, ti_cache, auc_cache, fi_cache)
+                        basic_cache, basic_prev_cache,
+                        mf_cache, mf_prev_cache, tl_cache, ti_cache, auc_cache, fi_cache)
 
     # 补策略分
     df = _add_strategy_scores(df, fi_cache, basic_cache, mf_cache, tl_cache)
