@@ -223,38 +223,49 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
     """
     if stack is None:
         stack = ScoreStack()
-    if iter_count is not None:
-        print(f"\n[{_now().strftime('%H:%M')}] 第{iter_count}轮 ① batch_quotes {len(pool_codes)}只...")
-    quotes = scan_batch(pool_codes)
-    filtered_quotes = {}
+    quotes: dict[str, dict] = {}
 
-    # 刷新概念热点缓存（基于涨幅榜 API）
-    try:
-        from plays.limit_up.strategies.concept_cache import refresh_concept_limit_ups
-        refresh_concept_limit_ups()
-    except Exception:
-        pass
+    # 栈空或接近空时才 batch_quotes 刷新
+    if stack.size < 10:
+        if iter_count is not None:
+            print(f"\n[{_now().strftime('%H:%M')}] ① batch_quotes {len(pool_codes)}只(栈将空)...")
+        quotes = scan_batch(pool_codes)
+        filtered_quotes = {}
 
-    for code, q in quotes.items():
-        if q is None:
-            continue
-        vetoed, reason = filter_realtime(q)
-        if not vetoed:
-            filtered_quotes[code] = q
+        # 刷新概念热点缓存（基于涨幅榜 API）
+        try:
+            from plays.limit_up.strategies.concept_cache import refresh_concept_limit_ups
+            refresh_concept_limit_ups()
+        except Exception:
+            pass
 
-    # 涨幅 > 7.0% 的不进栈（避免追高）
-    stack.update({k: v for k, v in filtered_quotes.items() if (v.get("pct_chg") or 0) <= 7.0}, name_map=pool_name_map)
-    if iter_count is not None:
-        print(f"    栈: {stack.size}只待评分 | batch {len(quotes)}只 ✓")
+        for code, q in quotes.items():
+            if q is None:
+                continue
+            vetoed, reason = filter_realtime(q)
+            if not vetoed:
+                filtered_quotes[code] = q
 
-    to_score = stack.pop_top(10)
+        # 涨幅 > 7.0% 的不进栈（避免追高）
+        stack.update({k: v for k, v in filtered_quotes.items() if (v.get("pct_chg") or 0) <= 7.0}, name_map=pool_name_map)
+        if iter_count is not None:
+            print(f"    栈: {stack.size}只待评分 | batch {len(quotes)}只 ✓")
+    elif iter_count is not None:
+        print(f"    评分(跳过扫盘,栈{stack.size}只)")
+
+    to_score = stack.pop_top(200)
     if not to_score:
         if iter_count is not None:
             print(f"  ② 粗评: 无待评分股票")
         return [], stack
 
+    # Top200 → 随机取 N 只（线程并发时重复概率极低）
+    import random
+    random.shuffle(to_score)
+    to_score = to_score[:10]
+
     if iter_count is not None:
-        print(f"  ② 粗评 {len(to_score)}只...")
+        print(f"  ② 粗评 {len(to_score)}只(Top200→rand→10)...")
     score_data = [
         (item.code, item.name or pool_name_map.get(item.code, ""),
          quotes.get(item.code, {"pct_chg": item.pct_chg, "speed": item.speed}))
@@ -544,14 +555,21 @@ def stage2_deep(code: str, name: str, total_score: float) -> dict | None:
 
 
 def save_analysis(results: list[dict]):
+    """单文件存档，同股票按 code 覆盖，不同股票追加。"""
     td = _today_str()
-    ts = _now().strftime("%H%M")
     analysis_dir = DATA_DIR / "analysis"
     analysis_dir.mkdir(exist_ok=True)
-    path = analysis_dir / f"{td}_{ts}.json"
+    path = analysis_dir / f"{td}.json"
+    existing = {}
+    if path.exists():
+        try:
+            existing = {r["code"]: r for r in json.loads(path.read_text())}
+        except Exception:
+            pass
+    existing.update({r["code"]: r for r in results})
     with open(path, "w") as f:
-        json.dump(results, f, ensure_ascii=False, indent=2)
-    print(f"  [analysis] 已保存 {path} ({len(results)} 只)")
+        json.dump(list(existing.values()), f, ensure_ascii=False, indent=2)
+    print(f"  [analysis] 已合并 {len(results)} 只到 {path} (累计{len(existing)}只)")
 
 
 # ===== 心跳 =====
@@ -641,7 +659,7 @@ def main_loop():
                 print(f"    候选池 {len(pool)} 只 ✓")
                 pool_built = True
 
-            # ── 交易时段 ──
+            # ── 交易时段：持续评分 ──
             trading = _is_trading_session(hhmm)
             if not trading or not pool_built:
                 _sim_sleep(60 if _SIM_TIME is not None else 1)
@@ -651,15 +669,15 @@ def main_loop():
                 print(f"[{now.strftime('%H:%M')}] ② 开始盘中扫描")
                 trading_started = True
 
-            # ── 执行一轮扫描评分 ──
+            # 一轮评分：栈空时先扫盘，否则直接取Top200→rand→10→评分
             iter_count += 1
             t0 = time.time()
             deep_results, stack = _run_one_round(pool_codes, pool_name_map, pool_extras=pool_extras, iter_count=iter_count, stack=stack)
-
+            elapsed = time.time() - t0
+            if deep_results:
+                print(f"  [完成] {elapsed:.1f}s | 栈{stack.size}只")
             save_queue(stack, _today_str())
             _write_heartbeat()
-            elapsed = time.time() - t0
-            print(f"  [完成] {elapsed:.1f}s")
 
             if sim_rounds and iter_count >= sim_rounds:
                 print(f"[pipeline] 模拟完成 {iter_count} 轮，退出")
