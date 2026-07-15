@@ -43,7 +43,7 @@ from plays.limit_up.utils import is_trading_time
 from scripts.ths_client import get_ths_client
 
 # ── 配置（可被环境变量覆盖，方便测试）──
-STAGE1_TOP_N = int(os.environ.get("STAGE1_TOP_N", "100"))
+STAGE1_TOP_N = int(os.environ.get("STAGE1_TOP_N", "50"))
 PUSH_THRESHOLD = float(os.environ.get("ULTIMATE_PUSH_THRESHOLD", "55"))
 L2_GREY_LOW = int(os.environ.get("L2_GREY_LOW", "45"))
 POOL_TIME = int(os.environ.get("POOL_TIME", "915"))        # 建池时间
@@ -242,18 +242,19 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
         if not vetoed:
             filtered_quotes[code] = q
 
-    stack.update(filtered_quotes, name_map=pool_name_map)
+    # 涨幅 > 7.0% 的不进栈（避免追高）
+    stack.update({k: v for k, v in filtered_quotes.items() if (v.get("pct_chg") or 0) <= 7.0}, name_map=pool_name_map)
     if iter_count is not None:
         print(f"    栈: {stack.size}只待评分 | batch {len(quotes)}只 ✓")
 
-    to_score = stack.pop_top(STAGE1_TOP_N)
+    to_score = stack.pop_top(10)
     if not to_score:
         if iter_count is not None:
             print(f"  ② 粗评: 无待评分股票")
         return [], stack
 
     if iter_count is not None:
-        print(f"  ② 粗评 {len(to_score)}只(L1)...")
+        print(f"  ② 粗评 {len(to_score)}只...")
     score_data = [
         (item.code, item.name or pool_name_map.get(item.code, ""),
          quotes.get(item.code, {"pct_chg": item.pct_chg, "speed": item.speed}))
@@ -262,6 +263,12 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
     rough_results = stage1_rough(score_data)
 
     # ── 模型分覆盖：用 XGBoost 替代老的加权总分 ──
+    # 分批处理：每批 10 只，评完立即走 L2/推送，不等全部完
+    BATCH_SIZE = 10
+    all_results = []
+    push_candidates = []
+    today_str = _today_str()
+
     try:
         from plays.limit_up.factors.optimized.model_score import factor_model_score_batch, _load_model
         from plays.limit_up.strategies import factor_ctx
@@ -271,24 +278,21 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
         from plays.limit_up.strategies.realtime_ctx import get_turnover, get_vol_ratio, _REALTIME_CACHE as _rc
         _model = _load_model()
         _feat_cols = _model.feature_cols if _model else []
-        
-        # 轻量预取 PIT 特征数据（只拉 daily+limit_list_d）
+
+        # 预取（全部一次性）
         code_list = [r["code"] for r in rough_results]
         for c in code_list:
             factor_ctx._ensure_daily_limit(c)
-        
-        # 批量预取 moneyflow（今昨两日，丁斐 mf_accel）+ 龙虎榜（1 call 覆盖所有 stock）
-        _MF_CACHE: dict[str, float] = {}   # 今日（T-1）moneyflow: {code: net_mf_amount}
-        _MF_PREV_CACHE: dict[str, float] = {}  # 前日 moneyflow
+
+        _MF_CACHE: dict[str, float] = {}
+        _MF_PREV_CACHE: dict[str, float] = {}
         _TL_CACHE: dict[str, dict] = {}
         _TI_CACHE: dict[str, list] = {}
-        today_str = _today_str()
+        _prev_date = _today_str()
         try:
             from scripts.tu_share import call_tushare as _ct
-            # 计算前一交易日
-            _prev_date = _today_str()
             _dt = datetime.strptime(_prev_date, "%Y%m%d")
-            for _ in range(10):  # 最多往前找 10 天
+            for _ in range(10):
                 _dt -= timedelta(days=1)
                 _try = _dt.strftime("%Y%m%d")
                 _cal = _ct("trade_cal", {"exchange": "SSE", "start_date": _try, "end_date": _try}, "cal_date,is_open")
@@ -297,218 +301,173 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
                     _prev_date = _try
                     break
             for _batch in [code_list[:50], code_list[50:]]:
-                if not _batch:
-                    continue
-                _codes_s = ",".join(_batch)
-                # 今日资金流（实际返回 T-1）
-                _r = _ct("moneyflow", {"ts_code": _codes_s, "trade_date": today_str},
-                          "ts_code,net_mf_amount")
-                for _item in _r.get("data", {}).get("items", []):
-                    _f = _r["data"]["fields"]
-                    _MF_CACHE[_item[0]] = _item[-1] if len(_item) > 1 else 0.0
-                # 前日资金流（丁斐 mf_accel）
-                _r2 = _ct("moneyflow", {"ts_code": _codes_s, "trade_date": _prev_date},
-                           "ts_code,net_mf_amount,amount")
-                for _item in _r2.get("data", {}).get("items", []):
-                    _MF_PREV_CACHE[_item[0]] = _item[-1] if len(_item) > 1 else 0.0
-            # top_list: 需 l_buy, l_amount 字段
-            _r = _ct("top_list", {"trade_date": today_str},
-                      "ts_code,name,amount,net_amount,l_buy,l_amount,buy_rate,net_rate")
-            for _item in _r.get("data", {}).get("items", []):
-                _f = _r["data"]["fields"]
-                _d = dict(zip(_f, _item))
-                _TL_CACHE[_d["ts_code"]] = _d
-            # top_inst: 需 exalter 字段区分机构/游资
-            _r = _ct("top_inst", {"trade_date": today_str},
-                      "ts_code,name,exalter,buy,sell,net_buy")
-            for _item in _r.get("data", {}).get("items", []):
-                _f = _r["data"]["fields"]
-                _d = dict(zip(_f, _item))
-                _TI_CACHE.setdefault(_d["ts_code"], []).append(_d)
-            if _MF_CACHE or _TL_CACHE:
-                print(f"    资金流{len(_MF_CACHE)}只 龙虎榜{len(_TL_CACHE)}只 ✓")
+                if not _batch: continue
+                _s = ",".join(_batch)
+                _r = _ct("moneyflow", {"ts_code": _s, "trade_date": today_str}, "ts_code,net_mf_amount")
+                for _it in _r.get("data",{}).get("items",[]): _MF_CACHE[_it[0]] = float(_it[-1]) if len(_it)>1 else 0
+                _r2 = _ct("moneyflow", {"ts_code": _s, "trade_date": _prev_date}, "ts_code,net_mf_amount")
+                for _it in _r2.get("data",{}).get("items",[]): _MF_PREV_CACHE[_it[0]] = float(_it[-1]) if len(_it)>1 else 0
+            _r = _ct("top_list", {"trade_date": today_str}, "ts_code,amount,net_amount,l_buy,l_amount,net_rate")
+            for _it in _r.get("data",{}).get("items",[]):
+                _f = _r["data"]["fields"]; _TL_CACHE[_it[0]] = dict(zip(_f, _it))
+            _r = _ct("top_inst", {"trade_date": today_str}, "ts_code,exalter,net_buy")
+            for _it in _r.get("data",{}).get("items",[]):
+                _TI_CACHE.setdefault(_it[0], []).append(dict(zip(_r["data"]["fields"], _it)))
+            print(f"    资金流{len(_MF_CACHE)}只 龙虎榜{len(_TL_CACHE)}只 ✓")
         except Exception as _e:
             print(f"    资金流/龙虎榜预取失败: {_e}")
 
-        # 并行预取竞价数据（100 次 stk_auction → ~21s → ~3s）
+        # 并行预取竞价
         _AUC_CACHE: dict[str, dict] = {}
         try:
-            from plays.limit_up.strategies.shortterm import _get_auction as _auc_fn
+            from plays.limit_up.strategies.shortterm import _get_auction as _afn
             with ThreadPoolExecutor(max_workers=16) as _p:
-                _futs = {_p.submit(_auc_fn, c): c for c in code_list}
-                for _fut in as_completed(_futs):
-                    _c = _futs[_fut]
+                _fu = {_p.submit(_afn, c): c for c in code_list}
+                for _f in as_completed(_fu):
                     try:
-                        _r = _fut.result()
-                        if _r:
-                            _AUC_CACHE[_c] = _r
-                    except Exception:
-                        pass
-            if _AUC_CACHE:
-                print(f"    竞价{len(_AUC_CACHE)}只 ✓")
-        except Exception:
-            pass
+                        _r = _f.result()
+                        if _r: _AUC_CACHE[_fu[_f]] = _r
+                    except Exception: pass
+            print(f"    竞价{len(_AUC_CACHE)}只 ✓")
+        except Exception: pass
 
-        feats_list = []
-        for r in rough_results:
-            code = r["code"]
-            short = code.split(".")[0]
-            _sf = lambda v: float(v) if v else 0.0
+        # 分批：每批 10 只，构建特征 → 推理 → 处理结果
+        for chunk_start in range(0, len(rough_results), BATCH_SIZE):
+            chunk = rough_results[chunk_start:chunk_start + BATCH_SIZE]
+            ferats_list = []
+            for r in chunk:
+                code = r["code"]
+                short = code.split(".")[0]
+                _sf = lambda v: float(v) if v else 0.0
 
-            # 从 DAILY_CACHE 构建 daily_rows + 确定 PIT 基准日
-            _raw = factor_ctx._DAILY_CACHE.get(code, [])
-            _daily_rows = sorted(_raw, key=lambda x: x.get("trade_date", ""))
-            _pit_date = _daily_rows[-1]["trade_date"] if _daily_rows else today_str
+                _raw = factor_ctx._DAILY_CACHE.get(code, [])
+                _daily_rows = sorted(_raw, key=lambda x: x.get("trade_date", ""))
+                _pit_date = _daily_rows[-1]["trade_date"] if _daily_rows else today_str
 
-            # 构建 basic_by_date（pool 缓存中 T-1 daily_basic，不要混入实时数据）
-            _basic_ent = {}
-            if pool_extras and code in pool_extras:
-                _pe = pool_extras[code]
-                _basic_ent = {
-                    "turnover_rate": _pe.get("prev_turnover", 5.0),
-                    "volume_ratio": _pe.get("prev_vol_ratio", 1.0),
-                    "circ_mv": _pe.get("circ_mv", 0),
-                    "pe": _pe.get("pe", 999.0),
-                    "pb": _pe.get("pb", 999.0),
-                }
+                # basic_by_date
+                _basic_ent = {}
+                if pool_extras and code in pool_extras:
+                    _pe = pool_extras[code]
+                    _tr = get_turnover(code); _vr = get_vol_ratio(code)
+                    _basic_ent = {"turnover_rate": _pe.get("prev_turnover",5.0), "volume_ratio": _pe.get("prev_vol_ratio",1.0),
+                                  "circ_mv": _pe.get("circ_mv",0), "pe": _pe.get("pe",999.0), "pb": _pe.get("pb",999.0)}
 
-            # 构建 moneyflow_by_date（两天数据，丁斐 mf_accel）
-            _mf_ent = {}
-            _nm = _MF_CACHE.get(code, 0.0)
-            _nm = float(_nm) if _nm else 0.0
-            if _nm:
-                _mf_ent = {"net_mf_amount": _nm, "buy_elg_amount": 0,
-                           "sell_elg_amount": 0, "buy_lg_amount": 0, "sell_lg_amount": 0}
-            _nm_prev = float(_MF_PREV_CACHE.get(code, 0.0)) if _MF_PREV_CACHE.get(code) else 0.0
-            _mf_by_date = {_pit_date: _mf_ent} if _mf_ent else None
-            if _nm_prev and len(_daily_rows) >= 2:
-                _prev2 = _daily_rows[-2].get("trade_date", "")
-                if _prev2:
-                    _mf_by_date = _mf_by_date or {}
-                    _mf_by_date[_prev2] = {"net_mf_amount": _nm_prev, "buy_elg_amount": 0,
-                                           "sell_elg_amount": 0, "buy_lg_amount": 0, "sell_lg_amount": 0}
+                # moneyflow
+                _nm = float(_MF_CACHE.get(code,0.0))
+                _mf_ent = {"net_mf_amount":_nm, "buy_elg_amount":0, "sell_elg_amount":0, "buy_lg_amount":0, "sell_lg_amount":0} if _nm else {}
+                _nm_prev = float(_MF_PREV_CACHE.get(code,0.0)) if code in _MF_PREV_CACHE else 0.0
+                _mf_bd = {_pit_date: _mf_ent} if _mf_ent else None
+                if _nm_prev and len(_daily_rows) >= 2:
+                    _p2 = _daily_rows[-2].get("trade_date","")
+                    if _p2:
+                        _mf_bd = _mf_bd or {}; _mf_bd[_p2] = {"net_mf_amount":_nm_prev, "buy_elg_amount":0, "sell_elg_amount":0, "buy_lg_amount":0, "sell_lg_amount":0}
 
-            # 构建 auction_by_date
-            _auc_ent = _AUC_CACHE.get(code, {})
+                # concept / auction / top
+                _cm = factor_ctx.get_concept_momentum(short)
+                if not _cm.get("n_concepts",0):
+                    from plays.limit_up.strategies.concept_cache import get_concept_limit_ups as _gclu
+                    _clu = _gclu(code)
+                    _cnames = [k for k in _clu if not k.startswith("_")]
+                    _best = max((_clu.get(n,0) for n in _cnames), default=0)
+                    _cm["n_concepts"] = float(len(_cnames)); _cm["ret1_avg"] = float(_best); _cm["ret3_max"] = float(_best*2)
+                _auc_ent = _AUC_CACHE.get(code, {})
+                _tl_ent = _TL_CACHE.get(code, {})
+                _ti_list = _TI_CACHE.get(code, [])
 
-            # 构建概念动量
-            _cm = factor_ctx.get_concept_momentum(short)
-            if not _cm.get("n_concepts", 0):
-                # concept_cache 实时数据兜底
-                from plays.limit_up.strategies.concept_cache import get_concept_limit_ups as _gclu
-                _clu = _gclu(code)
-                _cnames = [k for k in _clu if not k.startswith("_")]
-                _best = max((_clu.get(n, 0) for n in _cnames), default=0)
-                _cm["n_concepts"] = float(len(_cnames))
-                _cm["ret1_avg"] = float(_best)
-                _cm["ret3_max"] = float(_best * 2)
+                # build_pit_features
+                from plays.limit_up.pit_features import build_pit_features as _bpf
+                feats = _bpf(code=code, score_date=today_str, daily_rows=_daily_rows,
+                    basic_by_date={_pit_date: _basic_ent} if _basic_ent else None,
+                    moneyflow_by_date=_mf_bd,
+                    auction_by_date={_pit_date: _auc_ent} if _auc_ent else None,
+                    concept_momentum=_cm,
+                    top_list_by_date={_pit_date: _tl_ent} if _tl_ent else None,
+                    top_inst_by_date={_pit_date: _ti_list} if _ti_list else None,
+                    pit_mode=True)
 
-            # 构建 top_list/top_inst by_date
-            _tl_ent = _TL_CACHE.get(code, {})
-            _ti_list = _TI_CACHE.get(code, [])
+                # 实时覆盖
+                try:
+                    _rt = _rc.get(code,{}).get("pct_chg")
+                    if _rt is not None: feats["pct_chg_score_day"] = float(_rt)
+                except: pass
+                _tr2 = get_turnover(code); _vr2 = get_vol_ratio(code)
+                if _tr2 is not None: feats["turnover_rate"] = _tr2
+                if _vr2 is not None: feats["volume_ratio"] = _vr2
+                try:
+                    _c2 = _rc.get(code,{}); _h = _sf(_c2.get("high")); _l = _sf(_c2.get("low"))
+                    if _h and _l and _l > 0: feats["id_range"] = _h/_l - 1.0
+                    _amt = _sf(_c2.get("amount")); _a5 = _sf(feats.get("avg_amount_5d",1))
+                    if _amt and _a5 > 0: feats["id_amount_ratio"] = _amt/_a5
+                except: pass
 
-            # 统一调用 build_pit_features
-            from plays.limit_up.pit_features import build_pit_features as _bpf
-            feats = _bpf(
-                code=code,
-                score_date=today_str,
-                daily_rows=_daily_rows,
-                basic_by_date={_pit_date: _basic_ent} if _basic_ent else None,
-                moneyflow_by_date=_mf_by_date,
-                auction_by_date={_pit_date: _auc_ent} if _auc_ent else None,
-                concept_momentum=_cm,
-                top_list_by_date={_pit_date: _tl_ent} if _tl_ent else None,
-                top_inst_by_date={_pit_date: _ti_list} if _ti_list else None,
-                pit_mode=True,
-            )
+                for dim in ("sentiment","shortterm","technical","fundflow","fundamental"):
+                    feats[dim] = r["scores"].get(dim,0)
+                ferats_list.append(feats)
 
-            # ── 事后覆盖：实时数据替换 stale default ──
-            # pct_chg_score_day：THS 实时涨幅
-            try:
-                _rt_pct = _rc.get(code, {}).get("pct_chg")
-                if _rt_pct is not None:
-                    feats["pct_chg_score_day"] = float(_rt_pct)
-            except Exception:
-                pass
-            # 实时换手/量比（比 T-1 daily_basic 新）
-            _tr2 = get_turnover(code)
-            _vr2 = get_vol_ratio(code)
-            if _tr2 is not None:
-                feats["turnover_rate"] = _tr2
-            if _vr2 is not None:
-                feats["volume_ratio"] = _vr2
-            # 日内特征从 THS 实时行情计算 id_range/id_amount_ratio
-            try:
-                _rc2 = _rc.get(code, {})
-                _h = _sf(_rc2.get("high"))
-                _l = _sf(_rc2.get("low"))
-                if _h and _l and _l > 0:
-                    feats["id_range"] = _h / _l - 1.0
-                _amt = _sf(_rc2.get("amount"))
-                _a5 = _sf(feats.get("avg_amount_5d", 1))
-                if _amt and _a5 > 0:
-                    feats["id_amount_ratio"] = _amt / _a5
-            except Exception:
-                pass
+            # 推理 + 覆盖总分
+            _df = pd.DataFrame(ferats_list)
+            if _feat_cols:
+                _fill = sum(1 for c in _feat_cols if c not in _df.columns)
+                if _fill > 0:
+                    _missing = [c for c in _feat_cols if c not in _df.columns]; print(f"    缺: {','.join(_missing)}")
+            model_scores = factor_model_score_batch(_df)
+            for i, r in enumerate(chunk):
+                ms = round(float(model_scores.iloc[i]), 2)
+                r["factors"] = {"model_score": ms}; r["total_score"] = ms; r["score_mode"] = "model_score"
 
-            # 策略维度分（stage1_rough 产出，不属于 pit_features）
-            for dim in ("sentiment", "shortterm", "technical", "fundflow", "fundamental"):
-                feats[dim] = r["scores"].get(dim, 0)
-            feats_list.append(feats)
-        _df = pd.DataFrame(feats_list)
+            # 处理本批结果（L2/推送）
+            for r in chunk:
+                score = r["total_score"]
+                if score >= PUSH_THRESHOLD:
+                    if iter_count is not None: print(f"    ≥{PUSH_THRESHOLD:.0f} {r['code']} {r['name']} total_score={score:.1f} → 推送")
+                    all_results.append(r); push_candidates.append(r)
+                elif score >= L2_GREY_LOW:
+                    if iter_count is not None: print(f"    [{L2_GREY_LOW:.0f},{PUSH_THRESHOLD:.0f}) {r['code']} {r['name']} total_score={score:.1f} → L2确认...")
+                    confirmed = stage2_deep(r["code"], r["name"], score)
+                    if confirmed:
+                        for k in ("scores","reasons","pct_chg","resonance","score_mode","factors"):
+                            confirmed[k] = r.get(k, {}) if k in ("scores","reasons","factors") else r.get(k, 0)
+                        confirmed["l2_confirmed"] = True
+                        if iter_count is not None: print(f"      L2通过 → 推送")
+                        all_results.append(confirmed); push_candidates.append(confirmed)
+                    else:
+                        if iter_count is not None: print(f"      L2拒绝 (存档不推送)")
+                        all_results.append(r)
+                else:
+                    if iter_count is not None: print(f"    <{L2_GREY_LOW} {r['code']} {r['name']} total_score={score:.1f} → 存档不推送")
+                    all_results.append(r)
+
         if _feat_cols:
-            _fill = sum(1 for c in _feat_cols if c not in _df.columns)
-            if _fill > 0:
-                print(f"    模型特征: {len(_feat_cols)-_fill}/{len(_feat_cols)} 填充, fill_values({_fill})")
-                _missing = [c for c in _feat_cols if c not in _df.columns]
-                print(f"    缺: {','.join(_missing)}")
-        model_scores = factor_model_score_batch(_df)
-        for i, r in enumerate(rough_results):
-            ms = round(float(model_scores.iloc[i]), 2)
-            r["factors"] = {"model_score": ms}
-            r["total_score"] = ms
-            r["score_mode"] = "model_score"
-        print(f"    模型分 ✓")
+            print(f"    模型分 ✓")
     except Exception as e:
         print(f"    模型分失败, 回退加权总分: {e}")
+        # 回退：全部走一次老流程
+        all_results = []
+        push_candidates = []
+        for r in rough_results:
+            score = r.get("total_score", 0)
+            if score >= PUSH_THRESHOLD:
+                all_results.append(r); push_candidates.append(r)
+            elif score >= L2_GREY_LOW:
+                confirmed = stage2_deep(r["code"], r["name"], score)
+                if confirmed:
+                    for k in ("scores","reasons","pct_chg","resonance","score_mode","factors"):
+                        confirmed[k] = r.get(k, {}) if k in ("scores","reasons","factors") else r.get(k, 0)
+                    confirmed["l2_confirmed"] = True
+                    all_results.append(confirmed); push_candidates.append(confirmed)
+                else:
+                    all_results.append(r)
+            else:
+                all_results.append(r)
 
     # WS 订阅由 watchdog 独立管理，pipeline 不再直连
 
-    all_results = []      # 所有进入评分的都存档
-    push_candidates = []  # 只有满足推送条件的才推
-
-    for r in rough_results:
-        score = r.get("total_score", 0)
-        if score >= PUSH_THRESHOLD:
-            if iter_count is not None:
-                print(f"    ≥{PUSH_THRESHOLD:.0f} {r['code']} {r['name']} total_score={score:.1f} → 推送")
-            all_results.append(r)
-            push_candidates.append(r)
-        elif score >= L2_GREY_LOW:
-            if iter_count is not None:
-                print(f"    [{L2_GREY_LOW},{PUSH_THRESHOLD:.0f}) {r['code']} {r['name']} total_score={score:.1f} → L2确认...")
-            confirmed = stage2_deep(r["code"], r["name"], score)
-            if confirmed:
-                confirmed["scores"] = r.get("scores", {})
-                confirmed["reasons"] = r.get("reasons", {})
-                confirmed["pct_chg"] = r.get("pct_chg", 0)
-                confirmed["resonance"] = r.get("resonance", {})
-                confirmed["score_mode"] = r.get("score_mode", "model_score")
-                confirmed["factors"] = r.get("factors", {})
-                if iter_count is not None:
-                    print(f"      L2通过 → 推送")
-                confirmed["l2_confirmed"] = True
-                all_results.append(confirmed)
-                push_candidates.append(confirmed)
-            else:
-                # L2 拒绝：仍然存档原始粗评结果，但不推送
-                if iter_count is not None:
-                    print(f"      L2拒绝 (存档不推送)")
-                all_results.append(r)
-        else:
-            if iter_count is not None:
-                print(f"    <{L2_GREY_LOW} {r['code']} {r['name']} total_score={score:.1f} → 存档不推送")
-            all_results.append(r)
+    # debug: 概念缓存状态
+    try:
+        from plays.limit_up.strategies.concept_cache import _LIMIT_CODES, _CONCEPT_LIMIT_UPS, _REFRESHED
+        print(f"    概念缓存: REFRESHED={_REFRESHED} 涨停{len(_LIMIT_CODES)}只 概念{len(_CONCEPT_LIMIT_UPS)}个")
+    except Exception:
+        pass
 
     save_analysis(all_results)
     check_and_push(push_candidates, DATA_DIR)
@@ -517,6 +476,26 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
 
 def stage1_rough(codes_with_names: list[tuple[str, str, dict]]) -> list[dict]:
     """粗评（纯策略评分，不依赖 WS L1 订阅）。"""
+    # 预取当日资金流 + 龙虎榜（批量一次，供 fundflow 策略缓存读）
+    try:
+        from plays.limit_up.strategies.fundflow import set_fundflow_cache
+        from scripts.tu_share import call_tushare as _ct
+        _codes = [c for c, _, _ in codes_with_names]
+        _today_str2 = _now().strftime("%Y%m%d")
+        _mf = {}
+        for _batch in [_codes[:50], _codes[50:]]:
+            if not _batch: continue
+            _r = _ct("moneyflow", {"ts_code": ",".join(_batch), "trade_date": _today_str2}, "ts_code,net_mf_amount,buy_elg_amount,sell_elg_amount,buy_lg_amount,sell_lg_amount")
+            for _it in _r.get("data",{}).get("items",[]):
+                _f = _r["data"]["fields"]; _mf[_it[0]] = dict(zip(_f, _it))
+        _ti = {}
+        _r2 = _ct("top_inst", {"trade_date": _today_str2}, "ts_code,exalter,net_buy")
+        for _it in _r2.get("data",{}).get("items",[]):
+            _ti.setdefault(_it[0], []).append(dict(zip(_r2["data"]["fields"], _it)))
+        set_fundflow_cache(_mf, _ti)
+    except Exception:
+        pass
+
     results = []
     for code, name, realtime in codes_with_names:
         result = _raw_score(code, name, realtime=realtime)

@@ -3,7 +3,7 @@
 
 每轮扫描后调用 update() 入栈/更新/淘汰，评分线程调用 pop_top() 取票。
 
-排序逻辑：score = pct_chg * 0.3 + speed * 0.7
+排序逻辑：score = pct_chg * 0.7 + speed * 0.3
   - pct_chg: 当日涨跌幅 (%)
   - speed: 涨速 = 本轮 pct_chg - 上轮 pct_chg
 
@@ -21,8 +21,8 @@ PLAY_DIR = Path(__file__).resolve().parent
 QUEUE_DIR = PLAY_DIR / "data" / "queue"
 QUEUE_DIR.mkdir(parents=True, exist_ok=True)
 
-WEIGHT_PCT = 0.3  # 涨幅权重
-WEIGHT_SPEED = 0.7  # 涨速权重
+WEIGHT_PCT = 0.7  # 涨幅权重
+WEIGHT_SPEED = 0.3  # 涨速权重
 
 
 class ScoreStack:

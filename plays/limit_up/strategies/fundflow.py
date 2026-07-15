@@ -36,6 +36,17 @@ sys.path.insert(0, str(PROJECT_DIR / "scripts"))
 from scripts.tu_share import call_tushare  # noqa: E402
 from plays.limit_up.utils import safe_float, safe_float_none, list_to_dict  # noqa: E402
 
+# 模块级缓存（由 pipeline 的 stage1_rough 预填充）
+_FUNDFLOW_MF_CACHE: dict[str, dict] = {}  # {code: {net_mf_amount, ...}}
+_FUNDFLOW_TI_CACHE: dict[str, list] = {}  # {code: [{exalter, net_buy, ...}]}
+
+
+def set_fundflow_cache(mf_cache: dict, ti_cache: dict):
+    """由 pipeline 调用，预填充当日资金流和龙虎榜数据。"""
+    global _FUNDFLOW_MF_CACHE, _FUNDFLOW_TI_CACHE
+    _FUNDFLOW_MF_CACHE = mf_cache
+    _FUNDFLOW_TI_CACHE = ti_cache
+
 
 # ═══════════════════════════════════════════════════════════════════
 # Sigmoid 评分工具 — 平滑映射避免分数扎堆
@@ -246,8 +257,11 @@ def score_fundflow(code: str, trade_date: str = None,
     if jv_client is not None:
         jv_data = _get_jv_fundflow(code_short, trade_date, jv_client)
 
-    # 0.2 Tushare 降级数据
-    mf_rows = _get_tushare_moneyflow(code, trade_date)
+    # 0.2 数据源：优先模块缓存（pipeline 预填充），降级 Tushare
+    _cached_mf = _FUNDFLOW_MF_CACHE.get(code, {})
+    _cached_ti = _FUNDFLOW_TI_CACHE.get(code, [])
+    mf_rows = [_cached_mf] if _cached_mf else _get_tushare_moneyflow(code, trade_date)
+    ti_rows = _cached_ti or _get_top_inst(code, trade_date)
     db_rows = _get_tushare_daily_basic(code, trade_date)
     daily_rows = _get_tushare_daily(code, trade_date)
 
@@ -354,14 +368,12 @@ def score_fundflow(code: str, trade_date: str = None,
 
     # 否决1: 龙虎榜机构净卖出 > 流通市值0.3% 或 > 3亿（极端撤离信号）
     # 修复: 大盘股绝对金额高但占比小，改为相对+绝对双阈值
-    if not jv_data:
-        inst_rows = _get_top_inst(code, trade_date)
-        if inst_rows:
-            net_sell = 0
-            for inst in inst_rows:
-                nb = safe_float(inst.get("net_buy", 0))
-                if nb < 0:
-                    net_sell += abs(nb)
+    if ti_rows:
+        net_sell = 0
+        for inst in ti_rows:
+            nb = safe_float(inst.get("net_buy", 0))
+            if nb < 0:
+                net_sell += abs(nb)
             # 获取流通市值用于比例判断
             circ_mv_yuan = 0
             try:

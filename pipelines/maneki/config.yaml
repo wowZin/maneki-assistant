@@ -1,5 +1,5 @@
 claude:
-  max_turns: 20
+  max_turns: 200
   timeout: 600
   model: null
   system_prompt_extra: ""

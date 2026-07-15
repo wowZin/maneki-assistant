@@ -86,18 +86,18 @@ class TestStackUpdate:
 
 class TestStackSorting:
     def test_score_formula(self):
-        """score = pct * 0.3 + speed * 0.7"""
+        """score = pct * 0.7 + speed * 0.3"""
         s = ScoreStack()
         s.update(_make_quotes([
-            ("A", 2.0, ""),  # 首次: speed=0, score=2*0.3 = 0.6
+            ("A", 2.0, ""),  # 首次: speed=0, score=2*0.7 = 1.4
         ]))
         # 第二轮
         s.update(_make_quotes([
-            ("A", 4.0, ""),  # speed=2.0, score=4*0.3+2*0.7 = 1.2+1.4 = 2.6
-            ("B", 3.0, ""),  # speed=0, score=3*0.3 = 0.9
+            ("A", 4.0, ""),  # speed=2.0, score=4*0.7+2*0.3 = 2.8+0.6 = 3.4
+            ("B", 3.0, ""),  # speed=0, score=3*0.7 = 2.1
         ]))
-        assert s.items["A"].score == pytest.approx(2.6)
-        assert s.items["B"].score == pytest.approx(0.9)
+        assert s.items["A"].score == pytest.approx(3.4)
+        assert s.items["B"].score == pytest.approx(2.1)
 
     def test_pop_top_returns_highest_score_first(self):
         s = ScoreStack()
