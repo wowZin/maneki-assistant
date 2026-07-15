@@ -324,21 +324,19 @@ class WatchdogEngine:
             return "\n".join(lines)
 
     def _reconnect_ws(self) -> bool:
-        """强制重连 WebSocket 并恢复订阅。返回是否成功。"""
+        """重连 WebSocket 并恢复订阅（使用 _get_ws 单例，不创建新实例）。"""
         try:
             if self._ws:
                 self._ws.disconnect()
         except Exception:
             pass
 
-        # 强制创建新 WS 连接（而非 _get_ws 的保活，确保彻底重连）
-        from scripts.jvquant_ws_client import JvQuantWSClient
+        from scripts.jvquant_ws_client import _get_ws
         try:
-            new_ws = JvQuantWSClient()
-            new_ws.connect()
-            self._ws = new_ws
+            self._ws = _get_ws()
+            self._ws.connect()
         except Exception as e:
-            logger.error(f"WS 新连接失败: {e}")
+            logger.error(f"WS 重连失败: {e}")
             return False
 
         if self._ws.is_connected():

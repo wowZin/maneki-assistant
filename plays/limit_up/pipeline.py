@@ -124,186 +124,6 @@ _REALTIME_PCT_CACHE: dict = {}
 _REALTIME_PCT_TS: str = ""
 
 
-# ===== WS 管理 =====
-
-_WS_CLIENT = None
-_WS_L1_CODES: set[str] = set()
-_WS_L2_CODES: set[str] = set()
-_WS_CONNECTED_TODAY = False
-
-
-def _ensure_ws():
-    """懒加载 jvQuant WS。"""
-    global _WS_CLIENT
-    if _WS_CLIENT is None:
-        from scripts.jvquant_ws_client import JvQuantWSClient
-        _WS_CLIENT = JvQuantWSClient()
-    return _WS_CLIENT
-
-
-def _ensure_ws_connected() -> bool:
-    """确保 WS 已连接。自动重连。返回是否连接成功。"""
-    global _WS_CLIENT, _WS_CONNECTED_TODAY, _WS_L1_CODES, _WS_L2_CODES
-
-    now = _now()
-    market_open = now.replace(hour=9, minute=30, second=0, microsecond=0)
-    if now < market_open:
-        return False
-    if not is_trading_time():
-        return False
-
-    ws = _ensure_ws()
-    try:
-        if ws.is_connected():
-            _WS_CONNECTED_TODAY = True
-            return True
-    except Exception:
-        # is_connected() 本身失败时，降级为重新创建连接
-        _WS_CLIENT = None
-
-    print(f"[pipeline] WS 重连中...")
-    try:
-        ws = _ensure_ws()
-        ws.connect()
-        _WS_CONNECTED_TODAY = True
-        _WS_L1_CODES.clear()
-        _WS_L2_CODES.clear()
-        print(f"[pipeline] WS 已重连")
-        return True
-    except Exception as e:
-        print(f"[pipeline] WS 重连失败: {e}")
-        return False
-
-
-def _close_ws():
-    """关闭 WS 连接。daemon 退出时调用。"""
-    global _WS_CLIENT
-    if _WS_CLIENT is not None:
-        try:
-            _WS_CLIENT.disconnect()
-            print("[pipeline] WS 已关闭")
-        except Exception as e:
-            print(f"[pipeline] WS 关闭异常: {e}")
-        _WS_CLIENT = None
-
-
-def _close_pool():
-    """关闭评分线程池。daemon 退出时调用。"""
-    global _SCORE_POOL
-    if _SCORE_POOL is not None:
-        try:
-            _SCORE_POOL.shutdown(wait=True)
-            print("[pipeline] 评分线程池已关闭")
-        except Exception as e:
-            print(f"[pipeline] 评分线程池关闭异常: {e}")
-
-
-def _subscribe_l1(codes_short: list[str]):
-    if not _ensure_ws_connected():
-        return 0
-    ws = _ensure_ws()
-    new = [c for c in codes_short if c not in _WS_L1_CODES]
-    if new:
-        n = ws.subscribe_l1(new)
-        _WS_L1_CODES.update(new)
-        return n
-    return 0
-
-
-def _subscribe_l2(codes_short: list[str]):
-    if not _ensure_ws_connected():
-        return 0
-    ws = _ensure_ws()
-    new = [c for c in codes_short if c not in _WS_L2_CODES]
-    if new:
-        n_l10 = ws.subscribe_l10(new)
-        n_l2 = ws.subscribe_l2(new)
-        _WS_L2_CODES.update(new)
-        return max(n_l10, n_l2)
-    return 0
-
-
-def _unsubscribe_l1(codes_short: list[str]):
-    ws = _ensure_ws()
-    if ws is None or not ws.is_connected():
-        return
-    to_remove = [c for c in codes_short if c in _WS_L1_CODES]
-    if to_remove:
-        try:
-            ws.unsubscribe_l1(to_remove)
-        except Exception:
-            pass
-        _WS_L1_CODES.difference_update(to_remove)
-
-
-def _unsubscribe_l2(codes_short: list[str]):
-    ws = _ensure_ws()
-    if ws is None or not ws.is_connected():
-        return
-    to_remove = [c for c in codes_short if c in _WS_L2_CODES]
-    if to_remove:
-        try:
-            ws.unsubscribe_l2(to_remove)
-            ws.unsubscribe_l10(to_remove)
-        except Exception:
-            pass
-        _WS_L2_CODES.difference_update(to_remove)
-
-
-def _sync_subscriptions(current_shorts: set[str]):
-    """同步 WS 订阅：只保留当前栈顶股票的 L1/L2 订阅。"""
-    l1_to_remove = _WS_L1_CODES - current_shorts
-    l2_to_remove = _WS_L2_CODES - current_shorts
-    if l1_to_remove:
-        _unsubscribe_l1(list(l1_to_remove))
-    if l2_to_remove:
-        _unsubscribe_l2(list(l2_to_remove))
-
-
-def _get_l1_snapshot(code_short: str) -> dict:
-    """获取实时快照。优先级: WS L1缓存 > jvQuant SQL > 空"""
-    ws = _ensure_ws()
-    try:
-        data = ws.get_market(code_short)
-        if data:
-            return data
-    except Exception:
-        pass
-    try:
-        from scripts.jvquant_client import get_jvquant_client
-        client = get_jvquant_client()
-        metrics = client.get_intraday_metrics(code_short, _now().strftime("%Y%m%d"))
-        if metrics:
-            return {
-                "last": str(metrics.get("close", 0)),
-                "pre_close": "0",
-                "vwap": str(metrics.get("vwap", 0)),
-                "volume": str(metrics.get("volume", 0)),
-                "bid_prices": [],
-                "ask_prices": [],
-            }
-    except Exception:
-        pass
-    return {}
-
-
-def _get_l2_data(code_short: str) -> dict:
-    ws = _ensure_ws()
-    mkt = ws.get_market(code_short)
-    vwap = ws.get_vwap(code_short)
-    kline = ws.get_kline(code_short, n=5)
-    bid1 = float(mkt.get("bid_prices", [0])[0]) if mkt and mkt.get("bid_prices") else 0
-    ask1 = float(mkt.get("ask_prices", [0])[0]) if mkt and mkt.get("ask_prices") else 0
-    last = float(mkt.get("last", 0)) if mkt else 0
-    return {
-        "last": last,
-        "bid1": bid1,
-        "ask1": ask1,
-        "vwap": round(vwap, 2) if vwap else None,
-        "kline_bars": len(kline) if kline else 0,
-    }
-
-
 # ===== 评分 =====
 
 WEIGHTS = {
@@ -652,9 +472,7 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
     except Exception as e:
         print(f"    模型分失败, 回退加权总分: {e}")
 
-    # 同步 WS 订阅：只保留当前栈顶（WS 使用短代码）
-    current_shorts = {item.code.split(".")[0] for item in to_score}
-    _sync_subscriptions(current_shorts)
+    # WS 订阅由 watchdog 独立管理，pipeline 不再直连
 
     all_results = []      # 所有进入评分的都存档
     push_candidates = []  # 只有满足推送条件的才推
@@ -698,65 +516,63 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
 
 
 def stage1_rough(codes_with_names: list[tuple[str, str, dict]]) -> list[dict]:
-    """粗评。"""
-    from plays.limit_up.strategies.realtime_ctx import set_l1_snapshots
-
-    shorts = [c.split(".")[0] for c, _, _ in codes_with_names]
-    _subscribe_l1(shorts)
-    _sim_sleep(1)
-
-    l1_snapshots = {}
-    for code, _, _ in codes_with_names:
-        short = code.split(".")[0]
-        snap = _get_l1_snapshot(short)
-        if snap:
-            l1_snapshots[code] = snap
-    if l1_snapshots:
-        set_l1_snapshots(l1_snapshots)
-
+    """粗评（纯策略评分，不依赖 WS L1 订阅）。"""
     results = []
     for code, name, realtime in codes_with_names:
-        short = code.split(".")[0]
-        l1 = _get_l1_snapshot(short)
-        merged = dict(realtime) if realtime else {}
-        if l1:
-            merged["l1"] = l1
-        result = _raw_score(code, name, realtime=merged)
+        scores, reasons, total_score, top3_score, rc = _raw_score(code, name, realtime)
+        result = {
+            "code": code,
+            "name": name,
+            "scores": scores,
+            "reasons": reasons,
+            "total_score": total_score,
+            "top3_score": top3_score,
+            "score_mode": "daemon_weighted",
+            "pct_chg": round(float(realtime.get("pct_chg", 0) or 0), 2) if realtime else 0,
+            "resonance": {"count": rc, "threshold": 75, "is_resonance": rc >= 3},
+        }
         results.append(result)
     return results
 
 
 def stage2_deep(code: str, name: str, total_score: float) -> dict | None:
-    """灰色区间(45-55)用 L2/L10 确认。"""
+    """灰色区间(45-55)用 THS 实时行情确认（VWAP 从 amount/volume 估算）。"""
     short = code.split(".")[0]
-    _subscribe_l2([short])
-    _sim_sleep(1)
-
-    ws = _ensure_ws()
-    mkt = ws.get_market(short)
-    vwap = ws.get_vwap(short)
-    bid1 = float(mkt.get("bid_prices", [0])[0]) if mkt and mkt.get("bid_prices") else 0
-    ask1 = float(mkt.get("ask_prices", [0])[0]) if mkt and mkt.get("ask_prices") else 0
-    last = float(mkt.get("last", 0)) if mkt else 0
-
-    result = {
-        "code": code,
-        "name": name,
-        "total_score": total_score,
-        "score_mode": "daemon_weighted",
-        "l2api": {"last": last, "bid1": bid1, "ask1": ask1,
-                  "vwap": round(vwap, 2) if vwap else None},
-    }
-
-    if vwap and vwap > 0 and last > 0:
-        vwap_dev = (last - vwap) / vwap
-        if vwap_dev > 0.05:
-            print(f"    L2 拒绝: VWAP偏离{vwap_dev*100:.1f}% > 5%（诱多）")
+    try:
+        from scripts.ths_client import get_ths_client as _ths
+        q = _ths().get_quote(short)
+        if not q:
+            print(f"    L2 拒绝: 无 THS 行情")
             return None
-    if bid1 > 0 and ask1 > 0 and ask1 > bid1 * 3:
-        print(f"    L2 拒绝: 卖压({ask1:.0f}) > 买压({bid1:.0f}) ×3")
+        price = float(q.get("price", 0) or 0)
+        vol = float(q.get("volume", 0) or 0)
+        amt = float(q.get("amount", 0) or 0)
+        bid1 = float(q.get("bid1", 0) or 0)
+        ask1 = float(q.get("ask1", 0) or 0)
+        vwap = amt / vol if vol > 0 else 0
+        last = price
+
+        result = {
+            "code": code,
+            "name": name,
+            "total_score": total_score,
+            "score_mode": "daemon_weighted",
+            "l2api": {"last": last, "bid1": bid1, "ask1": ask1,
+                      "vwap": round(vwap, 2) if vwap else None},
+        }
+
+        if vwap > 0 and last > 0:
+            vwap_dev = (last - vwap) / vwap
+            if vwap_dev > 0.05:
+                print(f"    L2 拒绝: VWAP偏离{vwap_dev*100:.1f}% > 5%（诱多）")
+                return None
+        if bid1 > 0 and ask1 > 0 and ask1 > bid1 * 3:
+            print(f"    L2 拒绝: 卖压({ask1:.0f}) > 买压({bid1:.0f}) ×3")
+            return None
+        return result
+    except Exception as e:
+        print(f"    L2 拒绝: THS 行情异常: {e}")
         return None
-    return result
 
 
 def save_analysis(results: list[dict]):
@@ -886,7 +702,6 @@ def main_loop():
             traceback.print_exc()
             _sim_sleep(10 if _SIM_TIME is not None else 10)
 
-    _close_ws()
     _close_pool()
     _remove_pidfile()
     print("[pipeline] 已停止")
