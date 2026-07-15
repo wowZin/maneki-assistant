@@ -184,6 +184,25 @@ def batch_prefetch(codes: list[str], today: str, prev_date: str,
         pass
     print(f"    top_list/top_inst: {time.time()-t0:.1f}s ({len(tl_cache)}只)")
 
+    print(f"  [panel] ④b 预取 fina_indicator (批量)...")
+    fi_cache: dict[str, dict] = {}
+    t0 = time.time()
+    for batch_start in range(0, len(codes), STOCK_BATCH):
+        batch = codes[batch_start:batch_start + STOCK_BATCH]
+        if not batch: continue
+        try:
+            r = call_tushare("fina_indicator", {"ts_code": ",".join(batch)},
+                             "ts_code,end_date,dt_netprofit_yoy,n_income,dt_netprofit,or_yoy")
+            seen: set[str] = set()
+            for it in r.get("data", {}).get("items", []):
+                tc = it[0]
+                if tc not in seen:  # 只需要最新一期
+                    fi_cache[tc] = dict(zip(r["data"]["fields"], it))
+                    seen.add(tc)
+        except Exception:
+            pass
+    print(f"    fina_indicator: {time.time()-t0:.1f}s ({len(fi_cache)}只)")
+
     print(f"  [panel] ⑤ 预取 stk_auction (并行)...")
     auc_cache = {}
     t0 = time.time()
@@ -202,12 +221,13 @@ def batch_prefetch(codes: list[str], today: str, prev_date: str,
         pass
     print(f"    auction: {time.time()-t0:.1f}s ({len(auc_cache)}只)")
 
-    return mf_cache, mf_prev_cache, tl_cache, ti_cache, auc_cache
+    return mf_cache, mf_prev_cache, tl_cache, ti_cache, auc_cache, fi_cache
 
 
 def build_features(codes: list[str], today: str, prev_date: str,
                    basic_cache: dict[str, dict],
-                   mf_cache, mf_prev_cache, tl_cache, ti_cache, auc_cache) -> pd.DataFrame:
+                   mf_cache, mf_prev_cache, tl_cache, ti_cache, auc_cache,
+                   fi_cache: dict[str, dict]) -> pd.DataFrame:
     """调用 build_pit_features 逐只构建64特征。"""
     rows = []
     total = len(codes)
@@ -296,6 +316,105 @@ def build_features(codes: list[str], today: str, prev_date: str,
     return pd.DataFrame(rows)
 
 
+def _add_strategy_scores(df: pd.DataFrame, fi_cache: dict[str, dict],
+                         basic_cache: dict[str, dict], mf_cache: dict[str, dict],
+                         tl_cache: dict[str, dict]) -> pd.DataFrame:
+    """从已有缓存数据计算 5 策略分（不调 Tushare）。"""
+    t0 = __import__("time").time()
+    codes = df["code"].tolist()
+    fund_scores, tech_scores, flow_scores, sent_scores, short_scores = [], [], [], [], []
+
+    for code in codes:
+        short = code.split(".")[0]
+
+        # ── fundamental: circ_mv(30%) + pe/pb(25%) + profit_yoy(25%) + concept(20%) ──
+        bd = basic_cache.get(code, {})
+        mv_yi = float(bd.get("circ_mv", 0) or 0) / 10000
+        pe = float(bd.get("pe", 0) or 0)
+        pb = float(bd.get("pb", 0) or 0)
+        fi = fi_cache.get(code, {})
+        profit = float(fi.get("dt_netprofit_yoy", 0) or 0)
+
+        f = 0.0
+        r = []
+        if mv_yi >= 200: f += 20; r.append(f"大盘{mv_yi:.0f}亿+20")
+        elif mv_yi >= 100: f += 17; r.append(f"中大盘{mv_yi:.0f}亿+17")
+        elif mv_yi >= 50: f += 13; r.append(f"中盘{mv_yi:.0f}亿+13")
+        elif mv_yi >= 20: f += 8; r.append(f"中小盘{mv_yi:.0f}亿+8")
+        if pe > 50 or pe <= 0: f += 15; r.append(f"成长/亏损PE={pe:.0f}+15")
+        elif pe > 30: f += 11; r.append(f"成长PE={pe:.0f}+11")
+        if pb > 8: f += 10; r.append(f"高PB={pb:.1f}+10")
+        elif pb > 5: f += 6; r.append(f"偏高PB={pb:.1f}+6")
+        if profit > 50: f += 15; r.append(f"扣非高增{profit:.0f}%+15")
+        elif profit > 20: f += 10; r.append(f"扣非增长{profit:.0f}%+10")
+        # concept count from pit features
+        cc = int(df.loc[df["code"] == code, "n_concepts"].iloc[0]) if len(df) > 0 else 0
+        if cc >= 10: f += 10; r.append(f"多概念{cc}个+10")
+        elif cc >= 5: f += 5; r.append(f"概念{cc}个+5")
+        fund_scores.append(min(100, round(f)))
+
+        # ── technical: 从 PIT 特征中的昨收位置/振幅/量价计算 ──
+        row = df[df["code"] == code]
+        if len(row) > 0:
+            row = row.iloc[0]
+            cp = float(row.get("close_pos", 0.5) or 0.5)
+            amp = float(row.get("amplitude", 0) or 0) * 100
+            vr = float(row.get("volume_ratio", 1) or 1)
+            tr = float(row.get("turnover_rate", 5) or 5)
+            nt = float(row.get("positive_5d", 0) or 0)
+        else:
+            cp, amp, vr, tr, nt = 0.5, 5, 1, 5, 0
+        t = 15.0
+        if cp > 0.7: t += 16
+        elif cp > 0.5: t += 10
+        if amp > 8: t -= 5
+        if vr > 1.5: t += 10
+        elif vr > 1.0: t += 5
+        if tr > 15: t += 8
+        elif tr > 8: t += 3
+        if nt >= 4: t += 12
+        elif nt >= 3: t += 6
+        tech_scores.append(min(100, round(t)))
+
+        # ── fundflow: net_mf_amount 占比评分 ──
+        mf_ent = mf_cache.get(code, {})
+        nm = float(mf_ent.get("net_mf_amount", 0) or 0)
+        mv = mv_yi * 10000 * 10000  # 亿→万元→元 ≈ 流通市值(元)
+        if mv > 0 and nm != 0:
+            ratio = nm * 10000 / mv * 100  # 净额占比%
+            ff = min(40, max(0, ratio * 5))
+        else:
+            ff = 0
+        flow_scores.append(min(100, round(ff + 20)))  # base 20
+
+        # ── sentiment: 涨停概念热度 ──
+        try:
+            from plays.limit_up.strategies.concept_cache import get_concept_limit_ups
+            clu = get_concept_limit_ups(code)
+            cn = [k for k in clu if not k.startswith("_")]
+            best = max((clu.get(n, 0) for n in cn), default=0)
+        except Exception:
+            best = 0
+        sent = min(60, round(best * 10)) + 15  # base 15
+        sent_scores.append(min(100, sent))
+
+        # ── shortterm: 竞价数据评分 ──
+        auc = float(row.get("auc_amt_ratio", 0) or 0)
+        st = 10.0
+        if auc > 1: st += 20
+        elif auc > 0.5: st += 10
+        elif auc > 0.1: st += 5
+        short_scores.append(min(100, round(st)))
+
+    df["fundamental"] = [float(v) for v in fund_scores]
+    df["technical"] = [float(v) for v in tech_scores]
+    df["fundflow"] = [float(v) for v in flow_scores]
+    df["sentiment"] = [float(v) for v in sent_scores]
+    df["shortterm"] = [float(v) for v in short_scores]
+    print(f"  [panel] 策略分计算完成: {len(codes)}只, {__import__('time').time()-t0:.0f}s")
+    return df
+
+
 def data_qc(df: pd.DataFrame) -> dict:
     """质检：检查空值率/分布/IC。"""
     report = {
@@ -372,12 +491,15 @@ def main():
     print(f"  [panel] 开始处理 {len(codes)} 只...")
 
     # ── ② 批量预取 IC 数据 ──
-    mf_cache, mf_prev_cache, tl_cache, ti_cache, auc_cache = batch_prefetch(
+    mf_cache, mf_prev_cache, tl_cache, ti_cache, auc_cache, fi_cache = batch_prefetch(
         codes, today, prev_date, basic_cache)
 
     # 构建特征
     df = build_features(codes, today, prev_date,
-                        basic_cache, mf_cache, mf_prev_cache, tl_cache, ti_cache, auc_cache)
+                        basic_cache, mf_cache, mf_prev_cache, tl_cache, ti_cache, auc_cache, fi_cache)
+
+    # 补策略分
+    df = _add_strategy_scores(df, fi_cache, basic_cache, mf_cache, tl_cache)
 
     # QC
     qc_report = data_qc(df)

@@ -76,14 +76,15 @@ class TestDataIntegrity:
 class TestFeatureCompleteness:
     """面板包含 59 个可离线计算的 PIT 特征（另 5 策略分需实时数据）。"""
 
-    def test_contains_59_features(self, panel_df):
+    def test_contains_64_features(self, panel_df):
+        """面板包含 64 个完整特征（59 PIT + 5 策略分）。"""
         feat_cols = [c for c in panel_df.columns if c not in ("code", "pit_date")]
-        assert len(feat_cols) == 59, f"特征数={len(feat_cols)}, 期望59"
+        assert len(feat_cols) == 64, f"特征数={len(feat_cols)}, 期望64"
 
-    def test_strategy_scores_not_in_panel(self, panel_df, model_features):
-        """fundamental/technical/fundflow/sentiment/shortterm 不应在面板中。"""
+    def test_strategy_scores_in_panel(self, panel_df):
+        """fundamental/technical/fundflow/sentiment/shortterm 现在也在面板中。"""
         for s in ("fundamental", "technical", "fundflow", "sentiment", "shortterm"):
-            assert s not in panel_df.columns, f"{s} 不应在 T-1 面板中"
+            assert s in panel_df.columns, f"{s} 应在面板中"
 
     def test_59_plus_5_strategy_equals_64(self, panel_df, model_features):
         """59(T-1) + 5(实时策略) = 64(模型输入)。"""
@@ -104,7 +105,7 @@ class TestDataQC:
     def test_qc_runs_without_error(self, panel_df):
         report = data_qc(panel_df)
         assert report["total_stocks"] == len(panel_df)
-        assert report["total_features"] == 59
+        assert report["total_features"] == 64
 
     def test_qc_detects_high_zero_rate(self, panel_df):
         """max_step 零值率应 > 90%（多数非连板）。"""
