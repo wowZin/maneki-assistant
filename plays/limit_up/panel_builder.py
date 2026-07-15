@@ -33,6 +33,7 @@ from plays.limit_up.strategies import factor_ctx
 from plays.limit_up.pit_features import build_pit_features
 
 # ── 配置 ──
+ANALYSIS_DIR = PROJECT_DIR / "data" / "analysis"
 RAW_DIR = PROJECT_DIR / "wiki" / "raw" / "limit-up" / "panel"
 STOCK_BATCH = 50          # Tushare 批量上限
 MAX_WORKERS = 16          # 并行 workers
@@ -582,6 +583,20 @@ def main():
     with open(qc_path, "w") as f:
         json.dump(qc_report, f, ensure_ascii=False, indent=2)
     print(f"  [QC] 报告已保存: {qc_path}")
+
+    # ── 模型预评分 ──
+    try:
+        from plays.limit_up.factors.optimized.model_score import factor_model_score_batch
+        df["model_score"] = factor_model_score_batch(df)
+        hot = df[df["model_score"] >= 30].sort_values("model_score", ascending=False)
+        analysis_path = ANALYSIS_DIR / f"{today}.json"
+        analysis_path.parent.mkdir(parents=True, exist_ok=True)
+        keep = [c for c in df.columns if c not in ("pit_date",) and not c.startswith("_")]
+        hot[keep].to_json(
+            analysis_path, orient="records", force_ascii=False)
+        print(f"  [panel] 预评: {len(df)}只→≥30分={len(hot)}只已保存")
+    except Exception as e:
+        print(f"  [panel] 预评跳过: {e}")
 
     return df, qc_report
 
