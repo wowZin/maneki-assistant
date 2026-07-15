@@ -631,6 +631,91 @@ def _log_snapshot(r: dict, score: float, quote: dict | None = None):
         pass
 
 
+def _run_pre_scored_round(pool_codes: list[str], pool_name_map: dict[str, str],
+                           pool_extras: dict[str, dict] | None = None,
+                           t1_panel: pd.DataFrame | None = None,
+                           iter_count: int = 0) -> list[dict]:
+    """预评分池模式：不粗评，只对池内股做实时评分+推送。"""
+    from plays.limit_up.factors.optimized.model_score import factor_model_score_batch as _m
+    from plays.limit_up.pusher import check_and_push
+    from plays.limit_up.pipeline_feishu import stage2_deep
+
+    today_str = _today_str()
+    hhmm = _hhmm()
+    quotes: dict[str, dict] = {}
+
+    # batch_quotes (每5轮或首次)
+    _need_scan = iter_count % 5 == 0 or not getattr(_run_pre_scored_round, "_rc", None)
+    if _need_scan:
+        if iter_count > 0:
+            print(f"\n[{_now().strftime('%H:%M')}] ① batch_quotes {len(pool_codes)}只...")
+        quotes = scan_batch(pool_codes)
+        _run_pre_scored_round._rc = quotes
+    else:
+        quotes = _run_pre_scored_round._rc
+
+    # 过滤
+    filtered = []
+    for code in pool_codes:
+        q = quotes.get(code)
+        if q is None: continue
+        pct = float(q.get("pct_chg", 0) or 0)
+        if pct >= 9.8 or pct >= 7.0: continue
+        filtered.append(code)
+    if not filtered:
+        if iter_count > 0: print(f"  [{hhmm}] 过滤后0只")
+        return []
+
+    # T-1 面板 + 实时覆盖
+    if t1_panel is not None:
+        pit_df = t1_panel[t1_panel["code"].isin(filtered)].copy()
+    else:
+        pit_df = pd.DataFrame()
+
+    if pit_df.empty:
+        return []
+
+    for code in filtered:
+        q = quotes.get(code, {})
+        m = pit_df["code"] == code
+        pit_df.loc[m, "pct_chg_score_day"] = float(q.get("pct_chg", 0) or 0)
+        rt_tr = float(q.get("turnover", 0) or 0)
+        if rt_tr > 0: pit_df.loc[m, "turnover_rate"] = rt_tr
+        rt_vr = float(q.get("vol_ratio", 0) or 0)
+        if rt_vr > 0: pit_df.loc[m, "volume_ratio"] = rt_vr
+
+    # 模型评分
+    try:
+        pit_df["model_score"] = _m(pit_df)
+    except Exception as e:
+        print(f"  模型评分失败: {e}")
+        return []
+
+    # 推送
+    all_results, push_candidates = [], []
+    for _, r in pit_df.iterrows():
+        score = float(r["model_score"])
+        code = r["code"]
+        name = pool_name_map.get(code, "")
+        if score >= float(os.environ.get("ULTIMATE_PUSH_THRESHOLD","55")):
+            print(f"    ≥55 {code} {name} score={score:.1f} → 推送")
+            rec = {"code": code, "name": name, "total_score": score, "score_mode": "model_score",
+                   "pct_chg": quotes.get(code,{}).get("pct_chg",0)}
+            all_results.append(rec); push_candidates.append(rec)
+            _log_snapshot(rec, score, quotes.get(code))
+        elif score >= float(os.environ.get("L2_GREY_LOW","45")):
+            print(f"    [45-55) {code} {name} score={score:.1f} → L2...")
+            confirmed = stage2_deep(code, name, score)
+            _log_snapshot({"code":code,"name":name,"pct_chg":quotes.get(code,{}).get("pct_chg",0),
+                           "scores":{}}, score, quotes.get(code))
+            if confirmed:
+                confirmed["total_score"] = score; confirmed["l2_confirmed"] = True
+                all_results.append(confirmed); push_candidates.append(confirmed)
+    save_analysis(all_results)
+    check_and_push(push_candidates, PROJECT_DIR / "plays" / "limit_up" / "data")
+    return all_results
+
+
 def save_analysis(results: list[dict]):
     """单文件存档，同股票按 code 覆盖，不同股票追加。"""
     td = _today_str()
@@ -783,17 +868,33 @@ def main_loop():
                 continue
 
             if not trading_started:
-                print(f"[{now.strftime('%H:%M')}] ② 开始盘中扫描")
+                print(f"[{now.strftime('%H:%M')}] ② 开始盘中扫描(预评分池)")
                 trading_started = True
 
-            # 一轮评分：栈空时先扫盘，否则直接取Top200→rand→10→评分
+            # 预评分池模式：从 panel + analysis.json 读取
+            if getattr(_run_pre_scored_round, "_t1_panel", None) is None:
+                import pandas as _pd
+                pf = Path(__file__).resolve().parent.parent.parent / "wiki" / "raw" / "limit-up" / "panel"
+                af = Path(__file__).resolve().parent.parent.parent / "data" / "analysis"
+                today = _today_str()
+                panel_file = pf / f"{today}.parquet"
+                analysis_file = af / f"{today}.json"
+                assert panel_file.exists(), f"面板文件不存在: {panel_file}"
+                assert analysis_file.exists(), f"分析文件不存在: {analysis_file}"
+                _run_pre_scored_round._t1_panel = _pd.read_parquet(panel_file)
+                _run_pre_scored_round._pool = json.loads(analysis_file.read_text())
+                pool_codes = [r["code"] for r in _run_pre_scored_round._pool]
+                print(f"  [pipeline] 预评分池已加载: {len(pool_codes)}只")
+
             iter_count += 1
             t0 = time.time()
-            deep_results, stack = _run_one_round(pool_codes, pool_name_map, pool_extras=pool_extras, iter_count=iter_count, stack=stack)
+            pool_codes = [r["code"] for r in _run_pre_scored_round._pool]
+            deep_results = _run_pre_scored_round(pool_codes, pool_name_map,
+                                                  t1_panel=_run_pre_scored_round._t1_panel,
+                                                  iter_count=iter_count)
             elapsed = time.time() - t0
             if deep_results:
-                print(f"  [完成] {elapsed:.1f}s | 栈{stack.size}只")
-            save_queue(stack, _today_str())
+                print(f"  [完成] {elapsed:.1f}s")
             _write_heartbeat()
 
             if sim_rounds and iter_count >= sim_rounds:
