@@ -465,6 +465,7 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
                 elif score >= L2_GREY_LOW:
                     if iter_count is not None: print(f"    [{L2_GREY_LOW:.0f},{PUSH_THRESHOLD:.0f}) {r['code']} {r['name']} total_score={score:.1f} → L2确认...")
                     confirmed = stage2_deep(r["code"], r["name"], score)
+                    _log_l2_snapshot(confirmed, r["code"], score)
                     if confirmed:
                         for k in ("scores","reasons","pct_chg","resonance","score_mode","factors"):
                             confirmed[k] = r.get(k, {}) if k in ("scores","reasons","factors") else r.get(k, 0)
@@ -582,6 +583,34 @@ def stage2_deep(code: str, name: str, total_score: float) -> dict | None:
     except Exception as e:
         print(f"    L2 拒绝: THS 行情异常: {e}")
         return None
+
+
+def _log_l2_snapshot(result: dict | None, code: str, total_score: float):
+    """L2 快照落盘，供训练使用（含失败记录）。"""
+    now = datetime.now()
+    rec = {
+        "ts": now.strftime("%H:%M:%S"),
+        "code": code,
+        "total_score": total_score,
+        "bid1": (result.get("l2api", {}) if result else {}).get("bid1", 0),
+        "ask1": (result.get("l2api", {}) if result else {}).get("ask1", 0),
+        "last": (result.get("l2api", {}) if result else {}).get("last", 0),
+        "vwap": (result.get("l2api", {}) if result else {}).get("vwap", 0),
+        "confirmed": result is not None,
+    }
+    import pandas as pd
+    from pathlib import Path
+    l2_dir = Path(__file__).resolve().parent.parent.parent / "data" / "l2_log"
+    l2_dir.mkdir(parents=True, exist_ok=True)
+    path = l2_dir / f"{_today_str()}.parquet"
+    try:
+        if path.exists():
+            old = pd.read_parquet(path)
+            pd.concat([old, pd.DataFrame([rec])], ignore_index=True).to_parquet(path)
+        else:
+            pd.DataFrame([rec]).to_parquet(path)
+    except Exception:
+        pass
 
 
 def save_analysis(results: list[dict]):
