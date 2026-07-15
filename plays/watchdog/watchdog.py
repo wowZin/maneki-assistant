@@ -228,21 +228,14 @@ class WatchdogEngine:
     def _subscribe(self, codes: list[str]):
         if not self._ws:
             return
-        shorts = [_short(c) for c in codes]
-        try:
-            self._ws.subscribe_l1(shorts)
-            logger.info(f"已订阅 {len(shorts)} 只 L1")
-        except Exception as e:
-            logger.warning(f"订阅失败: {e}")
+        # Watchdog 不再订阅 WS（pipeline 独占）, 改用 THS
+        self._subscribed.update([_short(c) for c in codes])
 
     def _unsubscribe(self, codes: list[str]):
         if not self._ws:
             return
         shorts = [_short(c) for c in codes]
-        try:
-            self._ws.unsubscribe_l1(shorts)
-        except Exception as e:
-            logger.warning(f"取消订阅失败: {e}")
+        self._subscribed.difference_update(shorts)
 
     # ---- 指令 ----
 

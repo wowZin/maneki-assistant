@@ -62,6 +62,31 @@ _T1_MF_PREV_CACHE: dict[str, float] = {}
 _T1_TL_CACHE: dict[str, dict] = {}
 _T1_TI_CACHE: dict[str, list] = {}
 
+# WS 客户端（进程唯一，只由 pipeline 使用）
+_WS = None
+
+
+def _get_ws():
+    """懒加载 WS 客户端。"""
+    global _WS
+    if _WS is None:
+        from scripts.jvquant_ws_client import JvQuantWSClient
+        _WS = JvQuantWSClient()
+    return _WS
+
+
+def _subscribe_pool(codes: list[str]):
+    """开盘时全量订阅 L1+L10。"""
+    try:
+        ws = _get_ws()
+        if not ws.is_connected():
+            ws.connect()
+        shorts = [c.split(".")[0] for c in codes]
+        ws.subscribe_l1(shorts)
+        ws.subscribe_l10(shorts)
+    except Exception:
+        print(f"  [pipeline] WS 订阅失败, 降级 THS")
+
 # 时间模拟
 _SIM_TIME: datetime | None = None
 _SIM_TICK: int = 0
