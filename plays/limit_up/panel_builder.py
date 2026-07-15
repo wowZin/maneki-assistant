@@ -468,6 +468,10 @@ def main():
     args = parser.parse_args()
 
     today = _today_str()
+    from plays.limit_up.pipeline import _is_trade_day
+    if not _is_trade_day(today):
+        print(f"[panel_builder] {today} 非交易日，跳过")
+        return
     prev_date = _prev_trade_date(today)
     print(f"  [panel] T-1: {prev_date}, 今日: {today}")
 
