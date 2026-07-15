@@ -93,11 +93,18 @@ def main():
 
     while _running:
         now = time.time()
-        # 非交易时段自动退出
+        # 非交易时段等待（盘前等待开盘,盘中正常,盘后退出）
         _hhmm = int(datetime.now().strftime("%H%M"))
-        if not _is_trade_day(datetime.now().strftime("%Y%m%d")) or not _is_trading_session(_hhmm):
-            print(f"[ws_daemon] 非交易时段({_hhmm}), 退出")
+        _today = datetime.now().strftime("%Y%m%d")
+        if not _is_trade_day(_today):
+            print(f"[ws_daemon] 非交易日({_today}), 退出")
             break
+        if _hhmm >= 1500:
+            print(f"[ws_daemon] 收盘({_hhmm}), 退出")
+            break
+        if _hhmm < 925 or (1130 <= _hhmm < 1300):
+            time.sleep(30)  # 盘前/午休等待
+            continue
         # 检查新订阅（每秒）
         if now - last_sub_check >= 2:
             new_shorts, new_l2 = _read_sub()
