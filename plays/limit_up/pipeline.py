@@ -293,10 +293,10 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
     # Top200 → 随机取 N 只（线程并发时重复概率极低）
     import random
     random.shuffle(to_score)
-    to_score = to_score[:10]
+    to_score = to_score[:20]
 
     if iter_count is not None:
-        print(f"  ② 粗评 {len(to_score)}只(Top200→rand→10)...")
+        print(f"  ② 粗评 {len(to_score)}只(Top200→rand→20)...")
     score_data = [
         (item.code, item.name or pool_name_map.get(item.code, ""),
          quotes.get(item.code, {"pct_chg": item.pct_chg, "speed": item.speed}))
@@ -423,13 +423,8 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
                     top_inst_by_date={_pit_date: _ti_list} if _ti_list else None,
                     pit_mode=True)
 
-                # 实时覆盖
-                try:
-                    _rt = _rc.get(code,{}).get("pct_chg")
-                    if _rt is not None: feats["pct_chg_score_day"] = float(_rt)
-                except: pass
-                _tr2 = get_turnover(code); _vr2 = get_vol_ratio(code)
-                if _tr2 is not None: feats["turnover_rate"] = _tr2
+                if _rc.get(code,{}).get("inner_vol"):
+                    feats["inner_outer"] = (float(feats.get("inner_outer",1)) * 2 + 1) / 3
                 if _vr2 is not None: feats["volume_ratio"] = _vr2
                 try:
                     _c2 = _rc.get(code,{}); _h = _sf(_c2.get("high")); _l = _sf(_c2.get("low"))
@@ -555,7 +550,7 @@ def stage2_deep(code: str, name: str, total_score: float) -> dict | None:
         amt = float(q.get("amount", 0) or 0)
         bid1 = float(q.get("bid1", 0) or 0)
         ask1 = float(q.get("ask1", 0) or 0)
-        vwap = amt / vol if vol > 0 else 0
+        vwap = amt / (vol * 100) if vol > 0 else 0
         last = price
 
         result = {
@@ -755,7 +750,6 @@ def main_loop():
             traceback.print_exc()
             _sim_sleep(10 if _SIM_TIME is not None else 10)
 
-    _close_pool()
     _remove_pidfile()
     print("[pipeline] 已停止")
 
@@ -821,8 +815,14 @@ def _run_once():
     pool = ensure_pool(td)
     pool_codes = [s["code"] for s in pool]
     pool_name_map = build_name_map(pool)
+    pool_extras = {s["code"]: {"circ_mv": s.get("circ_mv", 0),
+                                "pe": s.get("pe", 999.0),
+                                "pb": s.get("pb", 999.0),
+                                "prev_turnover": s.get("turnover_rate", 0.0),
+                                "prev_vol_ratio": s.get("volume_ratio", 1.0)}
+                    for s in pool}
 
-    deep_results, _ = _run_one_round(pool_codes, pool_name_map)
+    deep_results, _ = _run_one_round(pool_codes, pool_name_map, pool_extras=pool_extras)
     print(f"[pipeline] 单次扫描完成，分析 {len(deep_results)} 只")
 
 

@@ -208,6 +208,7 @@ class WatchdogEngine:
         self._thread: Optional[threading.Thread] = None
         self._scan_count = 0
         self._subscribed: set[str] = set()
+        self._snap_fail_count = 0
         self._state_mtime: float = 0.0
         self._load_state()
 
@@ -429,11 +430,11 @@ class WatchdogEngine:
 
             market = _read_ws_snap(_short(code))
             if not market or not market.get("last"):
-                self._ws_fail_count += 1
+                self._snap_fail_count += 1
                 if self._scan_count % 10 == 0:
-                    logger.warning(f"{code} 无行情数据（共享内存无数据{self._ws_fail_count}次）")
+                    logger.warning(f"{code} 无行情数据（共享内存无数据{self._snap_fail_count}次）")
                 continue
-            self._ws_fail_count = 0  # 有数据了，重置
+            self._snap_fail_count = 0  # 有数据了，重置
 
             vwap_data = _read_ws_snap(f"{_short(code)}_vwap")
             vwap = float(vwap_data) if isinstance(vwap_data, (int, float)) else 0.0

@@ -378,12 +378,12 @@ def score_fundflow(code: str, trade_date: str = None,
             circ_mv_yuan = 0
             try:
                 from plays.limit_up.strategies import factor_ctx
-                basic = factor_ctx.get_daily_basic(code)
+                basic = factor_ctx.get_daily_basic(code, trade_date)
                 if basic:
                     circ_mv_yuan = safe_float(basic.get("circ_mv", 0)) * 10000  # 万元→元
                 else:
                     from scripts.tu_share import call_tushare
-                    resp_d = call_tushare("daily_basic", {"ts_code": code}, "circ_mv")
+                    resp_d = call_tushare("daily_basic", {"ts_code": code, "trade_date": trade_date}, "circ_mv")
                     db_items = resp_d.get("data",{}).get("items",[])
                     if db_items:
                         db_f = resp_d.get("data",{}).get("fields",[])

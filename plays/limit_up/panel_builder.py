@@ -203,20 +203,26 @@ def batch_prefetch(codes: list[str], today: str, prev_date: str,
             pass
     print(f"    fina_indicator: {time.time()-t0:.1f}s ({len(fi_cache)}只)")
 
-    print(f"  [panel] ⑤ 预取 stk_auction (并行)...")
+    print(f"  [panel] ⑤ 预取 stk_auction (并行, {prev_date})...")
     auc_cache = {}
     t0 = time.time()
     try:
-        from plays.limit_up.strategies.shortterm import _get_auction as auc_fn
+        from scripts.tu_share import call_tushare as _ct
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-            futs = {pool.submit(auc_fn, c): c for c in codes[:500]}
-            for fut in as_completed(futs):
+            def _get_auc(c):
                 try:
-                    r = fut.result()
-                    if r:
-                        auc_cache[futs[fut]] = r
+                    r = _ct("stk_auction", {"ts_code": c, "trade_date": prev_date},
+                            "amount,vol,price,turnover_rate,pre_close")
+                    items = r.get("data", {}).get("items", [])
+                    flds = r.get("data", {}).get("fields", [])
+                    return dict(zip(flds, items[0])) if items and flds else {}
                 except Exception:
-                    pass
+                    return {}
+            futs = {pool.submit(_get_auc, c): c for c in codes[:500]}
+            for fut in as_completed(futs):
+                r = fut.result()
+                if r:
+                    auc_cache[futs[fut]] = r
     except Exception:
         pass
     print(f"    auction: {time.time()-t0:.1f}s ({len(auc_cache)}只)")
@@ -470,19 +476,33 @@ def main():
     print(f"  [panel] ① 预取 daily_basic (全市场,确定股票池)...")
     t0 = time.time()
     basic_cache: dict[str, dict] = {}
+    st_codes: set[str] = set()
     try:
         r = call_tushare("daily_basic", {"trade_date": prev_date},
                          "ts_code,trade_date,turnover_rate,volume_ratio,circ_mv,pe,pb,amount")
         for it in r.get("data", {}).get("items", []):
             tc = it[0]
-            # 过滤：主板非ST
             if tc.split(".")[1] not in ("SH", "SZ"): continue
-            if "ST" in tc.upper() or tc.startswith("8") or tc.startswith("4"): continue
+            if tc.startswith("8") or tc.startswith("4"): continue
             basic_cache[tc] = dict(zip(r["data"]["fields"], it))
     except Exception:
         pass
+
+    # 从 stock_basic 获取名称，过滤 ST
+    try:
+        r2 = call_tushare("stock_basic", {}, "ts_code,name,list_date")
+        for it in r2.get("data", {}).get("items", []):
+            tc = it[0]
+            if tc in basic_cache:
+                if "ST" in (it[1] or "").upper() or "退" in (it[1] or ""):
+                    st_codes.add(tc)
+    except Exception:
+        pass
+    for tc in st_codes:
+        basic_cache.pop(tc, None)
+
     codes = list(basic_cache.keys())
-    print(f"    daily_basic: {time.time()-t0:.1f}s ({len(codes)}只)")
+    print(f"    daily_basic: {time.time()-t0:.1f}s ({len(codes)}只, 过滤ST={len(st_codes)})")
 
     if args.quick:
         codes = codes[:100]

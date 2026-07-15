@@ -924,18 +924,19 @@ def push_feishu(results):
         print("  无可推送股票")
         return False
 
-    # L2 确认通过的灰区股跳过阈值检查
+    # L2 确认通过的灰区股跳过阈值检查（仅对确认股本身放行）
     l2_bypass = any(r.get("l2_confirmed", False) for r in results)
     max_ts = sorted_results[0].get("total_score", 0)
     if max_ts < threshold and not l2_bypass:
         print(f"  最高 total_score={max_ts:.1f} 低于阈值 {threshold}，不推送")
         return False
 
-    # 本轮候选：直接推的 ≥threshold，灰区 L2 通过的也放行
-    if l2_bypass:
-        eligible = sorted_results[:3]
-    else:
-        eligible = [r for r in sorted_results if r.get("total_score", 0) >= threshold][:3]
+    # 本轮候选：达标股 + L2确认的灰区股
+    eligible = [r for r in sorted_results if r.get("total_score", 0) >= threshold]
+    for r in sorted_results:
+        if r.get("l2_confirmed") and r not in eligible:
+            eligible.append(r)
+    eligible = eligible[:3]
     top3_codes = {r["code"] for r in eligible}
 
     # 分数提高才推：首次出现或评分高于上次推送时
