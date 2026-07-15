@@ -56,6 +56,12 @@ HEARTBEAT_INTERVAL_SECONDS = int(os.environ.get("HEARTBEAT_INTERVAL_SECONDS", "6
 
 _running = True
 
+# T-1 一次性预取缓存
+_T1_MF_CACHE: dict[str, float] = {}
+_T1_MF_PREV_CACHE: dict[str, float] = {}
+_T1_TL_CACHE: dict[str, dict] = {}
+_T1_TI_CACHE: dict[str, list] = {}
+
 # 时间模拟
 _SIM_TIME: datetime | None = None
 _SIM_TICK: int = 0
@@ -295,10 +301,6 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
         for c in code_list:
             factor_ctx._ensure_daily_limit(c)
 
-        _MF_CACHE: dict[str, float] = {}
-        _MF_PREV_CACHE: dict[str, float] = {}
-        _TL_CACHE: dict[str, dict] = {}
-        _TI_CACHE: dict[str, list] = {}
         _prev_date = _today_str()
         try:
             from scripts.tu_share import call_tushare as _ct
@@ -315,16 +317,16 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
                 if not _batch: continue
                 _s = ",".join(_batch)
                 _r = _ct("moneyflow", {"ts_code": _s, "trade_date": today_str}, "ts_code,net_mf_amount")
-                for _it in _r.get("data",{}).get("items",[]): _MF_CACHE[_it[0]] = float(_it[-1]) if len(_it)>1 else 0
+                for _it in _r.get("data",{}).get("items",[]): _T1_MF_CACHE[_it[0]] = float(_it[-1]) if len(_it)>1 else 0
                 _r2 = _ct("moneyflow", {"ts_code": _s, "trade_date": _prev_date}, "ts_code,net_mf_amount")
-                for _it in _r2.get("data",{}).get("items",[]): _MF_PREV_CACHE[_it[0]] = float(_it[-1]) if len(_it)>1 else 0
+                for _it in _r2.get("data",{}).get("items",[]): _T1_MF_PREV_CACHE[_it[0]] = float(_it[-1]) if len(_it)>1 else 0
             _r = _ct("top_list", {"trade_date": today_str}, "ts_code,amount,net_amount,l_buy,l_amount,net_rate")
             for _it in _r.get("data",{}).get("items",[]):
-                _f = _r["data"]["fields"]; _TL_CACHE[_it[0]] = dict(zip(_f, _it))
+                _f = _r["data"]["fields"]; _T1_TL_CACHE[_it[0]] = dict(zip(_f, _it))
             _r = _ct("top_inst", {"trade_date": today_str}, "ts_code,exalter,net_buy")
             for _it in _r.get("data",{}).get("items",[]):
-                _TI_CACHE.setdefault(_it[0], []).append(dict(zip(_r["data"]["fields"], _it)))
-            print(f"    资金流{len(_MF_CACHE)}只 龙虎榜{len(_TL_CACHE)}只 ✓")
+                _T1_TI_CACHE.setdefault(_it[0], []).append(dict(zip(_r["data"]["fields"], _it)))
+            print(f"    资金流{len(_T1_MF_CACHE)}只 龙虎榜{len(_T1_TL_CACHE)}只 ✓")
         except Exception as _e:
             print(f"    资金流/龙虎榜预取失败: {_e}")
 
@@ -364,9 +366,9 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
                                   "circ_mv": _pe.get("circ_mv",0), "pe": _pe.get("pe",999.0), "pb": _pe.get("pb",999.0)}
 
                 # moneyflow
-                _nm = float(_MF_CACHE.get(code,0.0))
+                _nm = float(_T1_MF_CACHE.get(code,0.0))
                 _mf_ent = {"net_mf_amount":_nm, "buy_elg_amount":0, "sell_elg_amount":0, "buy_lg_amount":0, "sell_lg_amount":0} if _nm else {}
-                _nm_prev = float(_MF_PREV_CACHE.get(code,0.0)) if code in _MF_PREV_CACHE else 0.0
+                _nm_prev = float(_T1_MF_PREV_CACHE.get(code,0.0)) if code in _T1_MF_PREV_CACHE else 0.0
                 _mf_bd = {_pit_date: _mf_ent} if _mf_ent else None
                 if _nm_prev and len(_daily_rows) >= 2:
                     _p2 = _daily_rows[-2].get("trade_date","")
@@ -382,8 +384,8 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
                     _best = max((_clu.get(n,0) for n in _cnames), default=0)
                     _cm["n_concepts"] = float(len(_cnames)); _cm["ret1_avg"] = float(_best); _cm["ret3_max"] = float(_best*2)
                 _auc_ent = _AUC_CACHE.get(code, {})
-                _tl_ent = _TL_CACHE.get(code, {})
-                _ti_list = _TI_CACHE.get(code, [])
+                _tl_ent = _T1_TL_CACHE.get(code, {})
+                _ti_list = _T1_TI_CACHE.get(code, [])
 
                 # build_pit_features
                 from plays.limit_up.pit_features import build_pit_features as _bpf
@@ -657,6 +659,46 @@ def main_loop():
                                              "prev_turnover": s.get("turnover_rate", 0.0),
                                              "prev_vol_ratio": s.get("volume_ratio", 0.0)} for s in pool}
                 print(f"    候选池 {len(pool)} 只 ✓")
+
+                # 开盘一次性预取 T-1 数据（moneyflow/top_list/top_inst/daily/limit）
+                try:
+                    from scripts.tu_share import call_tushare as _ct
+                    from plays.limit_up.strategies import factor_ctx
+                    _td = _today_str()
+                    _prev_date = _td
+                    _dt = datetime.strptime(_prev_date, "%Y%m%d")
+                    for _ in range(10):
+                        _dt -= timedelta(days=1)
+                        _try = _dt.strftime("%Y%m%d")
+                        _cal = _ct("trade_cal", {"exchange":"SSE","start_date":_try,"end_date":_try},"cal_date,is_open")
+                        _items = _cal.get("data",{}).get("items",[])
+                        if _items and _items[0] and len(_items[0])>1 and str(_items[0][1])=="1":
+                            _prev_date = _try; break
+                    # daily + limit_list_d (只拉一次，_DAILY_CACHE 持久)
+                    for _c in pool_codes:
+                        factor_ctx._ensure_daily_limit(_c)
+                    # moneyflow (今昨两日)
+                    global _T1_MF_CACHE, _T1_MF_PREV_CACHE
+                    _T1_MF_CACHE.clear(); _T1_MF_PREV_CACHE.clear()
+                    for _batch in [pool_codes[:50], pool_codes[50:]]:
+                        if not _batch: continue
+                        _s = ",".join(_batch)
+                        _r = _ct("moneyflow",{"ts_code":_s,"trade_date":_td},"ts_code,net_mf_amount")
+                        for _it in _r.get("data",{}).get("items",[]): _T1_MF_CACHE[_it[0]] = float(_it[-1]) if len(_it)>1 else 0
+                        _r2 = _ct("moneyflow",{"ts_code":_s,"trade_date":_prev_date},"ts_code,net_mf_amount")
+                        for _it in _r2.get("data",{}).get("items",[]): _T1_MF_PREV_CACHE[_it[0]] = float(_it[-1]) if len(_it)>1 else 0
+                    # top_list + top_inst (全市场一次)
+                    global _T1_TL_CACHE, _T1_TI_CACHE
+                    _T1_TL_CACHE.clear(); _T1_TI_CACHE.clear()
+                    _r = _ct("top_list",{"trade_date":_td},"ts_code,amount,net_amount,l_buy,l_amount,net_rate")
+                    for _it in _r.get("data",{}).get("items",[]):
+                        _f = _r["data"]["fields"]; _T1_TL_CACHE[_it[0]] = dict(zip(_f,_it))
+                    _r = _ct("top_inst",{"trade_date":_td},"ts_code,exalter,net_buy")
+                    for _it in _r.get("data",{}).get("items",[]):
+                        _T1_TI_CACHE.setdefault(_it[0],[]).append(dict(zip(_r["data"]["fields"],_it)))
+                    print(f"    T-1 预取: moneyflow {len(_T1_MF_CACHE)}只 龙虎榜{len(_T1_TL_CACHE)}只 ✓")
+                except Exception as _e:
+                    print(f"    T-1 预取失败: {_e}")
                 pool_built = True
 
             # ── 交易时段：持续评分 ──
