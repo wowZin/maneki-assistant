@@ -459,13 +459,14 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
             # 处理本批结果（L2/推送）
             for r in chunk:
                 score = r["total_score"]
+                _log_snapshot(r, score, quotes.get(r["code"]))
                 if score >= PUSH_THRESHOLD:
                     if iter_count is not None: print(f"    ≥{PUSH_THRESHOLD:.0f} {r['code']} {r['name']} total_score={score:.1f} → 推送")
                     all_results.append(r); push_candidates.append(r)
                 elif score >= L2_GREY_LOW:
                     if iter_count is not None: print(f"    [{L2_GREY_LOW:.0f},{PUSH_THRESHOLD:.0f}) {r['code']} {r['name']} total_score={score:.1f} → L2确认...")
                     confirmed = stage2_deep(r["code"], r["name"], score)
-                    _log_l2_snapshot(confirmed, r["code"], score)
+                    _log_snapshot(r, score, quotes.get(r["code"]))
                     if confirmed:
                         for k in ("scores","reasons","pct_chg","resonance","score_mode","factors"):
                             confirmed[k] = r.get(k, {}) if k in ("scores","reasons","factors") else r.get(k, 0)
@@ -585,25 +586,42 @@ def stage2_deep(code: str, name: str, total_score: float) -> dict | None:
         return None
 
 
-def _log_l2_snapshot(result: dict | None, code: str, total_score: float):
-    """L2 快照落盘，供训练使用（含失败记录）。"""
-    now = datetime.now()
-    rec = {
-        "ts": now.strftime("%H:%M:%S"),
-        "code": code,
-        "total_score": total_score,
-        "bid1": (result.get("l2api", {}) if result else {}).get("bid1", 0),
-        "ask1": (result.get("l2api", {}) if result else {}).get("ask1", 0),
-        "last": (result.get("l2api", {}) if result else {}).get("last", 0),
-        "vwap": (result.get("l2api", {}) if result else {}).get("vwap", 0),
-        "confirmed": result is not None,
-    }
-    import pandas as pd
-    from pathlib import Path
-    l2_dir = Path(__file__).resolve().parent.parent.parent / "data" / "l2_log"
-    l2_dir.mkdir(parents=True, exist_ok=True)
-    path = l2_dir / f"{_today_str()}.parquet"
+def _log_snapshot(r: dict, score: float, quote: dict | None = None):
+    """每股评分时的实时快照落盘（L1+L2+score），供训练使用。"""
     try:
+        now = datetime.now()
+        code = r["code"]
+        q = quote or {}  # 用已有 batch_quotes 数据，不额外调 THS
+        vwap = 0.0
+        if q:
+            vol = float(q.get("volume", 0) or 0)
+            amt = float(q.get("amount", 0) or 0)
+            vwap = amt / (vol * 100) if vol > 0 else 0
+        rec = {
+            "ts": now.strftime("%H:%M:%S"),
+            "code": code,
+            "name": r.get("name", ""),
+            "total_score": score,
+            "pct_chg": r.get("pct_chg", 0),
+            "price": float(q.get("price", 0)) if q else 0,
+            "bid1": float(q.get("bid1", 0)) if q else 0,
+            "ask1": float(q.get("ask1", 0)) if q else 0,
+            "turnover": float(q.get("turnover", 0)) if q else 0,
+            "vol_ratio": float(q.get("vol_ratio", 0)) if q else 0,
+            "inner_vol": float(q.get("inner_vol", 0)) if q else 0,
+            "outer_vol": float(q.get("outer_vol", 0)) if q else 0,
+            "vwap": vwap,
+            "fundamental": r.get("scores", {}).get("fundamental", 0),
+            "technical": r.get("scores", {}).get("technical", 0),
+            "fundflow": r.get("scores", {}).get("fundflow", 0),
+            "sentiment": r.get("scores", {}).get("sentiment", 0),
+            "shortterm": r.get("scores", {}).get("shortterm", 0),
+        }
+        import pandas as pd
+        from pathlib import Path
+        log_dir = Path(__file__).resolve().parent.parent.parent / "data" / "snapshot_log"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        path = log_dir / f"{_today_str()}.parquet"
         if path.exists():
             old = pd.read_parquet(path)
             pd.concat([old, pd.DataFrame([rec])], ignore_index=True).to_parquet(path)
