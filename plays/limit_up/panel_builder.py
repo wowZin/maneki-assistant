@@ -258,10 +258,10 @@ def build_features(codes: list[str], today: str, prev_date: str,
         if bd:
             basic_ent = {
                 "turnover_rate": float(bd.get("turnover_rate", 0)),
-                "volume_ratio": float(bd.get("volume_ratio", 0)),
-                "circ_mv": float(bd.get("circ_mv", 0)),
-                "pe": float(bd.get("pe") or 999.0),
-                "pb": float(bd.get("pb") or 999.0),
+                "volume_ratio": float(bd.get("volume_ratio", 0) or 0),
+                "circ_mv": float(bd.get("circ_mv", 0) or 0),
+                "pe": float(bd.get("pe", 0) or 999.0),
+                "pb": float(bd.get("pb", 0) or 0),
             }
 
         # moneyflow
