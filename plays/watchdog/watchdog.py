@@ -50,9 +50,9 @@ def _read_ws_snap(code: str) -> dict:
         return {}
 
 
-def _write_ws_sub(shorts: list[str]):
+def _write_ws_sub(shorts: list[str], l2_shorts: list[str] | None = None):
     try:
-        WS_SUB.write_text(json.dumps({"shorts": shorts, "l2_shorts": []}))
+        WS_SUB.write_text(json.dumps({"shorts": shorts, "l2_shorts": l2_shorts or []}))
     except Exception:
         pass
 
@@ -238,13 +238,13 @@ class WatchdogEngine:
         """订阅标的到 ws_daemon。"""
         shorts = [_short(c) for c in codes]
         self._subscribed.update(shorts)
-        _write_ws_sub(list(self._subscribed))
+        _write_ws_sub(list(self._subscribed), list(self._subscribed))
 
     def _unsubscribe(self, codes: list[str]):
         """从 ws_daemon 取消订阅。"""
         shorts = [_short(c) for c in codes]
         self._subscribed.difference_update(shorts)
-        _write_ws_sub(list(self._subscribed))
+        _write_ws_sub(list(self._subscribed), list(self._subscribed))
 
     # ---- 指令 ----
 
@@ -513,7 +513,9 @@ class WatchdogEngine:
                         continue
             else:
                 # 状态恢复正常，清空冷却记录（下次异常立即推送）
-                st.last_abnormal_level = ""
+                # bear_trap 不移出盯盘，不清冷却，防止高频重复
+                if st.last_abnormal_level != "bear_trap":
+                    st.last_abnormal_level = ""
 
             if st.status == "watching":
                 triggered, sig_type, reason = check_entry(row, scores, klines)

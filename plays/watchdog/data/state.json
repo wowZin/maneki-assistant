@@ -52,7 +52,7 @@
     "signal_at": "",
     "last_alert_at": "",
     "last_abnormal_level": "bear_trap",
-    "last_abnormal_pushed_at": 1784166740.6672287,
+    "last_abnormal_pushed_at": 1784167045.4991229,
     "netflow_history": [
       -25139899.999999996,
       0.0,
@@ -169,7 +169,7 @@
     "signal_at": "",
     "last_alert_at": "",
     "last_abnormal_level": "bear_trap",
-    "last_abnormal_pushed_at": 1784166741.8482425,
+    "last_abnormal_pushed_at": 1784167046.8179677,
     "netflow_history": [
       -21435800.0,
       0.0,
