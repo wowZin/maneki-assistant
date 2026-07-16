@@ -67,10 +67,9 @@ def check_and_push(results: list[dict], data_dir: Path) -> list[dict]:
     if not to_push:
         return []
 
-    # 调用 push_feishu（自带评分提高重推逻辑）
+    # 调用 push_feishu（自带评分提高重推逻辑,内部已打日志）
     try:
         push_feishu(to_push)
-        print(f"  [推送] {len(to_push)} 只 → 飞书")
 
         # 存档已推记录供查询（原子写入）
         pushed_path = pushed_dir / f"{today_str}.json"
