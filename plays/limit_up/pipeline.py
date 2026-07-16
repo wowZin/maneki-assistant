@@ -635,16 +635,15 @@ def _run_pre_scored_round(pool_codes: list[str], pool_name_map: dict[str, str],
                            pool_extras: dict[str, dict] | None = None,
                            t1_panel: pd.DataFrame | None = None,
                            iter_count: int = 0) -> list[dict]:
-    """盘中评分：预趋势池 + 涨幅榜异动股，实时 pct_chg 覆盖后批量评分。"""
+    """盘中评分：从预评分池取股，实时 pct_chg 覆盖后批量评分。"""
     from plays.limit_up.factors.optimized.model_score import factor_model_score_batch as _m
     from plays.limit_up.pusher import check_and_push
-    from plays.limit_up.pipeline_feishu import scan_surge
 
     today_str = _today_str()
     hhmm = _hhmm()
     quotes: dict[str, dict] = {}
 
-    # ① batch_quotes 全量（每5轮刷新）
+    # ① batch_quotes（每5轮刷新）
     if iter_count % 5 == 0 or not getattr(_run_pre_scored_round, "_rc", None):
         if iter_count > 0:
             print(f"\n[{_now().strftime('%H:%M')}] batch_quotes...")
@@ -653,23 +652,15 @@ def _run_pre_scored_round(pool_codes: list[str], pool_name_map: dict[str, str],
     else:
         quotes = _run_pre_scored_round._rc
 
-    # ② 涨幅榜扫异动股（涨幅5-9.5%,补上盘中热票）
-    try:
-        surge = scan_surge() or []
-        surge_codes = [s["code"] for s in surge if 5 <= s.get("pct_chg", 0) < 9.8]
-    except Exception:
-        surge_codes = []
-    all_codes = list(set(pool_codes + surge_codes))
-
-    # ③ 从面板取 T-1 特征
+    # ② 从面板取 T-1 特征
     if t1_panel is not None:
-        pit_df = t1_panel[t1_panel["code"].isin(all_codes)].copy()
+        pit_df = t1_panel[t1_panel["code"].isin(pool_codes)].copy()
     else:
         pit_df = pd.DataFrame()
     if pit_df.empty:
         return []
 
-    # ④ 实时覆盖（含 pct_chg！真实趋势评分）
+    # ③ 实时覆盖（含 pct_chg！趋势评分）
     for code in pit_df["code"].tolist():
         q = quotes.get(code, {})
         m = pit_df["code"] == code
