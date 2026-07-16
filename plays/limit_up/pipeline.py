@@ -635,82 +635,81 @@ def _run_pre_scored_round(pool_codes: list[str], pool_name_map: dict[str, str],
                            pool_extras: dict[str, dict] | None = None,
                            t1_panel: pd.DataFrame | None = None,
                            iter_count: int = 0) -> list[dict]:
-    """预评分池模式：不粗评，只对池内股做实时评分+推送。"""
+    """盘中评分：预趋势池 + 涨幅榜异动股，实时 pct_chg 覆盖后批量评分。"""
     from plays.limit_up.factors.optimized.model_score import factor_model_score_batch as _m
     from plays.limit_up.pusher import check_and_push
-    from plays.limit_up.pipeline_feishu import stage2_deep
+    from plays.limit_up.pipeline_feishu import stage2_deep, scan_surge
 
     today_str = _today_str()
     hhmm = _hhmm()
     quotes: dict[str, dict] = {}
 
-    # batch_quotes (每5轮或首次)
-    _need_scan = iter_count % 5 == 0 or not getattr(_run_pre_scored_round, "_rc", None)
-    if _need_scan:
+    # ① batch_quotes 全量（每5轮刷新）
+    if iter_count % 5 == 0 or not getattr(_run_pre_scored_round, "_rc", None):
         if iter_count > 0:
-            print(f"\n[{_now().strftime('%H:%M')}] ① batch_quotes {len(pool_codes)}只...")
+            print(f"\n[{_now().strftime('%H:%M')}] batch_quotes...")
         quotes = scan_batch(pool_codes)
         _run_pre_scored_round._rc = quotes
     else:
         quotes = _run_pre_scored_round._rc
 
-    # 过滤
-    filtered = []
-    for code in pool_codes:
-        q = quotes.get(code)
-        if q is None: continue
-        pct = float(q.get("pct_chg", 0) or 0)
-        if pct >= 9.8 or pct >= 7.0: continue
-        filtered.append(code)
-    if not filtered:
-        if iter_count > 0: print(f"  [{hhmm}] 过滤后0只")
-        return []
+    # ② 涨幅榜扫异动股（涨幅5-9.5%,补上盘中热票）
+    try:
+        surge = scan_surge() or []
+        surge_codes = [s["code"] for s in surge if 5 <= s.get("pct_chg", 0) < 9.8]
+    except Exception:
+        surge_codes = []
+    all_codes = list(set(pool_codes + surge_codes))
 
-    # T-1 面板 + 实时覆盖
+    # ③ 从面板取 T-1 特征
     if t1_panel is not None:
-        pit_df = t1_panel[t1_panel["code"].isin(filtered)].copy()
+        pit_df = t1_panel[t1_panel["code"].isin(all_codes)].copy()
     else:
         pit_df = pd.DataFrame()
-
     if pit_df.empty:
         return []
 
-    for code in filtered:
+    # ④ 实时覆盖（含 pct_chg！真实趋势评分）
+    for code in pit_df["code"].tolist():
         q = quotes.get(code, {})
         m = pit_df["code"] == code
-        pit_df.loc[m, "pct_chg_score_day"] = float(q.get("pct_chg", 0) or 0)
+        rt_pct = float(q.get("pct_chg", 0) or 0)
+        pit_df.loc[m, "pct_chg_score_day"] = rt_pct
         rt_tr = float(q.get("turnover", 0) or 0)
         if rt_tr > 0: pit_df.loc[m, "turnover_rate"] = rt_tr
         rt_vr = float(q.get("vol_ratio", 0) or 0)
         if rt_vr > 0: pit_df.loc[m, "volume_ratio"] = rt_vr
 
-    # 模型评分
+    # ⑤ 批量评分
     try:
         pit_df["model_score"] = _m(pit_df)
     except Exception as e:
-        print(f"  模型评分失败: {e}")
+        print(f"  评分失败: {e}")
         return []
 
-    # 推送
+    # ⑥ 推送（仅 涨停不推）
     all_results, push_candidates = [], []
     for _, r in pit_df.iterrows():
         score = float(r["model_score"])
         code = r["code"]
         name = pool_name_map.get(code, "")
-        if score >= float(os.environ.get("ULTIMATE_PUSH_THRESHOLD","55")):
-            print(f"    ≥55 {code} {name} score={score:.1f} → 推送")
-            rec = {"code": code, "name": name, "total_score": score, "score_mode": "model_score",
-                   "pct_chg": quotes.get(code,{}).get("pct_chg",0)}
+        rt_pct = quotes.get(code, {}).get("pct_chg", 0)
+        if rt_pct is not None and float(rt_pct) >= 9.8:
+            continue
+        if score >= float(os.environ.get("ULTIMATE_PUSH_THRESHOLD", "55")):
+            print(f"    ≥55 {code} {name} score={score:.1f} pct_chg={rt_pct}%")
+            rec = {"code": code, "name": name, "total_score": score,
+                   "score_mode": "model_score", "pct_chg": rt_pct}
             all_results.append(rec); push_candidates.append(rec)
-            _log_snapshot(rec, score, quotes.get(code))
-        elif score >= float(os.environ.get("L2_GREY_LOW","45")):
+        elif score >= float(os.environ.get("L2_GREY_LOW", "45")):
             print(f"    [45-55) {code} {name} score={score:.1f} → L2...")
             confirmed = stage2_deep(code, name, score)
-            _log_snapshot({"code":code,"name":name,"pct_chg":quotes.get(code,{}).get("pct_chg",0),
-                           "scores":{}}, score, quotes.get(code))
+            _log_snapshot({"code": code, "name": name, "pct_chg": rt_pct, "scores": {}},
+                          score, quotes.get(code))
             if confirmed:
                 confirmed["total_score"] = score; confirmed["l2_confirmed"] = True
                 all_results.append(confirmed); push_candidates.append(confirmed)
+
     save_analysis(all_results)
     check_and_push(push_candidates, PROJECT_DIR / "plays" / "limit_up" / "data")
     return all_results
