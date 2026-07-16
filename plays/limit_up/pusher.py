@@ -6,7 +6,7 @@
   2. 从 pushed 历史中去重
   3. 调用 pipeline_feishu.push_feishu() 真正发送飞书卡片
 
-注意：pushed 文件只由 pipeline_feishu.push_feishu() 写入，本模块不再重复落盘。
+注意：本模块负责将推送记录落盘 pushed/ 供去重。
 """
 
 from __future__ import annotations
@@ -44,11 +44,10 @@ def check_and_push(results: list[dict], data_dir: Path) -> list[dict]:
 
     Args:
         results: 评分结果列表，每个结果必须含 code/name/total_score。
-                 灰区(45-55) L2 通过的结果也在此传入（带 l2_confirmed=True）。
         data_dir: plays/limit_up/data 目录路径。
 
     Returns:
-        实际推送的股票列表（可能为空）。
+        实际新推送的股票列表（可能为空）。
     """
     if not is_trading_time():
         return []
@@ -61,8 +60,8 @@ def check_and_push(results: list[dict], data_dir: Path) -> list[dict]:
     pushed_dir = data_dir / "pushed"
     pushed_dir.mkdir(parents=True, exist_ok=True)
 
-    # 阈值过滤：L2 确认通过的灰区股(score<55)直接放行
-    to_push = [r for r in results 
+    # 阈值过滤
+    to_push = [r for r in results
                if r.get("total_score", 0) >= PUSH_THRESHOLD
                or r.get("l2_confirmed", False)]
     if not to_push:
@@ -77,6 +76,14 @@ def check_and_push(results: list[dict], data_dir: Path) -> list[dict]:
     try:
         push_feishu(new)
         print(f"  [推送] {len(new)} 只 → 飞书")
+
+        # 存档已推记录供去重（原子写入）
+        pushed_path = pushed_dir / f"{today_str}.json"
+        all_pushed = existing | {r["code"] for r in new}
+        records = [r for r in to_push if r["code"] in all_pushed]
+        tmp = pushed_path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(records, ensure_ascii=False))
+        tmp.rename(pushed_path)
         return new
     except Exception as e:
         print(f"  [推送] 失败: {e}")
