@@ -50,24 +50,33 @@ def scan():
         return
     panel = pd.read_parquet(pf).set_index("code")
 
-    # 涨幅榜
+    # 全市场扫描(THS SDK batch_quotes,无需cookie)
+    from scripts.ths_client import get_ths_client as _ths
     try:
-        from plays.limit_up.pipeline_feishu import scan_surge
-        surge = scan_surge() or []
-        # 涨幅5-9.5%,未涨停,且不在现有池中的
+        pool_file = Path(__file__).resolve().parent / "data" / "pool" / f"pool_{td}.json"
+        if not pool_file.exists():
+            print(f"  [surge] 无候选池: {pool_file}")
+            return
+        pool = json.loads(pool_file.read_text())
+        pool_codes = [s["code"] for s in pool]
+        ths = _ths()
         new_codes = []
-        for s in surge:
-            pct = s.get("pct_chg", 0) or 0
-            if not (0 <= pct < 9.8):
-                continue
-            code = s["code"]
-            if code in existing_codes:
-                continue
-            if code not in panel.index:
-                continue
-            new_codes.append(code)
+        for i in range(0, len(pool_codes), 50):
+            batch = pool_codes[i:i+50]
+            quotes = ths.get_batch_quotes(batch)
+            for code, q in quotes.items():
+                pct = float(q.get("pct_chg", 0) or 0)
+                if not (5 <= pct < 9.8):
+                    continue
+                if code in existing_codes:
+                    continue
+                if code not in panel.index:
+                    continue
+                new_codes.append(code)
+            if len(new_codes) >= 20:  # 最多20只
+                break
     except Exception as e:
-        print(f"  [surge] 涨幅榜失败: {e}")
+        print(f"  [surge] 扫描失败: {e}")
         return
 
     if not new_codes:
@@ -76,7 +85,6 @@ def scan():
     print(f"  [surge] 发现 {len(new_codes)} 只新异动股: {new_codes[:5]}...")
 
     # 从面板取 T-1 特征 + 实时 pct_chg 覆盖
-    from scripts.ths_client import get_ths_client as _ths
     pit_rows = []
     for code in new_codes:
         try:
