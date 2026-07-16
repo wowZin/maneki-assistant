@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 ANALYSIS_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "analysis"
 PANEL_DIR = Path(__file__).resolve().parent.parent.parent / "wiki" / "raw" / "limit-up" / "panel"
-PUSH_THRESHOLD = 35  # 预评分阈值
+PUSH_THRESHOLD = 45  # 预评分阈值
 
 
 def _today() -> str:
