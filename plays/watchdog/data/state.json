@@ -79,8 +79,8 @@
   },
   "000811.SZ": {
     "code": "000811.SZ",
-    "name": "冰轮环境",
-    "added_at": "2026-07-16T14:08:17.776281",
+    "name": "000811",
+    "added_at": "2026-07-16T14:18:44.121271",
     "status": "watching",
     "entry_price": 0,
     "entry_at": "",
@@ -90,8 +90,8 @@
     "signal_reason": "",
     "signal_at": "",
     "last_alert_at": "",
-    "last_abnormal_level": "bear_trap",
-    "last_abnormal_pushed_at": 1784182188.9415874,
+    "last_abnormal_level": "warning",
+    "last_abnormal_pushed_at": 1784182786.079243,
     "netflow_history": [
       -101992599.99999999,
       -101992599.99999999
@@ -111,7 +111,7 @@
   "001287.SZ": {
     "code": "001287.SZ",
     "name": "中电港",
-    "added_at": "2026-07-16T14:08:17.777998",
+    "added_at": "2026-07-16T14:18:44.123718",
     "status": "watching",
     "entry_price": 0,
     "entry_at": "",
@@ -121,8 +121,8 @@
     "signal_reason": "",
     "signal_at": "",
     "last_alert_at": "",
-    "last_abnormal_level": "bear_trap",
-    "last_abnormal_pushed_at": 1784182189.087953,
+    "last_abnormal_level": "warning",
+    "last_abnormal_pushed_at": 1784182787.2411869,
     "netflow_history": [
       -56224500.0,
       -56224500.0
