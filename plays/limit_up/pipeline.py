@@ -631,7 +631,8 @@ def _log_snapshot(r: dict, score: float, quote: dict | None = None):
         pass
 
 
-def _run_pre_scored_round(pool_codes: list[str], pool_name_map: dict[str, str],
+def _run_pre_scored_round(pool_codes: list[str] | None = None,
+                           pool_name_map: dict[str, str] | None = None,
                            pool_extras: dict[str, dict] | None = None,
                            t1_panel: pd.DataFrame | None = None,
                            iter_count: int = 0) -> list[dict]:
@@ -643,7 +644,17 @@ def _run_pre_scored_round(pool_codes: list[str], pool_name_map: dict[str, str],
     hhmm = _hhmm()
     quotes: dict[str, dict] = {}
 
-    # ① batch_quotes（每5轮刷新）
+    # ① 读取最新预评分池（每轮刷新,接收surge_scanner追加）
+    try:
+        af = Path(__file__).resolve().parent.parent.parent / "data" / "analysis" / f"{_today_str()}.json"
+        _pool = json.loads(af.read_text()) if af.exists() else []
+        pool_codes = [r["code"] for r in _pool]
+    except Exception:
+        pool_codes = []
+    if not pool_codes:
+        return []
+
+    # ② batch_quotes（每5轮刷新）
     if iter_count % 5 == 0 or not getattr(_run_pre_scored_round, "_rc", None):
         if iter_count > 0:
             print(f"\n[{_now().strftime('%H:%M')}] batch_quotes...")
@@ -683,7 +694,7 @@ def _run_pre_scored_round(pool_codes: list[str], pool_name_map: dict[str, str],
     for _, r in pit_df.iterrows():
         score = float(r["model_score"])
         code = r["code"]
-        name = pool_name_map.get(code, "")
+        name = (pool_name_map or {}).get(code, "")
         rt_pct = quotes.get(code, {}).get("pct_chg", 0)
         if rt_pct is not None and float(rt_pct) >= 9.8:
             continue
@@ -884,8 +895,7 @@ def main_loop():
 
             iter_count += 1
             t0 = time.time()
-            pool_codes = [r["code"] for r in _run_pre_scored_round._pool]
-            deep_results = _run_pre_scored_round(pool_codes, pool_name_map,
+            deep_results = _run_pre_scored_round(pool_name_map=pool_name_map,
                                                   t1_panel=_run_pre_scored_round._t1_panel,
                                                   iter_count=iter_count)
             elapsed = time.time() - t0
