@@ -707,7 +707,11 @@ def _run_pre_scored_round(pool_codes: list[str] | None = None,
         if score >= float(os.environ.get("ULTIMATE_PUSH_THRESHOLD", "55")):
             print(f"    ≥55 {code} {name} score={score:.1f} pct_chg={rt_pct}%")
             rec = {"code": code, "name": name, "total_score": score,
-                   "score_mode": "model_score", "pct_chg": rt_pct}
+                   "score_mode": "model_score", "pct_chg": rt_pct,
+                   "technical": float(r.get("technical", 0) or 0),
+                   "fundflow": float(r.get("fundflow", 0) or 0),
+                   "sentiment": float(r.get("sentiment", 0) or 0),
+                   "shortterm": float(r.get("shortterm", 0) or 0)}
             all_results.append(rec); push_candidates.append(rec)
             # 自动加入 watchdog 盯盘
             try:
