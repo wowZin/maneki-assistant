@@ -65,14 +65,18 @@ def scan():
             batch = pool_codes[i:i+50]
             quotes = ths.get_batch_quotes(batch)
             for code, q in quotes.items():
+                if q is None:
+                    continue
                 pct = float(q.get("pct_chg", 0) or 0)
                 if not (5 <= pct < 9.8):
                     continue
-                if code in existing_codes:
+                # THS SDK 返回短码,转全码
+                full_code = f"{code}.SH" if code.startswith("6") else f"{code}.SZ"
+                if full_code in existing_codes:
                     continue
-                if code not in panel.index:
+                if full_code not in panel.index:
                     continue
-                new_codes.append(code)
+                new_codes.append(full_code)
             if len(new_codes) >= 20:  # 最多20只
                 break
     except Exception as e:
