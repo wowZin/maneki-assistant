@@ -13,9 +13,9 @@
     "signal_at": "",
     "last_alert_at": "",
     "last_abnormal_level": "bear_trap",
-    "last_abnormal_pushed_at": 1784170761.044125,
+    "last_abnormal_pushed_at": 1784171067.7385175,
     "netflow_history": [
-      -15774100.0,
+      -17958100.0,
       -15774100.0,
       -17958100.0,
       -15774100.0,
@@ -54,7 +54,7 @@
     "last_abnormal_level": "",
     "last_abnormal_pushed_at": 0,
     "netflow_history": [
-      73244599.99999997,
+      76729800.0,
       73244599.99999997,
       76729800.0,
       73244599.99999997,
@@ -93,7 +93,7 @@
     "last_abnormal_level": "",
     "last_abnormal_pushed_at": 1784169650.8877718,
     "netflow_history": [
-      -89361600.0,
+      -93159199.99999999,
       -89361600.0,
       -93159199.99999999,
       -89361600.0,
@@ -130,9 +130,9 @@
     "signal_at": "",
     "last_alert_at": "",
     "last_abnormal_level": "bear_trap",
-    "last_abnormal_pushed_at": 1784170762.5551367,
+    "last_abnormal_pushed_at": 1784171070.275446,
     "netflow_history": [
-      -12089500.0,
+      -12566000.0,
       -12089500.0,
       -12566000.0,
       -12089500.0,

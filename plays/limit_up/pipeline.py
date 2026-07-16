@@ -700,7 +700,7 @@ def _run_pre_scored_round(pool_codes: list[str] | None = None,
     for _, r in pit_df.iterrows():
         score = float(r["model_score"])
         code = r["code"]
-        name = (pool_name_map or {}).get(code, "")
+        name = (pool_name_map or {}).get(code, "") or code.split(".")[0]
         rt_pct = quotes.get(code, {}).get("pct_chg")
         if rt_pct is not None and float(rt_pct) >= 9.8:
             continue
