@@ -945,7 +945,7 @@ def push_feishu(results):
         code = r["code"]
         current_score = r.get("total_score", 0)
         last_score = push_state.get(code, 0)
-        if current_score > last_score:
+        if current_score > last_score + 0.5:
             push_list.append(r)
         else:
             print(f"  [跳过] {code}: 评分 {current_score} <= 上次推送 {last_score}")
