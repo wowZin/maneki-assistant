@@ -115,7 +115,7 @@ def scan_surge():
                 continue
             if re.match(r"^(300|301|688|8|4|920)", code):
                 continue
-            if pct < 0 or pct >= 9.5:
+            if pct < 0 or pct >= 9.9:
                 continue
             if "." not in code:
                 code = f"{code}.SH" if code.startswith("6") else f"{code}.SZ"

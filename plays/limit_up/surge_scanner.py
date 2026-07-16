@@ -58,7 +58,7 @@ def scan():
         new_codes = []
         for s in surge:
             pct = s.get("pct_chg", 0) or 0
-            if not (5 <= pct < 9.8):
+            if not (0 <= pct < 9.8):
                 continue
             code = s["code"]
             if code in existing_codes:
