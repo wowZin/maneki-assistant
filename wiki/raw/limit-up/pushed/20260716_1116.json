@@ -1,0 +1,15 @@
+[
+  {
+    "code": "000977.SZ",
+    "name": "000977",
+    "total_score": 60.12,
+    "score_mode": "model_score",
+    "pct_chg": 2.05,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 22.0,
+      "sentiment": 15.0,
+      "shortterm": 10.0
+    }
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "code": "001287.SZ",
+    "name": "中电港",
+    "total_score": 62.65,
+    "score_mode": "model_score",
+    "pct_chg": -2.93
+  },
+  {
+    "code": "000811.SZ",
+    "name": "",
+    "total_score": 61.81,
+    "score_mode": "model_score",
+    "pct_chg": -4.67
+  },
+  {
+    "code": "000977.SZ",
+    "name": "",
+    "total_score": 59.05,
+    "score_mode": "model_score",
+    "pct_chg": 0.35
+  }
+]

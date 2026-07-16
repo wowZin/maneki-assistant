@@ -15,16 +15,16 @@
     "last_abnormal_level": "",
     "last_abnormal_pushed_at": 0,
     "netflow_history": [
-      59999999.99999985,
-      59999999.99999985,
-      59999999.99999985,
-      59999999.99999985,
-      59999999.99999985,
-      59999999.99999985,
-      59999999.99999985,
-      59999999.99999985,
-      59999999.99999985,
-      59999999.99999985
+      74000000.0,
+      74000000.0,
+      74000000.0,
+      74000000.0,
+      74000000.0,
+      74000000.0,
+      74000000.0,
+      74000000.0,
+      74000000.0,
+      74000000.0
     ],
     "daily_basic": {
       "ts_code": "000938.SZ",
@@ -54,16 +54,16 @@
     "last_abnormal_level": "",
     "last_abnormal_pushed_at": 1784169650.8877718,
     "netflow_history": [
-      112192099.99999999,
-      112192099.99999999,
-      112192099.99999999,
-      112192099.99999999,
-      112192099.99999999,
-      112192099.99999999,
-      112192099.99999999,
-      112192099.99999999,
-      112192099.99999999,
-      112192099.99999999
+      122246400.0,
+      122246400.0,
+      122246400.0,
+      122246400.0,
+      122246400.0,
+      122246400.0,
+      122246400.0,
+      122246400.0,
+      122246400.0,
+      122246400.0
     ],
     "daily_basic": {
       "ts_code": "000977.SZ",
@@ -80,7 +80,7 @@
   "000811.SZ": {
     "code": "000811.SZ",
     "name": "000811",
-    "added_at": "2026-07-16T14:18:44.121271",
+    "added_at": "2026-07-16T14:56:05.757272",
     "status": "watching",
     "entry_price": 0,
     "entry_at": "",
@@ -90,11 +90,11 @@
     "signal_reason": "",
     "signal_at": "",
     "last_alert_at": "",
-    "last_abnormal_level": "warning",
-    "last_abnormal_pushed_at": 1784182786.079243,
+    "last_abnormal_level": "bear_trap",
+    "last_abnormal_pushed_at": 1784185177.8936067,
     "netflow_history": [
-      -101992599.99999999,
-      -101992599.99999999
+      -115397800.0,
+      -115397800.0
     ],
     "daily_basic": {
       "ts_code": "000811.SZ",
@@ -110,9 +110,9 @@
   },
   "001287.SZ": {
     "code": "001287.SZ",
-    "name": "中电港",
-    "added_at": "2026-07-16T14:18:44.123718",
+    "name": "\u4e2d\u7535\u6e2f",
     "status": "watching",
+    "added_at": "2026-07-16T14:59:38.030947",
     "entry_price": 0,
     "entry_at": "",
     "highest_since_entry": 0,
@@ -121,22 +121,11 @@
     "signal_reason": "",
     "signal_at": "",
     "last_alert_at": "",
-    "last_abnormal_level": "warning",
-    "last_abnormal_pushed_at": 1784182787.2411869,
-    "netflow_history": [
-      -56224500.0,
-      -56224500.0
-    ],
-    "daily_basic": {
-      "ts_code": "001287.SZ",
-      "trade_date": "20260715",
-      "pe": 71.2556,
-      "pb": 3.6571,
-      "circ_mv": 2025133.7665,
-      "turnover_rate": 5.9124,
-      "volume_ratio": 0.74
-    },
+    "last_abnormal_level": "",
+    "last_abnormal_pushed_at": 0,
+    "netflow_history": [],
+    "daily_basic": {},
     "dim_scores": {},
-    "last_daily_update": "20260716"
+    "last_daily_update": ""
   }
 }
