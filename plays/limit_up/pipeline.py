@@ -845,8 +845,9 @@ def main_loop():
                                              "prev_turnover": s.get("turnover_rate", 0.0),
                                              "prev_vol_ratio": s.get("volume_ratio", 0.0)} for s in pool}
                 print(f"    候选池 {len(pool)} 只 ✓")
+                pool_built = True  # 先放行评分循环
 
-                # 开盘一次性预取 T-1 数据（moneyflow/top_list/top_inst/daily/limit）
+                # T-1 数据后台预取（不影响评分）
                 try:
                     from scripts.tu_share import call_tushare as _ct
                     from plays.limit_up.strategies import factor_ctx
@@ -885,7 +886,7 @@ def main_loop():
                     print(f"    T-1 预取: moneyflow {len(_T1_MF_CACHE)}只 龙虎榜{len(_T1_TL_CACHE)}只 ✓")
                 except Exception as _e:
                     print(f"    T-1 预取失败: {_e}")
-                pool_built = True
+
 
             # ── 交易时段：持续评分 ──
             trading = _is_trading_session(hhmm)
