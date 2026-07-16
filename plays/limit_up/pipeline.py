@@ -638,7 +638,7 @@ def _run_pre_scored_round(pool_codes: list[str], pool_name_map: dict[str, str],
     """盘中评分：预趋势池 + 涨幅榜异动股，实时 pct_chg 覆盖后批量评分。"""
     from plays.limit_up.factors.optimized.model_score import factor_model_score_batch as _m
     from plays.limit_up.pusher import check_and_push
-    from plays.limit_up.pipeline_feishu import stage2_deep, scan_surge
+    from plays.limit_up.pipeline_feishu import scan_surge
 
     today_str = _today_str()
     hhmm = _hhmm()
