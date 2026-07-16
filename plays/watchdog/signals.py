@@ -47,31 +47,9 @@ from plays.limit_up.factors.crossdim.divergence import factor_dimension_divergen
 from plays.limit_up.factors.fundflow.rebuilt import factor_fundflow_rebuilt
 from plays.limit_up.factors.fundamental.rebuilt import factor_fundamental_rebuilt
 
-from plays.watchdog.indicators import minute_momentum
-
 
 # ── 入场信号配置 ──
 ENTRY_CONFIG = {
-    "breakout": {
-        "min_gap_up": 0.0,
-        "min_pct": 2.0,
-        "min_vol_ratio": 1.3,
-        "min_turnover": 5.0,
-        "min_breakout_score": 10.0,
-        "min_quality_combo": 0.0,
-    },
-    "surge": {
-        "min_minute_chg": 2.0,
-        "min_minute_vol_ratio": 1.5,
-        "min_intraday_score": 10.0,
-        "min_turnover": 3.0,
-    },
-    "sprint": {
-        "min_pct": 7.0,
-        "min_turnover": 12.0,
-        "min_turnover_momentum": 12.0,
-    },
-    # 模型分全局门槛：所有入场模式必须 >= 此值才允许触发
     "min_model_score": 40.0,
 }
 
@@ -167,87 +145,36 @@ def check_entry(row: dict, scores: dict, klines: list[dict]) -> tuple[bool, str,
     if l1_reasons:
         return False, "", f"L1拒绝: {'; '.join(l1_reasons)}"
 
-    pct = row.get("pct_chg_score_day", 0.0)
-    turnover = row.get("turnover_rate", 0.0)
-    vol_ratio = row.get("vol_ratio_proxy", 1.0)
-    quality_combo = scores.get("quality_combo", 0.0)
+    # ── 实时入场信号 ──
+    pct = float(row.get("pct_chg_score_day", 0) or 0)
+    turnover = float(row.get("turnover_rate", 0) or 0)
+    vol_ratio = float(row.get("vol_ratio_proxy", 1.0) or 1.0)
 
-    # 模式 A：突破
-    bc = cfg["breakout"]
-    gap = row.get("gap_up", 0.0)
-    if (
-        gap >= bc["min_gap_up"]
-        and pct >= bc["min_pct"]
-        and vol_ratio >= bc["min_vol_ratio"]
-        and turnover >= bc["min_turnover"]
-        and scores.get("breakout_quality", 0.0) >= bc["min_breakout_score"]
-        and quality_combo >= bc["min_quality_combo"]
-    ):
-        extra = []
-        sent = scores.get("sentiment_ensemble", 0.0)
-        if sent < 10:
-            extra.append(f"情绪偏低({sent:.0f})")
-        elif sent >= 20:
-            extra.append(f"情绪支撑({sent:.0f})")
-        div = scores.get("dimension_divergence", 0.0)
-        if div >= 8:
-            extra.append(f"背离({div:.0f})")
-        reason = (
-            f"突破: {pct:.1f}% 换手{turnover:.1f}% 量比{vol_ratio:.2f} "
-            f"模型{model_score:.0f} breakout={scores.get('breakout_quality', 0):.0f}"
-        )
-        if extra:
-            reason += " | " + " ".join(extra)
-        return True, "breakout", reason
+    # 信号 1: 价突破 VWAP（最核心的信号）
+    if vwap > 0 and last > 0 and last >= vwap and pct > 1.0:
+        details = []
+        if outer > inner:
+            details.append(f"外{outer:.0f}>内{inner:.0f}")
+        if vol_ratio > 1.3:
+            details.append(f"量比{vol_ratio:.2f}")
+        if turnover > 3:
+            details.append(f"换手{turnover:.1f}%")
+        reason = f"突破VWAP {last:.2f}>{vwap:.2f} 涨{pct:.1f}%"
+        if details:
+            reason += " " + " ".join(details)
+        return True, "vwap_break", reason
 
-    # 模式 B：放量拉升
-    sc = cfg["surge"]
-    mom = minute_momentum(klines, n=5)
-    if (
-        mom["chg_pct"] >= sc["min_minute_chg"]
-        and mom["vol_ratio"] >= sc["min_minute_vol_ratio"]
-        and scores.get("intraday_strength", 0.0) >= sc["min_intraday_score"]
-        and turnover >= sc["min_turnover"]
-    ):
-        extra = []
-        sent = scores.get("sentiment_ensemble", 0.0)
-        if sent >= 20:
-            extra.append(f"情绪支撑({sent:.0f})")
-        div = scores.get("dimension_divergence", 0.0)
-        if div >= 8:
-            extra.append(f"注意背离({div:.0f})")
-        reason = (
-            f"放量拉升: 5分钟{mom['chg_pct']:.1f}% 5分钟量比{mom['vol_ratio']:.2f} "
-            f"模型{model_score:.0f} intraday={scores.get('intraday_strength', 0):.0f}"
-        )
-        if extra:
-            reason += " | " + " ".join(extra)
-        return True, "surge", reason
+    # 信号 2: 放量拉升（价量齐升）
+    if pct > 2.5 and vol_ratio > 1.8 and turnover > 4:
+        reason = f"放量拉升{pct:.1f}% 量比{vol_ratio:.2f} 换手{turnover:.1f}%"
+        if vwap > 0 and last > vwap:
+            reason += f" VWAP上"
+        return True, "volume_surge", reason
 
-    # 模式 C：涨停冲刺（短线专用）
-    sp = cfg["sprint"]
-    if (
-        pct >= sp["min_pct"]
-        and turnover >= sp["min_turnover"]
-        and scores.get("turnover_momentum", 0.0) >= sp["min_turnover_momentum"]
-    ):
-        extra = []
-        tr = scores.get("trailing_momentum", 0.0)
-        if tr >= 15:
-            extra.append(f"动量强({tr:.0f})")
-        gr = scores.get("growth_momentum", 0.0)
-        if gr >= 10:
-            extra.append(f"成长加速({gr:.0f})")
-        div = scores.get("dimension_divergence", 0.0)
-        if div >= 8:
-            extra.append(f"注意背离({div:.0f})")
-        reason = (
-            f"涨停冲刺: {pct:.1f}% 换手{turnover:.1f}% "
-            f"模型{model_score:.0f} turnover_momentum={scores.get('turnover_momentum', 0):.0f}"
-        )
-        if extra:
-            reason += " | " + " ".join(extra)
-        return True, "sprint", reason
+    # 信号 3: 外盘占优（买盘积极）
+    if outer > 0 and inner > 0 and outer > inner * 1.3:
+        if last >= vwap and pct > 0.5:
+            return True, "buy_active", f"外盘{outer:.0f}>{inner:.0f}(×{outer/inner:.2f}) 价{last:.2f}>VWAP{vwap:.2f}"
 
     return False, "", ""
 
