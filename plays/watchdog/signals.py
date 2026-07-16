@@ -186,6 +186,7 @@ def check_exit(
     bars_held: int,
     vwap: float,
     scores: dict,
+    row: dict | None = None,
     config: dict | None = None,
 ) -> tuple[bool, str]:
     """检查是否触发出场信号。
@@ -223,35 +224,35 @@ def check_exit(
     if bars_held >= cfg["time_force_exit_minutes"]:
         return True, f"时间止损: 持仓{bars_held}分钟未达目标"
 
-    # ── 新增：回调出场（入场后已有盈利，从高点回落）──
+    # ── 回调出场（用实时量价判断,不依赖特征分）──
     if gain_pct >= cfg["pullback_entry_gain"] and highest_since_entry > entry_price:
         pullback_pct = (highest_since_entry - current_price) / highest_since_entry
         if pullback_pct >= cfg["min_pullback_exit"]:
-            # 结合 pullback_quality / pullback_from_peak / reversal_signal 判断
-            pb_quality = scores.get("pullback_quality", 0.0)
-            pb_peak = scores.get("pullback_from_peak", 0.0)
-            reversal = scores.get("reversal_signal", 0.0)
-            combined = pb_quality + pb_peak + reversal
+            vol_ratio = float(row.get("vol_ratio_proxy", 1.0) or 1.0) if row else 1.0
+            inner = float(row.get("inner_vol", 0) or 0) if row else 0
+            outer = float(row.get("outer_vol", 0) or 0) if row else 0
 
-            # 只有因子信号也确认回调时才出场，避免假摔
-            if reversal >= cfg["min_reversal_exit"]:
-                return True, (
-                    f"反转回调: 回撤{pullback_pct*100:.1f}% "
-                    f"最高{highest_since_entry:.2f} 现价{current_price:.2f} "
-                    f"reversal={reversal:.0f}"
-                )
-            if combined >= 15 and pullback_pct >= cfg["min_pullback_exit"]:
-                return True, (
-                    f"回调出场: 回撤{pullback_pct*100:.1f}% "
-                    f"最高{highest_since_entry:.2f} 现价{current_price:.2f} "
-                    f"pb={pb_quality:.0f}+{pb_peak:.0f} reversal={reversal:.0f}"
-                )
-            # 大幅回撤无条件出场
+            # 深度回撤 ≥10% → 无条件出场（保留）
             if pullback_pct >= 0.10:
                 return True, (
                     f"深度回撤: 回撤{pullback_pct*100:.1f}% "
                     f"最高{highest_since_entry:.2f} 现价{current_price:.2f}"
                 )
+
+            # 放量 + 跌破VWAP → 真跌,出场
+            if current_price < vwap and vol_ratio > 1.3:
+                return True, (
+                    f"真跌回调: 回撤{pullback_pct*100:.1f}% "
+                    f"放量(×{vol_ratio:.1f})跌破VWAP({vwap:.2f})"
+                )
+            # 外盘小于内盘 + 跌破VWAP → 抛压确认,出场
+            if current_price < vwap and outer < inner:
+                return True, (
+                    f"抛压回调: 回撤{pullback_pct*100:.1f}% "
+                    f"内{inner:.0f}>{outer:.0f}(×{inner/outer:.1f})跌破VWAP"
+                )
+            # 缩量 + 在VWAP上 → 正常波动,不出场
+            # 不返回,继续检查后续信号
 
     # 反转出场：盘中强度转负 + 跌破 VWAP
     intraday = scores.get("intraday_strength", 0.0)

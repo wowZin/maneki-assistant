@@ -554,8 +554,7 @@ class WatchdogEngine:
 
                 exit_triggered, exit_reason = check_exit(
                     st.entry_price, st.highest_since_entry, last,
-                    st.bars_held, vwap, scores
-                )
+                    st.bars_held, vwap, scores, row)
                 if exit_triggered:
                     pnl_pct = (last / st.entry_price - 1) * 100
                     _push_feishu(
