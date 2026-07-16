@@ -12,17 +12,12 @@
 
 from __future__ import annotations
 
-import os
-import re
 import threading
 from pathlib import Path
-
-import requests
 
 _CONCEPT_DIR = Path(__file__).resolve().parent.parent.parent.parent / "wiki" / "raw" / "limit-up" / "panel" / "concept"
 _MEMBERS_FILE = _CONCEPT_DIR / "concept_members.parquet"
 _NAMES_FILE = _CONCEPT_DIR / "concept_names.json"
-_GAINERS_URL = "https://data.10jqka.com.cn/market/zdfph/field/zdf/order/desc/ajax/{page}/"
 
 _LOCK = threading.RLock()
 _STOCK_CONCEPTS: dict[str, list[str]] = {}       # {short_code: [concept_name, ...]}
@@ -32,75 +27,37 @@ _LOADED = False
 _REFRESHED = False
 
 
-def _load_cookie() -> str:
-    """从 .env 加载同花顺 Cookie。"""
-    env_file = Path(__file__).resolve().parent.parent.parent.parent / ".env"
-    if not env_file.exists():
-        return ""
-    for line in env_file.read_text().splitlines():
-        line = line.strip()
-        if line.startswith("THS_COOKIE="):
-            return line.split("=", 1)[1]
-    return ""
-
-
 def _fetch_limit_up_codes() -> set[str]:
-    """调用同花顺涨幅榜 API（分页），返回全市场涨停股短码集合。"""
-    cookie = _load_cookie()
-    if not cookie:
-        print("[concept_cache] 无 THS Cookie")
+    """用 THS SDK batch_quotes 扫描全市场,返回涨停股短码集合。"""
+    try:
+        from scripts.ths_client import get_ths_client as _ths
+        import json
+        from pathlib import Path
+
+        # 读取候选池(1416只,开盘前已建好)
+        pool_file = Path(__file__).resolve().parent.parent.parent.parent / "plays" / "limit_up" / "data" / "pool"
+        pools = sorted(pool_file.glob(f"pool_*.json"))
+        if not pools:
+            print("[concept_cache] 无候选池")
+            return set()
+        pool = json.loads(pools[-1].read_text())
+        codes = [s["code"] for s in pool if s.get("code")]
+
+        ths = _ths()
+        limit_codes: set[str] = set()
+        for i in range(0, len(codes), 50):
+            batch = codes[i:i+50]
+            quotes = ths.get_batch_quotes(batch)
+            for code, q in quotes.items():
+                if q is None:
+                    continue
+                pct = float(q.get("pct_chg", 0) or 0)
+                if pct >= 9.5:
+                    limit_codes.add(code)
+        return limit_codes
+    except Exception as e:
+        print(f"[concept_cache] 扫描失败: {e}")
         return set()
-
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Cookie": cookie,
-    }
-    s = requests.Session()
-    s.headers.update(headers)
-    # 先访问主页面建立 session
-    s.get("https://data.10jqka.com.cn/market/zdfph/", timeout=10)
-
-    limit_codes: set[str] = set()
-    page = 1
-
-    while True:
-        url = _GAINERS_URL.format(page=page)
-        try:
-            r = s.get(url, timeout=10)
-            r.encoding = "gbk"
-            if r.status_code != 200:
-                break
-            rows = re.findall(r"<tr[^>]*>(.*?)</tr>", r.text, re.DOTALL)
-            page_codes: list[str] = []
-            for row in rows:
-                cells = re.findall(r"<td[^>]*>(.*?)</td>", row, re.DOTALL)
-                if len(cells) < 5:
-                    continue
-                code = re.sub(r"<[^>]+>", "", cells[1]).strip()
-                pct_str = re.sub(r"<[^>]+>", "", cells[4]).strip()
-                try:
-                    pct = float(pct_str)
-                except ValueError:
-                    continue
-                if code and pct >= 9.5:
-                    page_codes.append(code)
-            if not page_codes:
-                break
-            limit_codes.update(page_codes)
-            # 判断是否翻页：最后一只 > 9.9
-            last_cells = re.findall(r"<td[^>]*>(.*?)</td>", rows[-1], re.DOTALL)
-            if len(last_cells) >= 5:
-                lp = re.sub(r"<[^>]+>", "", last_cells[4]).strip()
-                try:
-                    if float(lp) < 9.9:
-                        break
-                except ValueError:
-                    break
-            page += 1
-        except Exception as e:
-            print(f"[concept_cache] 第{page}页失败: {e}")
-            break
-    return limit_codes
 
 
 def ensure_loaded():
