@@ -445,6 +445,14 @@ class WatchdogEngine:
             row = realtime_row(code, market, vwap, klines, daily_features, st.daily_basic, st.dim_scores, st.daily_rows)
             scores = compute_factor_scores(row)
 
+            # 补充 L1/L2 实时信号到 row（供 check_entry 入场确认）
+            row["bid1"] = bid1
+            row["ask1"] = ask1
+            row["vwap"] = vwap
+            row["inner_vol"] = market.get("inner_vol", 0)
+            row["outer_vol"] = market.get("outer_vol", 0)
+            row["last"] = market.get("last", 0)
+
             last = float(market.get("last") or 0)
 
             # 记录资金流向历史（最多保留 10 轮）

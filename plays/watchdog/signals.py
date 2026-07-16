@@ -141,6 +141,32 @@ def check_entry(row: dict, scores: dict, klines: list[dict]) -> tuple[bool, str,
     if model_score < cfg["min_model_score"]:
         return False, "", ""
 
+    # ── L1/L2 实时信号确认 ──
+    bid1 = row.get("bid1", 0) or 0
+    ask1 = row.get("ask1", 0) or 0
+    vwap = row.get("vwap", 0) or 0
+    last = row.get("last", 0) or 0
+    inner = float(row.get("inner_vol", 0) or 0)
+    outer = float(row.get("outer_vol", 0) or 0)
+
+    l1_reasons = []
+    if ask1 > 0 and bid1 > 0:
+        spread_ratio = ask1 / bid1
+        if spread_ratio > 3:
+            l1_reasons.append(f"卖压{ask1:.0f}→买{bid1:.0f}(×{spread_ratio:.1f})")
+    if vwap > 0 and last > 0:
+        vwap_dev = (last - vwap) / vwap * 100
+        if vwap_dev > 5:
+            l1_reasons.append(f"偏离均价{vwap_dev:.1f}%")
+        elif vwap_dev < -3:
+            l1_reasons.append(f"低于均价{vwap_dev:.1f}%")
+    if inner > 0 and outer > 0:
+        io_ratio = inner / outer
+        if io_ratio > 1.3:
+            l1_reasons.append(f"内盘{inner:.0f}→外{outer:.0f}(×{io_ratio:.2f})")
+    if l1_reasons:
+        return False, "", f"L1拒绝: {'; '.join(l1_reasons)}"
+
     pct = row.get("pct_chg_score_day", 0.0)
     turnover = row.get("turnover_rate", 0.0)
     vol_ratio = row.get("vol_ratio_proxy", 1.0)
