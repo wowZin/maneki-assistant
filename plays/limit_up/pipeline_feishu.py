@@ -127,12 +127,12 @@ def scan_surge():
         if len(candidates) >= MAX_CANDIDATES:
             break
 
-        # 翻页：当前页无候选或最后一只仍≥9.9% → 继续下一页
+        # 翻页：当前页无候选或最后一只仍≥5% → 继续下一页
         last_cells = re.findall(r"<td[^>]*>(.*?)</td>", rows[-1], re.DOTALL) if rows else []
         if not candidates or (len(last_cells) >= 5):
             lp = re.sub(r"<[^>]+>", "", last_cells[4]).strip() if len(last_cells) >= 5 else ""
             try:
-                if candidates and float(lp) < 9.9:
+                if candidates and float(lp) < 5.0:
                     break  # 已有候选且最后一只有效,翻页只会更低,停
             except ValueError:
                 pass
