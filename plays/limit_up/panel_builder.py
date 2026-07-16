@@ -592,9 +592,10 @@ def main():
         analysis_path = ANALYSIS_DIR / f"{today}.json"
         analysis_path.parent.mkdir(parents=True, exist_ok=True)
         keep = [c for c in df.columns if c not in ("pit_date",) and not c.startswith("_")]
-        hot[keep].to_json(
-            analysis_path, orient="records", force_ascii=False)
-        print(f"  [panel] 预评: {len(df)}只→≥30分={len(hot)}只已保存")
+        tmp = analysis_path.with_suffix(".tmp")
+        hot[keep].to_json(tmp, orient="records", force_ascii=False)
+        tmp.rename(analysis_path)  # 原子替换
+        print(f"  [panel] 预评: {len(df)}只→≥45分={len(hot)}只已保存")
     except Exception as e:
         print(f"  [panel] 预评跳过: {e}")
 

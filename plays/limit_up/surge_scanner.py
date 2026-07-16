@@ -121,7 +121,9 @@ def scan():
     if new_records:
         all_records = existing + new_records
         all_records.sort(key=lambda x: -x["model_score"])
-        af.write_text(json.dumps(all_records, ensure_ascii=False))
+        tmp = af.with_suffix(".tmp")
+        tmp.write_text(json.dumps(all_records, ensure_ascii=False))
+        tmp.rename(af)  # 原子替换,避免pipeline读到半写文件
         print(f"  [surge] 新增 {len(new_records)} 只 ≥{PUSH_THRESHOLD}, 池子共 {len(all_records)} 只")
     else:
         print(f"  [surge] 新异动股均未达阈值")
