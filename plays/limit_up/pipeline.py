@@ -649,6 +649,25 @@ def _run_pre_scored_round(pool_codes: list[str] | None = None,
         af = Path(__file__).resolve().parent.parent.parent / "data" / "analysis" / f"{_today_str()}.json"
         _pool = json.loads(af.read_text()) if af.exists() else []
         pool_codes = [r["code"] for r in _pool]
+        # 补齐股票名（不在pool_name_map中的从THS SDK取）
+        if pool_name_map is None:
+            pool_name_map = {}
+        missing = [c for c in pool_codes if c not in pool_name_map]
+        if missing:
+            try:
+                from scripts.ths_client import get_ths_client as _ths
+                _ths_inst = _ths()
+                _batch = [c.split(".")[0] for c in missing]
+                _quotes = _ths_inst.get_batch_quotes(_batch)
+                for c, q in _quotes.items():
+                    n = q.get("f_name", "") if q else ""
+                    if n:
+                        # Find the full code
+                        full = next((fc for fc in missing if fc.startswith(c)), None)
+                        if full:
+                            pool_name_map[full] = n
+            except Exception:
+                pass
     except Exception:
         pool_codes = []
     if not pool_codes:
