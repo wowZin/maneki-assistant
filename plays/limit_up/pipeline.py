@@ -701,14 +701,20 @@ def _run_pre_scored_round(pool_codes: list[str], pool_name_map: dict[str, str],
             rec = {"code": code, "name": name, "total_score": score,
                    "score_mode": "model_score", "pct_chg": rt_pct}
             all_results.append(rec); push_candidates.append(rec)
+            # 自动加入 watchdog 盯盘
+            try:
+                watchdog_path = Path(__file__).resolve().parent.parent.parent / "plays" / "watchdog" / "data" / "state.json"
+                if watchdog_path.exists():
+                    wd = json.loads(watchdog_path.read_text())
+                    if code not in wd.get("watching", {}):
+                        wd.setdefault("watching", {})[code] = {"name": name, "status": "watching"}
+                        watchdog_path.write_text(json.dumps(wd, indent=2))
+                        print(f"      ↳ 已加入watchdog盯盘")
+            except Exception:
+                pass
         elif score >= float(os.environ.get("L2_GREY_LOW", "45")):
-            print(f"    [45-55) {code} {name} score={score:.1f} → L2...")
-            confirmed = stage2_deep(code, name, score)
-            _log_snapshot({"code": code, "name": name, "pct_chg": rt_pct, "scores": {}},
-                          score, quotes.get(code))
-            if confirmed:
-                confirmed["total_score"] = score; confirmed["l2_confirmed"] = True
-                all_results.append(confirmed); push_candidates.append(confirmed)
+            print(f"    [45-55) {code} {name} score={score:.1f} → 灰区跳过")
+            # 不推送,不盯盘
 
     save_analysis(all_results)
     check_and_push(push_candidates, PROJECT_DIR / "plays" / "limit_up" / "data")
