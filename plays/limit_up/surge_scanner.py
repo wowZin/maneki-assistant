@@ -114,8 +114,14 @@ def scan():
     for _, r in pit_df.iterrows():
         score = float(r["model_score"])
         if score >= PUSH_THRESHOLD:
-            rec = {c: float(r[c]) if isinstance(r[c], (int, float)) else r[c] for c in keep_cols}
-            rec["model_score"] = score
+            rec = {}
+            for c in keep_cols:
+                v = r[c]
+                if isinstance(v, (int, float, __import__("numpy").floating)):
+                    rec[c] = float(v)
+                else:
+                    rec[c] = v
+            rec["model_score"] = float(score)
             new_records.append(rec)
 
     if new_records:

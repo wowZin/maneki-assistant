@@ -654,12 +654,18 @@ def _run_pre_scored_round(pool_codes: list[str] | None = None,
     if not pool_codes:
         return []
 
-    # ② batch_quotes（每5轮刷新）
-    if iter_count % 5 == 0 or not getattr(_run_pre_scored_round, "_rc", None):
+    # ② batch_quotes（有新票或每5轮刷新）
+    _should_scan = iter_count % 5 == 0 or not getattr(_run_pre_scored_round, "_rc", None)
+    _prev_codes = set(getattr(_run_pre_scored_round, "_prev_pool", []))
+    _new_codes = set(pool_codes) - _prev_codes
+    if _new_codes:
+        _should_scan = True
+    if _should_scan:
         if iter_count > 0:
-            print(f"\n[{_now().strftime('%H:%M')}] batch_quotes...")
+            print(f"\n[{_now().strftime('%H:%M')}] batch_quotes {len(pool_codes)}只...")
         quotes = scan_batch(pool_codes)
         _run_pre_scored_round._rc = quotes
+        _run_pre_scored_round._prev_pool = list(pool_codes)
     else:
         quotes = _run_pre_scored_round._rc
 
@@ -695,7 +701,7 @@ def _run_pre_scored_round(pool_codes: list[str] | None = None,
         score = float(r["model_score"])
         code = r["code"]
         name = (pool_name_map or {}).get(code, "")
-        rt_pct = quotes.get(code, {}).get("pct_chg", 0)
+        rt_pct = quotes.get(code, {}).get("pct_chg")
         if rt_pct is not None and float(rt_pct) >= 9.8:
             continue
         if score >= float(os.environ.get("ULTIMATE_PUSH_THRESHOLD", "55")):
@@ -708,9 +714,18 @@ def _run_pre_scored_round(pool_codes: list[str] | None = None,
                 watchdog_path = Path(__file__).resolve().parent.parent.parent / "plays" / "watchdog" / "data" / "state.json"
                 if watchdog_path.exists():
                     wd = json.loads(watchdog_path.read_text())
-                    if code not in wd.get("watching", {}):
-                        wd.setdefault("watching", {})[code] = {"name": name, "status": "watching"}
-                        watchdog_path.write_text(json.dumps(wd, indent=2))
+                    if code not in wd:
+                        wd[code] = {"code": code, "name": name, "status": "watching",
+                                    "added_at": __import__("datetime").datetime.now().isoformat(),
+                                    "entry_price": 0, "entry_at": "", "highest_since_entry": 0,
+                                    "bars_held": 0, "signal_type": "", "signal_reason": "",
+                                    "signal_at": "", "last_alert_at": "",
+                                    "last_abnormal_level": "", "last_abnormal_pushed_at": 0,
+                                    "netflow_history": [], "daily_basic": {}, "dim_scores": {},
+                                    "last_daily_update": ""}
+                        tmp = watchdog_path.with_suffix(".tmp")
+                        tmp.write_text(json.dumps(wd, indent=2))
+                        tmp.rename(watchdog_path)
                         print(f"      ↳ 已加入watchdog盯盘")
             except Exception:
                 pass
