@@ -483,18 +483,9 @@ class WatchdogEngine:
                     or (time.time() - st.last_abnormal_pushed_at) >= ABNORMAL_COOLDOWN_SECONDS
                 )
                 if level == "bear_trap":
-                    icon = "🛟"
-                    msg = (
-                        f"{icon} {st.name}({code}) 疑似诱空\n"
-                        f"{abnormal_reason}\n"
-                        f"现价: {last:.2f} | VWAP: {vwap:.2f}"
-                    )
-                    if should_push:
-                        logger.info(msg)
-                        _push_feishu(msg)
-                        st.last_abnormal_level = level
-                        st.last_abnormal_pushed_at = time.time()
-                    # 诱空不移出盯盘
+                    # 诱空不移出盯盘,不推送（太模糊,无操作价值）
+                    st.last_abnormal_level = level
+                    st.last_abnormal_pushed_at = time.time()
                 else:
                     icon = "🚨" if level == "critical" else "⚠️"
                     msg = (
