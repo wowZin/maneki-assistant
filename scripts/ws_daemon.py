@@ -78,6 +78,12 @@ def main():
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     from plays.limit_up.pipeline import _is_trading_session, _is_trade_day
 
+    # 非交易日直接退，不连 WS
+    _today = datetime.now().strftime("%Y%m%d")
+    if not _is_trade_day(_today):
+        print(f"[ws_daemon] 非交易日({_today}), 退出")
+        return
+
     ws = JvQuantWSClient()
     ws.connect()
     if shorts:
