@@ -3,10 +3,10 @@
 
 职责：
   1. 按 total_score 阈值过滤结果
-  2. 从 pushed 历史中去重
-  3. 调用 pipeline_feishu.push_feishu() 真正发送飞书卡片
+  2. 调用 pipeline_feishu.push_feishu()（自带评分提高重推逻辑）
+  3. 落盘 pushed/ 记录供外部查询
 
-注意：本模块负责将推送记录落盘 pushed/ 供去重。
+注意：重推决策由 push_feishu 内部的评分提高检查控制，本模块不做简单 code 去重。
 """
 
 from __future__ import annotations
@@ -67,24 +67,20 @@ def check_and_push(results: list[dict], data_dir: Path) -> list[dict]:
     if not to_push:
         return []
 
-    # 去重
-    existing = _load_pushed_codes(pushed_dir, today_str)
-    new = [r for r in to_push if r["code"] not in existing]
-    if not new:
-        return []
-
+    # 调用 push_feishu（自带评分提高重推逻辑）
     try:
-        push_feishu(new)
-        print(f"  [推送] {len(new)} 只 → 飞书")
+        push_feishu(to_push)
+        print(f"  [推送] {len(to_push)} 只 → 飞书")
 
-        # 存档已推记录供去重（原子写入）
+        # 存档已推记录供查询（原子写入）
         pushed_path = pushed_dir / f"{today_str}.json"
-        all_pushed = existing | {r["code"] for r in new}
+        existing = _load_pushed_codes(pushed_dir, today_str)
+        all_pushed = existing | {r["code"] for r in to_push}
         records = [r for r in to_push if r["code"] in all_pushed]
         tmp = pushed_path.with_suffix(".tmp")
         tmp.write_text(json.dumps(records, ensure_ascii=False))
         tmp.rename(pushed_path)
-        return new
+        return [r for r in to_push if r["code"] not in existing]
     except Exception as e:
         print(f"  [推送] 失败: {e}")
         return []
