@@ -636,8 +636,8 @@ class WatchdogEngine:
 
     # ---- 候选池 ----
 
-    def load_candidates(self) -> list[str]:
-        """从最新 limit_up analysis 加载候选股池（quality_combo 高分）。"""
+    def load_candidates(self) -> list[tuple[str, str]]:
+        """从最新 limit_up analysis 加载候选股池。返回 [(code, name), ...]。"""
         files = []
         for base in ANALYSIS_DIRS:
             if base.exists():
@@ -654,13 +654,14 @@ class WatchdogEngine:
         if isinstance(data, list):
             for item in data:
                 code = item.get("code")
-                total_score = float(item.get("total_score") or 0)
+                name = item.get("name", "")
+                total_score = float(item.get("total_score") or item.get("model_score", 0) or 0)
                 scores = item.get("scores", {})
                 if code and total_score >= 85:
-                    candidates.append((code, total_score, scores))
+                    candidates.append((code, name, total_score, scores))
 
-        candidates.sort(key=lambda x: x[1], reverse=True)
-        return [c[0] for c in candidates[:MAX_WATCH]]
+        candidates.sort(key=lambda x: x[2], reverse=True)
+        return [(c[0], c[1]) for c in candidates[:MAX_WATCH]]
 
     # ---- 状态持久化 ----
 
