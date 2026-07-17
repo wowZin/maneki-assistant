@@ -71,6 +71,7 @@ logger = logging.getLogger(__name__)
 STATE_FILE = PROJECT_DIR / "plays" / "watchdog" / "data" / "state.json"
 SCAN_INTERVAL = 30  # 每30秒检查一次信号
 MAX_WATCH = 20      # 同时盯盘上限
+ABNORMAL_COOLDOWN_SECONDS = 300  # 异常推送冷却：同一 level 5 分钟内不重复推送
 
 # 候选池来源：limit_up pipeline 产出的 analysis
 ANALYSIS_DIRS = [
@@ -481,9 +482,18 @@ class WatchdogEngine:
                     st.last_abnormal_level = level
                     st.last_abnormal_pushed_at = time.time()
                 else:
-                    # warning/critical 不推送(无操作价值),仅记录状态
-                    st.last_abnormal_level = level
-                    st.last_abnormal_pushed_at = time.time()
+                    icon = "🚨" if level == "critical" else "⚠️"
+                    msg = (
+                        f"{icon} {st.name}({code}) 异常状态 [{level}]\n"
+                        f"{abnormal_reason}\n"
+                        f"现价: {last:.2f} | VWAP: {vwap:.2f}"
+                    )
+                    # 冷却期内不重复推送
+                    since_last = time.time() - st.last_abnormal_pushed_at
+                    if level != st.last_abnormal_level or since_last >= ABNORMAL_COOLDOWN_SECONDS:
+                        _push_feishu(msg)
+                        st.last_abnormal_level = level
+                        st.last_abnormal_pushed_at = time.time()
                     if level == "critical":
                         self.remove([code])
                         continue
