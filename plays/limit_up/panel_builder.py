@@ -589,9 +589,26 @@ def main():
         from plays.limit_up.factors.optimized.model_score import factor_model_score_batch
         df["model_score"] = factor_model_score_batch(df)
         hot = df[df["model_score"] >= 35].sort_values("model_score", ascending=False)
+        # 补齐中文名(从THS SDK批量取)
+        try:
+            from scripts.ths_client import get_ths_client as _ths
+            _ths_inst = _ths()
+            _shorts = [c.split(".")[0] for c in hot["code"]]
+            _names = {}
+            for _i in range(0, len(_shorts), 50):
+                _q = _ths_inst.get_batch_quotes(_shorts[_i:_i+50])
+                for _s, _d in _q.items():
+                    if _d and _d.get("f_name"):
+                        _names[_s] = _d["f_name"]
+            hot = hot.copy()
+            hot["name"] = hot["code"].apply(lambda c: _names.get(c.split(".")[0], ""))
+        except Exception:
+            hot["name"] = ""
         analysis_path = ANALYSIS_DIR / f"{today}.json"
         analysis_path.parent.mkdir(parents=True, exist_ok=True)
         keep = [c for c in df.columns if c not in ("pit_date",) and not c.startswith("_")]
+        if "name" in hot.columns and "name" not in keep:
+            keep = ["name"] + keep
         tmp = analysis_path.with_suffix(".tmp")
         hot[keep].to_json(tmp, orient="records", force_ascii=False)
         tmp.rename(analysis_path)  # 原子替换
