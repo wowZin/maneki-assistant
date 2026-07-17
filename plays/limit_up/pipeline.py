@@ -948,6 +948,13 @@ def main_loop():
             print(f"[pipeline] 第{iter_count}轮异常: {e}")
             import traceback
             traceback.print_exc()
+            # 异常落盘方便排查
+            try:
+                with open(HEALTH_DIR / "pipeline_crash.log", "a") as _f:
+                    _f.write(f"[{_now().isoformat()}] iter={iter_count} {e}\n")
+                    traceback.print_exc(file=_f)
+            except Exception:
+                pass
             _sim_sleep(10 if _SIM_TIME is not None else 10)
 
     _remove_pidfile()
