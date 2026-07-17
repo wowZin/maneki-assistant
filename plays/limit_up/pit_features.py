@@ -352,9 +352,9 @@ def build_pit_features(
     # ═══════════════════════════════════════════════════════
     cm = concept_momentum or {}
     feats["sector_heat"] = _safe_float(cm.get("ret1_avg"), 0.0)
-    # sector_rank：概念数越多→越热门
-    feats["sector_rank"] = math.tanh(feats.get("n_concepts", 0) / 50.0)
     feats["n_concepts"] = _safe_float(cm.get("n_concepts"), 0.0)
+    # sector_rank：概念数越多→越热门
+    feats["sector_rank"] = math.tanh(feats["n_concepts"] / 50.0)
 
     # ═══════════════════════════════════════════════════════
     # 龙虎榜 PIT 特征（T-1 日上榜数据）
