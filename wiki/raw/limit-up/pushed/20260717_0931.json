@@ -1,0 +1,28 @@
+[
+  {
+    "code": "001287.SZ",
+    "name": "中电港",
+    "total_score": 61.96,
+    "score_mode": "model_score",
+    "pct_chg": -1.74,
+    "scores": {
+      "technical": 16.0,
+      "fundflow": 20.0,
+      "sentiment": 15.0,
+      "shortterm": 10.0
+    }
+  },
+  {
+    "code": "000977.SZ",
+    "name": "000977",
+    "total_score": 61.45,
+    "score_mode": "model_score",
+    "pct_chg": -2.21,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 22.0,
+      "sentiment": 15.0,
+      "shortterm": 10.0
+    }
+  }
+]

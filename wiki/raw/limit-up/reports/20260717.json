@@ -1,0 +1,81 @@
+{
+  "date": "20260717",
+  "pushed_count": 5,
+  "cumulative_limit_count": 35,
+  "hit_count": 0,
+  "hit_rate": 0.0,
+  "win_rate": 0.0,
+  "win_count": 0,
+  "win_total": 4,
+  "hit_codes": [],
+  "miss_codes": [
+    "000938.SZ",
+    "000811.SZ",
+    "001229.SZ",
+    "001287.SZ",
+    "000977.SZ"
+  ],
+  "hit_details": [],
+  "dim_performance": {
+    "technical": {
+      "total": 5,
+      "hit_avg": 0,
+      "miss_avg": 20.2
+    },
+    "fundflow": {
+      "total": 5,
+      "hit_avg": 0,
+      "miss_avg": 20.6
+    },
+    "sentiment": {
+      "total": 5,
+      "hit_avg": 0,
+      "miss_avg": 27.0
+    },
+    "shortterm": {
+      "total": 5,
+      "hit_avg": 0,
+      "miss_avg": 10.0
+    }
+  },
+  "confidence_dist": {
+    "high": 0,
+    "medium": 0,
+    "low": 5
+  },
+  "ab_comparison": {
+    "enabled": true,
+    "prev": {
+      "weights": {
+        "fundamental": 1.5,
+        "technical": 1.0,
+        "fundflow": 0.5,
+        "sentiment": 1.2,
+        "shortterm": 1.5
+      },
+      "pushed": 1,
+      "codes": [
+        "001229.SZ"
+      ],
+      "hits": 0
+    },
+    "curr": {
+      "weights": {
+        "fundamental": 0.3,
+        "technical": 0.7,
+        "fundflow": 0.3,
+        "sentiment": 0.5,
+        "shortterm": 2.0
+      },
+      "pushed": 5,
+      "codes": [
+        "000938.SZ",
+        "000811.SZ",
+        "001229.SZ",
+        "001287.SZ",
+        "000977.SZ"
+      ],
+      "hits": 0
+    }
+  }
+}

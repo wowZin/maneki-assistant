@@ -1,0 +1,15 @@
+[
+  {
+    "code": "000938.SZ",
+    "name": "000938",
+    "total_score": 58.23,
+    "score_mode": "model_score",
+    "pct_chg": -1.19,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 20.0,
+      "sentiment": 15.0,
+      "shortterm": 10.0
+    }
+  }
+]

@@ -216,10 +216,14 @@ def calculate_win_rate(pushed_analysis: list, daily_close_data: dict) -> dict:
     total = 0
     for item in pushed_analysis:
         code = item.get("code", "")
-        scan_pct = item.get("pct_chg", 0)
+        scan_pct = item.get("pct_chg")
+        if scan_pct is None:
+            scan_pct = 0.0
         close_info = daily_close_data.get(code)
         if scan_pct != 0 and close_info:
-            close_pct = close_info.get("pct_chg", 0)
+            close_pct = close_info.get("pct_chg")
+            if close_pct is None:
+                close_pct = 0.0
             if close_pct > scan_pct:
                 win_count += 1
             total += 1

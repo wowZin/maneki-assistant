@@ -13,7 +13,7 @@
     "signal_at": "",
     "last_alert_at": "",
     "last_abnormal_level": "warning",
-    "last_abnormal_pushed_at": 1784269725.7860465,
+    "last_abnormal_pushed_at": 1784271569.1338046,
     "netflow_history": [
       -13801799.999999998,
       -13801799.999999998,
@@ -34,6 +34,45 @@
       "circ_mv": 1917227.9523,
       "turnover_rate": 5.3676,
       "volume_ratio": 0.69
+    },
+    "dim_scores": {},
+    "last_daily_update": "20260717"
+  },
+  "001229.SZ": {
+    "code": "001229.SZ",
+    "name": "魅视科技",
+    "added_at": "2026-07-17T14:37:31.582566",
+    "status": "watching",
+    "entry_price": 0,
+    "entry_at": "",
+    "highest_since_entry": 0,
+    "bars_held": 0,
+    "signal_type": "",
+    "signal_reason": "",
+    "signal_at": "",
+    "last_alert_at": "",
+    "last_abnormal_level": "bear_trap",
+    "last_abnormal_pushed_at": 1784271569.1631303,
+    "netflow_history": [
+      -23486499.999999996,
+      -23486499.999999996,
+      -23486499.999999996,
+      -23486499.999999996,
+      -23486499.999999996,
+      -23486499.999999996,
+      -23486499.999999996,
+      -23486499.999999996,
+      -23486499.999999996,
+      -23486499.999999996
+    ],
+    "daily_basic": {
+      "ts_code": "001229.SZ",
+      "trade_date": "20260716",
+      "pe": 81.7104,
+      "pb": 5.6065,
+      "circ_mv": 291907.2496,
+      "turnover_rate": 11.0158,
+      "volume_ratio": 0.74
     },
     "dim_scores": {},
     "last_daily_update": "20260717"

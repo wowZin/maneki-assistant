@@ -1,0 +1,15 @@
+[
+  {
+    "code": "000811.SZ",
+    "name": "000811",
+    "total_score": 62.81,
+    "score_mode": "model_score",
+    "pct_chg": -3.32,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 15.0,
+      "shortterm": 10.0
+    }
+  }
+]
