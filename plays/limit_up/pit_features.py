@@ -352,10 +352,8 @@ def build_pit_features(
     # ═══════════════════════════════════════════════════════
     cm = concept_momentum or {}
     feats["sector_heat"] = _safe_float(cm.get("ret1_avg"), 0.0)
-    # sector_rank：把股票所属概念的平均涨幅在所有概念中的分位（0~1，越高越热）
-    ret1_avg = _safe_float(cm.get("ret1_avg"), 0.0)
-    # 简单实现：用 ret1_avg 的 tanh 映射；后续可接入全市场概念排名
-    feats["sector_rank"] = math.tanh(ret1_avg / 5.0)
+    # sector_rank：概念数越多→越热门
+    feats["sector_rank"] = math.tanh(feats.get("n_concepts", 0) / 50.0)
     feats["n_concepts"] = _safe_float(cm.get("n_concepts"), 0.0)
 
     # ═══════════════════════════════════════════════════════
