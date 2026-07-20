@@ -1,0 +1,41 @@
+[
+  {
+    "code": "000506.SZ",
+    "name": "招金黄金",
+    "total_score": 61.09,
+    "score_mode": "model_score",
+    "pct_chg": -1.67,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    }
+  },
+  {
+    "code": "000938.SZ",
+    "name": "紫光股份",
+    "total_score": 68.88,
+    "score_mode": "model_score",
+    "pct_chg": 7.34,
+    "scores": {
+      "technical": 13.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    }
+  },
+  {
+    "code": "000977.SZ",
+    "name": "浪潮信息",
+    "total_score": 55.22,
+    "score_mode": "model_score",
+    "pct_chg": 3.41,
+    "scores": {
+      "technical": 13.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    }
+  }
+]

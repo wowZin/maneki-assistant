@@ -228,5 +228,44 @@
     },
     "dim_scores": {},
     "last_daily_update": "20260720"
+  },
+  "000977.SZ": {
+    "code": "000977.SZ",
+    "name": "浪潮信息",
+    "added_at": "2026-07-20T13:56:30.545178",
+    "status": "watching",
+    "entry_price": 0,
+    "entry_at": "",
+    "highest_since_entry": 0,
+    "bars_held": 0,
+    "signal_type": "",
+    "signal_reason": "",
+    "signal_at": "",
+    "last_alert_at": "",
+    "last_abnormal_level": "bear_trap",
+    "last_abnormal_pushed_at": 1784530731.9022071,
+    "netflow_history": [
+      360000000.0,
+      360000000.0,
+      360000000.0,
+      360000000.0,
+      360000000.0,
+      360000000.0,
+      360000000.0,
+      360000000.0,
+      360000000.0,
+      360000000.0
+    ],
+    "daily_basic": {
+      "ts_code": "000977.SZ",
+      "trade_date": "20260717",
+      "pe": 47.1058,
+      "pb": 5.0963,
+      "circ_mv": 11353278.132,
+      "turnover_rate": 10.3781,
+      "volume_ratio": 0.82
+    },
+    "dim_scores": {},
+    "last_daily_update": "20260720"
   }
 }

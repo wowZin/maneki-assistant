@@ -1,0 +1,83 @@
+{
+  "date": "20260720",
+  "pushed_count": 7,
+  "cumulative_limit_count": 57,
+  "hit_count": 0,
+  "hit_rate": 0.0,
+  "win_rate": 28.57142857142857,
+  "win_count": 2,
+  "win_total": 7,
+  "hit_codes": [],
+  "miss_codes": [
+    "000823.SZ",
+    "000938.SZ",
+    "001229.SZ",
+    "000988.SZ",
+    "000977.SZ",
+    "000506.SZ",
+    "001287.SZ"
+  ],
+  "hit_details": [],
+  "dim_performance": {
+    "technical": {
+      "total": 7,
+      "hit_avg": 0,
+      "miss_avg": 16.1
+    },
+    "fundflow": {
+      "total": 7,
+      "hit_avg": 0,
+      "miss_avg": 20.1
+    },
+    "sentiment": {
+      "total": 7,
+      "hit_avg": 0,
+      "miss_avg": 75.0
+    },
+    "shortterm": {
+      "total": 7,
+      "hit_avg": 0,
+      "miss_avg": 10.0
+    }
+  },
+  "confidence_dist": {
+    "high": 0,
+    "medium": 0,
+    "low": 7
+  },
+  "ab_comparison": {
+    "enabled": true,
+    "prev": {
+      "weights": {
+        "fundamental": 1.5,
+        "technical": 1.0,
+        "fundflow": 0.5,
+        "sentiment": 1.2,
+        "shortterm": 1.5
+      },
+      "pushed": 0,
+      "codes": [],
+      "hits": 0
+    },
+    "curr": {
+      "weights": {
+        "fundamental": 0.3,
+        "technical": 0.7,
+        "fundflow": 0.3,
+        "sentiment": 0.5,
+        "shortterm": 2.0
+      },
+      "pushed": 7,
+      "codes": [
+        "000938.SZ",
+        "000823.SZ",
+        "001229.SZ",
+        "000988.SZ",
+        "000977.SZ",
+        "000506.SZ",
+        "001287.SZ"
+      ],
+      "hits": 0
+    }
+  }
+}

@@ -1,0 +1,28 @@
+[
+  {
+    "code": "000506.SZ",
+    "name": "招金黄金",
+    "total_score": 60.65,
+    "score_mode": "model_score",
+    "pct_chg": 2.11,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    }
+  },
+  {
+    "code": "000823.SZ",
+    "name": "超声电子",
+    "total_score": 56.82,
+    "score_mode": "model_score",
+    "pct_chg": -3.63,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    }
+  }
+]

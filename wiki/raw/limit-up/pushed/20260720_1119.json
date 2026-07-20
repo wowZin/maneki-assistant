@@ -1,0 +1,15 @@
+[
+  {
+    "code": "001229.SZ",
+    "name": "魅视科技",
+    "total_score": 56.32,
+    "score_mode": "model_score",
+    "pct_chg": -2.09,
+    "scores": {
+      "technical": 34.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    }
+  }
+]

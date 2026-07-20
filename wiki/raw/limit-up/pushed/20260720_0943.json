@@ -1,0 +1,15 @@
+[
+  {
+    "code": "000988.SZ",
+    "name": "华工科技",
+    "total_score": 57.78,
+    "score_mode": "model_score",
+    "pct_chg": -2.27,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    }
+  }
+]
