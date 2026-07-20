@@ -12,19 +12,19 @@
     "signal_reason": "",
     "signal_at": "",
     "last_alert_at": "",
-    "last_abnormal_level": "warning",
-    "last_abnormal_pushed_at": 1784271569.1338046,
+    "last_abnormal_level": "bear_trap",
+    "last_abnormal_pushed_at": 1784518077.4812384,
     "netflow_history": [
-      -13801799.999999998,
-      -13801799.999999998,
-      -13801799.999999998,
-      -13801799.999999998,
-      -13801799.999999998,
-      -13801799.999999998,
-      -13801799.999999998,
-      -13801799.999999998,
-      -13801799.999999998,
-      -13801799.999999998
+      3375300.0000000005,
+      3375300.0000000005,
+      3375300.0000000005,
+      3375300.0000000005,
+      3375300.0000000005,
+      3375300.0000000005,
+      3375300.0000000005,
+      3375300.0000000005,
+      3375300.0000000005,
+      3375300.0000000005
     ],
     "daily_basic": {
       "ts_code": "001287.SZ",
@@ -36,7 +36,7 @@
       "volume_ratio": 0.69
     },
     "dim_scores": {},
-    "last_daily_update": "20260717"
+    "last_daily_update": "20260720"
   },
   "001229.SZ": {
     "code": "001229.SZ",
@@ -52,18 +52,18 @@
     "signal_at": "",
     "last_alert_at": "",
     "last_abnormal_level": "bear_trap",
-    "last_abnormal_pushed_at": 1784271569.1631303,
+    "last_abnormal_pushed_at": 1784518198.5517788,
     "netflow_history": [
-      -23486499.999999996,
-      -23486499.999999996,
-      -23486499.999999996,
-      -23486499.999999996,
-      -23486499.999999996,
-      -23486499.999999996,
-      -23486499.999999996,
-      -23486499.999999996,
-      -23486499.999999996,
-      -23486499.999999996
+      -184600.0,
+      -184600.0,
+      -184600.0,
+      -184600.0,
+      -184600.0,
+      -184600.0,
+      -184600.0,
+      -184600.0,
+      -184600.0,
+      -184600.0
     ],
     "daily_basic": {
       "ts_code": "001229.SZ",
@@ -75,6 +75,119 @@
       "volume_ratio": 0.74
     },
     "dim_scores": {},
-    "last_daily_update": "20260717"
+    "last_daily_update": "20260720"
+  },
+  "000988.SZ": {
+    "code": "000988.SZ",
+    "name": "华工科技",
+    "added_at": "2026-07-20T09:30:12.793418",
+    "status": "watching",
+    "entry_price": 0,
+    "entry_at": "",
+    "highest_since_entry": 0,
+    "bars_held": 0,
+    "signal_type": "",
+    "signal_reason": "",
+    "signal_at": "",
+    "last_alert_at": "",
+    "last_abnormal_level": "bear_trap",
+    "last_abnormal_pushed_at": 1784518198.59362,
+    "netflow_history": [
+      -13332700.000000004,
+      -13332700.000000004,
+      -13332700.000000004,
+      -13332700.000000004,
+      -13332700.000000004,
+      -13332700.000000004,
+      -13332700.000000004,
+      -13332700.000000004,
+      -13332700.000000004,
+      -13332700.000000004
+    ],
+    "daily_basic": {
+      "ts_code": "000988.SZ",
+      "trade_date": "20260717",
+      "pe": 80.4104,
+      "pb": 10.1191,
+      "circ_mv": 11820641.8034,
+      "turnover_rate": 6.3591,
+      "volume_ratio": 0.98
+    },
+    "dim_scores": {},
+    "last_daily_update": "20260720"
+  },
+  "000506.SZ": {
+    "code": "000506.SZ",
+    "name": "招金黄金",
+    "added_at": "2026-07-20T11:25:36.439679",
+    "status": "watching",
+    "entry_price": 0,
+    "entry_at": "",
+    "highest_since_entry": 0,
+    "bars_held": 0,
+    "signal_type": "",
+    "signal_reason": "",
+    "signal_at": "",
+    "last_alert_at": "",
+    "last_abnormal_level": "bear_trap",
+    "last_abnormal_pushed_at": 1784518198.63084,
+    "netflow_history": [
+      45400500.0,
+      45400500.0,
+      45400500.0,
+      45400500.0,
+      45400500.0,
+      45400500.0,
+      45400500.0,
+      45400500.0
+    ],
+    "daily_basic": {
+      "ts_code": "000506.SZ",
+      "trade_date": "20260717",
+      "pe": 66.3761,
+      "pb": 11.8597,
+      "circ_mv": 1054082.445,
+      "turnover_rate": 6.0998,
+      "volume_ratio": 0.94
+    },
+    "dim_scores": {},
+    "last_daily_update": "20260720"
+  },
+  "000823.SZ": {
+    "code": "000823.SZ",
+    "name": "超声电子",
+    "added_at": "2026-07-20T11:25:36.441077",
+    "status": "watching",
+    "entry_price": 0,
+    "entry_at": "",
+    "highest_since_entry": 0,
+    "bars_held": 0,
+    "signal_type": "",
+    "signal_reason": "",
+    "signal_at": "",
+    "last_alert_at": "",
+    "last_abnormal_level": "bear_trap",
+    "last_abnormal_pushed_at": 1784518198.6699622,
+    "netflow_history": [
+      -55255599.99999999,
+      -55255599.99999999,
+      -55255599.99999999,
+      -55255599.99999999,
+      -55255599.99999999,
+      -55255599.99999999,
+      -55255599.99999999,
+      -55255599.99999999
+    ],
+    "daily_basic": {
+      "ts_code": "000823.SZ",
+      "trade_date": "20260717",
+      "pe": 36.8021,
+      "pb": 1.7086,
+      "circ_mv": 818626.7072,
+      "turnover_rate": 10.3898,
+      "volume_ratio": 1.03
+    },
+    "dim_scores": {},
+    "last_daily_update": "20260720"
   }
 }

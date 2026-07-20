@@ -68,7 +68,7 @@ def scan():
                 if q is None:
                     continue
                 pct = float(q.get("pct_chg", 0) or 0)
-                if not (5 <= pct < 9.8):
+                if not (3 <= pct < 9.8):
                     continue
                 # THS SDK 返回短码,转全码
                 full_code = f"{code}.SH" if code.startswith("6") else f"{code}.SZ"
