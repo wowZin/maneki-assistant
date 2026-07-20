@@ -116,7 +116,10 @@ def factor_model_score_batch(df: pd.DataFrame) -> pd.Series:
     penalty *= np.where(t10 > 0.30, 0.80, np.where(t10 > 0.20, 0.90, np.where(t10 > 0.10, 0.95, 1.0)))
     penalty *= np.where((pos > 0.85) & (pb < 0.03), 0.85, 1.0)
     penalty *= np.where(t5 > 0.15, 0.92, 1.0)
-    penalty *= np.where((t10 < -0.05) & (pos < 0.30), 1.05, 1.0)
+    # 深跌+低位+有量有资金承接 → +5%; 自由落体不加成
+    vol = _to_series(df, "volume_ratio", 1.0)
+    mf = _to_series(df, "net_mf_amount", 0.0)
+    penalty *= np.where((t10 < -0.05) & (pos < 0.30) & (vol >= 1.0) & (mf > 0), 1.05, 1.0)
 
     return (scores * penalty).clip(0.0, 100.0).round(2)
 

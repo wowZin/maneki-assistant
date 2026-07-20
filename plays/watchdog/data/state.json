@@ -13,7 +13,7 @@
     "signal_at": "",
     "last_alert_at": "",
     "last_abnormal_level": "bear_trap",
-    "last_abnormal_pushed_at": 1784518077.4812384,
+    "last_abnormal_pushed_at": 1784523630.4540372,
     "netflow_history": [
       3375300.0000000005,
       3375300.0000000005,
@@ -51,8 +51,8 @@
     "signal_reason": "",
     "signal_at": "",
     "last_alert_at": "",
-    "last_abnormal_level": "bear_trap",
-    "last_abnormal_pushed_at": 1784518198.5517788,
+    "last_abnormal_level": "warning",
+    "last_abnormal_pushed_at": 1784523693.8810515,
     "netflow_history": [
       -184600.0,
       -184600.0,
@@ -90,8 +90,8 @@
     "signal_reason": "",
     "signal_at": "",
     "last_alert_at": "",
-    "last_abnormal_level": "bear_trap",
-    "last_abnormal_pushed_at": 1784518198.59362,
+    "last_abnormal_level": "warning",
+    "last_abnormal_pushed_at": 1784523662.1662953,
     "netflow_history": [
       -13332700.000000004,
       -13332700.000000004,
@@ -130,8 +130,10 @@
     "signal_at": "",
     "last_alert_at": "",
     "last_abnormal_level": "bear_trap",
-    "last_abnormal_pushed_at": 1784518198.63084,
+    "last_abnormal_pushed_at": 1784523816.388309,
     "netflow_history": [
+      45400500.0,
+      45400500.0,
       45400500.0,
       45400500.0,
       45400500.0,
@@ -167,8 +169,10 @@
     "signal_at": "",
     "last_alert_at": "",
     "last_abnormal_level": "bear_trap",
-    "last_abnormal_pushed_at": 1784518198.6699622,
+    "last_abnormal_pushed_at": 1784523816.4547403,
     "netflow_history": [
+      -55255599.99999999,
+      -55255599.99999999,
       -55255599.99999999,
       -55255599.99999999,
       -55255599.99999999,
@@ -186,6 +190,41 @@
       "circ_mv": 818626.7072,
       "turnover_rate": 10.3898,
       "volume_ratio": 1.03
+    },
+    "dim_scores": {},
+    "last_daily_update": "20260720"
+  },
+  "000938.SZ": {
+    "code": "000938.SZ",
+    "name": "紫光股份",
+    "added_at": "2026-07-20T13:00:10.487705",
+    "status": "watching",
+    "entry_price": 0,
+    "entry_at": "",
+    "highest_since_entry": 0,
+    "bars_held": 0,
+    "signal_type": "",
+    "signal_reason": "",
+    "signal_at": "",
+    "last_alert_at": "",
+    "last_abnormal_level": "warning",
+    "last_abnormal_pushed_at": 1784523725.45522,
+    "netflow_history": [
+      -695000000.0,
+      -695000000.0,
+      -695000000.0,
+      -695000000.0,
+      -695000000.0,
+      -695000000.0
+    ],
+    "daily_basic": {
+      "ts_code": "000938.SZ",
+      "trade_date": "20260717",
+      "pe": 59.6104,
+      "pb": 6.4709,
+      "circ_mv": 10047435.3951,
+      "turnover_rate": 14.0573,
+      "volume_ratio": 0.91
     },
     "dim_scores": {},
     "last_daily_update": "20260720"
