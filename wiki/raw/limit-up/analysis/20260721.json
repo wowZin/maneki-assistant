@@ -1,0 +1,54 @@
+[
+  {
+    "code": "001287.SZ",
+    "name": "中电港",
+    "total_score": 56.8,
+    "score_mode": "model_score",
+    "pct_chg": null,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    }
+  },
+  {
+    "code": "001339.SZ",
+    "name": "智微智能",
+    "total_score": 55.51,
+    "score_mode": "model_score",
+    "pct_chg": 1.79,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    }
+  },
+  {
+    "code": "000017.SZ",
+    "name": "深中华A",
+    "total_score": 55.07,
+    "score_mode": "model_score",
+    "pct_chg": -1.15,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    }
+  },
+  {
+    "code": "000988.SZ",
+    "name": "华工科技",
+    "total_score": 56.0,
+    "score_mode": "model_score",
+    "pct_chg": 6.93,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    }
+  }
+]

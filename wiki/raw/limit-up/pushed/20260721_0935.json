@@ -1,0 +1,15 @@
+[
+  {
+    "code": "000017.SZ",
+    "name": "深中华A",
+    "total_score": 59.07,
+    "score_mode": "model_score",
+    "pct_chg": 0.0,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    }
+  }
+]

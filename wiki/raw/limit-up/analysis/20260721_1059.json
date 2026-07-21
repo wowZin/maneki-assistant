@@ -1,0 +1,40 @@
+[
+  {
+    "code": "001287.SZ",
+    "name": "中电港",
+    "scores": {
+      "fundamental": 84.8,
+      "technical": 54,
+      "fundflow": 2.0,
+      "sentiment": 0,
+      "shortterm": 20.0
+    },
+    "reasons": {
+      "fundamental": "[高] 中大盘(流通155亿)+17; 高成长/亏损股(PE=54.7)+15; 扣非暴增+146%; 营收+144%; 共振:大盘+成长+10",
+      "technical": "[低] 量比适中(1.89)+15; 换手温和(4.2%)+7; 竞价平开0.8%+2; 收盘<MA20-8; 5日累计-28.6%-3; 中市值(155亿)+6; 换手递减锁定+3; PIT大市值涨停基因+14",
+      "fundflow": "[无][Tushare] 换手温和4.2%+7; 成交不足9.4亿+0; 资金净流出-1.34%-3; 主力流出-3.06‰-3",
+      "sentiment": "情绪熔断:炸板率41.8%>40%+跌停210家",
+      "shortterm": "涨停基因8(20日1次/60日1次) | 开盘博弈5(跳空1.3%/竞价换手0.04%) 内外盘1.10 | 位置波动7(pos0.00/t10-30.0%/std5.4) | 连板溢价0(昨日涨停0/连板0板)"
+    },
+    "weights": {
+      "fundamental": "0.3",
+      "technical": "0.7",
+      "fundflow": "0.3",
+      "sentiment": "0.5",
+      "shortterm": "2.0"
+    },
+    "total": 34.413333333333334,
+    "resonance": {
+      "count": 1,
+      "threshold": 75,
+      "is_resonance": false
+    },
+    "top3_score": 34.4,
+    "pct_chg": 1.8,
+    "l2api": null,
+    "factors": {
+      "model_score": 46.3
+    },
+    "total_score": 46.3
+  }
+]
