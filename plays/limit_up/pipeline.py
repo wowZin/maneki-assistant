@@ -298,13 +298,8 @@ def _run_one_round(pool_codes: list[str], pool_name_map: dict[str, str],
             print(f"  ② 粗评: 无待评分股票")
         return [], stack
 
-    # Top200 → 随机取 N 只（线程并发时重复概率极低）
-    import random
-    random.shuffle(to_score)
-    to_score = to_score[:20]
-
     if iter_count is not None:
-        print(f"  ② 粗评 {len(to_score)}只(Top200→rand→20)...")
+        print(f"  ② 粗评 {len(to_score)}只(Top200→全量)...")
     score_data = [
         (item.code, item.name or pool_name_map.get(item.code, ""),
          quotes.get(item.code, {"pct_chg": item.pct_chg, "speed": item.speed}))
@@ -645,10 +640,12 @@ def _run_pre_scored_round(pool_codes: list[str] | None = None,
     quotes: dict[str, dict] = {}
 
     # ① 读取最新预评分池（每轮刷新,接收surge_scanner追加）
+    surge_codes: set[str] = set()
     try:
-        af = Path(__file__).resolve().parent.parent.parent / "data" / "analysis" / f"{_today_str()}.json"
+        af = PLAY_DIR / "data" / "analysis" / f"{_today_str()}.json"
         _pool = json.loads(af.read_text()) if af.exists() else []
         pool_codes = [r["code"] for r in _pool]
+        surge_codes = {r["code"] for r in _pool if r.get("source") == "surge"}  # surge 标记
         # 补齐股票名（不在pool_name_map中的从THS SDK取）
         if pool_name_map is None:
             pool_name_map = {}
@@ -673,20 +670,12 @@ def _run_pre_scored_round(pool_codes: list[str] | None = None,
     if not pool_codes:
         return []
 
-    # ② batch_quotes（有新票或每5轮刷新）
-    _should_scan = iter_count % 5 == 0 or not getattr(_run_pre_scored_round, "_rc", None)
-    _prev_codes = set(getattr(_run_pre_scored_round, "_prev_pool", []))
-    _new_codes = set(pool_codes) - _prev_codes
-    if _new_codes:
-        _should_scan = True
-    if _should_scan:
-        if iter_count > 0:
-            print(f"\n[{_now().strftime('%H:%M')}] batch_quotes {len(pool_codes)}只...")
-        quotes = scan_batch(pool_codes)
-        _run_pre_scored_round._rc = quotes
-        _run_pre_scored_round._prev_pool = list(pool_codes)
-    else:
-        quotes = _run_pre_scored_round._rc
+    # ② batch_quotes（每轮拉新数据）
+    if iter_count > 0:
+        print(f"\n[{_now().strftime('%H:%M')}] batch_quotes {len(pool_codes)}只...")
+    quotes = scan_batch(pool_codes)
+    _run_pre_scored_round._rc = quotes
+    _run_pre_scored_round._prev_pool = list(pool_codes)
 
     # ② 从面板取 T-1 特征
     if t1_panel is not None:
@@ -723,15 +712,23 @@ def _run_pre_scored_round(pool_codes: list[str] | None = None,
         rt_pct = quotes.get(code, {}).get("pct_chg")
         if rt_pct is not None and float(rt_pct) >= 9.8:
             continue
+        # 所有评分股票入池（维持 analysis.json 完整性）
+        rec = {"code": code, "name": name, "model_score": score,
+               "total_score": score, "score_mode": "model_score", "pct_chg": rt_pct,
+               "scores": {"technical": float(r.get("technical", 0) or 0),
+                          "fundflow": float(r.get("fundflow", 0) or 0),
+                          "sentiment": float(r.get("sentiment", 0) or 0),
+                          "shortterm": float(r.get("shortterm", 0) or 0)},
+               "fundamental": float(r.get("fundamental", 0) or 0)}
+        if code in surge_codes:
+            rec["source"] = "surge"  # 保留surge标记
+        all_results.append(rec)
         if score >= float(os.environ.get("ULTIMATE_PUSH_THRESHOLD", "55")):
             print(f"    ≥55 {code} {name} score={score:.1f} pct_chg={rt_pct}%")
-            rec = {"code": code, "name": name, "total_score": score,
-                   "score_mode": "model_score", "pct_chg": rt_pct,
-                   "scores": {"technical": float(r.get("technical", 0) or 0),
-                              "fundflow": float(r.get("fundflow", 0) or 0),
-                              "sentiment": float(r.get("sentiment", 0) or 0),
-                              "shortterm": float(r.get("shortterm", 0) or 0)}}
-            all_results.append(rec); push_candidates.append(rec)
+            push_candidates.append(rec)
+        elif code in surge_codes and score >= float(os.environ.get("SURGE_PUSH_THRESHOLD", "45")):
+            print(f"    ≥45(surge) {code} {name} score={score:.1f} pct_chg={rt_pct}%")
+            push_candidates.append(rec)
             # 自动加入 watchdog 盯盘
             try:
                 watchdog_path = Path(__file__).resolve().parent.parent.parent / "plays" / "watchdog" / "data" / "state.json"
@@ -867,7 +864,7 @@ def main_loop():
                 pool_built = True  # 先放行评分循环
 
                 # T-1 数据后台预取（预评分池模式跳过，面板已有全量数据）
-                _af = Path(__file__).resolve().parent.parent.parent / "data" / "analysis" / f"{_today_str()}.json"
+                _af = PLAY_DIR / "data" / "analysis" / f"{_today_str()}.json"
                 if not _af.exists():
                     try:
                         from scripts.tu_share import call_tushare as _ct
@@ -920,7 +917,7 @@ def main_loop():
             if getattr(_run_pre_scored_round, "_t1_panel", None) is None:
                 import pandas as _pd
                 pf = Path(__file__).resolve().parent.parent.parent / "wiki" / "raw" / "limit-up" / "panel"
-                af = Path(__file__).resolve().parent.parent.parent / "data" / "analysis"
+                af = PLAY_DIR / "data" / "analysis"
                 today = _today_str()
                 panel_file = pf / f"{today}.parquet"
                 analysis_file = af / f"{today}.json"
@@ -955,7 +952,7 @@ def main_loop():
                     traceback.print_exc(file=_f)
             except Exception:
                 pass
-            _sim_sleep(10 if _SIM_TIME is not None else 10)
+            # 不 sleep — 每轮拉新数据+评分，天然间隔 8s
 
     _remove_pidfile()
     print("[pipeline] 已停止")

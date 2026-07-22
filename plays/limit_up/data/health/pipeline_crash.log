@@ -1,0 +1,195 @@
+[2026-07-22T10:25:17.012181] iter=68 [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+Traceback (most recent call last):
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 936, in main_loop
+    deep_results = _run_pre_scored_round(pool_name_map=pool_name_map,
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 757, in _run_pre_scored_round
+    save_analysis(all_results)
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 778, in save_analysis
+    tmp_path.rename(path)  # 原子替换，防止并发读损坏
+    ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1363, in rename
+    os.rename(self, target)
+FileNotFoundError: [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+[2026-07-22T10:25:59.381429] iter=1169 [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+Traceback (most recent call last):
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 936, in main_loop
+    deep_results = _run_pre_scored_round(pool_name_map=pool_name_map,
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 757, in _run_pre_scored_round
+    save_analysis(all_results)
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 778, in save_analysis
+    tmp_path.rename(path)  # 原子替换，防止并发读损坏
+    ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1363, in rename
+    os.rename(self, target)
+FileNotFoundError: [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+[2026-07-22T10:26:21.980550] iter=1335 [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+Traceback (most recent call last):
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 936, in main_loop
+    deep_results = _run_pre_scored_round(pool_name_map=pool_name_map,
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 757, in _run_pre_scored_round
+    save_analysis(all_results)
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 778, in save_analysis
+    tmp_path.rename(path)  # 原子替换，防止并发读损坏
+    ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1363, in rename
+    os.rename(self, target)
+FileNotFoundError: [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+[2026-07-22T10:26:33.446140] iter=1354 [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+Traceback (most recent call last):
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 936, in main_loop
+    deep_results = _run_pre_scored_round(pool_name_map=pool_name_map,
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 757, in _run_pre_scored_round
+    save_analysis(all_results)
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 778, in save_analysis
+    tmp_path.rename(path)  # 原子替换，防止并发读损坏
+    ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1363, in rename
+    os.rename(self, target)
+FileNotFoundError: [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+[2026-07-22T10:26:45.571048] iter=2102 [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+Traceback (most recent call last):
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 936, in main_loop
+    deep_results = _run_pre_scored_round(pool_name_map=pool_name_map,
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 757, in _run_pre_scored_round
+    save_analysis(all_results)
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 778, in save_analysis
+    tmp_path.rename(path)  # 原子替换，防止并发读损坏
+    ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1363, in rename
+    os.rename(self, target)
+FileNotFoundError: [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+[2026-07-22T10:27:05.162600] iter=0 Extra data: line 18 column 1 (char 306)
+Traceback (most recent call last):
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 930, in main_loop
+    _run_pre_scored_round._pool = json.loads(analysis_file.read_text())
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 341, in decode
+    raise JSONDecodeError("Extra data", s, end)
+json.decoder.JSONDecodeError: Extra data: line 18 column 1 (char 306)
+[2026-07-22T10:28:48.493482] iter=19815 [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+Traceback (most recent call last):
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 936, in main_loop
+    deep_results = _run_pre_scored_round(pool_name_map=pool_name_map,
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 757, in _run_pre_scored_round
+    save_analysis(all_results)
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 778, in save_analysis
+    tmp_path.rename(path)  # 原子替换，防止并发读损坏
+    ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1363, in rename
+    os.rename(self, target)
+FileNotFoundError: [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+[2026-07-22T10:30:37.307308] iter=0 Extra data: line 1727 column 3 (char 37426)
+Traceback (most recent call last):
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 930, in main_loop
+    _run_pre_scored_round._pool = json.loads(analysis_file.read_text())
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 341, in decode
+    raise JSONDecodeError("Extra data", s, end)
+json.decoder.JSONDecodeError: Extra data: line 1727 column 3 (char 37426)
+[2026-07-22T10:31:23.216753] iter=17632 [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+Traceback (most recent call last):
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 936, in main_loop
+    deep_results = _run_pre_scored_round(pool_name_map=pool_name_map,
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 757, in _run_pre_scored_round
+    save_analysis(all_results)
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 778, in save_analysis
+    tmp_path.rename(path)  # 原子替换，防止并发读损坏
+    ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1363, in rename
+    os.rename(self, target)
+FileNotFoundError: [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+[2026-07-22T10:32:29.826079] iter=0 Extra data: line 1781 column 3 (char 39011)
+Traceback (most recent call last):
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 930, in main_loop
+    _run_pre_scored_round._pool = json.loads(analysis_file.read_text())
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 341, in decode
+    raise JSONDecodeError("Extra data", s, end)
+json.decoder.JSONDecodeError: Extra data: line 1781 column 3 (char 39011)
+[2026-07-22T10:42:27.838397] iter=677 [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+Traceback (most recent call last):
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 936, in main_loop
+    deep_results = _run_pre_scored_round(pool_name_map=pool_name_map,
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 757, in _run_pre_scored_round
+    save_analysis(all_results)
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 778, in save_analysis
+    tmp_path.rename(path)  # 原子替换，防止并发读损坏
+    ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1363, in rename
+    os.rename(self, target)
+FileNotFoundError: [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+[2026-07-22T10:44:05.381197] iter=794 [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+Traceback (most recent call last):
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 936, in main_loop
+    assert analysis_file.exists(), f"分析文件不存在: {analysis_file}"
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 757, in _run_pre_scored_round
+    save_analysis(all_results)
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 778, in save_analysis
+    json.dump(list(existing.values()), f, ensure_ascii=False, indent=2)
+    ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1363, in rename
+    os.rename(self, target)
+FileNotFoundError: [Errno 2] No such file or directory: '/root/maneki-agent/plays/limit_up/data/analysis/20260722.tmp' -> '/root/maneki-agent/plays/limit_up/data/analysis/20260722.json'
+[2026-07-22T10:47:39.757365] iter=0 Expecting ':' delimiter: line 395 column 10 (char 7994)
+Traceback (most recent call last):
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 928, in main_loop
+    _run_pre_scored_round._pool = json.loads(analysis_file.read_text())
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 338, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 354, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ^^^^^^^^^^^^^^^^^^^^^^
+json.decoder.JSONDecodeError: Expecting ':' delimiter: line 395 column 10 (char 7994)
+[2026-07-22T10:51:47.693118] iter=0 Expecting ':' delimiter: line 395 column 11 (char 7996)
+Traceback (most recent call last):
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 928, in main_loop
+    _run_pre_scored_round._pool = json.loads(analysis_file.read_text())
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 338, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 354, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ^^^^^^^^^^^^^^^^^^^^^^
+json.decoder.JSONDecodeError: Expecting ':' delimiter: line 395 column 11 (char 7996)
+[2026-07-22T10:52:00.119553] iter=0 Expecting ':' delimiter: line 395 column 11 (char 7996)
+Traceback (most recent call last):
+  File "/root/maneki-agent/plays/limit_up/pipeline.py", line 928, in main_loop
+    _run_pre_scored_round._pool = json.loads(analysis_file.read_text())
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 338, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 354, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ^^^^^^^^^^^^^^^^^^^^^^
+json.decoder.JSONDecodeError: Expecting ':' delimiter: line 395 column 11 (char 7996)

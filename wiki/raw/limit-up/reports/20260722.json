@@ -1,0 +1,87 @@
+{
+  "date": "20260722",
+  "pushed_count": 6,
+  "cumulative_limit_count": 51,
+  "hit_count": 1,
+  "hit_rate": 16.666666666666664,
+  "win_rate": 50.0,
+  "win_count": 3,
+  "win_total": 6,
+  "hit_codes": [
+    "301165.SZ"
+  ],
+  "miss_codes": [
+    "603986.SH",
+    "603019.SH",
+    "000977.SZ",
+    "000811.SZ",
+    "000636.SZ"
+  ],
+  "hit_details": [
+    {
+      "code": "301165.SZ",
+      "name": "锐捷网络"
+    }
+  ],
+  "dim_performance": {
+    "technical": {
+      "total": 6,
+      "hit_avg": 43.0,
+      "miss_avg": 37.2
+    },
+    "fundflow": {
+      "total": 6,
+      "hit_avg": 21.0,
+      "miss_avg": 22.6
+    },
+    "sentiment": {
+      "total": 6,
+      "hit_avg": 75.0,
+      "miss_avg": 75.0
+    },
+    "shortterm": {
+      "total": 6,
+      "hit_avg": 10.0,
+      "miss_avg": 10.0
+    }
+  },
+  "confidence_dist": {
+    "high": 0,
+    "medium": 0,
+    "low": 6
+  },
+  "ab_comparison": {
+    "enabled": true,
+    "prev": {
+      "weights": {
+        "fundamental": 1.5,
+        "technical": 1.0,
+        "fundflow": 0.5,
+        "sentiment": 1.2,
+        "shortterm": 1.5
+      },
+      "pushed": 0,
+      "codes": [],
+      "hits": 0
+    },
+    "curr": {
+      "weights": {
+        "fundamental": 0.3,
+        "technical": 0.7,
+        "fundflow": 0.3,
+        "sentiment": 0.5,
+        "shortterm": 2.0
+      },
+      "pushed": 6,
+      "codes": [
+        "603986.SH",
+        "603019.SH",
+        "000977.SZ",
+        "301165.SZ",
+        "000811.SZ",
+        "000636.SZ"
+      ],
+      "hits": 1
+    }
+  }
+}

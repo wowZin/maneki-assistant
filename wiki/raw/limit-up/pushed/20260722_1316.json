@@ -1,0 +1,32 @@
+[
+  {
+    "code": "000636.SZ",
+    "name": "风华高科",
+    "model_score": 56.52,
+    "total_score": 56.52,
+    "score_mode": "model_score",
+    "pct_chg": -3.41,
+    "scores": {
+      "technical": 44.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 55.0
+  },
+  {
+    "code": "000811.SZ",
+    "name": "冰轮环境",
+    "model_score": 56.29,
+    "total_score": 56.29,
+    "score_mode": "model_score",
+    "pct_chg": 0.11,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 51.0
+  }
+]

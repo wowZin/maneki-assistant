@@ -1,0 +1,41 @@
+[
+  {
+    "code": "000977.SZ",
+    "name": "浪潮信息",
+    "total_score": 61.41,
+    "score_mode": "model_score",
+    "pct_chg": -1.08,
+    "scores": {
+      "technical": 40.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    }
+  },
+  {
+    "code": "301165.SZ",
+    "name": "锐捷网络",
+    "total_score": 61.4,
+    "score_mode": "model_score",
+    "pct_chg": -2.8,
+    "scores": {
+      "technical": 43.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    }
+  },
+  {
+    "code": "603019.SH",
+    "name": "中科曙光",
+    "total_score": 57.36,
+    "score_mode": "model_score",
+    "pct_chg": -0.9,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    }
+  }
+]

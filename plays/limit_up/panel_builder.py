@@ -33,7 +33,7 @@ from plays.limit_up.strategies import factor_ctx
 from plays.limit_up.pit_features import build_pit_features
 
 # ── 配置 ──
-ANALYSIS_DIR = PROJECT_DIR / "data" / "analysis"
+ANALYSIS_DIR = Path(__file__).resolve().parent / "data" / "analysis"
 RAW_DIR = PROJECT_DIR / "wiki" / "raw" / "limit-up" / "panel"
 STOCK_BATCH = 50          # Tushare 批量上限
 MAX_WORKERS = 16          # 并行 workers
@@ -70,6 +70,9 @@ def load_stock_list() -> list[str]:
         if code.split(".")[1] not in ("SH", "SZ"):
             continue
         if code.startswith("8") or code.startswith("4"):
+            continue
+        # 过滤创业板/科创板：模型仅训练主板(60/00/002)，非主板评分无效
+        if code.startswith(("300", "301", "688")):
             continue
         if "ST" in code.upper() or "*ST" in code.upper() or "退" in code:
             continue
@@ -219,7 +222,7 @@ def batch_prefetch(codes: list[str], today: str, prev_date: str,
                     return dict(zip(flds, items[0])) if items and flds else {}
                 except Exception:
                     return {}
-            futs = {pool.submit(_get_auc, c): c for c in codes[:500]}
+            futs = {pool.submit(_get_auc, c): c for c in codes}
             for fut in as_completed(futs):
                 r = fut.result()
                 if r:
@@ -234,7 +237,8 @@ def batch_prefetch(codes: list[str], today: str, prev_date: str,
 def build_features(codes: list[str], today: str, prev_date: str,
                    basic_cache: dict[str, dict], basic_prev_cache: dict[str, dict],
                    mf_cache, mf_prev_cache, tl_cache, ti_cache, auc_cache,
-                   fi_cache: dict[str, dict]) -> pd.DataFrame:
+                   fi_cache: dict[str, dict],
+                   intraday_cache: dict[str, dict] | None = None) -> pd.DataFrame:
     """调用 build_pit_features 逐只构建64特征。"""
     rows = []
     total = len(codes)
@@ -329,6 +333,7 @@ def build_features(codes: list[str], today: str, prev_date: str,
                 concept_momentum=cm,
                 top_list_by_date={pit_date: tl_ent} if tl_ent else None,
                 top_inst_by_date={pit_date: ti_list} if ti_list else None,
+                intraday_by_date={pit_date: intraday_cache.get(code, {})} if intraday_cache else None,
                 pit_mode=True,
             )
             feats["code"] = code
@@ -487,7 +492,7 @@ def main():
     parser.add_argument("--quick", action="store_true", help="快验(100只)")
     args = parser.parse_args()
 
-    today = _today_str()
+    today = os.environ.get("_PANEL_DATE") or _today_str()
     from plays.limit_up.pipeline import _is_trade_day
     if not _is_trade_day(today):
         print(f"[panel_builder] {today} 非交易日，跳过")
@@ -563,10 +568,24 @@ def main():
         pass
     print(f"    daily_basic(前日{prev2}): {time.time()-t0:.1f}s ({len(basic_prev_cache)}只)")
 
+    # ⑥ 加载 T-1 盘中数据（intraday）
+    intraday_cache: dict[str, dict] = {}
+    id_path = RAW_DIR / "intraday" / f"{prev_date}.parquet"
+    if id_path.exists():
+        try:
+            import pandas as _pd
+            idf = _pd.read_parquet(id_path)
+            for _, r in idf.iterrows():
+                intraday_cache[r["ts_code"]] = r.to_dict()
+            print(f"    intraday({prev_date}): {len(intraday_cache)}只")
+        except Exception as e:
+            print(f"    intraday 加载失败: {e}")
+
     # 构建特征
     df = build_features(codes, today, prev_date,
                         basic_cache, basic_prev_cache,
-                        mf_cache, mf_prev_cache, tl_cache, ti_cache, auc_cache, fi_cache)
+                        mf_cache, mf_prev_cache, tl_cache, ti_cache, auc_cache, fi_cache,
+                        intraday_cache=intraday_cache if intraday_cache else None)
 
     # 补策略分
     df = _add_strategy_scores(df, fi_cache, basic_cache, mf_cache, tl_cache)
