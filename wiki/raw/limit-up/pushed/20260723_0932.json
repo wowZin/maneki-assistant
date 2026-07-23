@@ -1,0 +1,17 @@
+[
+  {
+    "code": "000811.SZ",
+    "name": "冰轮环境",
+    "model_score": 60.42,
+    "total_score": 60.42,
+    "score_mode": "model_score",
+    "pct_chg": 6.4,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 51.0
+  }
+]

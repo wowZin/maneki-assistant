@@ -1,0 +1,17 @@
+[
+  {
+    "code": "603738.SH",
+    "name": "泰晶科技",
+    "model_score": 58.33,
+    "total_score": 58.33,
+    "score_mode": "model_score",
+    "pct_chg": -0.12,
+    "scores": {
+      "technical": 23.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 63.0
+  }
+]

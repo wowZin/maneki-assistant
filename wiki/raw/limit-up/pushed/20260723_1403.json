@@ -1,0 +1,17 @@
+[
+  {
+    "code": "603989.SH",
+    "name": "艾华集团",
+    "model_score": 55.86,
+    "total_score": 55.86,
+    "score_mode": "model_score",
+    "pct_chg": 1.01,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  }
+]

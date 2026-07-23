@@ -1,0 +1,17 @@
+[
+  {
+    "code": "000636.SZ",
+    "name": "风华高科",
+    "model_score": 57.08,
+    "total_score": 57.08,
+    "score_mode": "model_score",
+    "pct_chg": 5.4,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 55.0
+  }
+]

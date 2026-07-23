@@ -1,0 +1,17 @@
+[
+  {
+    "code": "603082.SH",
+    "name": "北自科技",
+    "model_score": 90.21,
+    "total_score": 90.21,
+    "score_mode": "model_score",
+    "pct_chg": 4.17,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 10.0
+  }
+]

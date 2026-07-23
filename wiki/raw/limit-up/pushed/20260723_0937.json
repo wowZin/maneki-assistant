@@ -1,0 +1,17 @@
+[
+  {
+    "code": "603019.SH",
+    "name": "中科曙光",
+    "model_score": 56.71,
+    "total_score": 56.71,
+    "score_mode": "model_score",
+    "pct_chg": 0.66,
+    "scores": {
+      "technical": 40.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 66.0
+  }
+]

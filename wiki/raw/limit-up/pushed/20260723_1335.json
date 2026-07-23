@@ -1,0 +1,47 @@
+[
+  {
+    "code": "001238.SZ",
+    "name": "浙江正特",
+    "model_score": 86.33,
+    "total_score": 86.33,
+    "score_mode": "model_score",
+    "pct_chg": 1.03,
+    "scores": {
+      "technical": 20.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "605580.SH",
+    "name": "恒盛能源",
+    "model_score": 84.31,
+    "total_score": 84.31,
+    "score_mode": "model_score",
+    "pct_chg": 1.84,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "300935.SZ",
+    "name": "盈建科",
+    "model_score": 83.96,
+    "total_score": 83.96,
+    "score_mode": "model_score",
+    "pct_chg": 2.57,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  }
+]

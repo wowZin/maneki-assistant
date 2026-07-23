@@ -1,0 +1,47 @@
+[
+  {
+    "code": "688597.SH",
+    "name": "煜邦电力",
+    "model_score": 92.46,
+    "total_score": 92.46,
+    "score_mode": "model_score",
+    "pct_chg": 3.99,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 10.0
+  },
+  {
+    "code": "603015.SH",
+    "name": "弘讯科技",
+    "model_score": 92.0,
+    "total_score": 92.0,
+    "score_mode": "model_score",
+    "pct_chg": 4.49,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "603082.SH",
+    "name": "北自科技",
+    "model_score": 89.23,
+    "total_score": 89.23,
+    "score_mode": "model_score",
+    "pct_chg": 4.04,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 10.0
+  }
+]

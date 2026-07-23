@@ -1,0 +1,17 @@
+[
+  {
+    "code": "001257.SZ",
+    "name": "盛龙股份",
+    "model_score": 55.58,
+    "total_score": 55.58,
+    "score_mode": "model_score",
+    "pct_chg": -2.15,
+    "scores": {
+      "technical": 44.0,
+      "fundflow": 27.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 39.0
+  }
+]
