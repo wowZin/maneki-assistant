@@ -22,7 +22,7 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
-from plays.watchdog.watchdog import WatchState, STATE_FILE, MAX_WATCH, _norm, _short  # noqa
+from plays.watchdog.watchdog import WatchState, STATE_FILE, MAX_WATCH, SURGE_MAX_WATCH, _norm, _short  # noqa
 
 
 def _load_state() -> dict[str, WatchState]:
@@ -52,7 +52,7 @@ def _resolve_name(code: str) -> str:
     return code
 
 
-def cmd_add(codes: list[str]) -> str:
+def cmd_add(codes: list[str], source: str = "manual") -> str:
     codes = [_norm(c) for c in codes]
     states = _load_state()
     msgs = []
@@ -60,13 +60,22 @@ def cmd_add(codes: list[str]) -> str:
         if code in states:
             msgs.append(f"{code} 已在盯盘中")
             continue
-        if len(states) >= MAX_WATCH:
-            msgs.append(f"盯盘已达上限({MAX_WATCH}只)，无法添加 {code}")
-            continue
+        if source == "surge":
+            surge_count = sum(1 for st in states.values() if st.source == "surge")
+            if surge_count >= SURGE_MAX_WATCH:
+                msgs.append(f"surge盯盘已达上限({SURGE_MAX_WATCH}只)，无法添加 {code}")
+                continue
+        else:
+            manual_count = sum(1 for st in states.values() if st.source != "surge")
+            if manual_count >= MAX_WATCH:
+                msgs.append(f"盯盘已达上限({MAX_WATCH}只)，无法添加 {code}")
+                continue
         name = _resolve_name(code)
         st = WatchState(code, name)
+        st.source = source
         states[code] = st
-        msgs.append(f"开始盯盘 {name}({code})")
+        tag = "【surge】" if source == "surge" else ""
+        msgs.append(f"开始盯盘 {name}({code}){tag}")
     _save_state(states)
     return "\n".join(msgs)
 
@@ -126,10 +135,12 @@ def main():
     group.add_argument("--list", action="store_true", help="查看盯盘列表")
     group.add_argument("--clear", action="store_true", help="清空所有盯盘")
     group.add_argument("--status", action="store_true", help="查看守护进程状态")
+    parser.add_argument("--source", default="manual", choices=["manual", "surge"],
+                        help="添加来源（surge 走独立上限，只发入场信号）")
     args = parser.parse_args()
 
     if args.add:
-        print(cmd_add(args.add))
+        print(cmd_add(args.add, source=args.source))
     elif args.remove:
         print(cmd_remove(args.remove))
     elif args.list:

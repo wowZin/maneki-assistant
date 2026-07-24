@@ -71,6 +71,7 @@ logger = logging.getLogger(__name__)
 STATE_FILE = PROJECT_DIR / "plays" / "watchdog" / "data" / "state.json"
 SCAN_INTERVAL = 30  # 每30秒检查一次信号
 MAX_WATCH = 20      # 同时盯盘上限
+SURGE_MAX_WATCH = int(os.getenv("SURGE_MAX_WATCH", "10"))  # surge 通道独立上限（不占手动盯盘名额）
 ABNORMAL_COOLDOWN_SECONDS = 300  # 异常推送冷却：同一 level 5 分钟内不重复推送
 
 # 候选池来源：limit_up pipeline 产出的 analysis
@@ -135,6 +136,8 @@ class WatchState:
         self.name = name
         self.added_at = datetime.now().isoformat()
         self.status = "watching"  # watching | alerted | entered | exited
+        self.source = "manual"    # manual | surge —— surge 票只发入场信号，盘后零信号汰换
+        self.entry_pushed_date = ""  # 入场信号推送日期 YYYYMMDD（汰换依据）
         self.entry_price: float = 0.0
         self.entry_at: str = ""
         self.highest_since_entry: float = 0.0
@@ -162,6 +165,7 @@ class WatchState:
         return {
             "code": self.code, "name": self.name, "added_at": self.added_at,
             "status": self.status, "entry_price": self.entry_price,
+            "source": self.source, "entry_pushed_date": self.entry_pushed_date,
             "entry_at": self.entry_at, "highest_since_entry": self.highest_since_entry,
             "bars_held": self.bars_held, "signal_type": self.signal_type,
             "signal_reason": self.signal_reason, "signal_at": self.signal_at,
@@ -179,6 +183,8 @@ class WatchState:
         s = cls(d["code"], d.get("name", ""))
         s.added_at = d.get("added_at", "")
         s.status = d.get("status", "watching")
+        s.source = d.get("source", "manual")
+        s.entry_pushed_date = d.get("entry_pushed_date", "")
         s.entry_price = d.get("entry_price", 0.0)
         s.entry_at = d.get("entry_at", "")
         s.highest_since_entry = d.get("highest_since_entry", 0.0)
@@ -262,7 +268,7 @@ class WatchdogEngine:
         codes = [_norm(c) for c in codes]
         msgs = []
         with self._lock:
-            current = len(self._states)
+            current = sum(1 for st in self._states.values() if st.source != "surge")
             for code in codes:
                 if code in self._states:
                     msgs.append(f"{code} 已在盯盘中")
@@ -367,6 +373,7 @@ class WatchdogEngine:
                     if trading_day_logged:
                         logger.info("交易时段结束，暂停盯盘扫描")
                         trading_day_logged = False
+                        self._eod_purge()
                     wait = _next_trading_start()
                     sleep_for = min(wait, 300.0)
                     for _ in range(int(sleep_for)):
@@ -377,6 +384,18 @@ class WatchdogEngine:
                 logger.error(f"盯盘循环异常: {e}")
                 time.sleep(SCAN_INTERVAL)
         logger.info("盯盘循环退出")
+
+    def _eod_purge(self):
+        """盘后汰换：surge 票当天一次入场信号都没触发（仍 watching/alerted）→ 移出盯盘列表。
+
+        entered 状态的票保留（可能有持仓，继续走出场管理）。
+        """
+        with self._lock:
+            doomed = [c for c, st in self._states.items()
+                      if st.source == "surge" and st.status != "entered"]
+        if doomed:
+            logger.info(f"盘后汰换 surge 零信号 {len(doomed)} 只: {doomed}")
+            self.remove(doomed)
 
     def _get_state_mtime(self) -> float:
         try:
@@ -481,6 +500,13 @@ class WatchdogEngine:
                     # 诱空不移出盯盘,不推送
                     st.last_abnormal_level = level
                     st.last_abnormal_pushed_at = time.time()
+                elif st.source == "surge":
+                    # surge 票保持静默（只发入场信号）；critical 仍移除
+                    st.last_abnormal_level = level
+                    st.last_abnormal_pushed_at = time.time()
+                    if level == "critical":
+                        self.remove([code])
+                        continue
                 else:
                     icon = "🚨" if level == "critical" else "⚠️"
                     msg = (
@@ -512,12 +538,14 @@ class WatchdogEngine:
                     st.signal_at = now.strftime("%H:%M:%S")
                     st.last_alert_at = now.strftime("%H:%M")
                     self._save_state()
-                    _push_feishu(
-                        f"⏳ {st.name}({code}) 触发信号\n"
-                        f"类型: {sig_type}\n"
-                        f"原因: {reason}\n"
-                        f"现价: {last:.2f} | VWAP: {vwap:.2f}"
-                    )
+                    if st.source != "surge":
+                        # surge 票不发触发信号，只发入场信号
+                        _push_feishu(
+                            f"⏳ {st.name}({code}) 触发信号\n"
+                            f"类型: {sig_type}\n"
+                            f"原因: {reason}\n"
+                            f"现价: {last:.2f} | VWAP: {vwap:.2f}"
+                        )
 
             elif st.status == "alerted":
                 # 简单确认：信号触发后下一根K线仍满足条件则入场
@@ -528,9 +556,11 @@ class WatchdogEngine:
                     st.entry_at = now.strftime("%Y-%m-%d %H:%M:%S")
                     st.highest_since_entry = last
                     st.bars_held = 0
+                    st.entry_pushed_date = now.strftime("%Y%m%d")
                     self._save_state()
+                    _surge_tag = "【surge】" if st.source == "surge" else ""
                     _push_feishu(
-                        f"📈 {st.name}({code}) 入场!\n"
+                        f"📈 {st.name}({code}) 入场!{_surge_tag}\n"
                         f"入场价: {last:.2f}\n"
                         f"信号: {st.signal_reason}\n"
                         f"VWAP: {vwap:.2f}"
@@ -552,8 +582,9 @@ class WatchdogEngine:
                     st.bars_held, vwap, scores, row)
                 if exit_triggered:
                     pnl_pct = (last / st.entry_price - 1) * 100
+                    _surge_tag = "【surge】" if st.source == "surge" else ""
                     _push_feishu(
-                        f"🛑 {st.name}({code}) 出场\n"
+                        f"🛑 {st.name}({code}) 出场{_surge_tag}\n"
                         f"{exit_reason}\n"
                         f"入场: {st.entry_price:.2f} → 现价: {last:.2f}\n"
                         f"盈亏: {pnl_pct:+.2f}% | 持仓{st.bars_held}轮"

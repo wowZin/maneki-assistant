@@ -198,7 +198,7 @@ _API_FIELDS: dict[str, dict[str, bool]] = {
 
 # 面板内部名 -> Tushare API 名（多数相同，个别需要映射）
 _API_TUSHARE_NAME: dict[str, str] = {
-    "auction": "stk_auction",
+    "auction": "stk_auction_o",
 }
 
 
@@ -296,7 +296,18 @@ def _ensure_day_columns(api: str, date: str, cols_needed: list[str], timeout: in
         add = _validate_day_df(api, date, add)
         if add.empty:
             return df
-        df = df.merge(add[["ts_code", "trade_date"] + missing], on=["ts_code", "trade_date"], how="left")
+        # 接口可能不返回全部请求字段（如 stk_auction_o 只有 vol/amount）：
+        # 实际返回的列做合并，未返回的列补 NaN，保证列契约不炸
+        got = [c for c in missing if c in add.columns]
+        not_got = [c for c in missing if c not in add.columns]
+        if not_got:
+            for c in not_got:
+                df[c] = pd.NA
+            log_data_audit(
+                f"[panel] {api}/{date} 接口未返回字段 {not_got}，已补 NaN"
+            )
+        if got:
+            df = df.merge(add[["ts_code", "trade_date"] + got], on=["ts_code", "trade_date"], how="left")
         df = _validate_day_df(api, date, df)
         df.to_parquet(day_file)
         return df

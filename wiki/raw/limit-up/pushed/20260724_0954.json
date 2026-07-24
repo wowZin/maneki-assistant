@@ -1,0 +1,32 @@
+[
+  {
+    "code": "000977.SZ",
+    "name": "浪潮信息",
+    "model_score": 61.48,
+    "total_score": 61.48,
+    "score_mode": "model_score",
+    "pct_chg": -1.09,
+    "scores": {
+      "technical": 19.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 61.0
+  },
+  {
+    "code": "002828.SZ",
+    "name": "贝肯能源",
+    "model_score": 55.76,
+    "total_score": 55.76,
+    "score_mode": "model_score",
+    "pct_chg": -2.52,
+    "scores": {
+      "technical": 29.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  }
+]

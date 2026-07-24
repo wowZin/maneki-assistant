@@ -1,0 +1,17 @@
+[
+  {
+    "code": "002828.SZ",
+    "name": "贝肯能源",
+    "model_score": 61.24,
+    "total_score": 61.24,
+    "score_mode": "model_score",
+    "pct_chg": -3.74,
+    "scores": {
+      "technical": 29.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "code": "000977.SZ",
+    "name": "浪潮信息",
+    "model_score": 63.95,
+    "total_score": 63.95,
+    "score_mode": "model_score",
+    "pct_chg": -2.14,
+    "scores": {
+      "technical": 19.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 61.0
+  }
+]

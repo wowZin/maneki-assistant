@@ -1,0 +1,17 @@
+[
+  {
+    "code": "001309.SZ",
+    "name": "德明利",
+    "model_score": 59.19,
+    "total_score": 59.19,
+    "score_mode": "model_score",
+    "pct_chg": -5.06,
+    "scores": {
+      "technical": 28.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  }
+]

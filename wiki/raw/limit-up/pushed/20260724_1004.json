@@ -1,0 +1,17 @@
+[
+  {
+    "code": "600869.SH",
+    "name": "远东股份",
+    "model_score": 56.03,
+    "total_score": 56.03,
+    "score_mode": "model_score",
+    "pct_chg": -2.11,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  }
+]

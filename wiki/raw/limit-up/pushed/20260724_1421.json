@@ -1,0 +1,17 @@
+[
+  {
+    "code": "000938.SZ",
+    "name": "紫光股份",
+    "model_score": 61.32,
+    "total_score": 61.32,
+    "score_mode": "model_score",
+    "pct_chg": -0.85,
+    "scores": {
+      "technical": 29.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 66.0
+  }
+]

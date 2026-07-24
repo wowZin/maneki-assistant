@@ -1,0 +1,6202 @@
+[
+  {
+    "code": "000977.SZ",
+    "name": "浪潮信息",
+    "model_score": 69.0,
+    "total_score": 69.0,
+    "score_mode": "model_score",
+    "pct_chg": -2.96,
+    "scores": {
+      "technical": 19.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 61.0
+  },
+  {
+    "name": "威派格",
+    "position_20d": 0.4271356784,
+    "trailing_10": -0.0188034188,
+    "trailing_5": 0.0195381883,
+    "pct_chg_std_10d": 4.6504734612,
+    "pct_chg_std_5d": 5.0181561137,
+    "max_pct_chg_5d": 9.9617,
+    "limit_up_count_20d": 3.0,
+    "limit_up_count_60d": 6.0,
+    "max_step": 1.0,
+    "was_limit": 1.0,
+    "avg_amount_5d": 94943906.60000001,
+    "pct_chg_score_day": 9.9617,
+    "turnover_rate": 2.8257,
+    "volume_ratio": 0.93,
+    "prev_turnover": 2.0041,
+    "prev_vol_ratio": 0.62,
+    "vol_accel": 0.5,
+    "circ_mv": 327126.2162,
+    "cmv_yi": 32.71262162,
+    "pe": 999.0,
+    "pb": 1.7748,
+    "pullback_10d": 0.0605564648,
+    "pullback_20d": 0.1656976744,
+    "prev_pct": 0.3846,
+    "pct_5d": 2.5441,
+    "positive_5d": 2.0,
+    "close_pos": 1.0,
+    "body_ratio": 0.96,
+    "upper_ratio": 0.0,
+    "lower_ratio": 0.04,
+    "amplitude": 0.0871080139,
+    "net_mf_amount": 235.0,
+    "net_mf_ratio": 0.0261001041,
+    "buy_elg_ratio": 1.0,
+    "buy_lg_ratio": 0.4985950229,
+    "mf_net": 235.0,
+    "mf_accel": 2.2571550848,
+    "mf_pct": 0.0026100104,
+    "sector_heat": 0.0,
+    "sector_rank": 0.8976525982,
+    "n_concepts": 73.0,
+    "auc_amount": 0.0,
+    "auc_vol": 0.0,
+    "auc_amt_ratio": 0.0,
+    "auc_vol_ratio": 0.0,
+    "id_vwap_dev": 0.0,
+    "id_range": 0.0,
+    "id_morning_vol_ratio": 0.5,
+    "id_afternoon_strength": 1.0,
+    "id_tail_vol_ratio": 0.1,
+    "id_amount_ratio": 0.0,
+    "dt_is_listed": 0.0,
+    "dt_net_amount": 0.0,
+    "dt_net_rate": 0.0,
+    "dt_l_buy_ratio": 0.0,
+    "dt_n_exalter": 0.0,
+    "dt_inst_net_buy": 0.0,
+    "dt_hot_net_buy": 0.0,
+    "dt_inst_sell_ratio": 0.0,
+    "code": "603956.SH",
+    "fundamental": 33.0,
+    "technical": 26.0,
+    "fundflow": 20.0,
+    "sentiment": 75.0,
+    "shortterm": 10.0,
+    "model_score": 62.08
+  },
+  {
+    "code": "002828.SZ",
+    "name": "贝肯能源",
+    "model_score": 59.47,
+    "total_score": 59.47,
+    "score_mode": "model_score",
+    "pct_chg": 0.81,
+    "scores": {
+      "technical": 29.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "000938.SZ",
+    "name": "紫光股份",
+    "model_score": 63.78,
+    "total_score": 63.78,
+    "score_mode": "model_score",
+    "pct_chg": -2.14,
+    "scores": {
+      "technical": 29.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 66.0
+  },
+  {
+    "code": "001309.SZ",
+    "name": "德明利",
+    "model_score": 57.26,
+    "total_score": 57.26,
+    "score_mode": "model_score",
+    "pct_chg": -8.11,
+    "scores": {
+      "technical": 28.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "name": "顺钠股份",
+    "position_20d": 0.4671052632,
+    "trailing_10": -0.0102622577,
+    "trailing_5": 0.0508474576,
+    "pct_chg_std_10d": 3.2651880083,
+    "pct_chg_std_5d": 4.7430735138,
+    "max_pct_chg_5d": 10.0127,
+    "limit_up_count_20d": 1.0,
+    "limit_up_count_60d": 2.0,
+    "max_step": 1.0,
+    "was_limit": 1.0,
+    "avg_amount_5d": 212370213.468,
+    "pct_chg_score_day": 10.0127,
+    "turnover_rate": 4.184,
+    "volume_ratio": 1.2,
+    "prev_turnover": 3.0119,
+    "prev_vol_ratio": 0.9,
+    "vol_accel": 0.3333333333,
+    "circ_mv": 594495.2832,
+    "cmv_yi": 59.44952832,
+    "pe": 58.8162,
+    "pb": 6.0826,
+    "pullback_10d": 0.0503282276,
+    "pullback_20d": 0.1572815534,
+    "prev_pct": -0.7547,
+    "pct_5d": 5.5231,
+    "positive_5d": 2.0,
+    "close_pos": 1.0,
+    "body_ratio": 0.9875,
+    "upper_ratio": 0.0,
+    "lower_ratio": 0.0125,
+    "amplitude": 0.0921658986,
+    "net_mf_amount": -1756.23,
+    "net_mf_ratio": -0.0720220312,
+    "buy_elg_ratio": 0.922255299,
+    "buy_lg_ratio": 0.4551278558,
+    "mf_net": -1756.23,
+    "mf_accel": -18.7196272176,
+    "mf_pct": -0.0072022031,
+    "sector_heat": 0.0,
+    "sector_rank": 0.8510641097,
+    "n_concepts": 63.0,
+    "auc_amount": 556245.0,
+    "auc_vol": 70500.0,
+    "auc_amt_ratio": 0.0026192232,
+    "auc_vol_ratio": 0.2460164957,
+    "id_vwap_dev": 0.0,
+    "id_range": 0.0,
+    "id_morning_vol_ratio": 0.5,
+    "id_afternoon_strength": 1.0,
+    "id_tail_vol_ratio": 0.1,
+    "id_amount_ratio": 0.0,
+    "dt_is_listed": 0.0,
+    "dt_net_amount": 0.0,
+    "dt_net_rate": 0.0,
+    "dt_l_buy_ratio": 0.0,
+    "dt_n_exalter": 0.0,
+    "dt_inst_net_buy": 0.0,
+    "dt_hot_net_buy": 0.0,
+    "dt_inst_sell_ratio": 0.0,
+    "code": "000533.SZ",
+    "fundamental": 44.0,
+    "technical": 31.0,
+    "fundflow": 20.0,
+    "sentiment": 75.0,
+    "shortterm": 10.0,
+    "model_score": 56.56
+  },
+  {
+    "code": "000034.SZ",
+    "name": "神州数码",
+    "model_score": 56.13,
+    "total_score": 56.13,
+    "score_mode": "model_score",
+    "pct_chg": -3.92,
+    "scores": {
+      "technical": 51.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 45.0
+  },
+  {
+    "code": "000566.SZ",
+    "name": "海南海药",
+    "model_score": 51.1,
+    "total_score": 51.1,
+    "score_mode": "model_score",
+    "pct_chg": -6.29,
+    "scores": {
+      "technical": 23.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "000017.SZ",
+    "name": "深中华A",
+    "model_score": 55.06,
+    "total_score": 55.06,
+    "score_mode": "model_score",
+    "pct_chg": 2.11,
+    "scores": {
+      "technical": 26.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 43.0
+  },
+  {
+    "code": "000811.SZ",
+    "name": "冰轮环境",
+    "model_score": 55.83,
+    "total_score": 55.83,
+    "score_mode": "model_score",
+    "pct_chg": -1.56,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 51.0
+  },
+  {
+    "code": "688793.SH",
+    "name": "倍轻松",
+    "model_score": 43.23,
+    "total_score": 43.23,
+    "score_mode": "model_score",
+    "pct_chg": -3.44,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 31.0
+  },
+  {
+    "code": "000636.SZ",
+    "name": "风华高科",
+    "model_score": 53.75,
+    "total_score": 53.75,
+    "score_mode": "model_score",
+    "pct_chg": -6.43,
+    "scores": {
+      "technical": 23.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 55.0
+  },
+  {
+    "code": "600487.SH",
+    "name": "亨通光电",
+    "model_score": 52.72,
+    "total_score": 52.72,
+    "score_mode": "model_score",
+    "pct_chg": -5.69,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 60.0
+  },
+  {
+    "code": "301323.SZ",
+    "name": "新莱福",
+    "model_score": 53.07,
+    "total_score": 53.07,
+    "score_mode": "model_score",
+    "pct_chg": -0.81,
+    "scores": {
+      "technical": 42.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "002975.SZ",
+    "name": "博杰股份",
+    "model_score": 52.92,
+    "total_score": 52.92,
+    "score_mode": "model_score",
+    "pct_chg": -3.28,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 63.0
+  },
+  {
+    "code": "000539.SZ",
+    "name": "粤电力A",
+    "model_score": 54.3,
+    "total_score": 54.3,
+    "score_mode": "model_score",
+    "pct_chg": -10.02,
+    "scores": {
+      "technical": 30.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 57.0
+  },
+  {
+    "code": "600353.SH",
+    "name": "旭光电子",
+    "model_score": 52.7,
+    "total_score": 52.7,
+    "score_mode": "model_score",
+    "pct_chg": -0.53,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 55.0
+  },
+  {
+    "code": "600869.SH",
+    "name": "远东股份",
+    "model_score": 51.8,
+    "total_score": 51.8,
+    "score_mode": "model_score",
+    "pct_chg": -5.96,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "name": "中电鑫龙",
+    "position_20d": 0.6644736842,
+    "trailing_10": 0.0424929178,
+    "trailing_5": 0.0469416785,
+    "pct_chg_std_10d": 3.4703012539,
+    "pct_chg_std_5d": 4.8240401692,
+    "max_pct_chg_5d": 10.0149,
+    "limit_up_count_20d": 1.0,
+    "limit_up_count_60d": 1.0,
+    "max_step": 1.0,
+    "was_limit": 1.0,
+    "avg_amount_5d": 172443587.142,
+    "pct_chg_score_day": 10.0149,
+    "turnover_rate": 4.5059,
+    "volume_ratio": 1.25,
+    "prev_turnover": 2.7345,
+    "prev_vol_ratio": 0.69,
+    "vol_accel": 0.8115942029,
+    "circ_mv": 486317.152,
+    "cmv_yi": 48.6317152,
+    "pe": 999.0,
+    "pb": 2.9193,
+    "pullback_10d": 0.0027100271,
+    "pullback_20d": 0.0648030496,
+    "prev_pct": -1.7621,
+    "pct_5d": 5.1664,
+    "positive_5d": 2.0,
+    "close_pos": 1.0,
+    "body_ratio": 1.0,
+    "upper_ratio": 0.0,
+    "lower_ratio": 0.0,
+    "amplitude": 0.0910326087,
+    "net_mf_amount": -2525.71,
+    "net_mf_ratio": -0.1182503613,
+    "buy_elg_ratio": 0.905101037,
+    "buy_lg_ratio": 0.546357754,
+    "mf_net": -2525.71,
+    "mf_accel": -0.6361086459,
+    "mf_pct": -0.0118250361,
+    "sector_heat": 0.0,
+    "sector_rank": 0.9186018929,
+    "n_concepts": 79.0,
+    "auc_amount": 0.0,
+    "auc_vol": 0.0,
+    "auc_amt_ratio": 0.0,
+    "auc_vol_ratio": 0.0,
+    "id_vwap_dev": 0.0,
+    "id_range": 0.0,
+    "id_morning_vol_ratio": 0.5,
+    "id_afternoon_strength": 1.0,
+    "id_tail_vol_ratio": 0.1,
+    "id_amount_ratio": 0.0,
+    "dt_is_listed": 0.0,
+    "dt_net_amount": 0.0,
+    "dt_net_rate": 0.0,
+    "dt_l_buy_ratio": 0.0,
+    "dt_n_exalter": 0.0,
+    "dt_inst_net_buy": 0.0,
+    "dt_hot_net_buy": 0.0,
+    "dt_inst_sell_ratio": 0.0,
+    "code": "002298.SZ",
+    "fundamental": 33.0,
+    "technical": 31.0,
+    "fundflow": 20.0,
+    "sentiment": 75.0,
+    "shortterm": 10.0,
+    "model_score": 52.42
+  },
+  {
+    "code": "688038.SH",
+    "name": "中科通达",
+    "model_score": 49.51,
+    "total_score": 49.51,
+    "score_mode": "model_score",
+    "pct_chg": 0.18,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "603459.SH",
+    "name": "红板科技",
+    "model_score": 51.42,
+    "total_score": 51.42,
+    "score_mode": "model_score",
+    "pct_chg": -5.54,
+    "scores": {
+      "technical": 39.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "002580.SZ",
+    "name": "圣阳股份",
+    "model_score": 49.76,
+    "total_score": 49.76,
+    "score_mode": "model_score",
+    "pct_chg": -4.84,
+    "scores": {
+      "technical": 39.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 34.0
+  },
+  {
+    "code": "001359.SZ",
+    "name": "平安电工",
+    "model_score": 49.17,
+    "total_score": 49.17,
+    "score_mode": "model_score",
+    "pct_chg": -4.19,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "001896.SZ",
+    "name": "豫能控股",
+    "model_score": 48.87,
+    "total_score": 48.87,
+    "score_mode": "model_score",
+    "pct_chg": -10.01,
+    "scores": {
+      "technical": 46.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 51.0
+  },
+  {
+    "code": "301013.SZ",
+    "name": "利和兴",
+    "model_score": 50.83,
+    "total_score": 50.83,
+    "score_mode": "model_score",
+    "pct_chg": -3.44,
+    "scores": {
+      "technical": 23.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 63.0
+  },
+  {
+    "code": "301526.SZ",
+    "name": "国际复材",
+    "model_score": 49.48,
+    "total_score": 49.48,
+    "score_mode": "model_score",
+    "pct_chg": -4.01,
+    "scores": {
+      "technical": 13.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "603011.SH",
+    "name": "合锻智能",
+    "model_score": 49.5,
+    "total_score": 49.5,
+    "score_mode": "model_score",
+    "pct_chg": -2.7,
+    "scores": {
+      "technical": 28.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "600611.SH",
+    "name": "大众交通",
+    "model_score": 47.77,
+    "total_score": 47.77,
+    "score_mode": "model_score",
+    "pct_chg": -5.0,
+    "scores": {
+      "technical": 26.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "603177.SH",
+    "name": "德创环保",
+    "model_score": 47.59,
+    "total_score": 47.59,
+    "score_mode": "model_score",
+    "pct_chg": -1.35,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 31.0
+  },
+  {
+    "code": "002579.SZ",
+    "name": "中京电子",
+    "model_score": 52.17,
+    "total_score": 52.17,
+    "score_mode": "model_score",
+    "pct_chg": 0.5,
+    "scores": {
+      "technical": 24.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 53.0
+  },
+  {
+    "code": "600105.SH",
+    "name": "永鼎股份",
+    "model_score": 51.31,
+    "total_score": 51.31,
+    "score_mode": "model_score",
+    "pct_chg": -5.09,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 55.0
+  },
+  {
+    "code": "603893.SH",
+    "name": "瑞芯微",
+    "model_score": 52.23,
+    "total_score": 52.23,
+    "score_mode": "model_score",
+    "pct_chg": 3.31,
+    "scores": {
+      "technical": 24.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "300351.SZ",
+    "name": "永贵电器",
+    "model_score": 51.66,
+    "total_score": 51.66,
+    "score_mode": "model_score",
+    "pct_chg": -5.58,
+    "scores": {
+      "technical": 42.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "603738.SH",
+    "name": "泰晶科技",
+    "model_score": 48.42,
+    "total_score": 48.42,
+    "score_mode": "model_score",
+    "pct_chg": -3.03,
+    "scores": {
+      "technical": 13.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 63.0
+  },
+  {
+    "code": "300001.SZ",
+    "name": "特锐德",
+    "model_score": 49.06,
+    "total_score": 49.06,
+    "score_mode": "model_score",
+    "pct_chg": -6.23,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 41.0
+  },
+  {
+    "code": "301165.SZ",
+    "name": "锐捷网络",
+    "model_score": 49.87,
+    "total_score": 49.87,
+    "score_mode": "model_score",
+    "pct_chg": 4.1,
+    "scores": {
+      "technical": 27.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 55.0
+  },
+  {
+    "code": "300522.SZ",
+    "name": "世名科技",
+    "model_score": 50.57,
+    "total_score": 50.57,
+    "score_mode": "model_score",
+    "pct_chg": -3.68,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "603082.SH",
+    "name": "北自科技",
+    "model_score": 49.71,
+    "total_score": 49.71,
+    "score_mode": "model_score",
+    "pct_chg": 2.15,
+    "scores": {
+      "technical": 34.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 21.0
+  },
+  {
+    "code": "603019.SH",
+    "name": "中科曙光",
+    "model_score": 52.96,
+    "total_score": 52.96,
+    "score_mode": "model_score",
+    "pct_chg": -0.73,
+    "scores": {
+      "technical": 21.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 66.0
+  },
+  {
+    "code": "301390.SZ",
+    "name": "经纬股份",
+    "model_score": 47.4,
+    "total_score": 47.4,
+    "score_mode": "model_score",
+    "pct_chg": -1.7,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "000759.SZ",
+    "name": "中百集团",
+    "model_score": 44.81,
+    "total_score": 44.81,
+    "score_mode": "model_score",
+    "pct_chg": -3.98,
+    "scores": {
+      "technical": 24.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 39.0
+  },
+  {
+    "code": "301302.SZ",
+    "name": "华如科技",
+    "model_score": 50.16,
+    "total_score": 50.16,
+    "score_mode": "model_score",
+    "pct_chg": 0.29,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "301179.SZ",
+    "name": "泽宇智能",
+    "model_score": 46.36,
+    "total_score": 46.36,
+    "score_mode": "model_score",
+    "pct_chg": -5.48,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "688813.SH",
+    "name": "泰金新能",
+    "model_score": 49.97,
+    "total_score": 49.97,
+    "score_mode": "model_score",
+    "pct_chg": -5.89,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 43.0
+  },
+  {
+    "code": "600540.SH",
+    "name": "新赛股份",
+    "model_score": 44.92,
+    "total_score": 44.92,
+    "score_mode": "model_score",
+    "pct_chg": -4.15,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 46.0
+  },
+  {
+    "code": "001339.SZ",
+    "name": "智微智能",
+    "model_score": 49.24,
+    "total_score": 49.24,
+    "score_mode": "model_score",
+    "pct_chg": -2.28,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 67.0
+  },
+  {
+    "code": "001257.SZ",
+    "name": "盛龙股份",
+    "model_score": 47.03,
+    "total_score": 47.03,
+    "score_mode": "model_score",
+    "pct_chg": -8.46,
+    "scores": {
+      "technical": 56.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 39.0
+  },
+  {
+    "code": "000948.SZ",
+    "name": "南天信息",
+    "model_score": 46.43,
+    "total_score": 46.43,
+    "score_mode": "model_score",
+    "pct_chg": -8.15,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "301248.SZ",
+    "name": "杰创智能",
+    "model_score": 40.32,
+    "total_score": 40.32,
+    "score_mode": "model_score",
+    "pct_chg": -2.99,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 44.0
+  },
+  {
+    "code": "002080.SZ",
+    "name": "中材科技",
+    "model_score": 44.93,
+    "total_score": 44.93,
+    "score_mode": "model_score",
+    "pct_chg": -5.79,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 56.0
+  },
+  {
+    "code": "301536.SZ",
+    "name": "星宸科技",
+    "model_score": 47.53,
+    "total_score": 47.53,
+    "score_mode": "model_score",
+    "pct_chg": 0.12,
+    "scores": {
+      "technical": 24.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "000725.SZ",
+    "name": "京东方Ａ",
+    "model_score": 46.59,
+    "total_score": 46.59,
+    "score_mode": "model_score",
+    "pct_chg": -4.46,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 41.0
+  },
+  {
+    "code": "300682.SZ",
+    "name": "朗新科技",
+    "model_score": 45.0,
+    "total_score": 45.0,
+    "score_mode": "model_score",
+    "pct_chg": -4.13,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 42.0
+  },
+  {
+    "code": "002354.SZ",
+    "name": "天娱数科",
+    "model_score": 48.55,
+    "total_score": 48.55,
+    "score_mode": "model_score",
+    "pct_chg": -5.26,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 63.0
+  },
+  {
+    "code": "688051.SH",
+    "name": "佳华科技",
+    "model_score": 45.3,
+    "total_score": 45.3,
+    "score_mode": "model_score",
+    "pct_chg": -2.81,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "301511.SZ",
+    "name": "德福科技",
+    "model_score": 42.11,
+    "total_score": 42.11,
+    "score_mode": "model_score",
+    "pct_chg": -4.4,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "600881.SH",
+    "name": "亚泰集团",
+    "model_score": 35.19,
+    "total_score": 35.19,
+    "score_mode": "model_score",
+    "pct_chg": -4.09,
+    "scores": {
+      "technical": 21.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 58.0
+  },
+  {
+    "code": "002851.SZ",
+    "name": "麦格米特",
+    "model_score": 41.93,
+    "total_score": 41.93,
+    "score_mode": "model_score",
+    "pct_chg": -4.06,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 55.0
+  },
+  {
+    "code": "301312.SZ",
+    "name": "智立方",
+    "model_score": 47.32,
+    "total_score": 47.32,
+    "score_mode": "model_score",
+    "pct_chg": 0.35,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "002910.SZ",
+    "name": "庄园牧场",
+    "model_score": 47.74,
+    "total_score": 47.74,
+    "score_mode": "model_score",
+    "pct_chg": -2.57,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "001270.SZ",
+    "name": "铖昌科技",
+    "model_score": 43.45,
+    "total_score": 43.45,
+    "score_mode": "model_score",
+    "pct_chg": -5.3,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "603296.SH",
+    "name": "华勤技术",
+    "model_score": 48.55,
+    "total_score": 48.55,
+    "score_mode": "model_score",
+    "pct_chg": -0.87,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 47.0
+  },
+  {
+    "code": "301117.SZ",
+    "name": "佳缘科技",
+    "model_score": 47.66,
+    "total_score": 47.66,
+    "score_mode": "model_score",
+    "pct_chg": -3.03,
+    "scores": {
+      "technical": 34.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "001283.SZ",
+    "name": "豪鹏科技",
+    "model_score": 35.77,
+    "total_score": 35.77,
+    "score_mode": "model_score",
+    "pct_chg": -3.64,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "300136.SZ",
+    "name": "信维通信",
+    "model_score": 45.87,
+    "total_score": 45.87,
+    "score_mode": "model_score",
+    "pct_chg": -5.87,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "300608.SZ",
+    "name": "思特奇",
+    "model_score": 45.25,
+    "total_score": 45.25,
+    "score_mode": "model_score",
+    "pct_chg": -3.0,
+    "scores": {
+      "technical": 42.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "300274.SZ",
+    "name": "阳光电源",
+    "model_score": 44.1,
+    "total_score": 44.1,
+    "score_mode": "model_score",
+    "pct_chg": -3.33,
+    "scores": {
+      "technical": 43.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 36.0
+  },
+  {
+    "code": "000657.SZ",
+    "name": "中钨高新",
+    "model_score": 41.68,
+    "total_score": 41.68,
+    "score_mode": "model_score",
+    "pct_chg": -3.81,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "600579.SH",
+    "name": "中化装备",
+    "model_score": 43.28,
+    "total_score": 43.28,
+    "score_mode": "model_score",
+    "pct_chg": -1.59,
+    "scores": {
+      "technical": 25.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "002028.SZ",
+    "name": "思源电气",
+    "model_score": 43.02,
+    "total_score": 43.02,
+    "score_mode": "model_score",
+    "pct_chg": -1.22,
+    "scores": {
+      "technical": 42.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 47.0
+  },
+  {
+    "code": "301638.SZ",
+    "name": "南网数字",
+    "model_score": 45.14,
+    "total_score": 45.14,
+    "score_mode": "model_score",
+    "pct_chg": -7.0,
+    "scores": {
+      "technical": 45.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 59.0
+  },
+  {
+    "code": "601869.SH",
+    "name": "长飞光纤",
+    "model_score": 43.24,
+    "total_score": 43.24,
+    "score_mode": "model_score",
+    "pct_chg": -7.33,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "300711.SZ",
+    "name": "广哈通信",
+    "model_score": 44.6,
+    "total_score": 44.6,
+    "score_mode": "model_score",
+    "pct_chg": -0.56,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 29.0
+  },
+  {
+    "code": "301439.SZ",
+    "name": "泓淋电力",
+    "model_score": 45.64,
+    "total_score": 45.64,
+    "score_mode": "model_score",
+    "pct_chg": -7.76,
+    "scores": {
+      "technical": 45.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 28.0
+  },
+  {
+    "code": "301599.SZ",
+    "name": "理奇智能",
+    "model_score": 51.93,
+    "total_score": 51.93,
+    "score_mode": "model_score",
+    "pct_chg": -3.26,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 35.0
+  },
+  {
+    "code": "002316.SZ",
+    "name": "亚联发展",
+    "model_score": 43.94,
+    "total_score": 43.94,
+    "score_mode": "model_score",
+    "pct_chg": -2.91,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 35.0
+  },
+  {
+    "code": "000506.SZ",
+    "name": "招金黄金",
+    "model_score": 46.4,
+    "total_score": 46.4,
+    "score_mode": "model_score",
+    "pct_chg": -8.44,
+    "scores": {
+      "technical": 34.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 67.0
+  },
+  {
+    "code": "600875.SH",
+    "name": "XD东方电",
+    "model_score": 45.5,
+    "total_score": 45.5,
+    "score_mode": "model_score",
+    "pct_chg": -6.02,
+    "scores": {
+      "technical": 47.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 30.0
+  },
+  {
+    "code": "002339.SZ",
+    "name": "积成电子",
+    "model_score": 46.7,
+    "total_score": 46.7,
+    "score_mode": "model_score",
+    "pct_chg": -3.13,
+    "scores": {
+      "technical": 39.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "603798.SH",
+    "name": "康普顿",
+    "model_score": 43.12,
+    "total_score": 43.12,
+    "score_mode": "model_score",
+    "pct_chg": -2.6,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "002294.SZ",
+    "name": "信立泰",
+    "model_score": 40.73,
+    "total_score": 40.73,
+    "score_mode": "model_score",
+    "pct_chg": -7.84,
+    "scores": {
+      "technical": 25.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 45.0
+  },
+  {
+    "code": "002821.SZ",
+    "name": "凯莱英",
+    "model_score": 46.29,
+    "total_score": 46.29,
+    "score_mode": "model_score",
+    "pct_chg": -3.18,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 45.0
+  },
+  {
+    "code": "003036.SZ",
+    "name": "泰坦股份",
+    "model_score": 43.4,
+    "total_score": 43.4,
+    "score_mode": "model_score",
+    "pct_chg": -3.84,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 58.0
+  },
+  {
+    "code": "600129.SH",
+    "name": "太极集团",
+    "model_score": 46.13,
+    "total_score": 46.13,
+    "score_mode": "model_score",
+    "pct_chg": -6.22,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "002384.SZ",
+    "name": "东山精密",
+    "model_score": 44.59,
+    "total_score": 44.59,
+    "score_mode": "model_score",
+    "pct_chg": -3.36,
+    "scores": {
+      "technical": 13.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "002141.SZ",
+    "name": "贤丰控股",
+    "model_score": 38.64,
+    "total_score": 38.64,
+    "score_mode": "model_score",
+    "pct_chg": -7.94,
+    "scores": {
+      "technical": 45.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 59.0
+  },
+  {
+    "code": "301548.SZ",
+    "name": "崇德科技",
+    "model_score": 45.27,
+    "total_score": 45.27,
+    "score_mode": "model_score",
+    "pct_chg": -2.25,
+    "scores": {
+      "technical": 25.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 36.0
+  },
+  {
+    "code": "300605.SZ",
+    "name": "恒锋信息",
+    "model_score": 45.58,
+    "total_score": 45.58,
+    "score_mode": "model_score",
+    "pct_chg": -3.55,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "301218.SZ",
+    "name": "华是科技",
+    "model_score": 45.57,
+    "total_score": 45.57,
+    "score_mode": "model_score",
+    "pct_chg": -2.29,
+    "scores": {
+      "technical": 46.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 39.0
+  },
+  {
+    "code": "301217.SZ",
+    "name": "铜冠铜箔",
+    "model_score": 43.05,
+    "total_score": 43.05,
+    "score_mode": "model_score",
+    "pct_chg": -2.93,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "301396.SZ",
+    "name": "宏景科技",
+    "model_score": 43.52,
+    "total_score": 43.52,
+    "score_mode": "model_score",
+    "pct_chg": -6.05,
+    "scores": {
+      "technical": 24.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 65.0
+  },
+  {
+    "code": "688322.SH",
+    "name": "奥比中光-W",
+    "model_score": 40.42,
+    "total_score": 40.42,
+    "score_mode": "model_score",
+    "pct_chg": -3.97,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "002747.SZ",
+    "name": "埃斯顿",
+    "model_score": 41.33,
+    "total_score": 41.33,
+    "score_mode": "model_score",
+    "pct_chg": -3.99,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "000988.SZ",
+    "name": "华工科技",
+    "model_score": 43.97,
+    "total_score": 43.97,
+    "score_mode": "model_score",
+    "pct_chg": -3.45,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 65.0
+  },
+  {
+    "code": "002591.SZ",
+    "name": "恒大高新",
+    "model_score": 43.38,
+    "total_score": 43.38,
+    "score_mode": "model_score",
+    "pct_chg": -2.69,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 40.0
+  },
+  {
+    "code": "002738.SZ",
+    "name": "中矿资源",
+    "model_score": 42.45,
+    "total_score": 42.45,
+    "score_mode": "model_score",
+    "pct_chg": -4.79,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 60.0
+  },
+  {
+    "code": "002558.SZ",
+    "name": "巨人网络",
+    "model_score": 48.57,
+    "total_score": 48.57,
+    "score_mode": "model_score",
+    "pct_chg": -3.68,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 45.0
+  },
+  {
+    "code": "001314.SZ",
+    "name": "亿道信息",
+    "model_score": 43.29,
+    "total_score": 43.29,
+    "score_mode": "model_score",
+    "pct_chg": 1.36,
+    "scores": {
+      "technical": 23.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 53.0
+  },
+  {
+    "code": "603120.SH",
+    "name": "肯特催化",
+    "model_score": 30.75,
+    "total_score": 30.75,
+    "score_mode": "model_score",
+    "pct_chg": -7.08,
+    "scores": {
+      "technical": 34.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "002491.SZ",
+    "name": "通鼎互联",
+    "model_score": 42.4,
+    "total_score": 42.4,
+    "score_mode": "model_score",
+    "pct_chg": -5.19,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 67.0
+  },
+  {
+    "code": "300444.SZ",
+    "name": "双杰电气",
+    "model_score": 42.24,
+    "total_score": 42.24,
+    "score_mode": "model_score",
+    "pct_chg": 1.57,
+    "scores": {
+      "technical": 44.0,
+      "fundflow": 25.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 34.0
+  },
+  {
+    "code": "000070.SZ",
+    "name": "特发信息",
+    "model_score": 43.34,
+    "total_score": 43.34,
+    "score_mode": "model_score",
+    "pct_chg": -4.82,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 52.0
+  },
+  {
+    "code": "603313.SH",
+    "name": "梦百合",
+    "model_score": 44.61,
+    "total_score": 44.61,
+    "score_mode": "model_score",
+    "pct_chg": -1.06,
+    "scores": {
+      "technical": 25.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "300496.SZ",
+    "name": "中科创达",
+    "model_score": 39.49,
+    "total_score": 39.49,
+    "score_mode": "model_score",
+    "pct_chg": -1.23,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 45.0
+  },
+  {
+    "code": "600176.SH",
+    "name": "中国巨石",
+    "model_score": 43.2,
+    "total_score": 43.2,
+    "score_mode": "model_score",
+    "pct_chg": -2.55,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 56.0
+  },
+  {
+    "code": "603577.SH",
+    "name": "汇金通",
+    "model_score": 35.92,
+    "total_score": 35.92,
+    "score_mode": "model_score",
+    "pct_chg": -4.27,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 29.0
+  },
+  {
+    "code": "301563.SZ",
+    "name": "云汉芯城",
+    "model_score": 43.32,
+    "total_score": 43.32,
+    "score_mode": "model_score",
+    "pct_chg": -1.97,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 58.0
+  },
+  {
+    "code": "001210.SZ",
+    "name": "金房能源",
+    "model_score": 41.27,
+    "total_score": 41.27,
+    "score_mode": "model_score",
+    "pct_chg": -3.05,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 18.0
+  },
+  {
+    "name": "汉缆股份",
+    "position_20d": 0.3946188341,
+    "trailing_10": -0.0215231788,
+    "trailing_5": 0.0725952813,
+    "pct_chg_std_10d": 3.3561408048,
+    "pct_chg_std_5d": 4.5311090159,
+    "max_pct_chg_5d": 10.0559,
+    "limit_up_count_20d": 1.0,
+    "limit_up_count_60d": 1.0,
+    "max_step": 1.0,
+    "was_limit": 1.0,
+    "avg_amount_5d": 393440524.124,
+    "pct_chg_score_day": 10.0559,
+    "turnover_rate": 2.3063,
+    "volume_ratio": 1.16,
+    "prev_turnover": 1.586,
+    "prev_vol_ratio": 0.83,
+    "vol_accel": 0.3975903614,
+    "circ_mv": 1966136.436,
+    "cmv_yi": 196.6136436,
+    "pe": 35.5248,
+    "pb": 2.231,
+    "pullback_10d": 0.0559105431,
+    "pullback_20d": 0.1859504132,
+    "prev_pct": -1.2868,
+    "pct_5d": 7.5472,
+    "positive_5d": 2.0,
+    "close_pos": 1.0,
+    "body_ratio": 0.9473684211,
+    "upper_ratio": 0.0,
+    "lower_ratio": 0.0526315789,
+    "amplitude": 0.0964467005,
+    "net_mf_amount": 979.67,
+    "net_mf_ratio": 0.0222822903,
+    "buy_elg_ratio": 0.8904948281,
+    "buy_lg_ratio": 0.5580367961,
+    "mf_net": 979.67,
+    "mf_accel": 1.4380488634,
+    "mf_pct": 0.002228229,
+    "sector_heat": 0.0,
+    "sector_rank": 0.761594156,
+    "n_concepts": 50.0,
+    "auc_amount": 0.0,
+    "auc_vol": 0.0,
+    "auc_amt_ratio": 0.0,
+    "auc_vol_ratio": 0.0,
+    "id_vwap_dev": 0.0,
+    "id_range": 0.0,
+    "id_morning_vol_ratio": 0.5,
+    "id_afternoon_strength": 1.0,
+    "id_tail_vol_ratio": 0.1,
+    "id_amount_ratio": 0.0,
+    "dt_is_listed": 0.0,
+    "dt_net_amount": 0.0,
+    "dt_net_rate": 0.0,
+    "dt_l_buy_ratio": 0.0,
+    "dt_n_exalter": 0.0,
+    "dt_inst_net_buy": 0.0,
+    "dt_hot_net_buy": 0.0,
+    "dt_inst_sell_ratio": 0.0,
+    "code": "002498.SZ",
+    "fundamental": 38.0,
+    "technical": 31.0,
+    "fundflow": 20.0,
+    "sentiment": 75.0,
+    "shortterm": 10.0,
+    "model_score": 42.86
+  },
+  {
+    "code": "002317.SZ",
+    "name": "众生药业",
+    "model_score": 45.56,
+    "total_score": 45.56,
+    "score_mode": "model_score",
+    "pct_chg": -1.62,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 61.0
+  },
+  {
+    "code": "600721.SH",
+    "name": "百花医药",
+    "model_score": 43.74,
+    "total_score": 43.74,
+    "score_mode": "model_score",
+    "pct_chg": -5.32,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "600506.SH",
+    "name": "统一股份",
+    "model_score": 43.24,
+    "total_score": 43.24,
+    "score_mode": "model_score",
+    "pct_chg": -5.11,
+    "scores": {
+      "technical": 42.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 49.0
+  },
+  {
+    "code": "605589.SH",
+    "name": "圣泉集团",
+    "model_score": 40.85,
+    "total_score": 40.85,
+    "score_mode": "model_score",
+    "pct_chg": -2.63,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 41.0
+  },
+  {
+    "code": "300961.SZ",
+    "name": "深水海纳",
+    "model_score": 41.45,
+    "total_score": 41.45,
+    "score_mode": "model_score",
+    "pct_chg": -4.42,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "688796.SH",
+    "name": "百奥赛图",
+    "model_score": 44.89,
+    "total_score": 44.89,
+    "score_mode": "model_score",
+    "pct_chg": -3.86,
+    "scores": {
+      "technical": 35.0,
+      "fundflow": 25.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "000068.SZ",
+    "name": "华控赛格",
+    "model_score": 42.51,
+    "total_score": 42.51,
+    "score_mode": "model_score",
+    "pct_chg": -2.62,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "301587.SZ",
+    "name": "中瑞股份",
+    "model_score": 39.24,
+    "total_score": 39.24,
+    "score_mode": "model_score",
+    "pct_chg": -5.1,
+    "scores": {
+      "technical": 39.0,
+      "fundflow": 30.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 40.0
+  },
+  {
+    "code": "688498.SH",
+    "name": "源杰科技",
+    "model_score": 42.05,
+    "total_score": 42.05,
+    "score_mode": "model_score",
+    "pct_chg": -3.58,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "001229.SZ",
+    "name": "魅视科技",
+    "model_score": 44.52,
+    "total_score": 44.52,
+    "score_mode": "model_score",
+    "pct_chg": null,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 39.0
+  },
+  {
+    "code": "001287.SZ",
+    "name": "中电港",
+    "model_score": 42.14,
+    "total_score": 42.14,
+    "score_mode": "model_score",
+    "pct_chg": -0.09,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 57.0
+  },
+  {
+    "code": "603717.SH",
+    "name": "天域生物",
+    "model_score": 35.38,
+    "total_score": 35.38,
+    "score_mode": "model_score",
+    "pct_chg": -2.9,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "001233.SZ",
+    "name": "海安集团",
+    "model_score": 40.17,
+    "total_score": 40.17,
+    "score_mode": "model_score",
+    "pct_chg": -3.1,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 10.0
+  },
+  {
+    "name": "孚日股份",
+    "position_20d": 0.5080906149,
+    "trailing_10": 0.1079365079,
+    "trailing_5": 0.0086705202,
+    "pct_chg_std_10d": 5.402840124,
+    "pct_chg_std_5d": 6.3354180637,
+    "max_pct_chg_5d": 9.979,
+    "limit_up_count_20d": 1.0,
+    "limit_up_count_60d": 1.0,
+    "max_step": 1.0,
+    "was_limit": 1.0,
+    "avg_amount_5d": 525908846.47400004,
+    "pct_chg_score_day": 9.979,
+    "turnover_rate": 5.6441,
+    "volume_ratio": 0.89,
+    "prev_turnover": 3.8222,
+    "prev_vol_ratio": 0.61,
+    "vol_accel": 0.4590163934,
+    "circ_mv": 991131.0456,
+    "cmv_yi": 99.11310456,
+    "pe": 23.1341,
+    "pb": 2.0291,
+    "pullback_10d": 0.0169014085,
+    "pullback_20d": 0.1267723103,
+    "prev_pct": -1.0395,
+    "pct_5d": 1.8676,
+    "positive_5d": 2.0,
+    "close_pos": 1.0,
+    "body_ratio": 0.9528301887,
+    "upper_ratio": 0.0,
+    "lower_ratio": 0.0471698113,
+    "amplitude": 0.1012416428,
+    "net_mf_amount": 2825.17,
+    "net_mf_ratio": 0.0516045717,
+    "buy_elg_ratio": 0.7748254173,
+    "buy_lg_ratio": 0.5369226295,
+    "mf_net": 2825.17,
+    "mf_accel": 2.5598160356,
+    "mf_pct": 0.0051604572,
+    "sector_heat": 0.0,
+    "sector_rank": 0.7778880666,
+    "n_concepts": 52.0,
+    "auc_amount": 0.0,
+    "auc_vol": 0.0,
+    "auc_amt_ratio": 0.0,
+    "auc_vol_ratio": 0.0,
+    "id_vwap_dev": 0.0,
+    "id_range": 0.0,
+    "id_morning_vol_ratio": 0.5,
+    "id_afternoon_strength": 1.0,
+    "id_tail_vol_ratio": 0.1,
+    "id_amount_ratio": 0.0,
+    "dt_is_listed": 0.0,
+    "dt_net_amount": 0.0,
+    "dt_net_rate": 0.0,
+    "dt_l_buy_ratio": 0.0,
+    "dt_n_exalter": 0.0,
+    "dt_inst_net_buy": 0.0,
+    "dt_hot_net_buy": 0.0,
+    "dt_inst_sell_ratio": 0.0,
+    "code": "002083.SZ",
+    "fundamental": 33.0,
+    "technical": 26.0,
+    "fundflow": 21.0,
+    "sentiment": 75.0,
+    "shortterm": 10.0,
+    "model_score": 42.23
+  },
+  {
+    "code": "601179.SH",
+    "name": "中国西电",
+    "model_score": 44.86,
+    "total_score": 44.86,
+    "score_mode": "model_score",
+    "pct_chg": -0.22,
+    "scores": {
+      "technical": 48.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 55.0
+  },
+  {
+    "code": "301630.SZ",
+    "name": "同宇新材",
+    "model_score": 42.63,
+    "total_score": 42.63,
+    "score_mode": "model_score",
+    "pct_chg": -0.95,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 49.0
+  },
+  {
+    "code": "002156.SZ",
+    "name": "通富微电",
+    "model_score": 46.94,
+    "total_score": 46.94,
+    "score_mode": "model_score",
+    "pct_chg": 8.97,
+    "scores": {
+      "technical": 13.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 66.0
+  },
+  {
+    "code": "002420.SZ",
+    "name": "毅昌科技",
+    "model_score": 43.48,
+    "total_score": 43.48,
+    "score_mode": "model_score",
+    "pct_chg": -2.39,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 18.0
+  },
+  {
+    "code": "603716.SH",
+    "name": "塞力医疗",
+    "model_score": 37.42,
+    "total_score": 37.42,
+    "score_mode": "model_score",
+    "pct_chg": -5.49,
+    "scores": {
+      "technical": 23.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 43.0
+  },
+  {
+    "code": "603773.SH",
+    "name": "沃格光电",
+    "model_score": 42.32,
+    "total_score": 42.32,
+    "score_mode": "model_score",
+    "pct_chg": -2.59,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 52.0
+  },
+  {
+    "code": "603496.SH",
+    "name": "恒为科技",
+    "model_score": 39.81,
+    "total_score": 39.81,
+    "score_mode": "model_score",
+    "pct_chg": 2.67,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 44.0
+  },
+  {
+    "code": "688157.SH",
+    "name": "松井股份",
+    "model_score": 42.79,
+    "total_score": 42.79,
+    "score_mode": "model_score",
+    "pct_chg": -1.73,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "600172.SH",
+    "name": "黄河旋风",
+    "model_score": 40.51,
+    "total_score": 40.51,
+    "score_mode": "model_score",
+    "pct_chg": -7.08,
+    "scores": {
+      "technical": 23.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 62.0
+  },
+  {
+    "code": "002971.SZ",
+    "name": "和远气体",
+    "model_score": 42.99,
+    "total_score": 42.99,
+    "score_mode": "model_score",
+    "pct_chg": 0.11,
+    "scores": {
+      "technical": 25.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "600121.SH",
+    "name": "郑州煤电",
+    "model_score": 40.94,
+    "total_score": 40.94,
+    "score_mode": "model_score",
+    "pct_chg": -6.43,
+    "scores": {
+      "technical": 33.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 39.0
+  },
+  {
+    "code": "002909.SZ",
+    "name": "集泰股份",
+    "model_score": 41.75,
+    "total_score": 41.75,
+    "score_mode": "model_score",
+    "pct_chg": -2.43,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "603191.SH",
+    "name": "望变电气",
+    "model_score": 42.21,
+    "total_score": 42.21,
+    "score_mode": "model_score",
+    "pct_chg": -3.81,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "000676.SZ",
+    "name": "智度股份",
+    "model_score": 41.71,
+    "total_score": 41.71,
+    "score_mode": "model_score",
+    "pct_chg": -6.38,
+    "scores": {
+      "technical": 34.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "688768.SH",
+    "name": "容知日新",
+    "model_score": 40.12,
+    "total_score": 40.12,
+    "score_mode": "model_score",
+    "pct_chg": 1.86,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 29.0
+  },
+  {
+    "code": "688718.SH",
+    "name": "唯赛勃",
+    "model_score": 40.64,
+    "total_score": 40.64,
+    "score_mode": "model_score",
+    "pct_chg": -2.51,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 44.0
+  },
+  {
+    "code": "601138.SH",
+    "name": "工业富联",
+    "model_score": 40.02,
+    "total_score": 40.02,
+    "score_mode": "model_score",
+    "pct_chg": -4.12,
+    "scores": {
+      "technical": 30.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 62.0
+  },
+  {
+    "code": "300640.SZ",
+    "name": "德艺文创",
+    "model_score": 40.8,
+    "total_score": 40.8,
+    "score_mode": "model_score",
+    "pct_chg": -5.18,
+    "scores": {
+      "technical": 34.0,
+      "fundflow": 28.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "600268.SH",
+    "name": "国电南自",
+    "model_score": 44.86,
+    "total_score": 44.86,
+    "score_mode": "model_score",
+    "pct_chg": -6.26,
+    "scores": {
+      "technical": 48.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 37.0
+  },
+  {
+    "code": "002775.SZ",
+    "name": "文科股份",
+    "model_score": 43.89,
+    "total_score": 43.89,
+    "score_mode": "model_score",
+    "pct_chg": -0.57,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 43.0
+  },
+  {
+    "code": "600206.SH",
+    "name": "有研新材",
+    "model_score": 46.67,
+    "total_score": 46.67,
+    "score_mode": "model_score",
+    "pct_chg": 4.64,
+    "scores": {
+      "technical": 34.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 55.0
+  },
+  {
+    "code": "600563.SH",
+    "name": "法拉电子",
+    "model_score": 40.28,
+    "total_score": 40.28,
+    "score_mode": "model_score",
+    "pct_chg": -3.23,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 30.0
+  },
+  {
+    "code": "300561.SZ",
+    "name": "汇金科技",
+    "model_score": 38.7,
+    "total_score": 38.7,
+    "score_mode": "model_score",
+    "pct_chg": -8.69,
+    "scores": {
+      "technical": 35.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 43.0
+  },
+  {
+    "code": "000833.SZ",
+    "name": "粤桂股份",
+    "model_score": 46.6,
+    "total_score": 46.6,
+    "score_mode": "model_score",
+    "pct_chg": -2.13,
+    "scores": {
+      "technical": 42.0,
+      "fundflow": 26.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 49.0
+  },
+  {
+    "code": "002396.SZ",
+    "name": "星网锐捷",
+    "model_score": 41.11,
+    "total_score": 41.11,
+    "score_mode": "model_score",
+    "pct_chg": -2.51,
+    "scores": {
+      "technical": 24.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 45.0
+  },
+  {
+    "code": "688057.SH",
+    "name": "金达莱",
+    "model_score": 37.78,
+    "total_score": 37.78,
+    "score_mode": "model_score",
+    "pct_chg": -7.29,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "301577.SZ",
+    "name": "美信科技",
+    "model_score": 39.33,
+    "total_score": 39.33,
+    "score_mode": "model_score",
+    "pct_chg": -1.06,
+    "scores": {
+      "technical": 40.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "301607.SZ",
+    "name": "富特科技",
+    "model_score": 41.97,
+    "total_score": 41.97,
+    "score_mode": "model_score",
+    "pct_chg": -1.45,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 55.0
+  },
+  {
+    "code": "600303.SH",
+    "name": "曙光股份",
+    "model_score": 41.78,
+    "total_score": 41.78,
+    "score_mode": "model_score",
+    "pct_chg": -2.06,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "603303.SH",
+    "name": "得邦照明",
+    "model_score": 40.06,
+    "total_score": 40.06,
+    "score_mode": "model_score",
+    "pct_chg": -0.32,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 34.0
+  },
+  {
+    "code": "300465.SZ",
+    "name": "高伟达",
+    "model_score": 42.19,
+    "total_score": 42.19,
+    "score_mode": "model_score",
+    "pct_chg": -4.8,
+    "scores": {
+      "technical": 42.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 44.0
+  },
+  {
+    "code": "600118.SH",
+    "name": "XD中国卫",
+    "model_score": 40.35,
+    "total_score": 40.35,
+    "score_mode": "model_score",
+    "pct_chg": -5.31,
+    "scores": {
+      "technical": 25.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 55.0
+  },
+  {
+    "code": "688517.SH",
+    "name": "金冠电气",
+    "model_score": 42.12,
+    "total_score": 42.12,
+    "score_mode": "model_score",
+    "pct_chg": -2.61,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 18.0
+  },
+  {
+    "code": "000151.SZ",
+    "name": "中成股份",
+    "model_score": 39.05,
+    "total_score": 39.05,
+    "score_mode": "model_score",
+    "pct_chg": -3.54,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "688573.SH",
+    "name": "信宇人",
+    "model_score": 40.54,
+    "total_score": 40.54,
+    "score_mode": "model_score",
+    "pct_chg": -2.64,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "002279.SZ",
+    "name": "久其软件",
+    "model_score": 37.91,
+    "total_score": 37.91,
+    "score_mode": "model_score",
+    "pct_chg": -5.11,
+    "scores": {
+      "technical": 48.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 43.0
+  },
+  {
+    "code": "301591.SZ",
+    "name": "肯特股份",
+    "model_score": 39.01,
+    "total_score": 39.01,
+    "score_mode": "model_score",
+    "pct_chg": -3.93,
+    "scores": {
+      "technical": 34.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 21.0
+  },
+  {
+    "code": "603212.SH",
+    "name": "赛伍技术",
+    "model_score": 43.61,
+    "total_score": 43.61,
+    "score_mode": "model_score",
+    "pct_chg": -2.01,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "301329.SZ",
+    "name": "信音电子",
+    "model_score": 44.83,
+    "total_score": 44.83,
+    "score_mode": "model_score",
+    "pct_chg": -2.36,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 31.0
+  },
+  {
+    "code": "688618.SH",
+    "name": "三旺通信",
+    "model_score": 40.79,
+    "total_score": 40.79,
+    "score_mode": "model_score",
+    "pct_chg": -6.55,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "002008.SZ",
+    "name": "大族激光",
+    "model_score": 42.71,
+    "total_score": 42.71,
+    "score_mode": "model_score",
+    "pct_chg": -3.48,
+    "scores": {
+      "technical": 21.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 66.0
+  },
+  {
+    "code": "300570.SZ",
+    "name": "太辰光",
+    "model_score": 39.79,
+    "total_score": 39.79,
+    "score_mode": "model_score",
+    "pct_chg": -3.42,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 55.0
+  },
+  {
+    "code": "002460.SZ",
+    "name": "赣锋锂业",
+    "model_score": 38.65,
+    "total_score": 38.65,
+    "score_mode": "model_score",
+    "pct_chg": -4.22,
+    "scores": {
+      "technical": 41.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 60.0
+  },
+  {
+    "code": "301500.SZ",
+    "name": "飞南资源",
+    "model_score": 40.08,
+    "total_score": 40.08,
+    "score_mode": "model_score",
+    "pct_chg": -8.35,
+    "scores": {
+      "technical": 39.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 44.0
+  },
+  {
+    "code": "301310.SZ",
+    "name": "鑫宏业",
+    "model_score": 36.56,
+    "total_score": 36.56,
+    "score_mode": "model_score",
+    "pct_chg": -16.96,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "300166.SZ",
+    "name": "东方国信",
+    "model_score": 31.31,
+    "total_score": 31.31,
+    "score_mode": "model_score",
+    "pct_chg": -4.05,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 42.0
+  },
+  {
+    "code": "688048.SH",
+    "name": "长光华芯",
+    "model_score": 40.19,
+    "total_score": 40.19,
+    "score_mode": "model_score",
+    "pct_chg": -1.03,
+    "scores": {
+      "technical": 13.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 65.0
+  },
+  {
+    "code": "600378.SH",
+    "name": "昊华科技",
+    "model_score": 45.5,
+    "total_score": 45.5,
+    "score_mode": "model_score",
+    "pct_chg": -1.49,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 56.0
+  },
+  {
+    "code": "000767.SZ",
+    "name": "晋控电力",
+    "model_score": 43.17,
+    "total_score": 43.17,
+    "score_mode": "model_score",
+    "pct_chg": -9.68,
+    "scores": {
+      "technical": 30.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 42.0
+  },
+  {
+    "code": "688511.SH",
+    "name": "天微电子",
+    "model_score": 38.56,
+    "total_score": 38.56,
+    "score_mode": "model_score",
+    "pct_chg": -3.43,
+    "scores": {
+      "technical": 26.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "688711.SH",
+    "name": "宏微科技",
+    "model_score": 39.87,
+    "total_score": 39.87,
+    "score_mode": "model_score",
+    "pct_chg": -2.7,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "002929.SZ",
+    "name": "润建股份",
+    "model_score": 41.78,
+    "total_score": 41.78,
+    "score_mode": "model_score",
+    "pct_chg": -3.44,
+    "scores": {
+      "technical": 24.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 42.0
+  },
+  {
+    "code": "301682.SZ",
+    "name": "宏明电子",
+    "model_score": 40.13,
+    "total_score": 40.13,
+    "score_mode": "model_score",
+    "pct_chg": -3.53,
+    "scores": {
+      "technical": 33.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 29.0
+  },
+  {
+    "code": "000032.SZ",
+    "name": "深桑达A",
+    "model_score": 37.54,
+    "total_score": 37.54,
+    "score_mode": "model_score",
+    "pct_chg": -5.43,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 42.0
+  },
+  {
+    "code": "603989.SH",
+    "name": "艾华集团",
+    "model_score": 38.99,
+    "total_score": 38.99,
+    "score_mode": "model_score",
+    "pct_chg": -6.3,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "301459.SZ",
+    "name": "丰茂股份",
+    "model_score": 32.2,
+    "total_score": 32.2,
+    "score_mode": "model_score",
+    "pct_chg": -2.73,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 21.0
+  },
+  {
+    "code": "688558.SH",
+    "name": "国盛智科",
+    "model_score": 35.92,
+    "total_score": 35.92,
+    "score_mode": "model_score",
+    "pct_chg": -3.3,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 18.0
+  },
+  {
+    "code": "002815.SZ",
+    "name": "崇达技术",
+    "model_score": 39.09,
+    "total_score": 39.09,
+    "score_mode": "model_score",
+    "pct_chg": -3.88,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 34.0
+  },
+  {
+    "code": "001317.SZ",
+    "name": "三羊马",
+    "model_score": 39.57,
+    "total_score": 39.57,
+    "score_mode": "model_score",
+    "pct_chg": -4.24,
+    "scores": {
+      "technical": 35.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "600363.SH",
+    "name": "联创光电",
+    "model_score": 37.28,
+    "total_score": 37.28,
+    "score_mode": "model_score",
+    "pct_chg": -5.17,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 27.0
+  },
+  {
+    "code": "600847.SH",
+    "name": "万里股份",
+    "model_score": 39.47,
+    "total_score": 39.47,
+    "score_mode": "model_score",
+    "pct_chg": -2.94,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "300128.SZ",
+    "name": "锦富技术",
+    "model_score": 36.83,
+    "total_score": 36.83,
+    "score_mode": "model_score",
+    "pct_chg": -4.68,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "688766.SH",
+    "name": "普冉股份",
+    "model_score": 38.38,
+    "total_score": 38.38,
+    "score_mode": "model_score",
+    "pct_chg": -4.03,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "300513.SZ",
+    "name": "恒实科技",
+    "model_score": 36.6,
+    "total_score": 36.6,
+    "score_mode": "model_score",
+    "pct_chg": -1.22,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "300071.SZ",
+    "name": "福石控股",
+    "model_score": 40.9,
+    "total_score": 40.9,
+    "score_mode": "model_score",
+    "pct_chg": -7.71,
+    "scores": {
+      "technical": 40.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 43.0
+  },
+  {
+    "code": "688327.SH",
+    "name": "云从科技-UW",
+    "model_score": 39.35,
+    "total_score": 39.35,
+    "score_mode": "model_score",
+    "pct_chg": -2.95,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "301295.SZ",
+    "name": "美硕科技",
+    "model_score": 40.29,
+    "total_score": 40.29,
+    "score_mode": "model_score",
+    "pct_chg": 1.02,
+    "scores": {
+      "technical": 29.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 40.0
+  },
+  {
+    "code": "688635.SH",
+    "name": "长进光子",
+    "model_score": 38.68,
+    "total_score": 38.68,
+    "score_mode": "model_score",
+    "pct_chg": -8.56,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 53.0
+  },
+  {
+    "code": "603399.SH",
+    "name": "永杉锂业",
+    "model_score": 41.75,
+    "total_score": 41.75,
+    "score_mode": "model_score",
+    "pct_chg": -1.31,
+    "scores": {
+      "technical": 40.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 53.0
+  },
+  {
+    "code": "002119.SZ",
+    "name": "康强电子",
+    "model_score": 38.33,
+    "total_score": 38.33,
+    "score_mode": "model_score",
+    "pct_chg": 0.68,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 59.0
+  },
+  {
+    "code": "002471.SZ",
+    "name": "中超控股",
+    "model_score": 39.86,
+    "total_score": 39.86,
+    "score_mode": "model_score",
+    "pct_chg": -2.75,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 27.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 53.0
+  },
+  {
+    "code": "300563.SZ",
+    "name": "神宇股份",
+    "model_score": 32.41,
+    "total_score": 32.41,
+    "score_mode": "model_score",
+    "pct_chg": -3.3,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "002771.SZ",
+    "name": "真视通",
+    "model_score": 39.47,
+    "total_score": 39.47,
+    "score_mode": "model_score",
+    "pct_chg": -3.09,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "301212.SZ",
+    "name": "联盛化学",
+    "model_score": 40.48,
+    "total_score": 40.48,
+    "score_mode": "model_score",
+    "pct_chg": -3.27,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "002422.SZ",
+    "name": "科伦药业",
+    "model_score": 37.37,
+    "total_score": 37.37,
+    "score_mode": "model_score",
+    "pct_chg": -9.48,
+    "scores": {
+      "technical": 32.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 41.0
+  },
+  {
+    "code": "300531.SZ",
+    "name": "优博讯",
+    "model_score": 39.15,
+    "total_score": 39.15,
+    "score_mode": "model_score",
+    "pct_chg": -6.78,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 53.0
+  },
+  {
+    "code": "301196.SZ",
+    "name": "唯科科技",
+    "model_score": 39.29,
+    "total_score": 39.29,
+    "score_mode": "model_score",
+    "pct_chg": -3.67,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 34.0
+  },
+  {
+    "code": "001336.SZ",
+    "name": "楚环科技",
+    "model_score": 39.58,
+    "total_score": 39.58,
+    "score_mode": "model_score",
+    "pct_chg": -2.58,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 36.0
+  },
+  {
+    "code": "600936.SH",
+    "name": "北投科技",
+    "model_score": 41.69,
+    "total_score": 41.69,
+    "score_mode": "model_score",
+    "pct_chg": -2.73,
+    "scores": {
+      "technical": 47.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 63.0
+  },
+  {
+    "code": "300943.SZ",
+    "name": "春晖智控",
+    "model_score": 37.84,
+    "total_score": 37.84,
+    "score_mode": "model_score",
+    "pct_chg": -4.55,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "301349.SZ",
+    "name": "信德新材",
+    "model_score": 37.54,
+    "total_score": 37.54,
+    "score_mode": "model_score",
+    "pct_chg": -4.59,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "301667.SZ",
+    "name": "纳百川",
+    "model_score": 39.93,
+    "total_score": 39.93,
+    "score_mode": "model_score",
+    "pct_chg": -3.06,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "002467.SZ",
+    "name": "二六三",
+    "model_score": 35.46,
+    "total_score": 35.46,
+    "score_mode": "model_score",
+    "pct_chg": -4.67,
+    "scores": {
+      "technical": 27.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "301489.SZ",
+    "name": "思泉新材",
+    "model_score": 37.75,
+    "total_score": 37.75,
+    "score_mode": "model_score",
+    "pct_chg": -1.34,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 63.0
+  },
+  {
+    "code": "301186.SZ",
+    "name": "超达装备",
+    "model_score": 37.91,
+    "total_score": 37.91,
+    "score_mode": "model_score",
+    "pct_chg": null,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 18.0
+  },
+  {
+    "code": "002709.SZ",
+    "name": "天赐材料",
+    "model_score": 41.39,
+    "total_score": 41.39,
+    "score_mode": "model_score",
+    "pct_chg": -1.28,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 60.0
+  },
+  {
+    "code": "688170.SH",
+    "name": "德龙激光",
+    "model_score": 38.74,
+    "total_score": 38.74,
+    "score_mode": "model_score",
+    "pct_chg": -3.32,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "600110.SH",
+    "name": "诺德股份",
+    "model_score": 34.27,
+    "total_score": 34.27,
+    "score_mode": "model_score",
+    "pct_chg": -4.38,
+    "scores": {
+      "technical": 20.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 57.0
+  },
+  {
+    "code": "301338.SZ",
+    "name": "凯格精机",
+    "model_score": 36.56,
+    "total_score": 36.56,
+    "score_mode": "model_score",
+    "pct_chg": -1.91,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 67.0
+  },
+  {
+    "code": "001266.SZ",
+    "name": "宏英智能",
+    "model_score": 39.6,
+    "total_score": 39.6,
+    "score_mode": "model_score",
+    "pct_chg": -2.51,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 40.0
+  },
+  {
+    "code": "002938.SZ",
+    "name": "鹏鼎控股",
+    "model_score": 39.56,
+    "total_score": 39.56,
+    "score_mode": "model_score",
+    "pct_chg": 1.07,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 51.0
+  },
+  {
+    "code": "002654.SZ",
+    "name": "万润科技",
+    "model_score": 40.91,
+    "total_score": 40.91,
+    "score_mode": "model_score",
+    "pct_chg": -2.76,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 44.0
+  },
+  {
+    "code": "600160.SH",
+    "name": "巨化股份",
+    "model_score": 34.99,
+    "total_score": 34.99,
+    "score_mode": "model_score",
+    "pct_chg": null,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 46.0
+  },
+  {
+    "code": "603211.SH",
+    "name": "晋拓股份",
+    "model_score": 39.47,
+    "total_score": 39.47,
+    "score_mode": "model_score",
+    "pct_chg": -2.92,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 44.0
+  },
+  {
+    "code": "002902.SZ",
+    "name": "铭普光磁",
+    "model_score": 36.9,
+    "total_score": 36.9,
+    "score_mode": "model_score",
+    "pct_chg": -0.95,
+    "scores": {
+      "technical": 21.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 58.0
+  },
+  {
+    "code": "600703.SH",
+    "name": "三安光电",
+    "model_score": 35.6,
+    "total_score": 35.6,
+    "score_mode": "model_score",
+    "pct_chg": -2.8,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 45.0
+  },
+  {
+    "code": "000823.SZ",
+    "name": "超声电子",
+    "model_score": 38.57,
+    "total_score": 38.57,
+    "score_mode": "model_score",
+    "pct_chg": -3.33,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 34.0
+  },
+  {
+    "code": "600498.SH",
+    "name": "烽火通信",
+    "model_score": 38.19,
+    "total_score": 38.19,
+    "score_mode": "model_score",
+    "pct_chg": -3.85,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 45.0
+  },
+  {
+    "code": "000890.SZ",
+    "name": "法尔胜",
+    "model_score": 37.97,
+    "total_score": 37.97,
+    "score_mode": "model_score",
+    "pct_chg": -4.04,
+    "scores": {
+      "technical": 42.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 43.0
+  },
+  {
+    "code": "301446.SZ",
+    "name": "福事特",
+    "model_score": 40.62,
+    "total_score": 40.62,
+    "score_mode": "model_score",
+    "pct_chg": -5.2,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 31.0
+  },
+  {
+    "code": "603186.SH",
+    "name": "华正新材",
+    "model_score": 41.87,
+    "total_score": 41.87,
+    "score_mode": "model_score",
+    "pct_chg": -5.89,
+    "scores": {
+      "technical": 13.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "002015.SZ",
+    "name": "协鑫能科",
+    "model_score": 41.1,
+    "total_score": 41.1,
+    "score_mode": "model_score",
+    "pct_chg": -9.99,
+    "scores": {
+      "technical": 45.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 55.0
+  },
+  {
+    "code": "301392.SZ",
+    "name": "汇成真空",
+    "model_score": 37.52,
+    "total_score": 37.52,
+    "score_mode": "model_score",
+    "pct_chg": -0.75,
+    "scores": {
+      "technical": 13.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 63.0
+  },
+  {
+    "code": "002188.SZ",
+    "name": "中天服务",
+    "model_score": 37.53,
+    "total_score": 37.53,
+    "score_mode": "model_score",
+    "pct_chg": -3.13,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 21.0
+  },
+  {
+    "code": "000158.SZ",
+    "name": "常山北明",
+    "model_score": 38.01,
+    "total_score": 38.01,
+    "score_mode": "model_score",
+    "pct_chg": -3.03,
+    "scores": {
+      "technical": 43.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 42.0
+  },
+  {
+    "code": "301568.SZ",
+    "name": "思泰克",
+    "model_score": 37.6,
+    "total_score": 37.6,
+    "score_mode": "model_score",
+    "pct_chg": -2.43,
+    "scores": {
+      "technical": 28.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 49.0
+  },
+  {
+    "code": "002536.SZ",
+    "name": "飞龙股份",
+    "model_score": 37.55,
+    "total_score": 37.55,
+    "score_mode": "model_score",
+    "pct_chg": -4.35,
+    "scores": {
+      "technical": 24.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 55.0
+  },
+  {
+    "code": "605376.SH",
+    "name": "博迁新材",
+    "model_score": 38.03,
+    "total_score": 38.03,
+    "score_mode": "model_score",
+    "pct_chg": -4.97,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "000803.SZ",
+    "name": "山高环能",
+    "model_score": 39.26,
+    "total_score": 39.26,
+    "score_mode": "model_score",
+    "pct_chg": -3.09,
+    "scores": {
+      "technical": 42.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 43.0
+  },
+  {
+    "code": "002990.SZ",
+    "name": "盛视科技",
+    "model_score": 38.93,
+    "total_score": 38.93,
+    "score_mode": "model_score",
+    "pct_chg": -5.46,
+    "scores": {
+      "technical": 25.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 44.0
+  },
+  {
+    "code": "002560.SZ",
+    "name": "通达股份",
+    "model_score": 40.76,
+    "total_score": 40.76,
+    "score_mode": "model_score",
+    "pct_chg": -1.34,
+    "scores": {
+      "technical": 39.0,
+      "fundflow": 28.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "600379.SH",
+    "name": "宝光股份",
+    "model_score": 40.66,
+    "total_score": 40.66,
+    "score_mode": "model_score",
+    "pct_chg": -3.47,
+    "scores": {
+      "technical": 32.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "688286.SH",
+    "name": "敏芯股份",
+    "model_score": 40.92,
+    "total_score": 40.92,
+    "score_mode": "model_score",
+    "pct_chg": -1.4,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "001225.SZ",
+    "name": "和泰机电",
+    "model_score": 42.6,
+    "total_score": 42.6,
+    "score_mode": "model_score",
+    "pct_chg": 1.52,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "603678.SH",
+    "name": "火炬电子",
+    "model_score": 38.81,
+    "total_score": 38.81,
+    "score_mode": "model_score",
+    "pct_chg": -5.69,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 45.0
+  },
+  {
+    "code": "002980.SZ",
+    "name": "华盛昌",
+    "model_score": 36.44,
+    "total_score": 36.44,
+    "score_mode": "model_score",
+    "pct_chg": -2.97,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "300454.SZ",
+    "name": "深信服",
+    "model_score": 38.3,
+    "total_score": 38.3,
+    "score_mode": "model_score",
+    "pct_chg": -9.42,
+    "scores": {
+      "technical": 21.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 60.0
+  },
+  {
+    "code": "000839.SZ",
+    "name": "国安股份",
+    "model_score": 35.5,
+    "total_score": 35.5,
+    "score_mode": "model_score",
+    "pct_chg": -4.25,
+    "scores": {
+      "technical": 25.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 15.0
+    },
+    "fundamental": 58.0
+  },
+  {
+    "code": "002421.SZ",
+    "name": "达实智能",
+    "model_score": 40.88,
+    "total_score": 40.88,
+    "score_mode": "model_score",
+    "pct_chg": -3.25,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 53.0
+  },
+  {
+    "code": "688071.SH",
+    "name": "华依科技",
+    "model_score": 43.35,
+    "total_score": 43.35,
+    "score_mode": "model_score",
+    "pct_chg": -2.8,
+    "scores": {
+      "technical": 38.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "301016.SZ",
+    "name": "雷尔伟",
+    "model_score": 39.14,
+    "total_score": 39.14,
+    "score_mode": "model_score",
+    "pct_chg": -2.4,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "002888.SZ",
+    "name": "惠威科技",
+    "model_score": 42.67,
+    "total_score": 42.67,
+    "score_mode": "model_score",
+    "pct_chg": 0.95,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 31.0
+  },
+  {
+    "code": "002636.SZ",
+    "name": "金安国纪",
+    "model_score": 36.78,
+    "total_score": 36.78,
+    "score_mode": "model_score",
+    "pct_chg": -8.18,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "002463.SZ",
+    "name": "沪电股份",
+    "model_score": 36.05,
+    "total_score": 36.05,
+    "score_mode": "model_score",
+    "pct_chg": -2.91,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "688662.SH",
+    "name": "富信科技",
+    "model_score": 40.95,
+    "total_score": 40.95,
+    "score_mode": "model_score",
+    "pct_chg": -1.72,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "301502.SZ",
+    "name": "华阳智能",
+    "model_score": 40.74,
+    "total_score": 40.74,
+    "score_mode": "model_score",
+    "pct_chg": -3.62,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 35.0
+  },
+  {
+    "code": "301360.SZ",
+    "name": "荣旗科技",
+    "model_score": 40.78,
+    "total_score": 40.78,
+    "score_mode": "model_score",
+    "pct_chg": -1.64,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 40.0
+  },
+  {
+    "code": "000603.SZ",
+    "name": "盛达资源",
+    "model_score": 35.86,
+    "total_score": 35.86,
+    "score_mode": "model_score",
+    "pct_chg": -1.09,
+    "scores": {
+      "technical": 50.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 53.0
+  },
+  {
+    "code": "688671.SH",
+    "name": "碧兴物联",
+    "model_score": 37.38,
+    "total_score": 37.38,
+    "score_mode": "model_score",
+    "pct_chg": -0.89,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "603986.SH",
+    "name": "兆易创新",
+    "model_score": 39.72,
+    "total_score": 39.72,
+    "score_mode": "model_score",
+    "pct_chg": 1.0,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "600522.SH",
+    "name": "中天科技",
+    "model_score": 36.4,
+    "total_score": 36.4,
+    "score_mode": "model_score",
+    "pct_chg": -4.85,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 51.0
+  },
+  {
+    "code": "300774.SZ",
+    "name": "倍杰特",
+    "model_score": 38.08,
+    "total_score": 38.08,
+    "score_mode": "model_score",
+    "pct_chg": -5.46,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 21.0
+  },
+  {
+    "code": "301379.SZ",
+    "name": "天山电子",
+    "model_score": 36.47,
+    "total_score": 36.47,
+    "score_mode": "model_score",
+    "pct_chg": -1.31,
+    "scores": {
+      "technical": 13.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 29.0
+  },
+  {
+    "code": "003019.SZ",
+    "name": "宸展光电",
+    "model_score": 37.64,
+    "total_score": 37.64,
+    "score_mode": "model_score",
+    "pct_chg": 0.17,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 18.0
+  },
+  {
+    "code": "300287.SZ",
+    "name": "飞利信",
+    "model_score": 34.87,
+    "total_score": 34.87,
+    "score_mode": "model_score",
+    "pct_chg": -7.94,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 39.0
+  },
+  {
+    "code": "002735.SZ",
+    "name": "王子新材",
+    "model_score": 37.04,
+    "total_score": 37.04,
+    "score_mode": "model_score",
+    "pct_chg": -3.0,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 43.0
+  },
+  {
+    "code": "300184.SZ",
+    "name": "力源信息",
+    "model_score": 38.86,
+    "total_score": 38.86,
+    "score_mode": "model_score",
+    "pct_chg": 0.5,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 57.0
+  },
+  {
+    "code": "002976.SZ",
+    "name": "瑞玛精密",
+    "model_score": 30.11,
+    "total_score": 30.11,
+    "score_mode": "model_score",
+    "pct_chg": -2.5,
+    "scores": {
+      "technical": 25.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "002859.SZ",
+    "name": "洁美科技",
+    "model_score": 37.41,
+    "total_score": 37.41,
+    "score_mode": "model_score",
+    "pct_chg": -2.32,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 65.0
+  },
+  {
+    "code": "000688.SZ",
+    "name": "国城矿业",
+    "model_score": 37.6,
+    "total_score": 37.6,
+    "score_mode": "model_score",
+    "pct_chg": -4.86,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 66.0
+  },
+  {
+    "code": "301339.SZ",
+    "name": "通行宝",
+    "model_score": 37.72,
+    "total_score": 37.72,
+    "score_mode": "model_score",
+    "pct_chg": 0.47,
+    "scores": {
+      "technical": 42.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 23.0
+  },
+  {
+    "code": "000039.SZ",
+    "name": "中集集团",
+    "model_score": 36.39,
+    "total_score": 36.39,
+    "score_mode": "model_score",
+    "pct_chg": -5.27,
+    "scores": {
+      "technical": 43.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 42.0
+  },
+  {
+    "code": "001389.SZ",
+    "name": "广合科技",
+    "model_score": 37.22,
+    "total_score": 37.22,
+    "score_mode": "model_score",
+    "pct_chg": 0.12,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "002655.SZ",
+    "name": "共达电声",
+    "model_score": 36.84,
+    "total_score": 36.84,
+    "score_mode": "model_score",
+    "pct_chg": -1.62,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "603083.SH",
+    "name": "剑桥科技",
+    "model_score": 36.99,
+    "total_score": 36.99,
+    "score_mode": "model_score",
+    "pct_chg": -1.28,
+    "scores": {
+      "technical": 13.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "000571.SZ",
+    "name": "新大洲A",
+    "model_score": 35.21,
+    "total_score": 35.21,
+    "score_mode": "model_score",
+    "pct_chg": -0.17,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 43.0
+  },
+  {
+    "code": "688676.SH",
+    "name": "金盘科技",
+    "model_score": 40.18,
+    "total_score": 40.18,
+    "score_mode": "model_score",
+    "pct_chg": -2.79,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 47.0
+  },
+  {
+    "code": "000703.SZ",
+    "name": "恒逸石化",
+    "model_score": 38.05,
+    "total_score": 38.05,
+    "score_mode": "model_score",
+    "pct_chg": -4.87,
+    "scores": {
+      "technical": 48.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 60.0
+  },
+  {
+    "code": "002682.SZ",
+    "name": "龙洲股份",
+    "model_score": 37.2,
+    "total_score": 37.2,
+    "score_mode": "model_score",
+    "pct_chg": -2.68,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "600186.SH",
+    "name": "莲花控股",
+    "model_score": 36.94,
+    "total_score": 36.94,
+    "score_mode": "model_score",
+    "pct_chg": -2.87,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 62.0
+  },
+  {
+    "code": "300018.SZ",
+    "name": "中元股份",
+    "model_score": 38.62,
+    "total_score": 38.62,
+    "score_mode": "model_score",
+    "pct_chg": -0.27,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 29.0
+  },
+  {
+    "code": "301512.SZ",
+    "name": "智信精密",
+    "model_score": 36.15,
+    "total_score": 36.15,
+    "score_mode": "model_score",
+    "pct_chg": -0.52,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "name": "长城军工",
+    "position_20d": 0.8752642706,
+    "trailing_10": 0.0824665676,
+    "trailing_5": 0.1181887951,
+    "pct_chg_std_10d": 3.5708205794,
+    "pct_chg_std_5d": 4.3910371774,
+    "max_pct_chg_5d": 10.0038,
+    "limit_up_count_20d": 1.0,
+    "limit_up_count_60d": 1.0,
+    "max_step": 1.0,
+    "was_limit": 1.0,
+    "avg_amount_5d": 462262872.8,
+    "pct_chg_score_day": 10.0038,
+    "turnover_rate": 4.2066,
+    "volume_ratio": 2.39,
+    "prev_turnover": 2.023,
+    "prev_vol_ratio": 1.27,
+    "vol_accel": 0.8818897638,
+    "circ_mv": 2110401.5576,
+    "cmv_yi": 211.04015576,
+    "pe": 2528.574,
+    "pb": 9.6711,
+    "pullback_10d": 0.0,
+    "pullback_20d": 0.0198452741,
+    "prev_pct": 0.7607,
+    "pct_5d": 11.7601,
+    "positive_5d": 4.0,
+    "close_pos": 1.0,
+    "body_ratio": 0.9395017794,
+    "upper_ratio": 0.0,
+    "lower_ratio": 0.0604982206,
+    "amplitude": 0.0964310226,
+    "net_mf_amount": 7207.53,
+    "net_mf_ratio": 0.0847528221,
+    "buy_elg_ratio": 0.8791274843,
+    "buy_lg_ratio": 0.4465842754,
+    "mf_net": 7207.53,
+    "mf_accel": 8.3431982578,
+    "mf_pct": 0.0084752822,
+    "sector_heat": 0.0,
+    "sector_rank": 0.6410769612,
+    "n_concepts": 38.0,
+    "auc_amount": 0.0,
+    "auc_vol": 0.0,
+    "auc_amt_ratio": 0.0,
+    "auc_vol_ratio": 0.0,
+    "id_vwap_dev": 0.0,
+    "id_range": 0.0,
+    "id_morning_vol_ratio": 0.5,
+    "id_afternoon_strength": 1.0,
+    "id_tail_vol_ratio": 0.1,
+    "id_amount_ratio": 0.0,
+    "dt_is_listed": 0.0,
+    "dt_net_amount": 0.0,
+    "dt_net_rate": 0.0,
+    "dt_l_buy_ratio": 0.0,
+    "dt_n_exalter": 0.0,
+    "dt_inst_net_buy": 0.0,
+    "dt_hot_net_buy": 0.0,
+    "dt_inst_sell_ratio": 0.0,
+    "code": "601606.SH",
+    "fundamental": 55.0,
+    "technical": 48.0,
+    "fundflow": 22.0,
+    "sentiment": 75.0,
+    "shortterm": 10.0,
+    "model_score": 36.22
+  },
+  {
+    "code": "000510.SZ",
+    "name": "新金路",
+    "model_score": 37.53,
+    "total_score": 37.53,
+    "score_mode": "model_score",
+    "pct_chg": -6.38,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "002240.SZ",
+    "name": "盛新锂能",
+    "model_score": 37.71,
+    "total_score": 37.71,
+    "score_mode": "model_score",
+    "pct_chg": -6.54,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 60.0
+  },
+  {
+    "code": "002585.SZ",
+    "name": "双星新材",
+    "model_score": 36.22,
+    "total_score": 36.22,
+    "score_mode": "model_score",
+    "pct_chg": -4.33,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 53.0
+  },
+  {
+    "code": "601678.SH",
+    "name": "滨化股份",
+    "model_score": 20.02,
+    "total_score": 20.02,
+    "score_mode": "model_score",
+    "pct_chg": 4.82,
+    "scores": {
+      "technical": 43.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 57.0
+  },
+  {
+    "code": "300537.SZ",
+    "name": "广信材料",
+    "model_score": 29.35,
+    "total_score": 29.35,
+    "score_mode": "model_score",
+    "pct_chg": -2.42,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "605208.SH",
+    "name": "永茂泰",
+    "model_score": 36.5,
+    "total_score": 36.5,
+    "score_mode": "model_score",
+    "pct_chg": -9.65,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 43.0
+  },
+  {
+    "code": "688667.SH",
+    "name": "菱电电控",
+    "model_score": 35.61,
+    "total_score": 35.61,
+    "score_mode": "model_score",
+    "pct_chg": -1.44,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 44.0
+  },
+  {
+    "code": "301251.SZ",
+    "name": "威尔高",
+    "model_score": 37.65,
+    "total_score": 37.65,
+    "score_mode": "model_score",
+    "pct_chg": -3.89,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "001208.SZ",
+    "name": "华菱线缆",
+    "model_score": 34.95,
+    "total_score": 34.95,
+    "score_mode": "model_score",
+    "pct_chg": -1.32,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "600641.SH",
+    "name": "先导基电",
+    "model_score": 37.04,
+    "total_score": 37.04,
+    "score_mode": "model_score",
+    "pct_chg": 1.77,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 45.0,
+    "source": "surge"
+  },
+  {
+    "code": "301230.SZ",
+    "name": "泓博医药",
+    "model_score": 36.14,
+    "total_score": 36.14,
+    "score_mode": "model_score",
+    "pct_chg": -5.36,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "name": "日科化学",
+    "position_20d": 0.4454022989,
+    "trailing_10": 0.0458715596,
+    "trailing_5": -0.0420168067,
+    "pct_chg_std_10d": 9.0557420804,
+    "pct_chg_std_5d": 11.3864026849,
+    "max_pct_chg_5d": 20.0,
+    "limit_up_count_20d": 3.0,
+    "limit_up_count_60d": 3.0,
+    "max_step": 1.0,
+    "was_limit": 1.0,
+    "avg_amount_5d": 392542058.8619999,
+    "pct_chg_score_day": 20.0,
+    "turnover_rate": 10.7857,
+    "volume_ratio": 1.12,
+    "prev_turnover": 6.3245,
+    "prev_vol_ratio": 0.53,
+    "vol_accel": 1.1132075472,
+    "circ_mv": 476990.0676,
+    "cmv_yi": 47.69900676,
+    "pe": 999.0,
+    "pb": 1.992,
+    "pullback_10d": 0.2733711048,
+    "pullback_20d": 0.2733711048,
+    "prev_pct": -2.7304,
+    "pct_5d": -1.1914,
+    "positive_5d": 2.0,
+    "close_pos": 1.0,
+    "body_ratio": 0.9269662921,
+    "upper_ratio": 0.0,
+    "lower_ratio": 0.0730337079,
+    "amplitude": 0.1734892788,
+    "net_mf_amount": -359.43,
+    "net_mf_ratio": -0.0074494306,
+    "buy_elg_ratio": 0.7388959912,
+    "buy_lg_ratio": 0.501375995,
+    "mf_net": -359.43,
+    "mf_accel": 0.8273498444,
+    "mf_pct": -0.0007449431,
+    "sector_heat": 0.0,
+    "sector_rank": 0.652706706,
+    "n_concepts": 39.0,
+    "auc_amount": 0.0,
+    "auc_vol": 0.0,
+    "auc_amt_ratio": 0.0,
+    "auc_vol_ratio": 0.0,
+    "id_vwap_dev": 0.0,
+    "id_range": 0.0,
+    "id_morning_vol_ratio": 0.5,
+    "id_afternoon_strength": 1.0,
+    "id_tail_vol_ratio": 0.1,
+    "id_amount_ratio": 0.0,
+    "dt_is_listed": 1.0,
+    "dt_net_amount": -4336702.0,
+    "dt_net_rate": -0.9,
+    "dt_l_buy_ratio": 0.489001444,
+    "dt_n_exalter": 10.0,
+    "dt_inst_net_buy": -31643177.0,
+    "dt_hot_net_buy": 15760078.0,
+    "dt_inst_sell_ratio": 0.0874156122,
+    "code": "300214.SZ",
+    "fundamental": 48.0,
+    "technical": 34.0,
+    "fundflow": 20.0,
+    "sentiment": 75.0,
+    "shortterm": 10.0,
+    "model_score": 35.88
+  },
+  {
+    "code": "001393.SZ",
+    "name": "维通利",
+    "model_score": 34.8,
+    "total_score": 34.8,
+    "score_mode": "model_score",
+    "pct_chg": -3.98,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 25.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 35.0
+  },
+  {
+    "code": "002301.SZ",
+    "name": "齐心集团",
+    "model_score": 35.27,
+    "total_score": 35.27,
+    "score_mode": "model_score",
+    "pct_chg": -6.47,
+    "scores": {
+      "technical": 25.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "002350.SZ",
+    "name": "北京科锐",
+    "model_score": 36.09,
+    "total_score": 36.09,
+    "score_mode": "model_score",
+    "pct_chg": 1.33,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "000777.SZ",
+    "name": "中核科技",
+    "model_score": 37.21,
+    "total_score": 37.21,
+    "score_mode": "model_score",
+    "pct_chg": 1.58,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 34.0
+  },
+  {
+    "code": "002725.SZ",
+    "name": "跃岭股份",
+    "model_score": 38.59,
+    "total_score": 38.59,
+    "score_mode": "model_score",
+    "pct_chg": 0.56,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "000035.SZ",
+    "name": "中国天楹",
+    "model_score": 33.6,
+    "total_score": 33.6,
+    "score_mode": "model_score",
+    "pct_chg": -4.97,
+    "scores": {
+      "technical": 42.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "603727.SH",
+    "name": "博迈科",
+    "model_score": 37.74,
+    "total_score": 37.74,
+    "score_mode": "model_score",
+    "pct_chg": -6.48,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "301358.SZ",
+    "name": "湖南裕能",
+    "model_score": 35.7,
+    "total_score": 35.7,
+    "score_mode": "model_score",
+    "pct_chg": -3.0,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 56.0
+  },
+  {
+    "code": "600343.SH",
+    "name": "航天动力",
+    "model_score": 35.74,
+    "total_score": 35.74,
+    "score_mode": "model_score",
+    "pct_chg": -7.23,
+    "scores": {
+      "technical": 34.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 52.0
+  },
+  {
+    "code": "301152.SZ",
+    "name": "天力锂能",
+    "model_score": 34.42,
+    "total_score": 34.42,
+    "score_mode": "model_score",
+    "pct_chg": -2.84,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 40.0
+  },
+  {
+    "code": "002806.SZ",
+    "name": "华锋股份",
+    "model_score": 35.86,
+    "total_score": 35.86,
+    "score_mode": "model_score",
+    "pct_chg": -2.94,
+    "scores": {
+      "technical": 25.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "301003.SZ",
+    "name": "江苏博云",
+    "model_score": 36.87,
+    "total_score": 36.87,
+    "score_mode": "model_score",
+    "pct_chg": -1.08,
+    "scores": {
+      "technical": 32.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 29.0
+  },
+  {
+    "code": "301210.SZ",
+    "name": "金杨精密",
+    "model_score": 38.93,
+    "total_score": 38.93,
+    "score_mode": "model_score",
+    "pct_chg": -3.79,
+    "scores": {
+      "technical": 34.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 40.0
+  },
+  {
+    "code": "000801.SZ",
+    "name": "四川九洲",
+    "model_score": 38.33,
+    "total_score": 38.33,
+    "score_mode": "model_score",
+    "pct_chg": -2.01,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 52.0
+  },
+  {
+    "code": "605117.SH",
+    "name": "德业股份",
+    "model_score": 37.13,
+    "total_score": 37.13,
+    "score_mode": "model_score",
+    "pct_chg": 0.07,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 66.0
+  },
+  {
+    "code": "301042.SZ",
+    "name": "安联锐视",
+    "model_score": 37.15,
+    "total_score": 37.15,
+    "score_mode": "model_score",
+    "pct_chg": -2.56,
+    "scores": {
+      "technical": 28.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "600590.SH",
+    "name": "泰豪科技",
+    "model_score": 35.96,
+    "total_score": 35.96,
+    "score_mode": "model_score",
+    "pct_chg": -3.4,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "605358.SH",
+    "name": "立昂微",
+    "model_score": 39.18,
+    "total_score": 39.18,
+    "score_mode": "model_score",
+    "pct_chg": -2.45,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 60.0
+  },
+  {
+    "code": "000601.SZ",
+    "name": "韶能股份",
+    "model_score": 33.68,
+    "total_score": 33.68,
+    "score_mode": "model_score",
+    "pct_chg": -9.99,
+    "scores": {
+      "technical": 39.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "603005.SH",
+    "name": "晶方科技",
+    "model_score": 38.08,
+    "total_score": 38.08,
+    "score_mode": "model_score",
+    "pct_chg": -0.06,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 45.0
+  },
+  {
+    "code": "002955.SZ",
+    "name": "鸿合科技",
+    "model_score": 35.96,
+    "total_score": 35.96,
+    "score_mode": "model_score",
+    "pct_chg": 2.1,
+    "scores": {
+      "technical": 43.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "603050.SH",
+    "name": "科林电气",
+    "model_score": 35.67,
+    "total_score": 35.67,
+    "score_mode": "model_score",
+    "pct_chg": -4.61,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 23.0
+  },
+  {
+    "code": "002490.SZ",
+    "name": "山东墨龙",
+    "model_score": 39.49,
+    "total_score": 39.49,
+    "score_mode": "model_score",
+    "pct_chg": -3.16,
+    "scores": {
+      "technical": 39.0,
+      "fundflow": 25.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 58.0
+  },
+  {
+    "code": "603669.SH",
+    "name": "灵康药业",
+    "model_score": 36.98,
+    "total_score": 36.98,
+    "score_mode": "model_score",
+    "pct_chg": -6.05,
+    "scores": {
+      "technical": 23.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 54.0
+  },
+  {
+    "code": "002741.SZ",
+    "name": "光华科技",
+    "model_score": 36.34,
+    "total_score": 36.34,
+    "score_mode": "model_score",
+    "pct_chg": -1.83,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 59.0
+  },
+  {
+    "code": "688163.SH",
+    "name": "赛伦生物",
+    "model_score": 37.99,
+    "total_score": 37.99,
+    "score_mode": "model_score",
+    "pct_chg": -1.82,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "603220.SH",
+    "name": "中贝通信",
+    "model_score": 33.61,
+    "total_score": 33.61,
+    "score_mode": "model_score",
+    "pct_chg": -4.38,
+    "scores": {
+      "technical": 42.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "300873.SZ",
+    "name": "海晨股份",
+    "model_score": 35.63,
+    "total_score": 35.63,
+    "score_mode": "model_score",
+    "pct_chg": -9.16,
+    "scores": {
+      "technical": 33.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 18.0
+  },
+  {
+    "code": "688072.SH",
+    "name": "拓荆科技",
+    "model_score": 34.55,
+    "total_score": 34.55,
+    "score_mode": "model_score",
+    "pct_chg": 5.72,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "002104.SZ",
+    "name": "恒宝股份",
+    "model_score": 38.98,
+    "total_score": 38.98,
+    "score_mode": "model_score",
+    "pct_chg": -3.72,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "000555.SZ",
+    "name": "神州信息",
+    "model_score": 35.21,
+    "total_score": 35.21,
+    "score_mode": "model_score",
+    "pct_chg": -4.79,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 42.0
+  },
+  {
+    "code": "002674.SZ",
+    "name": "兴业科技",
+    "model_score": 37.06,
+    "total_score": 37.06,
+    "score_mode": "model_score",
+    "pct_chg": 2.12,
+    "scores": {
+      "technical": 34.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "002925.SZ",
+    "name": "盈趣科技",
+    "model_score": 33.6,
+    "total_score": 33.6,
+    "score_mode": "model_score",
+    "pct_chg": 1.71,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 27.0,
+    "source": "surge"
+  },
+  {
+    "code": "301176.SZ",
+    "name": "逸豪新材",
+    "model_score": 30.86,
+    "total_score": 30.86,
+    "score_mode": "model_score",
+    "pct_chg": -2.08,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 53.0
+  },
+  {
+    "code": "301382.SZ",
+    "name": "蜂助手",
+    "model_score": 35.46,
+    "total_score": 35.46,
+    "score_mode": "model_score",
+    "pct_chg": 7.26,
+    "scores": {
+      "technical": 32.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "002566.SZ",
+    "name": "益盛药业",
+    "model_score": 35.29,
+    "total_score": 35.29,
+    "score_mode": "model_score",
+    "pct_chg": -2.19,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "002812.SZ",
+    "name": "恩捷股份",
+    "model_score": 36.23,
+    "total_score": 36.23,
+    "score_mode": "model_score",
+    "pct_chg": 0.45,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 60.0
+  },
+  {
+    "code": "603861.SH",
+    "name": "白云电器",
+    "model_score": 34.64,
+    "total_score": 34.64,
+    "score_mode": "model_score",
+    "pct_chg": -4.71,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 34.0
+  },
+  {
+    "code": "300458.SZ",
+    "name": "全志科技",
+    "model_score": 38.21,
+    "total_score": 38.21,
+    "score_mode": "model_score",
+    "pct_chg": 1.84,
+    "scores": {
+      "technical": 24.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "301528.SZ",
+    "name": "多浦乐",
+    "model_score": 35.36,
+    "total_score": 35.36,
+    "score_mode": "model_score",
+    "pct_chg": -0.92,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "600468.SH",
+    "name": "百利电气",
+    "model_score": 36.67,
+    "total_score": 36.67,
+    "score_mode": "model_score",
+    "pct_chg": -3.25,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "300201.SZ",
+    "name": "海伦哲",
+    "model_score": 34.12,
+    "total_score": 34.12,
+    "score_mode": "model_score",
+    "pct_chg": -0.22,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 59.0
+  },
+  {
+    "code": "002552.SZ",
+    "name": "宝鼎科技",
+    "model_score": 35.93,
+    "total_score": 35.93,
+    "score_mode": "model_score",
+    "pct_chg": -5.81,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 67.0
+  },
+  {
+    "code": "300519.SZ",
+    "name": "新光药业",
+    "model_score": 26.96,
+    "total_score": 26.96,
+    "score_mode": "model_score",
+    "pct_chg": -5.18,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 21.0
+  },
+  {
+    "code": "603115.SH",
+    "name": "海星股份",
+    "model_score": 35.01,
+    "total_score": 35.01,
+    "score_mode": "model_score",
+    "pct_chg": -0.41,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 63.0
+  },
+  {
+    "code": "002407.SZ",
+    "name": "多氟多",
+    "model_score": 34.85,
+    "total_score": 34.85,
+    "score_mode": "model_score",
+    "pct_chg": 0.66,
+    "scores": {
+      "technical": 28.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 60.0
+  },
+  {
+    "code": "300475.SZ",
+    "name": "香农芯创",
+    "model_score": 35.34,
+    "total_score": 35.34,
+    "score_mode": "model_score",
+    "pct_chg": -0.67,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "300423.SZ",
+    "name": "昇辉科技",
+    "model_score": 36.28,
+    "total_score": 36.28,
+    "score_mode": "model_score",
+    "pct_chg": -2.39,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 25.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "001378.SZ",
+    "name": "德冠新材",
+    "model_score": 37.08,
+    "total_score": 37.08,
+    "score_mode": "model_score",
+    "pct_chg": -4.07,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 31.0
+  },
+  {
+    "code": "002606.SZ",
+    "name": "大连电瓷",
+    "model_score": 32.18,
+    "total_score": 32.18,
+    "score_mode": "model_score",
+    "pct_chg": -1.69,
+    "scores": {
+      "technical": 40.0,
+      "fundflow": 27.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "301520.SZ",
+    "name": "万邦医药",
+    "model_score": 33.04,
+    "total_score": 33.04,
+    "score_mode": "model_score",
+    "pct_chg": 4.0,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "002653.SZ",
+    "name": "海思科",
+    "model_score": 33.91,
+    "total_score": 33.91,
+    "score_mode": "model_score",
+    "pct_chg": -8.33,
+    "scores": {
+      "technical": 16.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "605288.SH",
+    "name": "凯迪股份",
+    "model_score": 28.58,
+    "total_score": 28.58,
+    "score_mode": "model_score",
+    "pct_chg": 3.44,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "002300.SZ",
+    "name": "太阳电缆",
+    "model_score": 33.33,
+    "total_score": 33.33,
+    "score_mode": "model_score",
+    "pct_chg": 9.46,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "600550.SH",
+    "name": "保变电气",
+    "model_score": 41.19,
+    "total_score": 41.19,
+    "score_mode": "model_score",
+    "pct_chg": -2.32,
+    "scores": {
+      "technical": 48.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "688679.SH",
+    "name": "通源环境",
+    "model_score": 36.21,
+    "total_score": 36.21,
+    "score_mode": "model_score",
+    "pct_chg": -11.86,
+    "scores": {
+      "technical": 48.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 53.0
+  },
+  {
+    "code": "301366.SZ",
+    "name": "一博科技",
+    "model_score": 29.21,
+    "total_score": 29.21,
+    "score_mode": "model_score",
+    "pct_chg": -1.57,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "603283.SH",
+    "name": "赛腾股份",
+    "model_score": 36.55,
+    "total_score": 36.55,
+    "score_mode": "model_score",
+    "pct_chg": 1.16,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "603757.SH",
+    "name": "大元泵业",
+    "model_score": 35.47,
+    "total_score": 35.47,
+    "score_mode": "model_score",
+    "pct_chg": -4.24,
+    "scores": {
+      "technical": 13.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "002642.SZ",
+    "name": "荣联科技",
+    "model_score": 33.6,
+    "total_score": 33.6,
+    "score_mode": "model_score",
+    "pct_chg": -7.36,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "002409.SZ",
+    "name": "雅克科技",
+    "model_score": 35.42,
+    "total_score": 35.42,
+    "score_mode": "model_score",
+    "pct_chg": 2.85,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 55.0
+  },
+  {
+    "code": "600667.SH",
+    "name": "太极实业",
+    "model_score": 33.66,
+    "total_score": 33.66,
+    "score_mode": "model_score",
+    "pct_chg": 0.06,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 45.0
+  },
+  {
+    "code": "605189.SH",
+    "name": "富春染织",
+    "model_score": 36.96,
+    "total_score": 36.96,
+    "score_mode": "model_score",
+    "pct_chg": -2.53,
+    "scores": {
+      "technical": 26.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 44.0
+  },
+  {
+    "code": "600990.SH",
+    "name": "四创电子",
+    "model_score": 36.35,
+    "total_score": 36.35,
+    "score_mode": "model_score",
+    "pct_chg": -0.12,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "300097.SZ",
+    "name": "智云股份",
+    "model_score": 35.7,
+    "total_score": 35.7,
+    "score_mode": "model_score",
+    "pct_chg": -0.88,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 53.0
+  },
+  {
+    "code": "300801.SZ",
+    "name": "泰和科技",
+    "model_score": 31.93,
+    "total_score": 31.93,
+    "score_mode": "model_score",
+    "pct_chg": 8.38,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "688717.SH",
+    "name": "艾罗能源",
+    "model_score": 35.75,
+    "total_score": 35.75,
+    "score_mode": "model_score",
+    "pct_chg": -6.23,
+    "scores": {
+      "technical": 34.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 53.0
+  },
+  {
+    "code": "300541.SZ",
+    "name": "先进数通",
+    "model_score": 31.68,
+    "total_score": 31.68,
+    "score_mode": "model_score",
+    "pct_chg": -5.46,
+    "scores": {
+      "technical": 26.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 29.0
+  },
+  {
+    "code": "600156.SH",
+    "name": "华升股份",
+    "model_score": 31.22,
+    "total_score": 31.22,
+    "score_mode": "model_score",
+    "pct_chg": -1.55,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 39.0
+  },
+  {
+    "code": "603906.SH",
+    "name": "龙蟠科技",
+    "model_score": 30.21,
+    "total_score": 30.21,
+    "score_mode": "model_score",
+    "pct_chg": -4.86,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 57.0
+  },
+  {
+    "code": "600513.SH",
+    "name": "联环药业",
+    "model_score": 29.49,
+    "total_score": 29.49,
+    "score_mode": "model_score",
+    "pct_chg": -6.52,
+    "scores": {
+      "technical": 29.0,
+      "fundflow": 25.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "000155.SZ",
+    "name": "川能动力",
+    "model_score": 34.73,
+    "total_score": 34.73,
+    "score_mode": "model_score",
+    "pct_chg": -5.21,
+    "scores": {
+      "technical": 42.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 51.0
+  },
+  {
+    "code": "301308.SZ",
+    "name": "江波龙",
+    "model_score": 35.61,
+    "total_score": 35.61,
+    "score_mode": "model_score",
+    "pct_chg": -1.53,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "300407.SZ",
+    "name": "凯发电气",
+    "model_score": 30.01,
+    "total_score": 30.01,
+    "score_mode": "model_score",
+    "pct_chg": 2.66,
+    "scores": {
+      "technical": 39.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 43.0
+  },
+  {
+    "code": "300740.SZ",
+    "name": "水羊股份",
+    "model_score": 31.3,
+    "total_score": 31.3,
+    "score_mode": "model_score",
+    "pct_chg": -0.41,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 25.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 34.0
+  },
+  {
+    "code": "600230.SH",
+    "name": "沧州大化",
+    "model_score": 32.67,
+    "total_score": 32.67,
+    "score_mode": "model_score",
+    "pct_chg": -6.82,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 53.0
+  },
+  {
+    "code": "300005.SZ",
+    "name": "探路者",
+    "model_score": 32.77,
+    "total_score": 32.77,
+    "score_mode": "model_score",
+    "pct_chg": -5.37,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "300489.SZ",
+    "name": "光智科技",
+    "model_score": 32.4,
+    "total_score": 32.4,
+    "score_mode": "model_score",
+    "pct_chg": 0.85,
+    "scores": {
+      "technical": 10.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 70.0
+  },
+  {
+    "code": "300231.SZ",
+    "name": "银信科技",
+    "model_score": 33.65,
+    "total_score": 33.65,
+    "score_mode": "model_score",
+    "pct_chg": -7.09,
+    "scores": {
+      "technical": 25.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "300766.SZ",
+    "name": "每日互动",
+    "model_score": 32.89,
+    "total_score": 32.89,
+    "score_mode": "model_score",
+    "pct_chg": -9.77,
+    "scores": {
+      "technical": 24.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 44.0
+  },
+  {
+    "code": "002829.SZ",
+    "name": "星网宇达",
+    "model_score": 30.0,
+    "total_score": 30.0,
+    "score_mode": "model_score",
+    "pct_chg": -5.93,
+    "scores": {
+      "technical": 34.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "300427.SZ",
+    "name": "红相股份",
+    "model_score": 27.33,
+    "total_score": 27.33,
+    "score_mode": "model_score",
+    "pct_chg": 4.02,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 25.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "002229.SZ",
+    "name": "鸿博股份",
+    "model_score": 31.62,
+    "total_score": 31.62,
+    "score_mode": "model_score",
+    "pct_chg": -7.16,
+    "scores": {
+      "technical": 32.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "301578.SZ",
+    "name": "辰奕智能",
+    "model_score": 34.21,
+    "total_score": 34.21,
+    "score_mode": "model_score",
+    "pct_chg": 5.97,
+    "scores": {
+      "technical": 20.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 25.0
+  },
+  {
+    "code": "688353.SH",
+    "name": "华盛锂电",
+    "model_score": 37.7,
+    "total_score": 37.7,
+    "score_mode": "model_score",
+    "pct_chg": -3.59,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 24.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 57.0
+  },
+  {
+    "code": "300988.SZ",
+    "name": "津荣天宇",
+    "model_score": 32.92,
+    "total_score": 32.92,
+    "score_mode": "model_score",
+    "pct_chg": -4.95,
+    "scores": {
+      "technical": 28.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 29.0
+  },
+  {
+    "code": "603680.SH",
+    "name": "今创集团",
+    "model_score": 32.48,
+    "total_score": 32.48,
+    "score_mode": "model_score",
+    "pct_chg": -1.65,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 23.0
+  },
+  {
+    "code": "003043.SZ",
+    "name": "华亚智能",
+    "model_score": 32.55,
+    "total_score": 32.55,
+    "score_mode": "model_score",
+    "pct_chg": 4.96,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 44.0
+  },
+  {
+    "code": "603988.SH",
+    "name": "中电电机",
+    "model_score": 32.94,
+    "total_score": 32.94,
+    "score_mode": "model_score",
+    "pct_chg": -3.96,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 49.0
+  },
+  {
+    "code": "300464.SZ",
+    "name": "星徽股份",
+    "model_score": 28.65,
+    "total_score": 28.65,
+    "score_mode": "model_score",
+    "pct_chg": -5.18,
+    "scores": {
+      "technical": 26.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 43.0
+  },
+  {
+    "code": "002451.SZ",
+    "name": "摩恩电气",
+    "model_score": 33.73,
+    "total_score": 33.73,
+    "score_mode": "model_score",
+    "pct_chg": -2.35,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "603228.SH",
+    "name": "景旺电子",
+    "model_score": 30.45,
+    "total_score": 30.45,
+    "score_mode": "model_score",
+    "pct_chg": 1.03,
+    "scores": {
+      "technical": 22.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 51.0
+  },
+  {
+    "code": "001337.SZ",
+    "name": "四川黄金",
+    "model_score": 30.58,
+    "total_score": 30.58,
+    "score_mode": "model_score",
+    "pct_chg": -7.92,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 63.0
+  },
+  {
+    "code": "603331.SH",
+    "name": "百达精工",
+    "model_score": 31.22,
+    "total_score": 31.22,
+    "score_mode": "model_score",
+    "pct_chg": -0.09,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "003026.SZ",
+    "name": "中晶科技",
+    "model_score": 32.22,
+    "total_score": 32.22,
+    "score_mode": "model_score",
+    "pct_chg": -1.13,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 54.0
+  },
+  {
+    "code": "002165.SZ",
+    "name": "红 宝 丽",
+    "model_score": 30.05,
+    "total_score": 30.05,
+    "score_mode": "model_score",
+    "pct_chg": -0.46,
+    "scores": {
+      "technical": 46.0,
+      "fundflow": 23.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "603876.SH",
+    "name": "鼎胜新材",
+    "model_score": 26.47,
+    "total_score": 26.47,
+    "score_mode": "model_score",
+    "pct_chg": -2.89,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 53.0
+  },
+  {
+    "code": "600844.SH",
+    "name": "金煤科技",
+    "model_score": 29.53,
+    "total_score": 29.53,
+    "score_mode": "model_score",
+    "pct_chg": -2.61,
+    "scores": {
+      "technical": 35.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 58.0
+  },
+  {
+    "code": "002112.SZ",
+    "name": "三变科技",
+    "model_score": 23.86,
+    "total_score": 23.86,
+    "score_mode": "model_score",
+    "pct_chg": 2.55,
+    "scores": {
+      "technical": 36.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 33.0
+  },
+  {
+    "code": "600980.SH",
+    "name": "北矿科技",
+    "model_score": 20.92,
+    "total_score": 20.92,
+    "score_mode": "model_score",
+    "pct_chg": -4.64,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 28.0
+  }
+]
