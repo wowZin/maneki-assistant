@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """盘中异动扫描 → watchdog surge 盯盘（代替推送）。
 
-口径（2026-07-24 与用户确认）：
-- 扫描宇宙：pool(全市场主板，无市值带) ∪ 昨日涨停 ∪ 前20日涨停基因
-- 行情源：ths_client.get_batch_quotes_fast（并发批量，~30s/轮）
-- 路由：
-  ① 面板早盘评分 ≥ SURGE_PANEL_SCORE(默认20) → 主闸（pipeline 09:30 评分产物）
-  ② 面板外无分票 → 排雷兜底（首板: 量比≥2+窄概念联动≥2+筹码不压顶；
-     昨日涨停无分票: 量比≥2+筹码不压顶）
+口径（2026-07-25 v2 与用户确认）：
+- 扫描池（先筛后拉，THS 压力最小化）：
+  ① 主闸池：面板 model_score ≥ SURGE_PANEL_SCORE(默认20)
+     （pipeline 09:30 全量评分写回面板，surge 直接读面板）
+  ② 排雷池：昨日涨停 ∪ 前20日涨停基因 中不在主闸池的票
+- 行情源：ths_client.get_batch_quotes_fast（并发批量，仅扫描池 ~1100 只/轮）
+- 路由：主闸池直接过；排雷池走排雷（首板: 量比≥2+窄概念联动≥2+筹码不压顶；
+  昨日涨停: 量比≥2+筹码不压顶）。无每轮/每日限量（watchdog 侧 SURGE_MAX_WATCH=10 兜底）
 - 通过的票同时写：watchdog state.json（source="surge"）、analysis.json、
   pushed/{date}_surge.json（pipeline 同构记录，按 code 去重）
 - surge 票只发【surge】入场信号，无信号不通知；盘后零信号自动汰换（watchdog 侧实现）。
@@ -37,8 +38,6 @@ PCT_HIGH = float(os.getenv("SURGE_PCT_HIGH", "9.0"))
 SURGE_PANEL_SCORE = float(os.getenv("SURGE_PANEL_SCORE", "20"))  # 主闸：面板早盘评分阈值
 SURGE_VOL_RATIO = float(os.getenv("SURGE_VOL_RATIO", "2.0"))  # 排雷：量比下限
 SURGE_MAX_WATCH = int(os.getenv("SURGE_MAX_WATCH", "10"))     # watchdog surge 上限（与 watchdog 侧一致）
-SURGE_DAILY_MAX = int(os.getenv("SURGE_DAILY_MAX", "10"))     # 每日最多新增
-SURGE_ROUND_MAX = int(os.getenv("SURGE_ROUND_MAX", "5"))      # 每轮最多新增
 
 
 def _today() -> str:
@@ -69,7 +68,14 @@ def _is_trade_day(date_str: str) -> bool:
 # ══════════════════════════════════════════════════════
 
 def build_universe(td: str) -> dict:
-    """pool ∪ 昨日涨停 ∪ 前20日涨停基因。返回 {code: name} 及分组。"""
+    """构建扫描池数据（日缓存）。
+
+    返回:
+      scores: {code: 面板 model_score}（pipeline 09:30 全量写回，主板）
+      dims:   {code: {technical,fundflow,sentiment,shortterm,fundamental}}（面板列）
+      yesterday_limit / gene: 昨日涨停 / 前20日涨停基因（排雷候选池）
+      names:  {code: name}（pool 文件 + 涨停名单）
+    """
     cache = PLAY_DIR / "data" / "pool" / f"surge_universe_{td}.json"
     if cache.exists():
         try:
@@ -78,8 +84,25 @@ def build_universe(td: str) -> dict:
             pass
 
     from scripts.tu_share import call_tushare
+    import pandas as pd
 
-    # pool
+    # 面板：主板 model_score + 维度分（pipeline 09:30 全量评分产物）
+    scores: dict[str, float] = {}
+    dims: dict[str, dict] = {}
+    panel_file = PANEL_DIR / f"{td}.parquet"
+    if panel_file.exists():
+        _DIM_COLS = ["technical", "fundflow", "sentiment", "shortterm", "fundamental"]
+        panel = pd.read_parquet(panel_file, columns=["code", "model_score"] + _DIM_COLS)
+        panel = panel[panel["code"].str[:2].isin(["00", "60"])]  # 打板只看主板
+        for _, r in panel.iterrows():
+            ms = r.get("model_score")
+            if ms is not None and ms == ms:  # 非 NaN
+                scores[r["code"]] = float(ms)
+            dims[r["code"]] = {d: float(r.get(d, 0) or 0) for d in _DIM_COLS}
+    else:
+        print(f"  [surge] 面板不存在: {panel_file}，今日无面板分可用（全部走排雷）")
+
+    # 名称：pool 文件（缺失自建）+ 涨停名单
     pool_file = PLAY_DIR / "data" / "pool" / f"pool_{td}.json"
     if not pool_file.exists():
         # pipeline 已改为一次性进程，不再建池；surge 自治补齐
@@ -89,9 +112,9 @@ def build_universe(td: str) -> dict:
         except Exception as e:
             print(f"  [surge] 建池失败: {e}")
     pool = json.loads(pool_file.read_text()) if pool_file.exists() else []
-    pool_map = {s["code"]: s.get("name", "") for s in pool}
+    names = {s["code"]: s.get("name", "") for s in pool}
 
-    # 昨日涨停 + 前20日基因（一次调用拉40天）
+    # 昨日涨停 + 前20日基因（一次调用拉45天）
     from datetime import timedelta
     start = (datetime.strptime(td, "%Y%m%d") - timedelta(days=45)).strftime("%Y%m%d")
     resp = call_tushare("limit_list_d",
@@ -115,15 +138,13 @@ def build_universe(td: str) -> dict:
         if dte in window:
             gene_map[c] = n
 
-    universe = dict(pool_map)
-    for m in (yesterday_map, gene_map):
-        for c, n in m.items():
-            universe.setdefault(c, n)
+    names.update({c: n for c, n in yesterday_map.items() if c not in names})
+    names.update({c: n for c, n in gene_map.items() if c not in names})
 
     out = {
         "date": td, "limit_yesterday_date": yesterday,
-        "pool": pool_map, "yesterday_limit": yesterday_map,
-        "gene": gene_map, "universe": universe,
+        "scores": scores, "dims": dims, "names": names,
+        "yesterday_limit": yesterday_map, "gene": gene_map,
     }
     cache.write_text(json.dumps(out, ensure_ascii=False))
     return out
@@ -245,13 +266,6 @@ def _wd_add(entries: list[dict], dry_run: bool = False) -> list[str]:
     return added
 
 
-def _wd_codes() -> set:
-    try:
-        states = json.loads(WATCHDOG_STATE.read_text())
-        return set(states.keys())
-    except Exception:
-        return set()
-
 
 def _log_signals(td: str, recs: list[dict]):
     """surge 路由记录（盘后归档 wiki/raw/limit-up/signals/）。"""
@@ -312,19 +326,21 @@ def _log_snapshots(td: str, quote_rows: list[dict], morning_scores: dict):
 # analysis / pushed 写入（与 pipeline 记录格式一致，按 code 去重）
 # ══════════════════════════════════════════════════════
 
-def _surge_record(code: str, name: str, pct: float, morning_rec: dict | None) -> dict:
-    """构造 surge 记录（pipeline 精简格式 + source=surge）。"""
-    if morning_rec:
-        rec = dict(morning_rec)
-        rec["pct_chg"] = pct
-        rec["source"] = "surge"
-        return rec
+def _surge_record(code: str, name: str, pct: float,
+                  score: float | None, dims: dict | None) -> dict:
+    """构造 surge 记录（pipeline 精简格式 + source=surge）。
+
+    score: 面板 model_score（排雷票为 <20 的真实分，无分为 None）。
+    dims:  面板维度分列（无则全 0）。
+    """
+    score_mode = "model_score" if (score is not None and score >= SURGE_PANEL_SCORE) else "surge_screen"
     return {
         "code": code, "name": name,
-        "model_score": None, "total_score": None,
-        "score_mode": "surge_screen", "pct_chg": pct,
-        "scores": {"technical": 0, "fundflow": 0, "sentiment": 0, "shortterm": 0},
-        "fundamental": 0, "source": "surge",
+        "model_score": score, "total_score": score,
+        "score_mode": score_mode, "pct_chg": pct,
+        "scores": dims or {"technical": 0, "fundflow": 0, "sentiment": 0, "shortterm": 0},
+        "fundamental": (dims or {}).get("fundamental", 0),
+        "source": "surge",
     }
 
 
@@ -372,30 +388,24 @@ def _write_pushed(recs: list[dict], td: str):
 def scan(dry_run: bool = False):
     td = _today()
     uni = build_universe(td)
-    universe = uni["universe"]
+    scores: dict[str, float] = uni["scores"]
+    dims: dict[str, dict] = uni["dims"]
+    names: dict[str, str] = uni["names"]
     yesterday_limit = set(uni["yesterday_limit"].keys())
+    gene = set(uni["gene"].keys())
 
-    # 面板早盘评分（pipeline 09:30 全量评分产物）→ 主闸
-    morning: dict[str, dict] = {}
-    af = ANALYSIS_DIR / f"{td}.json"
-    if af.exists():
-        try:
-            for r in json.loads(af.read_text()):
-                if isinstance(r, dict) and r.get("code"):
-                    morning[r["code"]] = r
-        except Exception:
-            pass
-    morning_scores = {c: float(r.get("model_score") or r.get("total_score") or 0)
-                      for c, r in morning.items()}
-    print(f"  [surge] 宇宙 {len(universe)} 只 | 面板分≥{SURGE_PANEL_SCORE:.0f}: "
-          f"{sum(1 for s in morning_scores.values() if s >= SURGE_PANEL_SCORE)} 只")
-
-    wd_codes = _wd_codes()
+    # ── 扫描池预筛（先筛后拉，THS 压力最小化）──
+    # 主闸池：面板 model_score ≥ 20（pipeline 09:30 全量评分写回）
+    main_pool = {c for c, s in scores.items() if s >= SURGE_PANEL_SCORE}
+    # 排雷池：昨日涨停 ∪ 前20日基因 中不在主闸池的（分<20或无分的票）
+    screen_pool = (yesterday_limit | gene) - main_pool
+    watch = sorted(main_pool | screen_pool)
+    print(f"  [surge] 扫描池 {len(watch)} 只（主闸{len(main_pool)} + 排雷{len(screen_pool)}）")
 
     # THS 并发批量实时行情（ths_client.get_batch_quotes_fast，线程池）
     from scripts.ths_client import get_ths_client as _ths
-    _workers = int(os.getenv("SURGE_QUOTE_WORKERS", "24"))  # 全市场池(3000+)压测 24线程≈52s
-    quotes = _ths().get_batch_quotes_fast(list(universe.keys()), workers=_workers)
+    _workers = int(os.getenv("SURGE_QUOTE_WORKERS", "24"))
+    quotes = _ths().get_batch_quotes_fast(watch, workers=_workers)
     candidates = []  # (code, pct, vol_ratio)
     quote_map = {}   # full_code -> quote dict（快照用）
     for code, q in quotes.items():
@@ -405,8 +415,6 @@ def scan(dry_run: bool = False):
         if not (PCT_LOW <= pct < PCT_HIGH):
             continue
         full = f"{code}.SH" if code.startswith("6") else f"{code}.SZ"
-        if full in wd_codes:  # 已在盯盘，去重
-            continue
         vr = float(q.get("vol_ratio", 0) or 0)
         candidates.append((full, pct, vr))
         quote_map[full] = q
@@ -419,31 +427,17 @@ def scan(dry_run: bool = False):
 
     # 候选快照落盘（盘中模型训练素材，原 pipeline 职责迁入）
     if not dry_run:
-        _log_snapshots(td, [(c, p, v, quote_map[c]) for c, p, v in candidates], morning_scores)
+        _log_snapshots(td, [(c, p, v, quote_map[c]) for c, p, v in candidates], scores)
 
-    # 路由：① 面板早盘分≥20（主闸） ② 面板外无分票 → 排雷兜底
+    # 路由：① 主闸池直接过 ② 排雷池 → 排雷（首板3项/昨停2项）
     round_codes = [c for c, _, _ in candidates]
-    daily_added_file = SIGNALS_DIR / f"{td}.json"
-    daily_count = 0
-    if daily_added_file.exists():
-        try:
-            # 只数通过的（pass=True），被拒日志不占每日额度
-            daily_count = sum(1 for l in json.loads(daily_added_file.read_text())
-                              if isinstance(l, dict) and l.get("pass"))
-        except Exception:
-            pass
-
     picks, logs = [], []
     for c, pct, vr in candidates:
-        if len(picks) >= SURGE_ROUND_MAX or daily_count + len(picks) >= SURGE_DAILY_MAX:
-            break
         is_lb = c in yesterday_limit
-        # 分数>0 才算"有分"：surge 排雷票写入 analysis 时 model_score=None→0，
-        # 避免其下轮被误判为"面板分0<20"而跳过排雷通道
-        if c in morning_scores and morning_scores[c] > 0:
-            sc = morning_scores[c]
-            ok = sc >= SURGE_PANEL_SCORE
-            route = f"面板分{sc:.1f}{'≥' if ok else '<'}{SURGE_PANEL_SCORE:.0f}"
+        if c in main_pool:
+            sc = scores[c]
+            ok = True
+            route = f"面板分{sc:.1f}≥{SURGE_PANEL_SCORE:.0f}"
         else:
             checks = []
             if vr >= SURGE_VOL_RATIO:
@@ -455,20 +449,20 @@ def scan(dry_run: bool = False):
                     checks.append("联动")
                 ok = len(checks) == 3
             else:
-                ok = len(checks) == 2  # 面板外昨日涨停票：量比+筹码
-            route = f"{'连板(无分)' if is_lb else '首板(无分)'} 排雷={'/'.join(checks) or '无'}"
-        logs.append({"code": c, "name": universe.get(c, ""), "pct": pct,
+                ok = len(checks) == 2  # 昨日涨停票：量比+筹码
+            route = f"{'连板' if is_lb else '首板'} 排雷={'/'.join(checks) or '无'}"
+        logs.append({"code": c, "name": names.get(c, ""), "pct": pct,
                      "vol_ratio": vr, "route": route, "pass": ok,
                      "ts": datetime.now().isoformat()})
         if ok:
-            picks.append({"code": c, "name": universe.get(c, ""),
-                          "pct": pct, "morning_rec": morning.get(c)})
+            picks.append({"code": c, "name": names.get(c, ""), "pct": pct})
 
     if not dry_run:
         _log_signals(td, logs)
 
     # 写 watchdog state（surge 标签）+ analysis + pushed（格式一致，按 code 去重）
-    recs = [_surge_record(p["code"], p["name"], p["pct"], p["morning_rec"]) for p in picks]
+    recs = [_surge_record(p["code"], p["name"], p["pct"],
+                          scores.get(p["code"]), dims.get(p["code"])) for p in picks]
     added = _wd_add([{"code": p["code"], "name": p["name"]} for p in picks],
                     dry_run=dry_run) if picks else []
     if not dry_run:

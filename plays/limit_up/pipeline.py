@@ -181,30 +181,20 @@ def _refresh_panel_auction(today: str) -> bool:
 def morning_pass(today: str) -> list[dict]:
     """② 全量静态模型评分（不拉实时行情，pct 用竞价涨幅 auc_pct）。
 
-    数据源：analysis/{today}.json 预评池（panel_builder 00:01 产物，≥35 预评，
-    含名称与五维度分）∩ 当日面板特征。
-    产出：model_score 写回面板；全部记录合并写 analysis（按 code 去重覆盖，
-    维度分继承预评记录）；≥PUSH_THRESHOLD 经 pusher 推送 + 落 pushed/。
+    数据源：当日面板全量（panel_builder 00:01 全市场构建 + 本流程竞价刷新）。
+    产出：model_score 全量写回面板（surge 主闸直接读面板）；
+    主板(00/60)记录合并写 analysis（按 code 去重，维度分取面板列）；
+    ≥PUSH_THRESHOLD 经 pusher 推送 + 落 pushed/（仅主板，打板逻辑不看 20cm）。
     """
     import pandas as pd
     from plays.limit_up.factors.optimized.model_score import factor_model_score_batch
     from plays.limit_up.pusher import check_and_push
 
-    af = ANALYSIS_FILE(today)
-    if not af.exists():
-        raise RuntimeError(f"预评分池不存在: {af}（panel_builder 未运行？）")
-    pool = json.loads(af.read_text())
-    pool_recs = {r["code"]: r for r in pool if isinstance(r, dict) and r.get("code")}
-    pool_codes = list(pool_recs.keys())
-    log.info(f"预评池 {len(pool_codes)} 只")
-
     panel_file = PANEL_FILE(today)
     if not panel_file.exists():
-        raise RuntimeError(f"面板不存在: {panel_file}")
+        raise RuntimeError(f"面板不存在: {panel_file}（panel_builder 未运行？）")
     pit_df = pd.read_parquet(panel_file)
-    pit_df = pit_df[pit_df["code"].isin(pool_codes)].copy()
-    if pit_df.empty:
-        raise RuntimeError(f"面板与预评池无交集 ({len(pool_codes)} 只)")
+    log.info(f"面板 {len(pit_df)} 只，开始全量评分")
 
     # 竞价涨幅作为当日涨幅特征（09:30 静态评分，连续竞价尚未开始）
     if "auc_pct" in pit_df.columns:
@@ -219,30 +209,50 @@ def morning_pass(today: str) -> list[dict]:
              f"max={_scores.max():.1f} mean={_scores.mean():.1f} "
              f"≥{PUSH_THRESHOLD:.0f}={int((_scores >= PUSH_THRESHOLD).sum())}只")
 
-    # model_score 写回面板（面板 = T-1 特征 + 当日竞价 + 早盘模型分，终态）
-    full_panel = pd.read_parquet(panel_file)
-    full_panel["model_score"] = full_panel["code"].map(
-        dict(zip(pit_df["code"], pit_df["model_score"])))
-    full_panel.to_parquet(panel_file, index=False)
-    log.info("model_score 已写回面板")
+    # model_score 全量写回面板（面板 = T-1 特征 + 当日竞价 + 早盘模型分，终态）
+    pit_df.to_parquet(panel_file, index=False)
+    log.info("model_score 已全量写回面板")
 
-    # ── 组装记录：维度分继承预评记录（面板列与 analysis 同值，analysis 为准）──
+    # 名称来源：pool 文件 + analysis 旧记录（面板暂无 name 列，见 panel_builder TODO）
+    name_map: dict[str, str] = {}
+    pool_file = PLAY_DIR / "data" / "pool" / f"pool_{today}.json"
+    if pool_file.exists():
+        try:
+            for s in json.loads(pool_file.read_text()):
+                name_map[s["code"]] = s.get("name", "")
+        except Exception:
+            pass
+    af = ANALYSIS_FILE(today)
+    existing: dict[str, dict] = {}
+    if af.exists():
+        try:
+            for r in json.loads(af.read_text()):
+                if isinstance(r, dict) and r.get("code"):
+                    existing[r["code"]] = r
+                    name_map.setdefault(r["code"], r.get("name", ""))
+        except Exception:
+            pass
+
+    # ── 组装主板记录（维度分直接取面板列）──
     all_results, push_candidates = [], []
     for _, r in pit_df.iterrows():
-        score = float(r["model_score"])
         code = r["code"]
+        if code[:2] not in ("00", "60"):
+            continue  # 打板只看主板（20cm 涨停规则不同）
+        score = float(r["model_score"])
         ap = r.get("auc_pct")
         pct = round(float(ap), 2) if ap is not None and ap == ap else None
-        if pct is not None and pct >= 9.8:
-            continue  # 竞价已涨停不推
-        old = pool_recs.get(code, {})
-        rec = {"code": code, "name": old.get("name", "") or code.split(".")[0],
+        rec = {"code": code,
+               "name": name_map.get(code, "") or code.split(".")[0],
                "model_score": score, "total_score": score,
                "score_mode": "model_score", "pct_chg": pct,
-               "scores": old.get("scores", {}),
-               "fundamental": old.get("fundamental", float(r.get("fundamental", 0) or 0))}
+               "scores": {"technical": float(r.get("technical", 0) or 0),
+                          "fundflow": float(r.get("fundflow", 0) or 0),
+                          "sentiment": float(r.get("sentiment", 0) or 0),
+                          "shortterm": float(r.get("shortterm", 0) or 0)},
+               "fundamental": float(r.get("fundamental", 0) or 0)}
         all_results.append(rec)
-        if score >= PUSH_THRESHOLD:
+        if score >= PUSH_THRESHOLD and not (pct is not None and pct >= 9.8):
             push_candidates.append(rec)
 
     # analysis 合并（按 code 去重覆盖）
