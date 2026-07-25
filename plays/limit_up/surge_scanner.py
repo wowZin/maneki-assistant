@@ -2,7 +2,7 @@
 """盘中异动扫描 → watchdog surge 盯盘（代替推送）。
 
 口径（2026-07-24 与用户确认）：
-- 扫描宇宙：pool(50-300亿主板) ∪ 昨日涨停 ∪ 前20日涨停基因
+- 扫描宇宙：pool(全市场主板，无市值带) ∪ 昨日涨停 ∪ 前20日涨停基因
 - 行情源：ths_client.get_batch_quotes_fast（并发批量，~30s/轮）
 - 路由：
   ① 面板早盘评分 ≥ SURGE_PANEL_SCORE(默认20) → 主闸（pipeline 09:30 评分产物）
@@ -427,7 +427,9 @@ def scan(dry_run: bool = False):
     daily_count = 0
     if daily_added_file.exists():
         try:
-            daily_count = len(json.loads(daily_added_file.read_text()))
+            # 只数通过的（pass=True），被拒日志不占每日额度
+            daily_count = sum(1 for l in json.loads(daily_added_file.read_text())
+                              if isinstance(l, dict) and l.get("pass"))
         except Exception:
             pass
 
@@ -436,7 +438,9 @@ def scan(dry_run: bool = False):
         if len(picks) >= SURGE_ROUND_MAX or daily_count + len(picks) >= SURGE_DAILY_MAX:
             break
         is_lb = c in yesterday_limit
-        if c in morning_scores:
+        # 分数>0 才算"有分"：surge 排雷票写入 analysis 时 model_score=None→0，
+        # 避免其下轮被误判为"面板分0<20"而跳过排雷通道
+        if c in morning_scores and morning_scores[c] > 0:
             sc = morning_scores[c]
             ok = sc >= SURGE_PANEL_SCORE
             route = f"面板分{sc:.1f}{'≥' if ok else '<'}{SURGE_PANEL_SCORE:.0f}"
