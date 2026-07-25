@@ -7,6 +7,7 @@
 """
 
 import logging
+import os
 from datetime import datetime
 
 log = logging.getLogger("limit_up_utils")
@@ -35,6 +36,47 @@ def is_trading_time():
 def is_market_closed():
     """盘后（非交易时段）"""
     return not is_trading_time()
+
+
+# ===== 交易日历 / 时段（原 pipeline.py 迁入，供 pipeline/panel_builder/ws_daemon 共用）=====
+
+def _today_str() -> str:
+    return datetime.now().strftime("%Y%m%d")
+
+
+_TRADE_DAY_CACHE: dict[str, bool] = {}
+
+
+def _is_trade_day(date_str: str) -> bool:
+    """判断某天是否为交易日（tushare 交易日历，结果缓存）。"""
+    if date_str in _TRADE_DAY_CACHE:
+        return _TRADE_DAY_CACHE[date_str]
+    try:
+        from scripts.tu_share import call_tushare
+        result = call_tushare(
+            "trade_cal", {"cal_date": date_str},
+            "exchange,cal_date,is_open",
+        )
+        items = result.get("data", {}).get("items", [])
+        for row in items:
+            opened = int(row[2]) if len(row) > 2 else 0
+            _TRADE_DAY_CACHE[date_str] = opened == 1
+            return opened == 1
+    except Exception:
+        pass
+    _TRADE_DAY_CACHE[date_str] = False
+    return False
+
+
+TRADE_START = int(os.environ.get("TRADE_START", "930"))
+TRADE_END = int(os.environ.get("TRADE_END", "1130"))
+TRADE_PM_START = int(os.environ.get("TRADE_PM_START", "1300"))
+TRADE_PM_END = int(os.environ.get("TRADE_PM_END", "1500"))
+
+
+def _is_trading_session(hhmm: int) -> bool:
+    """判断当前时间是否在交易时段内。"""
+    return (TRADE_START <= hhmm < TRADE_END) or (TRADE_PM_START <= hhmm < TRADE_PM_END)
 
 
 # ═══════════════════════════════════════════════════════════

@@ -196,7 +196,9 @@ def build_concept_members(cache_dir: Path | None = None) -> pd.DataFrame:
     """
     cache_dir = _ensure_dir(cache_dir or DEFAULT_CACHE_DIR)
     existing = _load_or_init_members(cache_dir)
-    existing_codes = set(existing["ts_code"].unique()) if not existing.empty else set()
+    # 存量文件可能已是重命名后的 schema（cpt_code/stock_code）
+    cpt_col = "cpt_code" if "cpt_code" in existing.columns else "ts_code"
+    existing_codes = set(existing[cpt_col].unique()) if not existing.empty else set()
 
     index_df = _fetch_ths_index()
     codes = [c for c in index_df["ts_code"].unique() if c not in existing_codes]
@@ -230,8 +232,10 @@ def build_concept_members(cache_dir: Path | None = None) -> pd.DataFrame:
             # 每 100 个概念或最后批量落盘，保留进度
             if frames:
                 combined = pd.concat(frames, ignore_index=True)
-                combined = combined.drop_duplicates(subset=["ts_code", "con_code"], keep="last")
-                combined = combined.sort_values(["ts_code", "con_code"]).reset_index(drop=True)
+                dedup_cols = (["cpt_code", "stock_code"] if "cpt_code" in combined.columns
+                              else ["ts_code", "con_code"])
+                combined = combined.drop_duplicates(subset=dedup_cols, keep="last")
+                combined = combined.sort_values(dedup_cols).reset_index(drop=True)
                 combined.to_parquet(out_path, index=False)
                 print(f"  [checkpoint] 已保存 {len(combined)} 行")
                 frames = [combined]
@@ -241,8 +245,10 @@ def build_concept_members(cache_dir: Path | None = None) -> pd.DataFrame:
         return existing
 
     combined = pd.concat(frames, ignore_index=True)
-    combined = combined.drop_duplicates(subset=["ts_code", "con_code"], keep="last")
-    combined = combined.sort_values(["ts_code", "con_code"]).reset_index(drop=True)
+    dedup_cols = (["cpt_code", "stock_code"] if "cpt_code" in combined.columns
+                  else ["ts_code", "con_code"])
+    combined = combined.drop_duplicates(subset=dedup_cols, keep="last")
+    combined = combined.sort_values(dedup_cols).reset_index(drop=True)
 
     combined.to_parquet(out_path, index=False)
     print(f"[concept_members] 已保存 {len(combined)} 行 -> {out_path}")
@@ -263,9 +269,10 @@ def check_cache(cache_dir: Path | None = None) -> dict:
         out["daily_concepts"] = df["ts_code"].nunique()
     if member_path.exists():
         df = pd.read_parquet(member_path)
+        cpt_col = "cpt_code" if "cpt_code" in df.columns else "ts_code"
         out["members_exists"] = True
         out["members_rows"] = len(df)
-        out["members_concepts"] = df["ts_code"].nunique()
+        out["members_concepts"] = df[cpt_col].nunique()
     return out
 
 

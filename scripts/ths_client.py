@@ -218,6 +218,61 @@ class THSClient:
 
         return results
 
+    def get_batch_quotes_fast(self, codes: list[str], workers: int = 16) -> dict[str, dict]:
+        """并发批量实时行情（线程池版 get_batch_quotes，供 surge 全市场分钟级扫描）。
+
+        与 get_batch_quotes 相同的缓存策略（30s TTL），但缺失项用线程池并发拉取。
+        1819 只约 20-40 秒/轮（视 THS 响应）。共享 Session 挂载大连接池。
+        注意：纯新增方法，不改变 get_batch_quotes 的既有行为。
+        """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        now = time.time()
+        if not self._cache_date:
+            self._cache_date = datetime.now().strftime("%Y%m%d")
+        if self._cache_date != datetime.now().strftime("%Y%m%d") or now - self._cache_ts > 30:
+            self._cache = {}
+            self._cache_date = datetime.now().strftime("%Y%m%d")
+            self._cache_ts = now
+
+        # 扩大连接池以支撑并发（一次性）
+        if not getattr(self, "_pool_mounted", False):
+            from requests.adapters import HTTPAdapter
+            self._session.mount("https://", HTTPAdapter(
+                pool_connections=workers, pool_maxsize=workers * 2))
+            self._pool_mounted = True
+
+        results = {}
+        new_codes = []
+        for code in codes:
+            short = self._normalize_code(code)
+            if short in self._cache:
+                results[short] = self._cache[short]
+            else:
+                new_codes.append(short)
+
+        if new_codes:
+            t0, success = time.time(), 0
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                futs = {pool.submit(self.get_quote, c): c for c in new_codes}
+                for fut in as_completed(futs):
+                    c = futs[fut]
+                    try:
+                        quote = fut.result()
+                    except Exception:
+                        quote = None
+                    if quote:
+                        self._cache[c] = quote
+                        results[c] = quote
+                        success += 1
+                    else:
+                        results[c] = None
+            from scripts.audit import record
+            record("ths", "batch_quote_fast", ok=success > 0,
+                   items=success, latency_ms=(time.time() - t0) * 1000,
+                   extra=f"{success}/{len(new_codes)} workers={workers}")
+
+        return results
+
     def get_realtime_pct_cache(self) -> dict[str, float]:
         """获取全市场涨跌幅缓存（兼容原 _batch_fetch_realtime_pct 接口）
 

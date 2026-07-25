@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""候选池构建 — 每日一次，开盘前拉 daily_basic 全市场数据，筛选 50-300亿 主板候选股。
+"""候选池构建 — 每日一次，开盘前拉 daily_basic 全市场数据，筛选全市场主板候选股。
 
 用法：
     python plays/limit_up/pool_builder.py              # 构建当日池
@@ -8,11 +8,10 @@
 输出：
     data/pool/pool_{date}.json: list[{"code": str, "name": str}]
 
-过滤规则（与 filter.py 原规则保持一致）：
+过滤规则（2026-07-25 起取消 50-300亿 市值带，与 panel_builder 全市场口径对齐）：
     1. 主板 (00/60 开头)
     2. 非 ST / *ST
     3. 上市满 120 天（非次新）
-    4. 流通市值 50-300 亿
 """
 
 from __future__ import annotations
@@ -123,10 +122,8 @@ def build_pool(trade_date: str | None = None) -> list[dict]:
             except (ValueError, TypeError):
                 pass
 
-        # 规则: 流通市值 50-300亿
+        # 市值带已取消（2026-07-25）：小票是首板/连板主力，不再按市值过滤
         circ_mv = float(row.get("circ_mv", 0) or 0)
-        if circ_mv < MARKET_CAP_MIN or circ_mv > MARKET_CAP_MAX:
-            continue
 
         pool.append({
             "code": code,

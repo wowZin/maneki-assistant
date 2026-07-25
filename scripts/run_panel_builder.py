@@ -5,7 +5,7 @@ import os, sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from plays.limit_up.pipeline import _is_trade_day, _today_str
+from plays.limit_up.utils import _is_trade_day, _today_str
 
 today = os.environ.get("_PANEL_DATE") or _today_str()
 if not _is_trade_day(today):

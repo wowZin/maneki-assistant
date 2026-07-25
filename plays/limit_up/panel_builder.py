@@ -338,6 +338,8 @@ def build_features(codes: list[str], today: str, prev_date: str,
             )
             feats["code"] = code
             feats["pit_date"] = pit_date
+            # TODO(2026-07-25): 面板缺 name 列，后续单独补（stock_basic 已在 ST 过滤时加载，
+            # 带上 name 进 feats 即可；pipeline/surge 目前从 analysis/pool 取名）
             rows.append(feats)
         except Exception as e:
             print(f"    [!] {code} build_pit_features 失败: {e}")
@@ -493,7 +495,7 @@ def main():
     args = parser.parse_args()
 
     today = os.environ.get("_PANEL_DATE") or _today_str()
-    from plays.limit_up.pipeline import _is_trade_day
+    from plays.limit_up.utils import _is_trade_day
     if not _is_trade_day(today):
         print(f"[panel_builder] {today} 非交易日，跳过")
         return

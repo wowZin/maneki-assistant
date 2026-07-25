@@ -984,7 +984,6 @@ def push_feishu(results):
     }
 
     for r in push_list:
-        s = r.get("scores", {}) or {}
         ts = r.get("total_score", 0)
         stars = _stars(ts)
         pct = r.get("pct_chg", 0)
@@ -994,10 +993,7 @@ def push_feishu(results):
             "tag": "div",
             "text": {
                 "tag": "lark_md",
-                "content": (
-                    f"**{code} {name}** {stars} 涨幅{pct:.1f}%\n"
-                    f"总分:{ts:.0f} 情绪:{s.get('sentiment',0):.0f} 资金:{s.get('fundflow',0):.0f} 短线:{s.get('shortterm',0):.0f}"
-                ),
+                "content": f"**{code} {name}** {stars}\n涨幅:{pct:.1f}%\n总分:{ts:.0f}",
             },
         })
 
