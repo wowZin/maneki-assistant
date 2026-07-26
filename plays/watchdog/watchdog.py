@@ -215,6 +215,8 @@ class WatchdogEngine:
         self._subscribed: set[str] = set()
         self._snap_fail_count = 0
         self._netflow_cache: dict[str, tuple[float, float]] = {}  # code -> (ts, netflow)
+        self._netflow_hist_ts: dict[str, float] = {}  # code -> 上次 netflow 采样时间（连续轮询下按真实时间采样）
+        self._alert_ts: dict[str, float] = {}         # code -> 入场信号触发时间（连续轮询下按真实时间确认）
         self._state_mtime: float = 0.0
         self._load_state()
 
@@ -368,7 +370,7 @@ class WatchdogEngine:
                         codes = list(self._states.keys())
                     if codes:
                         self._scan_round(codes)
-                    time.sleep(SCAN_INTERVAL)
+                    time.sleep(1)  # 连续轮询：一轮跑完立刻下一轮（原 30s 固定间隔已废）
                 else:
                     if trading_day_logged:
                         logger.info("交易时段结束，暂停盯盘扫描")
@@ -472,11 +474,18 @@ class WatchdogEngine:
 
             last = float(market.get("last") or 0)
 
-            # 记录资金流向历史（最多保留 10 轮）
-            netflow = self._get_netflow(code)
-            st.netflow_history.append(netflow)
-            if len(st.netflow_history) > 10:
-                st.netflow_history = st.netflow_history[-10:]
+            # 资金流向历史：按真实时间采样（≥60s 一个点，10点≈10分钟窗口；
+            # 连续轮询下若按轮追加，窗口会从5分钟塌缩到几十秒）
+            _now_ts = time.time()
+            if _now_ts - self._netflow_hist_ts.get(code, 0.0) >= 60:
+                netflow = self._get_netflow(code)
+                st.netflow_history.append(netflow)
+                if len(st.netflow_history) > 10:
+                    st.netflow_history = st.netflow_history[-10:]
+                self._netflow_hist_ts[code] = _now_ts
+            else:
+                netflow = (st.netflow_history[-1] if st.netflow_history
+                           else self._get_netflow(code))
 
             # ── 异常状态检测（资金离场 / 抛压 / 诱空）──
             abnormal, level, abnormal_reason = check_abnormal(
@@ -535,6 +544,7 @@ class WatchdogEngine:
                     st.signal_reason = reason
                     st.signal_at = now.strftime("%H:%M:%S")
                     st.last_alert_at = now.strftime("%H:%M")
+                    self._alert_ts[code] = time.time()
                     self._save_state()
                     if st.source != "surge":
                         # surge 票不发触发信号，只发入场信号
@@ -546,38 +556,47 @@ class WatchdogEngine:
                         )
 
             elif st.status == "alerted":
-                # 简单确认：信号触发后下一根K线仍满足条件则入场
-                triggered, _, _ = check_entry(row, scores)
-                if triggered:
-                    st.status = "entered"
-                    st.entry_price = last
-                    st.entry_at = now.strftime("%Y-%m-%d %H:%M:%S")
-                    st.highest_since_entry = last
-                    st.bars_held = 0
-                    st.entry_pushed_date = now.strftime("%Y%m%d")
-                    self._save_state()
-                    _surge_tag = "【surge】" if st.source == "surge" else ""
-                    _push_feishu(
-                        f"📈 {st.name}({code}) 入场!{_surge_tag}\n"
-                        f"入场价: {last:.2f}\n"
-                        f"信号: {st.signal_reason}\n"
-                        f"VWAP: {vwap:.2f}"
-                    )
-                else:
-                    st.status = "watching"
-                    st.signal_type = ""
-                    st.signal_reason = ""
-                    st.signal_at = ""
-                    self._save_state()
+                # 信号确认：触发满 30s 后仍满足条件才入场
+                # （连续轮询下按真实时间判断，保持原 30s 间隔的确认语义）
+                if time.time() - self._alert_ts.get(code, 0.0) >= 30:
+                    triggered, _, _ = check_entry(row, scores)
+                    if triggered:
+                        st.status = "entered"
+                        st.entry_price = last
+                        st.entry_at = now.strftime("%Y-%m-%d %H:%M:%S")
+                        st.highest_since_entry = last
+                        st.bars_held = 0
+                        st.entry_pushed_date = now.strftime("%Y%m%d")
+                        self._save_state()
+                        _surge_tag = "【surge】" if st.source == "surge" else ""
+                        _push_feishu(
+                            f"📈 {st.name}({code}) 入场!{_surge_tag}\n"
+                            f"入场价: {last:.2f}\n"
+                            f"信号: {st.signal_reason}\n"
+                            f"VWAP: {vwap:.2f}"
+                        )
+                    else:
+                        st.status = "watching"
+                        st.signal_type = ""
+                        st.signal_reason = ""
+                        st.signal_at = ""
+                        self._save_state()
 
             elif st.status == "entered":
                 if last > st.highest_since_entry:
                     st.highest_since_entry = last
                 st.bars_held += 1
 
+                # 时间止损按真实持仓分钟（bars_held 只是轮数计数，
+                # 连续轮询下按轮换算会让 60 分钟止损在几分钟内误触发）
+                try:
+                    held_minutes = int((datetime.now() - datetime.strptime(
+                        st.entry_at, "%Y-%m-%d %H:%M:%S")).total_seconds() // 60)
+                except Exception:
+                    held_minutes = st.bars_held
                 exit_triggered, exit_reason = check_exit(
                     st.entry_price, st.highest_since_entry, last,
-                    st.bars_held, vwap, scores, row)
+                    held_minutes, vwap, scores, row)
                 if exit_triggered:
                     pnl_pct = (last / st.entry_price - 1) * 100
                     _surge_tag = "【surge】" if st.source == "surge" else ""
@@ -784,6 +803,9 @@ def _next_trading_start() -> float:
 # ---- 入口 ----
 
 def main():
+    """cron 每日拉起模式（2026-07-26）：09:20 hermes cron 启动 → 内部 30s 循环
+    → 15:05 自动退出（EOD 汰换 15:00 已执行）。非交易日直接退出。
+    pid 守卫防多实例（cron 与手动启动撞车）。代码改动次日自然生效。"""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -795,13 +817,36 @@ def main():
     if env_file.exists():
         load_dotenv(env_file)
 
+    # pid 防多实例
+    pid_file = PROJECT_DIR / "plays" / "watchdog" / "data" / "health" / "watchdog.pid"
+    pid_file.parent.mkdir(parents=True, exist_ok=True)
+    if pid_file.exists():
+        try:
+            old_pid = int(pid_file.read_text().strip())
+            os.kill(old_pid, 0)
+            logger.info(f"已有实例在跑 (PID {old_pid})，退出")
+            return
+        except (ValueError, PermissionError):
+            pass
+        except OSError:
+            pass  # 旧进程不存在
+    pid_file.write_text(str(os.getpid()))
+    import atexit
+    atexit.register(lambda: pid_file.unlink() if pid_file.exists() else None)
+
+    # 非交易日不启动（cron 按工作日触发，节假日在此兜底）
+    from plays.limit_up.utils import _is_trade_day, _today_str
+    if not _is_trade_day(_today_str()):
+        logger.info("非交易日，退出")
+        return
+
     engine = get_engine()
     engine.start()
 
     logger.info("=" * 50)
     logger.info("盯盘引擎已启动！")
     logger.info("状态文件: %s", STATE_FILE)
-    logger.info("扫描间隔: %ds", SCAN_INTERVAL)
+    logger.info("轮询模式: 连续（一轮跑完即下一轮）")
     logger.info("盯盘上限: %d 只", MAX_WATCH)
     logger.info("=" * 50)
     logger.info("通过飞书发送指令: 盯/停/盯盘列表/清盯盘")
@@ -809,6 +854,11 @@ def main():
     try:
         while True:
             time.sleep(60)
+            # 15:05 自动退出（EOD 汰换在 15:00 收盘轮已执行，留 5 分钟余量）
+            if datetime.now().hour >= 15 and datetime.now().minute >= 5:
+                logger.info("收盘退出（15:05），明日由 cron 重新拉起")
+                engine.stop()
+                return
             with engine._lock:
                 count = len(engine._states)
             logger.debug("心跳: 引擎%s, 盯盘%d只", "运行中" if engine._running else "已停止", count)
