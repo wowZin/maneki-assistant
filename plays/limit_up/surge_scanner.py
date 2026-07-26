@@ -15,7 +15,7 @@
 
 用法:
     python3 plays/limit_up/surge_scanner.py            # 扫描一次
-    python3 plays/limit_up/surge_scanner.py --daemon   # 每5分钟循环
+    python3 plays/limit_up/surge_scanner.py --daemon   # 每60s循环
     python3 plays/limit_up/surge_scanner.py --dry-run  # 只打印路由决策，不写 watchdog
 """
 import json
@@ -490,7 +490,7 @@ def scan(dry_run: bool = False):
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="盘中异动扫描 → watchdog surge")
-    parser.add_argument("--daemon", action="store_true", help="每5分钟循环")
+    parser.add_argument("--daemon", action="store_true", help="每60s循环")
     parser.add_argument("--dry-run", action="store_true", help="只打印决策，不写 watchdog/signals")
     args = parser.parse_args()
 
