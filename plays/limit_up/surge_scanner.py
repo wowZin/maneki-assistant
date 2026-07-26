@@ -89,17 +89,26 @@ def build_universe(td: str) -> dict:
     # 面板：主板 model_score + 维度分（pipeline 09:30 全量评分产物）
     scores: dict[str, float] = {}
     dims: dict[str, dict] = {}
+    uncertain = False  # 面板存在但 model_score 未写回（pipeline 未跑/失败）→ 不写日缓存
     panel_file = PANEL_DIR / f"{td}.parquet"
     if panel_file.exists():
         _DIM_COLS = ["technical", "fundflow", "sentiment", "shortterm", "fundamental"]
-        panel = pd.read_parquet(panel_file, columns=["code", "model_score"] + _DIM_COLS)
+        # model_score 由 pipeline 09:30 写回；未写回时列不存在，需容错（全走排雷，下轮重试）
+        import pyarrow.parquet as _pq
+        _avail = _pq.read_schema(panel_file).names  # 只读元数据，不读数据
+        _want = ["code"] + [c for c in ["model_score"] + _DIM_COLS if c in _avail]
+        panel = pd.read_parquet(panel_file, columns=_want)
+        if "model_score" not in _avail:
+            uncertain = True
+            print(f"  [surge] 面板 model_score 未写回（pipeline 未评分？），本轮全走排雷")
         panel = panel[panel["code"].str[:2].isin(["00", "60"])]  # 打板只看主板
         for _, r in panel.iterrows():
             ms = r.get("model_score")
-            if ms is not None and ms == ms:  # 非 NaN
+            if ms is not None and ms == ms:  # 非 NaN（列不存在时 r.get 返回 None）
                 scores[r["code"]] = float(ms)
-            dims[r["code"]] = {d: float(r.get(d, 0) or 0) for d in _DIM_COLS}
+            dims[r["code"]] = {d: float(r.get(d, 0) or 0) for d in _DIM_COLS if d in panel.columns}
     else:
+        uncertain = True
         print(f"  [surge] 面板不存在: {panel_file}，今日无面板分可用（全部走排雷）")
 
     # 名称：pool 文件（缺失自建）+ 涨停名单
@@ -146,7 +155,9 @@ def build_universe(td: str) -> dict:
         "scores": scores, "dims": dims, "names": names,
         "yesterday_limit": yesterday_map, "gene": gene_map,
     }
-    cache.write_text(json.dumps(out, ensure_ascii=False))
+    # 状态不确定（无面板分）时不写日缓存——避免把"主闸空"锁死一整天，下轮重试
+    if not uncertain:
+        cache.write_text(json.dumps(out, ensure_ascii=False))
     return out
 
 
@@ -501,13 +512,19 @@ def main():
         import atexit
         atexit.register(lambda: pid_file.unlink() if pid_file.exists() else None)
 
-        print(f"[surge] daemon 模式启动, 每300s扫描一次 → watchdog (窗口 09:35-11:30/13:00-15:00)")
+        print(f"[surge] daemon 模式启动, 每60s扫描一次 → watchdog (窗口 09:35-11:30/13:00-15:00)")
         while True:
             now = datetime.now()
             hhmm = int(now.strftime("%H%M"))
             if (935 <= hhmm < 1130 or 1300 <= hhmm < 1500) and _is_trade_day(_today()):
-                scan()
-            time.sleep(300)
+                try:
+                    scan()
+                except Exception as e:
+                    # 瞬时错误（THS 超时/文件竞争）不杀 daemon，下轮重试
+                    import traceback
+                    print(f"  [surge] 本轮异常(已吞，下轮重试): {e}")
+                    traceback.print_exc()
+            time.sleep(60)
     else:
         scan(dry_run=args.dry_run)
 
