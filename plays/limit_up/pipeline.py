@@ -7,7 +7,8 @@
   3. 竞价数据刷新面板：auc_amount/auc_vol/auc_amt_ratio/auc_vol_ratio/auc_pct，
      并重算 shortterm 维度分（唯一吃竞价数据的维度，panel_builder 同公式）
   4. 全量静态模型评分（面板 64 特征 + auc_pct 覆盖 pct_chg_score_day）
-  5. model_score 写回面板；≥55 写 analysis + pushed + 飞书推送
+  5. model_score 写回面板；Top-N（默认3，PUSH_TOP_N 可配）+ ≥55 地板 → 推送
+     并写 analysis/pushed（≥55 全量带留 analysis 供回测）
   6. 任何未捕获异常 → crash 日志 + 飞书通知 + 非零退出（无心跳/无常驻）
 
 用法：
@@ -268,8 +269,13 @@ def morning_pass(today: str) -> list[dict]:
     tmp.rename(af)
     log.info(f"analysis 已合并 {len(all_results)} 只 (累计 {len(existing)} 只)")
 
-    pushed = check_and_push(push_candidates, PLAY_DIR / "data")
-    log.info(f"推送: ≥{PUSH_THRESHOLD:.0f} 候选 {len(push_candidates)} 只, 新推送 {len(pushed)} 只")
+    # 显式 TopN 推送（模型是排序导向：TopN 相对标准 + ≥55 绝对地板，2026-07-26 定）
+    # ≥55 全量带留在 analysis 供回测；pushed 存档 = 真实推送的 Top-N
+    top_n = int(os.environ.get("PUSH_TOP_N", "3"))
+    push_candidates.sort(key=lambda r: r["model_score"], reverse=True)
+    pushed = check_and_push(push_candidates[:top_n], PLAY_DIR / "data")
+    log.info(f"推送: ≥{PUSH_THRESHOLD:.0f} 候选 {len(push_candidates)} 只, "
+             f"Top{top_n} 中新推送 {len(pushed)} 只")
     return all_results
 
 
