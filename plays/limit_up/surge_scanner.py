@@ -8,7 +8,7 @@
   ② 排雷池：昨日涨停 ∪ 前20日涨停基因 中不在主闸池的票
 - 行情源：ths_client.get_batch_quotes_fast（并发批量，仅扫描池 ~1100 只/轮）
 - 路由：主闸池直接过；排雷池走排雷（首板: 量比≥2+窄概念联动≥2+筹码不压顶；
-  昨日涨停: 量比≥2+筹码不压顶）。无每轮/每日限量（watchdog 侧 SURGE_MAX_WATCH=10 兜底）
+  昨日涨停: 量比≥2+筹码不压顶）。无数量上限（2026-07-26 用户拍板：入盯不设限）
 - 通过的票同时写：watchdog state.json（source="surge"）、analysis.json、
   pushed/{date}_surge.json（pipeline 同构记录，按 code 去重）
 - surge 票只发【surge】入场信号，无信号不通知；盘后零信号自动汰换（watchdog 侧实现）。
@@ -37,7 +37,7 @@ PCT_LOW = float(os.getenv("SURGE_PCT_LOW", "5.0"))    # 异动涨幅窗口（5%�
 PCT_HIGH = float(os.getenv("SURGE_PCT_HIGH", "9.8"))  # 上限9.8：连板秒板高发，9.0会丢窗口
 SURGE_PANEL_SCORE = float(os.getenv("SURGE_PANEL_SCORE", "20"))  # 主闸：面板早盘评分阈值
 SURGE_VOL_RATIO = float(os.getenv("SURGE_VOL_RATIO", "2.0"))  # 排雷：量比下限
-SURGE_MAX_WATCH = int(os.getenv("SURGE_MAX_WATCH", "10"))     # watchdog surge 上限（与 watchdog 侧一致）
+
 
 
 def _today() -> str:
@@ -255,12 +255,9 @@ def _wd_add(entries: list[dict], dry_run: bool = False) -> list[str]:
     for attempt in range(3):
         try:
             states = json.loads(WATCHDOG_STATE.read_text()) if WATCHDOG_STATE.exists() else {}
-            surge_count = sum(1 for s in states.values() if s.get("source") == "surge")
             for e in entries:
                 if e["code"] in states or e["code"] in added:
                     continue
-                if surge_count >= SURGE_MAX_WATCH:
-                    break
                 states[e["code"]] = {
                     "code": e["code"], "name": e.get("name", ""),
                     "added_at": datetime.now().isoformat(),
@@ -275,7 +272,6 @@ def _wd_add(entries: list[dict], dry_run: bool = False) -> list[str]:
                     "last_daily_update": "",
                 }
                 added.append(e["code"])
-                surge_count += 1
             WATCHDOG_STATE.write_text(json.dumps(states, ensure_ascii=False, indent=2))
             # 回读校验（watchdog 引擎每30秒重写 state，可能覆盖；重写则重试）
             back = json.loads(WATCHDOG_STATE.read_text())

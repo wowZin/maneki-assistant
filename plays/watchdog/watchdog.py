@@ -70,8 +70,7 @@ def _short(code: str) -> str:
 logger = logging.getLogger(__name__)
 STATE_FILE = PROJECT_DIR / "plays" / "watchdog" / "data" / "state.json"
 SCAN_INTERVAL = 30  # 每30秒检查一次信号
-MAX_WATCH = 20      # 同时盯盘上限
-SURGE_MAX_WATCH = int(os.getenv("SURGE_MAX_WATCH", "10"))  # surge 通道独立上限（不占手动盯盘名额）
+MAX_WATCH = 20      # 手动盯盘上限（surge 通道不设上限，2026-07-26 用户拍板）
 ABNORMAL_COOLDOWN_SECONDS = 300  # 异常推送冷却：同一 level 5 分钟内不重复推送
 
 # 候选池来源：limit_up pipeline 产出的 analysis
@@ -215,6 +214,7 @@ class WatchdogEngine:
         self._scan_count = 0
         self._subscribed: set[str] = set()
         self._snap_fail_count = 0
+        self._netflow_cache: dict[str, tuple[float, float]] = {}  # code -> (ts, netflow)
         self._state_mtime: float = 0.0
         self._load_state()
 
@@ -598,21 +598,31 @@ class WatchdogEngine:
         return float(market.get("last") or 0) if market else 0.0
 
     def _get_netflow(self, code: str) -> float:
-        """从 jvQuant 获取当日大单+中单净流向（元）。"""
+        """从 jvQuant 获取当日大单+中单净流向（元）。
+
+        节流：每只股票 300s 缓存。资金流向是当日累计值，30s 粒度无意义，
+        不节流时每股每轮一次 REST，30 只票一轮 30-60s 会拖垮 30s 节奏。
+        """
+        now = time.time()
+        cached = self._netflow_cache.get(code)
+        if cached and now - cached[0] < 300:
+            return cached[1]
+        val = 0.0
         try:
             from scripts.jvquant_client import get_jvquant_client
             client = get_jvquant_client()
             data = client.get_fundflow_single(_short(code))
             if data:
                 # main_net/big_net/mid_net 单位万元，转元
-                return (
+                val = (
                     float(data.get("main_net", 0) or 0)
                     + float(data.get("big_net", 0) or 0)
                     + float(data.get("mid_net", 0) or 0)
                 ) * 10000
         except Exception as e:
             logger.debug(f"获取资金流向失败 {code}: {e}")
-        return 0.0
+        self._netflow_cache[code] = (now, val)
+        return val
 
     # ---- 日线数据 ----
 

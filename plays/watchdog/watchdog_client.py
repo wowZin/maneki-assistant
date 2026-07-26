@@ -22,7 +22,7 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
-from plays.watchdog.watchdog import WatchState, STATE_FILE, MAX_WATCH, SURGE_MAX_WATCH, _norm, _short  # noqa
+from plays.watchdog.watchdog import WatchState, STATE_FILE, MAX_WATCH, _norm, _short  # noqa
 
 
 def _load_state() -> dict[str, WatchState]:
@@ -60,12 +60,7 @@ def cmd_add(codes: list[str], source: str = "manual") -> str:
         if code in states:
             msgs.append(f"{code} 已在盯盘中")
             continue
-        if source == "surge":
-            surge_count = sum(1 for st in states.values() if st.source == "surge")
-            if surge_count >= SURGE_MAX_WATCH:
-                msgs.append(f"surge盯盘已达上限({SURGE_MAX_WATCH}只)，无法添加 {code}")
-                continue
-        else:
+        if source != "surge":  # surge 通道不设上限（2026-07-26 用户拍板）
             manual_count = sum(1 for st in states.values() if st.source != "surge")
             if manual_count >= MAX_WATCH:
                 msgs.append(f"盯盘已达上限({MAX_WATCH}只)，无法添加 {code}")
