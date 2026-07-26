@@ -107,18 +107,14 @@ def compute_factor_scores(row: dict) -> dict:
 
 
 def check_entry(row: dict, scores: dict) -> tuple[bool, str, str]:
-    """检查是否触发入场信号。
+    """检查是否触发入场信号（2026-07-26 已去除 XGBoost 实时分闸）。
 
-    全局前置条件：model_score >= min_model_score
+    验证结论：同一 XGBoost 模型以 T-1 数据训练，盘中极端走强值(OOD)会导致
+    分数反而下跌（median -7.6分），且 pct_chg_score_day 权重≈0。
+    入场决策完全交给实时形态突破 + L1/L2 盘口确认，不依赖模型分。
+    面板分≥20 的筛选由 surge_scanner 在入盯前完成。
     返回: (is_triggered, signal_type, reason)
     """
-    cfg = ENTRY_CONFIG
-
-    # ── 全局模型分门槛 ──
-    model_score = scores.get("model_score", 0.0)
-    if model_score < cfg["min_model_score"]:
-        return False, "", ""
-
     # ── L1/L2 实时信号确认 ──
     bid1 = row.get("bid1", 0) or 0
     ask1 = row.get("ask1", 0) or 0

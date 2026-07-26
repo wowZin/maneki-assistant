@@ -104,12 +104,10 @@ def test_volume_surge_entry():
 
 
 def test_entry_model_score_gate_boundary():
-    """model_score 全局闸边界：39.9 拒 / 40.0 过（ENTRY_CONFIG['min_model_score']=40）。"""
+    """验证 2026-07-26 已去除 XGBoost 实时分闸后，model_score=0 不阻拦入场（完全交实时形态+L1确认）。"""
     row = _make_l1_row(last=10.5, vwap=10.3, pct=3.0)
-    triggered, _, _ = check_entry(row, {"model_score": 39.9})
-    assert not triggered
-    triggered, sig_type, _ = check_entry(row, {"model_score": 40.0})
-    assert triggered
+    triggered, sig_type, _ = check_entry(row, {"model_score": 0.0})
+    assert triggered, "model_score=0 不应阻拦入场（实时闸已删）"
     assert sig_type == "vwap_break"
 
 
