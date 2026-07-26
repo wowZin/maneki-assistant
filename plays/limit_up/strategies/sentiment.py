@@ -483,13 +483,13 @@ def score_sentiment(code: str, trade_date: str | None = None) -> tuple[int | flo
     # A. 换手活跃度（分档升级，占 0-5 分）
     turnover = None
     try:
-        # 1) 实时换手（pipeline 注入的 batch_quotes）
+        # 1) 实时换手（ad-hoc 流程 pipeline_feishu 注入的 batch_quotes）
         from plays.limit_up.strategies import realtime_ctx
         rt_turnover = realtime_ctx.get_turnover(code)
         if rt_turnover and rt_turnover > 0:
             turnover = rt_turnover
         else:
-            # 2) pipeline 预取的 daily_basic 缓存
+            # 2) panel_builder 预取的 daily_basic 缓存
             from plays.limit_up.strategies import factor_ctx
             basic = factor_ctx.get_daily_basic(code)
             if basic:

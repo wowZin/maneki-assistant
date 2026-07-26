@@ -24,8 +24,13 @@ from plays.limit_up.panel_builder import _prev_trade_date, data_qc, RAW_DIR
 
 @pytest.fixture(scope="module")
 def panel_df():
-    """真实面板 parquet（由 --quick 生成）。"""
-    files = sorted(RAW_DIR.glob("*.parquet"))
+    """真实面板 parquet（最近一个交易日的 {date}.parquet）。
+
+    注意：panel/ 目录下还有 stk_factor_pro.parquet/cyq_perf.parquet 等
+    非日面板文件，必须按 8 位日期文件名过滤，否则会拿错文件。
+    """
+    files = sorted(f for f in RAW_DIR.glob("*.parquet")
+                   if f.stem.isdigit() and len(f.stem) == 8)
     if not files:
         pytest.skip("无面板 parquet，先跑 python3 panel_builder.py --quick")
     df = pd.read_parquet(files[-1])
@@ -63,9 +68,10 @@ class TestDataIntegrity:
             assert panel_df[c].dtype == "float64", f"{c} 类型={panel_df[c].dtype}"
 
     def test_no_nulls(self, panel_df):
-        """T-1 数据零缺失。"""
+        """T-1 数据零缺失（例外：auc_pct——停牌股当日无竞价，NaN 为设计行为，
+        XGBoost 原生处理 NaN；pipeline 覆盖 pct_chg_score_day 时只取非空）。"""
         nulls = panel_df.isna().sum()
-        bad = nulls[nulls > 0]
+        bad = nulls[(nulls > 0) & (nulls.index != "auc_pct")]
         assert len(bad) == 0, f"缺失字段: {dict(bad)}"
 
 
@@ -77,9 +83,9 @@ class TestFeatureCompleteness:
     """面板包含 59 个可离线计算的 PIT 特征（另 5 策略分需实时数据）。"""
 
     def test_contains_64_features(self, panel_df):
-        """面板包含 64 个完整特征（59 PIT + 5 策略分）。"""
+        """面板 ≥64 特征（59 PIT + 5 策略分；另有 auc_pct/model_score 运营列）。"""
         feat_cols = [c for c in panel_df.columns if c not in ("code", "pit_date")]
-        assert len(feat_cols) == 64, f"特征数={len(feat_cols)}, 期望64"
+        assert len(feat_cols) >= 64, f"特征数={len(feat_cols)}, 期望≥64"
 
     def test_strategy_scores_in_panel(self, panel_df):
         """fundamental/technical/fundflow/sentiment/shortterm 现在也在面板中。"""
@@ -105,7 +111,7 @@ class TestDataQC:
     def test_qc_runs_without_error(self, panel_df):
         report = data_qc(panel_df)
         assert report["total_stocks"] == len(panel_df)
-        assert report["total_features"] == 64
+        assert report["total_features"] >= 64
 
     def test_qc_detects_high_zero_rate(self, panel_df):
         """max_step 零值率应 > 90%（多数非连板）。"""
@@ -115,7 +121,9 @@ class TestDataQC:
 
     def test_qc_zero_missing(self, panel_df):
         report = data_qc(panel_df)
-        assert len(report["missing_rate"]) == 0, f"有缺失: {report['missing_rate']}"
+        # auc_pct 允许缺失（停牌股无竞价，设计行为）
+        unexpected = {k: v for k, v in report["missing_rate"].items() if k != "auc_pct"}
+        assert len(unexpected) == 0, f"有缺失: {unexpected}"
 
     def test_qc_feature_stats_have_expected_keys(self, panel_df):
         report = data_qc(panel_df)

@@ -19,7 +19,7 @@ _CONCEPT_DAILY_CACHE: pd.DataFrame | None = None
 _CONCEPT_MEMBER_CACHE: pd.DataFrame | None = None
 
 
-# ── 写入接口（仅 pipeline.py 调用） ─────────────────
+# ── 写入接口（原仅 pipeline.py 调用；2026-07-25 后由 panel_builder/pit_features 使用） ─────────────────
 
 def set_daily(code: str, rows: list[dict]):
     """设置某只股票的日线序列，按 trade_date 降序。"""

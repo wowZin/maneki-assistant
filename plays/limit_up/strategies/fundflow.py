@@ -36,7 +36,8 @@ sys.path.insert(0, str(PROJECT_DIR / "scripts"))
 from scripts.tu_share import call_tushare  # noqa: E402
 from plays.limit_up.utils import safe_float, safe_float_none, list_to_dict  # noqa: E402
 
-# 模块级缓存（由 pipeline 的 stage1_rough 预填充）
+# 模块级缓存（原由 pipeline stage1_rough 预填充；2026-07-25 pipeline 一次性化后
+# 无人预填充，策略内实时调用直接走 Tushare 降级路径）
 _FUNDFLOW_MF_CACHE: dict[str, dict] = {}  # {code: {net_mf_amount, ...}}
 _FUNDFLOW_TI_CACHE: dict[str, list] = {}  # {code: [{exalter, net_buy, ...}]}
 

@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """
-涨停预测完整流程脚本
-流程：异动扫描(同花顺直连) → 五维度评分 → 排序 → 飞书推送
+涨停预测 ad-hoc 分析脚本（飞书问个股/手动分析的入口）。
 
-用法:
-  python plays/limit_up/pipeline.py                  # 完整流程(requests+代理)
-  python plays/limit_up/pipeline.py --from-file=data/signals/xxx.json  # 从已有文件读取
+注意：每日自动推送已不由本文件负责——09:30 由 plays/limit_up/pipeline.py
+一次性进程（cron 触发）完成全量评分推送；本文件仅保留手动/ad-hoc 流程：
+异动扫描(同花顺直连) → 五维度评分 → 排序 → 飞书推送。
 """
 
 import json
