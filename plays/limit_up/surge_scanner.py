@@ -89,14 +89,16 @@ def build_universe(td: str) -> dict:
     # 面板：主板 model_score + 维度分（pipeline 09:30 全量评分产物）
     scores: dict[str, float] = {}
     dims: dict[str, dict] = {}
+    basics: dict[str, dict] = {}
     uncertain = False  # 面板存在但 model_score 未写回（pipeline 未跑/失败）→ 不写日缓存
     panel_file = PANEL_DIR / f"{td}.parquet"
     if panel_file.exists():
         _DIM_COLS = ["technical", "fundflow", "sentiment", "shortterm", "fundamental"]
+        _BASE_COLS = ["circ_mv", "pe", "pb"]  # watchdog realtime_row 需要（turnover/基本面因子）
         # model_score 由 pipeline 09:30 写回；未写回时列不存在，需容错（全走排雷，下轮重试）
         import pyarrow.parquet as _pq
         _avail = _pq.read_schema(panel_file).names  # 只读元数据，不读数据
-        _want = ["code"] + [c for c in ["model_score"] + _DIM_COLS if c in _avail]
+        _want = ["code"] + [c for c in ["model_score"] + _DIM_COLS + _BASE_COLS if c in _avail]
         panel = pd.read_parquet(panel_file, columns=_want)
         if "model_score" not in _avail:
             uncertain = True
@@ -107,6 +109,7 @@ def build_universe(td: str) -> dict:
             if ms is not None and ms == ms:  # 非 NaN（列不存在时 r.get 返回 None）
                 scores[r["code"]] = float(ms)
             dims[r["code"]] = {d: float(r.get(d, 0) or 0) for d in _DIM_COLS if d in panel.columns}
+            basics[r["code"]] = {b: float(r.get(b, 0) or 0) for b in _BASE_COLS if b in panel.columns}
     else:
         uncertain = True
         print(f"  [surge] 面板不存在: {panel_file}，今日无面板分可用（全部走排雷）")
@@ -152,7 +155,7 @@ def build_universe(td: str) -> dict:
 
     out = {
         "date": td, "limit_yesterday_date": yesterday,
-        "scores": scores, "dims": dims, "names": names,
+        "scores": scores, "dims": dims, "basics": basics, "names": names,
         "yesterday_limit": yesterday_map, "gene": gene_map,
     }
     # 状态不确定（无面板分）时不写日缓存——避免把"主闸空"锁死一整天，下轮重试
@@ -240,7 +243,12 @@ def sector_resonance(code: str, round_codes: list[str], min_peers: int = 2) -> b
 # ══════════════════════════════════════════════════════
 
 def _wd_add(entries: list[dict], dry_run: bool = False) -> list[str]:
-    """把 surge 票写入 watchdog state.json。entries: [{code,name}]。返回成功添加的 code。"""
+    """把 surge 票写入 watchdog state.json。
+
+    entries: [{code, name, dim_scores?, daily_basic?}]
+      dim_scores/daily_basic 必须带上（面板值）——否则 watchdog realtime_row
+      的五维度分=0，模型分被系统性压低，入场闸(min_model_score=40)永远够不到。
+    """
     if dry_run:
         return [e["code"] for e in entries]
     added = []
@@ -262,7 +270,9 @@ def _wd_add(entries: list[dict], dry_run: bool = False) -> list[str]:
                     "signal_type": "", "signal_reason": "", "signal_at": "",
                     "last_alert_at": "", "last_abnormal_level": "",
                     "last_abnormal_pushed_at": 0, "netflow_history": [],
-                    "daily_basic": {}, "dim_scores": {}, "last_daily_update": "",
+                    "daily_basic": e.get("daily_basic", {}),
+                    "dim_scores": e.get("dim_scores", {}),
+                    "last_daily_update": "",
                 }
                 added.append(e["code"])
                 surge_count += 1
@@ -474,8 +484,10 @@ def scan(dry_run: bool = False):
     # 写 watchdog state（surge 标签）+ analysis + pushed（格式一致，按 code 去重）
     recs = [_surge_record(p["code"], p["name"], p["pct"],
                           scores.get(p["code"]), dims.get(p["code"])) for p in picks]
-    added = _wd_add([{"code": p["code"], "name": p["name"]} for p in picks],
-                    dry_run=dry_run) if picks else []
+    added = _wd_add([{"code": p["code"], "name": p["name"],
+                      "dim_scores": dims.get(p["code"], {}),
+                      "daily_basic": uni["basics"].get(p["code"], {})}
+                     for p in picks], dry_run=dry_run) if picks else []
     if not dry_run:
         _write_analysis(recs, td)
         _write_pushed(recs, td)
