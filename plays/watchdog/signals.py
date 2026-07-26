@@ -106,7 +106,7 @@ def compute_factor_scores(row: dict) -> dict:
     }
 
 
-def check_entry(row: dict, scores: dict, klines: list[dict]) -> tuple[bool, str, str]:
+def check_entry(row: dict, scores: dict) -> tuple[bool, str, str]:
     """检查是否触发入场信号。
 
     全局前置条件：model_score >= min_model_score

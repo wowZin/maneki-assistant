@@ -157,7 +157,6 @@ def realtime_row(
     code: str,
     market: dict,
     vwap: float,
-    klines: list[dict],
     daily_features: dict,
     daily_basic: dict,
     dim_scores: dict,
@@ -243,25 +242,3 @@ def realtime_row(
         "avg_pct_chg_5d": daily_features.get("avg_pct_chg_5d", 0.0),
     }
     return row
-
-
-def minute_momentum(klines: list[dict], n: int = 5) -> dict:
-    """计算最近 n 根分钟 K 线的动量。
-
-    返回 {"chg_pct": 涨幅%, "vol_ratio": 成交量/前n根均量, "bars": 有效bar数}
-    """
-    if len(klines) < n + 1:
-        return {"chg_pct": 0.0, "vol_ratio": 1.0, "bars": len(klines)}
-
-    recent = klines[-n:]
-    prev = klines[-(n + 1):-1]
-
-    c0 = recent[0].get("open") or recent[0].get("close") or 0
-    c1 = recent[-1].get("close", 0)
-    chg_pct = ((c1 / c0 - 1) * 100) if c0 > 0 else 0.0
-
-    vol_recent = sum(float(b.get("volume") or 0) for b in recent)
-    vol_prev = sum(float(b.get("volume") or 0) for b in prev)
-    vol_ratio = (vol_recent / vol_prev) if vol_prev > 0 else 1.0
-
-    return {"chg_pct": chg_pct, "vol_ratio": vol_ratio, "bars": len(recent)}

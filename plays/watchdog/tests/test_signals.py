@@ -63,7 +63,7 @@ def test_breakout_entry():
     row = _make_row(pct=3.0, gap=1.0, turnover=8.0, vol_ratio=1.6,
                     pullback10=0.02, pullback20=0.08, position=0.65)
     scores = compute_factor_scores(row)
-    triggered, sig_type, reason = check_entry(row, scores, [])
+    triggered, sig_type, reason = check_entry(row, scores)
     assert triggered
     assert sig_type == "breakout"
 
@@ -74,7 +74,7 @@ def test_sprint_entry():
                     limit20=3.0, position=0.6, trailing=0.12,
                     pullback10=0.1, pullback20=0.25)
     scores = compute_factor_scores(row)
-    triggered, sig_type, reason = check_entry(row, scores, [])
+    triggered, sig_type, reason = check_entry(row, scores)
     assert triggered
     assert sig_type == "sprint"
 

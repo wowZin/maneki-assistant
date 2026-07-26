@@ -57,7 +57,7 @@ def test_realtime_row():
     }
     daily_basic = {"circ_mv": 10000000.0, "pe": 20.0, "pb": 2.0}
     dim_scores = {"fundamental": 50, "technical": 60, "fundflow": 70, "sentiment": 40, "shortterm": 55}
-    row = realtime_row("000001.SZ", market, 10.5, [], daily_features, daily_basic, dim_scores)
+    row = realtime_row("000001.SZ", market, 10.5, daily_features, daily_basic, dim_scores)
     assert abs(row["pct_chg_score_day"] - 10.0) < 1e-9
     assert abs(row["gap_up"] - 2.0) < 1e-9
     assert row["turnover_rate"] > 0

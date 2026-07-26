@@ -453,15 +453,13 @@ class WatchdogEngine:
 
             vwap_data = _read_ws_snap(f"{_short(code)}_vwap")
             vwap = float(vwap_data) if isinstance(vwap_data, (int, float)) else 0.0
-            klines = []  # Kline 数据目前由 ws_daemon 暂不提供，不影响评分
-
             bid_price = market.get("bid_price", [None] * 10)
             ask_price = market.get("ask_price", [None] * 10)
             bid1 = float(bid_price[0]) if bid_price and bid_price[0] else 0
             ask1 = float(ask_price[0]) if ask_price and ask_price[0] else 0
             ask_bid = bid1 / ask1 if ask1 > 0 else 1.0
             daily_features = price_features(st.daily_rows)
-            row = realtime_row(code, market, vwap, klines, daily_features, st.daily_basic, st.dim_scores, st.daily_rows)
+            row = realtime_row(code, market, vwap, daily_features, st.daily_basic, st.dim_scores, st.daily_rows)
             scores = compute_factor_scores(row)
 
             # 补充 L1/L2 实时信号到 row（供 check_entry 入场确认）
@@ -530,7 +528,7 @@ class WatchdogEngine:
                     st.last_abnormal_level = ""
 
             if st.status == "watching":
-                triggered, sig_type, reason = check_entry(row, scores, klines)
+                triggered, sig_type, reason = check_entry(row, scores)
                 if triggered:
                     st.status = "alerted"
                     st.signal_type = sig_type
@@ -549,7 +547,7 @@ class WatchdogEngine:
 
             elif st.status == "alerted":
                 # 简单确认：信号触发后下一根K线仍满足条件则入场
-                triggered, _, _ = check_entry(row, scores, klines)
+                triggered, _, _ = check_entry(row, scores)
                 if triggered:
                     st.status = "entered"
                     st.entry_price = last
