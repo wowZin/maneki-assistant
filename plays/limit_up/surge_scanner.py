@@ -33,8 +33,8 @@ SIGNALS_DIR = PLAY_DIR / "data" / "signals"
 PANEL_DIR = PLAY_DIR.parent.parent / "wiki" / "raw" / "limit-up" / "panel"
 WATCHDOG_STATE = PLAY_DIR.parent.parent / "plays" / "watchdog" / "data" / "state.json"
 
-PCT_LOW = float(os.getenv("SURGE_PCT_LOW", "5.0"))    # 异动涨幅窗口（5%≤涨幅<9%）
-PCT_HIGH = float(os.getenv("SURGE_PCT_HIGH", "9.0"))
+PCT_LOW = float(os.getenv("SURGE_PCT_LOW", "5.0"))    # 异动涨幅窗口（5%≤涨幅<9.8%，留0.2%防已封板）
+PCT_HIGH = float(os.getenv("SURGE_PCT_HIGH", "9.8"))  # 上限9.8：连板秒板高发，9.0会丢窗口
 SURGE_PANEL_SCORE = float(os.getenv("SURGE_PANEL_SCORE", "20"))  # 主闸：面板早盘评分阈值
 SURGE_VOL_RATIO = float(os.getenv("SURGE_VOL_RATIO", "2.0"))  # 排雷：量比下限
 SURGE_MAX_WATCH = int(os.getenv("SURGE_MAX_WATCH", "10"))     # watchdog surge 上限（与 watchdog 侧一致）
