@@ -54,6 +54,18 @@ SAMPLE_CODE_2 = "000001.SZ"     # 平安银行（主板）
 
 
 @pytest.fixture(scope="session")
+def latest_panel_date() -> str:
+    """最近一个有面板 parquet 的交易日（8位日期文件名取最大，动态发现不硬编码）。"""
+    panel_dir = PROJECT_ROOT / "wiki" / "raw" / "limit-up" / "panel"
+    dates = sorted(
+        p.stem for p in panel_dir.glob("*.parquet")
+        if p.stem.isdigit() and len(p.stem) == 8
+    )
+    assert dates, f"无面板文件: {panel_dir}"
+    return dates[-1]
+
+
+@pytest.fixture(scope="session")
 def sample_code() -> str:
     """真实调用测试用样本股票代码（600176.SH）。"""
     return SAMPLE_CODE

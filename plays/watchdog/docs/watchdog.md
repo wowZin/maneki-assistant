@@ -7,8 +7,14 @@
 与旧版不同：
 - 不再使用 KAMA/ADX/布林带/RSI 传统指标
 - 直接复用 `plays.limit_up.factors` 中回测验证过的因子
-- 数据源唯一：jvQuant WebSocket（无需守护进程）
-- 候选股优先来自 limit_up pipeline 高分结果
+- 实时数据：`ws_daemon`（jvQuant WS 独占）写共享内存 `/dev/shm/ws_snap.json`，引擎只读不发 HTTP
+- 候选股来源：手动指令 + surge_scanner 异动票（source="surge"）
+
+## 运行方式（2026-07-26 起）
+
+cron 每日 09:20 拉起（hermes cron `watchdog-day`），内部 60s 轮询，15:00 EOD 汰换后
+15:05 自动退出；非交易日启动即退。pid 守卫防多实例。代码改动次日自然生效，无需手动重启。
+（原 systemd 常驻已废弃）
 
 ## 盯盘指令
 
@@ -28,7 +34,6 @@
 ## 状态机
 
 ```
-candidate    候选股池（来自 limit_up pipeline total_score >= 85）
 watching     已加入盯盘，等待实时信号
 alerted      触发入场信号，等待确认
 entered      已入场持仓
@@ -37,7 +42,9 @@ exited       已出场，移出盯盘
 
 ## 入场信号
 
-任一条件触发即进入 `alerted`：
+**全局前置**：实时模型分 `factor_model_score(realtime_row) >= 40`
+（与 limit_up 同一个 XGBoost，输入为 L1 实时 + 日级特征 + 面板维度分）。
+满足前置后，任一模式触发即进入 `alerted`：
 
 | 模式 | 条件 |
 |------|------|
@@ -45,7 +52,7 @@ exited       已出场，移出盯盘
 | 放量拉升 | 5分钟涨幅 ≥ 2%、5分钟量比 ≥ 1.5、intraday_strength ≥ 10 |
 | 涨停冲刺 | 当前涨幅 ≥ 7%、换手 ≥ 12%、turnover_momentum ≥ 12、technical ≥ 30、shortterm ≥ 25 |
 
-`alerted` 后下一扫描周期仍满足条件则自动 `entered`。
+`alerted` 后**信号满 30 秒**仍满足条件则自动 `entered`（真实时间判断）。
 
 ## 出场信号
 
@@ -55,14 +62,21 @@ exited       已出场，移出盯盘
 | 移动止损 | 现价 ≤ 入场后最高价 × 0.97 |
 | 第一止盈 | 涨幅 ≥ 5% 提醒平 50% |
 | 第二止盈 | 涨幅 ≥ 10% 提醒全平 |
-| 时间止损 | 持仓 60 分钟未达目标强制出场 |
+| 时间止损 | 持仓 60 分钟（entry_at 真实分钟）未达目标强制出场 |
 | 日内反转 | 盘中强度转负且跌破 VWAP |
 
 ## 数据源
 
-- **实时行情**：`scripts.jvquant_ws_client.JvQuantWSClient`
+- **实时行情**：`ws_daemon` 共享内存快照（`/dev/shm/ws_snap.json`）
 - **日线/基本面**：Tushare `daily` / `daily_basic`
-- **五维度评分**：`wiki/raw/limit-up/analysis/` 或 `plays/limit_up/data/analysis/` 最新一轮结果
+- **五维度评分**：surge 写入 state 时播种（面板值），引擎异常分支会实时重算
+
+## surge 票规则（source="surge"）
+
+- 由 `plays/limit_up/surge_scanner.py` 写入 state.json
+- 静默：不发触发信号、不发异常推送（critical 仍移除）；只发【surge】入场/出场
+- 盘后 15:00：当天零入场信号（status != entered）自动汰换
+- 数量无上限（手动通道上限 20，引擎 add 只数非 surge 票）
 
 ## 异常状态提醒
 
@@ -88,7 +102,7 @@ exited       已出场，移出盯盘
 
 资金流向来自 jvQuant 的 `get_fundflow_single()`。
 
-## 启动
+## 手动启动（调试用）
 
 ```bash
 python plays/watchdog/watchdog.py

@@ -1,49 +1,45 @@
-# filter.py — 实时过滤
+# 候选过滤 — pool_builder 静态口径 + filter 实时规则
 
-## 作用
+## 一、pool_builder.py — 候选池构建（静态过滤）
 
-`plays/limit_up/filter.py` 只做**实时可判断**的过滤规则。静态过滤规则（ST/次新/板块/市值）已迁移到 `pool_builder.py`，在候选池构建阶段完成。
+每日一次，开盘前用 Tushare `daily_basic` 全市场数据 + `stock_basic` 筛选主板候选股。
 
-## 接口
-
-```python
-def filter_realtime(quote: dict[str, Any]) -> tuple[bool, str]:
-    """实时过滤。
-
-    Args:
-        quote: get_batch_quotes 返回的单只股票行情
-
-    Returns:
-        (是否被排除, 排除理由)
-    """
-
-
-def filter_candidates(candidates: list[dict]) -> list[dict]:
-    """旧接口兼容桩。静态过滤已迁移到 pool_builder，本函数直接返回原列表。"""
+```bash
+python plays/limit_up/pool_builder.py              # 构建当日池
+python plays/limit_up/pool_builder.py --date 20260710 --force
 ```
 
-## 实时规则
+**输出**：`data/pool/pool_{date}.json`，按流通市值降序，每条含 `{code, name, circ_mv, pe, pb, turnover_rate, volume_ratio}`。
 
-### 一字板涨停
+### 过滤规则（2026-07-25 起，全市场主板口径，已取消市值带）
 
-- 涨幅 `pct_chg >= 9.5%`
-- 现价 `price >= limit_up_price`
-- 换手 `turnover < 0.5%`
+| 规则 | 口径 | 代码出处 |
+|------|------|----------|
+| 主板 | 代码 `00`/`60` 开头（`MAIN_BOARD_PREFIXES`） | `pool_builder.py` |
+| 排除板块 | 创业板/科创板/北交所（`300/301/688/8/4/920/430`，`EXCLUDED_PREFIXES`） | 同上 |
+| 非 ST | 名称含 `ST`/`*ST` 剔除 | 同上 |
+| 非次新 | 上市满 120 天（`MIN_LISTING_DAYS = 120`） | 同上 |
 
-### 一字跌停
+**市值带已取消**：`MARKET_CAP_MIN/MAX`（50/300 亿）常量仍留在文件中但**不参与过滤**——小票是首板/连板主力，2026-07-25 起与 panel_builder 全市场口径对齐。
 
-- 涨幅 `pct_chg <= -9.5%`
-- 现价 `price <= limit_down_price`
-- 换手 `turnover < 0.5%`
+### 使用方
 
-## 为什么静态规则移到 pool Builder
+- `surge_scanner`：读池取名称；池缺失时 surge 自治调 `ensure_pool()` 补齐（pipeline 改一次性进程后不再建池）。
+- `ensure_pool(trade_date, force=False)`：有缓存直接用，无缓存才构建。
 
-- ST/次新/板块/市值 都是 T-1 已知条件，不需要每分钟重复判断
-- 在开盘前构建候选池时一次性过滤，减少盘中计算量和 Tushare 调用
+## 二、filter.py — 实时过滤
 
-## 测试重点
+只做**实时可判断**的过滤。静态规则全部在 pool_builder 阶段完成，`filter_candidates()` 是恒等返回的兼容桩。
 
-- 一字板（涨停+低换手）被过滤
-- 正常涨停（高换手）不被过滤
-- 涨幅不足时不被过滤
-- 一字跌停被过滤
+### 实时规则（`filter_realtime(quote)`）
+
+| 规则 | 条件 |
+|------|------|
+| 一字板涨停 | `pct_chg >= 9.5%` 且 `price >= limit_up` 且 `turnover < 0.5%` |
+| 一字跌停 | `pct_chg <= -9.5%` 且 `price <= limit_down` 且 `turnover < 0.5%` |
+
+返回 `(是否排除, 排除理由)`。
+
+## 三、面板口径（panel_builder，与池对齐但更广）
+
+面板（`wiki/raw/limit-up/panel/{date}.parquet`）覆盖**全市场主板 + 创业/科创非 ST**（过滤 `300/301/688` 之外的口径见 `panel_builder.load_stock_list`：SH/SZ、非 8/4 开头、非 ST/退、上市满 60 天），供模型评分用；打板推送/入盯环节再收窄到主板（`00`/`60`）。

@@ -113,7 +113,8 @@ def test_concept_momentum_features():
     assert feat["sector_heat"] == 2.5
     assert feat["n_concepts"] == 3
     import math
-    assert abs(feat["sector_rank"] - math.tanh(2.5 / 5.0)) < 1e-6
+    # 当前公式（pit_features.py:357）：sector_rank = tanh(n_concepts / 50.0)
+    assert abs(feat["sector_rank"] - math.tanh(3 / 50.0)) < 1e-6
 
 
 def test_dragon_tiger_features():

@@ -61,6 +61,20 @@ def test_realtime_row():
     assert abs(row["pct_chg_score_day"] - 10.0) < 1e-9
     assert abs(row["gap_up"] - 2.0) < 1e-9
     assert row["turnover_rate"] > 0
+    # ── 关键字段手算核对 ──
+    # pct_chg_score_day = (11.0/10.0 - 1) * 100 = 10.0（上方已断言）
+    # gap_up            = (10.2/10.0 - 1) * 100 = 2.0（上方已断言）
+    # vol_ratio_proxy   = trade_amount / avg_amount_5d = 1_100_000 / 1_000_000 = 1.1
+    assert abs(row["vol_ratio_proxy"] - 1.1) < 1e-9
+    # turnover_rate     = trade_amount / (circ_mv * 10000) * 100
+    #                   = 1_100_000 / (10_000_000 * 10000) * 100 = 0.0011
+    assert abs(row["turnover_rate"] - 0.0011) < 1e-12
+    # amount_ratio      = trade_amount / avg_amount_5d = 1.1
+    assert abs(row["amount_ratio"] - 1.1) < 1e-9
+    # 透传字段
+    assert row["last_price"] == 11.0
+    assert row["vwap"] == 10.5
+    assert row["code"] == "000001.SZ"
 
 
 if __name__ == "__main__":

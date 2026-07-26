@@ -5,7 +5,10 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
-from plays.limit_up.utils import safe_float, safe_float_none, safe_int_none, is_trading_time, list_to_dict
+from plays.limit_up.utils import (
+    safe_float, safe_float_none, safe_int_none, is_trading_time, list_to_dict,
+    _is_trade_day, _is_trading_session,
+)
 
 
 class TestSafeFloat(unittest.TestCase):
@@ -56,6 +59,32 @@ class TestListToDict(unittest.TestCase):
 
     def test_none(self):
         self.assertEqual(list_to_dict(None, ["a"]), [])
+
+
+class TestIsTradeDayReal(unittest.TestCase):
+    """_is_trade_day 对真实日期（tushare 交易日历，禁止 mock）。"""
+
+    def test_friday_20260724_is_trade_day(self):
+        self.assertTrue(_is_trade_day("20260724"))  # 2026-07-24 周五
+
+    def test_sunday_20260726_not_trade_day(self):
+        self.assertFalse(_is_trade_day("20260726"))  # 2026-07-26 周日
+
+
+class TestIsTradingSession(unittest.TestCase):
+    """_is_trading_session 边界：9:30/11:30/13:00/15:00。"""
+
+    def test_am_session(self):
+        self.assertFalse(_is_trading_session(929))
+        self.assertTrue(_is_trading_session(930))   # 开盘含
+        self.assertTrue(_is_trading_session(1129))
+        self.assertFalse(_is_trading_session(1130))  # 午收不含
+
+    def test_pm_session(self):
+        self.assertFalse(_is_trading_session(1259))
+        self.assertTrue(_is_trading_session(1300))   # 午后开盘含
+        self.assertTrue(_is_trading_session(1459))
+        self.assertFalse(_is_trading_session(1500))  # 收盘不含
 
 
 if __name__ == "__main__":

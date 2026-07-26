@@ -1,4 +1,7 @@
-# 盯盘信号引擎 v2（重构设计）
+# 盯盘信号引擎（当前实现）
+
+> 本文已按 2026-07-26 实现更新。引擎：cron 09:20 拉起、60s 轮询、15:05 自退；
+> 入场全局前置为实时模型分 ≥40；surge 票静默+盘后汰换；时间语义全部真实化。
 
 ## 1. 重构目标
 
@@ -7,25 +10,22 @@
 v2 目标：
 - **复用 limit_up 因子库**：把回测验证过的日线/实时因子直接用于盯盘信号
 - **专注动量突破**：从"回调买入"改为"放量突破 + 涨停基因 + 质量共振"
-- **数据源唯一**：实时数据只从 `scripts.jvquant_ws_client` L2 守护进程获取
-- **状态机简化**：candidate → watching → alerted → entered → exited
+- **数据源唯一**：实时数据从 `ws_daemon` 共享内存 `/dev/shm/ws_snap.json` 读取（引擎不发 HTTP）
+- **状态机**：watching → alerted → entered →（出场移除）
 
 ## 2. 数据源
 
 | 数据类型 | 来源 | 用途 |
 |----------|------|------|
-| 实时价格/成交量/VWAP/盘口 | `scripts.jvquant_ws_client.JvQuantWSClient` | 盘中信号触发 |
+| 实时价格/成交量/VWAP/盘口 | `ws_daemon` 共享内存快照 | 盘中信号触发 |
 | 日线历史 | Tushare `daily` / `daily_basic` / `limit_list_d` | 日线背景因子（quality_combo、涨停基因、位置） |
-| 五维度评分 | limit_up pipeline 产出的 analysis JSON | 候选股池筛选 |
+| 五维度评分 | surge 写入 state 时播种（面板值） | realtime_row 输入 |
 
-## 3. 候选股池生成
+## 3. 候选来源（2026-07 定稿）
 
-每日开盘前/早盘，从 `wiki/raw/limit-up/analysis/` 和 `plays/limit_up/data/analysis/` 读取最新一轮 pipeline 结果，筛选：
-
-- `total_score >= 85`（quality_combo 高分或次高分）
-- 或用户手动添加的代码
-
-作为今日盯盘 **candidate pool**。
+- **surge 通道**（主力）：`surge_scanner` 盘中异动票写入 state.json（source="surge"，无上限），
+  只发【surge】入场/出场信号，盘后零信号汰换
+- **手动通道**：飞书指令 盯 CODE（上限 20）
 
 ## 4. 盯盘信号体系
 

@@ -98,8 +98,8 @@ class TestBuildPool:
     def test_pool_size_in_range(self):
         """候选池应该在合理数量范围内"""
         pool = build_pool("20260710")
-        assert len(pool) >= 500, f"候选池太小: {len(pool)}"
-        assert len(pool) <= 2000, f"候选池太大: {len(pool)}"
+        assert len(pool) >= 2500, f"候选池太小: {len(pool)}"
+        assert len(pool) <= 4000, f"候选池太大: {len(pool)}"  # 全市场主板非ST满120天 ≈3032（2026-07 取消市值带后）
 
     def test_no_st_stocks(self):
         """池中不应有ST股"""
@@ -112,6 +112,18 @@ class TestBuildPool:
         pool = build_pool("20260710")
         for s in pool:
             assert _is_main_board(s["code"]), f"非主板: {s}"
+
+    def test_no_market_cap_filter(self):
+        """2026-07-25 起取消 50-300亿 市值带：池中应同时存在 <50亿 和 >300亿 的票。
+
+        circ_mv 单位万元：50亿=500,000 万，300亿=3,000,000 万。
+        """
+        pool = build_pool("20260710")
+        mvs = [float(s.get("circ_mv", 0) or 0) for s in pool]
+        assert any(0 < mv < 500_000 for mv in mvs), \
+            "池中无 <50亿 小票（市值下限过滤疑似仍存在）"
+        assert any(mv > 3_000_000 for mv in mvs), \
+            "池中无 >300亿 大票（市值上限过滤疑似仍存在）"
 
     def test_unique_codes(self):
         """候选池不应有重复代码"""

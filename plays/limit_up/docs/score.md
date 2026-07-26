@@ -1,139 +1,94 @@
-# 总分聚合规则
+# 评分体系 — XGBoost 模型分为主
 
-> 唯一总分 `total_score`。所有历史版本（`new_total_v2 / balanced_total / balanced_total_v2 / sentiment_adaptive_total / ultimate_total_v1~v5 / cpt_* / balanced_ensemble` 等）已废弃。
+> 2026-07-26 现状：生产环境的唯一评分是 **XGBoost 模型分（`model_score`，0–100 连续分）**。
+> 五维度分（fundamental/technical/fundflow/sentiment/shortterm）已降级为模型 64 特征中的 5 个普通特征，不再用于选股展示。
+> 面板（`wiki/raw/limit-up/panel/{date}.parquet`）是评分的单一事实源。
 
-## 一、Pipeline 流程（简版）
-
-```
-scanner → filter → cache_layer → pre_rank → quote_cache
-      → scoring (五维度并行) → total_score → push (Top-3)
-```
-
-完整分层见 [`architecture.md`](./architecture.md)。
-
-## 二、唯一总分：`total_score`
-
-**入口**：`plays/limit_up/total.py::total_score(row: dict) -> float`
-
-**默认公式**（未开启模型时）：
+## 一、生产评分链路
 
 ```
-total_score = round(max(0.0, 1.0 * factor_quality_combo(row)), 2)
+panel_builder（00:01）  全市场主板面板：64 特征 + 五维度分列 + 预评 model_score（≥35 写 analysis）
+      ↓
+pipeline（09:30，一次性） 竞价刷新 auc_* → factor_model_score_batch 全量评分 → model_score 写回面板
+      ↓
+surge_scanner（09:35 起，60s） 主闸直接读面板 model_score ≥ 20
+      ↓
+watchdog（09:20 起，60s） realtime_row（日级特征 + 面板维度分 + L1）→ 同一模型逐只打分，入场闸 min_model_score=40
 ```
 
-**模型公式**（设置 `LIMIT_UP_USE_MODEL=true` 时）：
+各环节用**同一个模型文件**，输入行分别为面板行（批量）和实时行（逐只）。
 
-```
-total_score = round(max(0.0, 1.0 * factor_model_score(row)), 2)
-```
+## 二、模型分实现
 
-`factor_model_score` 由 `plays.limit_up.factors.optimized.model_score` 实现：
-- 加载 `plays/limit_up/data/backtest/models/limit_up_model.joblib`；
-- 输出 0–100 连续分；
-- 模型文件缺失或加载失败时，**自动回退**到 `factor_quality_combo`。
+**入口**：
+- 批量：`plays/limit_up/factors/optimized/model_score.py::factor_model_score_batch(df)`（pipeline / panel_builder 用）
+- 逐行：`factor_model_score(row)`（watchdog 用）
 
-### 组件因子
-
-| 组件 | 模块 | 启用条件 |
-|------|------|----------|
-| `factor_quality_combo` | `factors/optimized/quality_combo.py` | 默认（`LIMIT_UP_USE_MODEL` 未设置或 `false`） |
-| `factor_model_score` | `factors/optimized/model_score.py` | `LIMIT_UP_USE_MODEL=true` |
-
-`factor_quality_combo` 不再使用 60/80/100 的宽口径阶梯，而是提炼为两条高置信规则，并新增 **`fundflow` 硬过滤**：
-
-- **100 分档**：`fundflow >= 10` + `turnover_rate >= 18` + `trailing_10 <= 0.20` + `technical >= 30` + `shortterm >= 30`；
-- **95 分档**：`fundflow >= 10` + `turnover_rate >= 12` + `trailing_10 ∈ [0.05,0.20]` + `position_20d <= 0.70` + `pct_chg_score_day ∈ [0,5]` + `technical >= 30` + `shortterm >= 25` + `limit_up_count_20d >= 2`。
-
-历史回测（全部轮次）中，阈值 ≥95 的推送命中率 **97.83%**、胜率 **100%**；日去重命中率 **90.91%**、胜率 **100%**。
-原 60/80 宽口径档与 `quality_gate` 已从 `total_score` 汰换，保留在因子库作为备用。
-
-组件因子的定义见 [`factors.md`](./factors.md)。因子有效性以最新训练集的评估为准，不引用历史回测数据。
-
-## 三、模型分说明
-
-当启用 `LIMIT_UP_USE_MODEL=true` 时：
-
-- 模型输入为 `pit_features.py` 构建的 PIT 特征，包括：
-  - 价格位置与动量（`position_20d`、`trailing_5/10`、`max_step` 等）
+**模型**：
+- 文件：`plays/limit_up/data/backtest/models/limit_up_model.joblib`（`LimitUpModel`，XGBoost；环境变量 `LIMIT_UP_MODEL_PATH` 可覆盖目录）
+- 特征：`backtest/model.py::DEFAULT_FEATURES`，共 **64 个**（`models/model_features.json` 同步维护）：
+  - 价格位置/动量（`position_20d`、`trailing_5/10`、`max_step`、`was_limit` 等）
+  - 波动与量价（`pct_chg_std_*`、`turnover_rate`、`volume_ratio`、`vol_accel` 等）
+  - 市值估值（`circ_mv`、`cmv_yi`、`pe`、`pb`）
   - 资金流（`net_mf_amount`、`mf_accel`、`buy_elg_ratio` 等）
   - K 线形态（`close_pos`、`body_ratio`、`upper_ratio` 等）
-  - 板块/概念动量（`sector_heat`、`sector_rank`、`n_concepts`）
-  - 龙虎榜因子（`dt_is_listed`、`dt_net_amount`、`dt_inst_net_buy`、`dt_hot_net_buy` 等）
-  - **集合竞价因子（`auc_amount`、`auc_vol`、`auc_amt_ratio`、`auc_vol_ratio`）**
-  - **日内分时因子（`id_vwap_dev`、`id_range`、`id_morning_vol_ratio`、`id_afternoon_strength`、`id_tail_vol_ratio`、`id_amount_ratio`）**
-- 模型由 XGBoost / HistGradientBoostingClassifier 训练，同时预测 `hit_limit_3` 与 `fwd_ret_3 > 0`，混合为 0–100 分。
-- 生产 pipeline 会从 Tushare `stk_auction` 拉取当日集合竞价数据，并从 `wiki/raw/limit-up/panel/intraday/<YYYYMMDD>.parquet` 加载 T-1 分时指标作为模型输入；任一数据源缺失时回退到默认值，不阻塞评分。
-- 反追高护栏作为乘性惩罚保留。
-- 训练脚本见 [`backtest.md`](./backtest.md)。
+  - 板块/概念（`sector_heat`、`sector_rank`、`n_concepts`）
+  - 集合竞价（`auc_amount`、`auc_vol`、`auc_amt_ratio`、`auc_vol_ratio`）
+  - 日内分时 T-1（`id_vwap_dev`、`id_range`、`id_morning_vol_ratio` 等）
+  - 龙虎榜 PIT（`dt_is_listed`、`dt_net_amount`、`dt_inst_net_buy` 等）
+  - **五维度分（`fundamental`、`technical`、`fundflow`、`sentiment`、`shortterm`）— 64 特征中的最后 5 个**
+- 双头训练：`hit_limit_3`（命中率头）+ `fwd_ret_3 > 0`（胜率头），默认 0.6/0.4 混合为 0–100 分（`blend_hit=0.6, blend_win=0.4`）。
+- 缺失值用训练时中位数填充。
 
-## 四、维度权重（供其他用途，非 total）
+**追高护栏**（乘性，`factor_model_score_batch` 向量化版本）：
 
-维度权重仍从 `.env` 读取（用于监控、health_patrol、旧 review 兼容），**不参与 `total_score` 计算**。
+| 条件 | 惩罚 |
+|------|------|
+| `trailing_10 > 0.30 / 0.20 / 0.10` | ×0.80 / ×0.90 / ×0.95 |
+| `position_20d > 0.85` 且 `pullback_10d < 0.03` | ×0.85 |
+| `trailing_5 > 0.15` | ×0.92 |
+| 深跌+低位+有量有资金承接（`trailing_10 < -0.05`、`position_20d < 0.30`、`volume_ratio ≥ 1.0`、`net_mf_amount > 0`） | ×1.05 |
 
-| 维度 | .env 键 | 默认值 |
-|------|---------|:--:|
-| fundamental | `AGENT_WEIGHT_FUNDAMENTAL` | 0.5 |
-| technical | `AGENT_WEIGHT_TECHNICAL` | 0.5 |
-| fundflow | `AGENT_WEIGHT_FUND_FLOW` | 1.5 |
-| sentiment | `AGENT_WEIGHT_SENTIMENT` | 1.0 |
-| shortterm | `AGENT_WEIGHT_SHORTTERM` | 0.5 |
+**回退**：模型文件缺失/加载失败/预测异常时，自动回退到 `factor_quality_combo`（硬规则 0/95/100 分档，见 [factors.md](./factors.md)）。
 
-## 五、推送规则
+## 三、五维度分的当前角色
 
-- **排序键**：`total_score` 降序（唯一键，无 fallback）
-- **推送策略**：
-  - `quality_combo` 模式：固定阈值 ≥95，取满足条件的前 3 只；
-  - `model_score` 模式：默认阈值 55，采用「**首次进入 Top-3 推送 + 连续第 2 轮仍在 Top-3 再推一次**」。同一股票连续在榜超过 2 轮后不再推送，掉出 Top-3 后重新进入视为首次。
-- **数量上限**：每轮扫描最多 3 只
-- **落盘**：`data/pushed/{HHMM}.json`
+五维度分由 `panel_builder._add_strategy_scores` 在夜间从缓存数据计算（不调 Tushare），作为面板列存储：
 
-> 模型模式阈值可通过 `.env` 的 `ULTIMATE_PUSH_THRESHOLD` 覆盖；连续推送逻辑由 `pipeline.py::push_feishu` 维护，跨天自动重置。
+| 维度 | 主要输入 | 备注 |
+|------|----------|------|
+| `fundamental` | 流通市值/pe/pb/扣非增速/概念数 | |
+| `technical` | close_pos/振幅/量比/换手/5日收阳数 | base 15 |
+| `fundflow` | 主力净额占流通市值比 | base 20 |
+| `sentiment` | 概念涨停热度 | base 15 |
+| `shortterm` | `auc_amt_ratio` 分档 | base 10；**唯一吃竞价数据的维度**，pipeline 09:30 竞价刷新时同步重算 |
 
-## 六、评级
+角色定位：
 
-| total_score | 星级 |
-|:--:|:--:|
-| ≥ 95 | ⭐⭐⭐⭐⭐ |
-| = 100 | ⭐⭐⭐⭐⭐ |
-| 0 | 不评级 |
+1. **模型特征**：是 64 特征中的 5 个普通特征，单个特征重要性各约 1.4%（`models/feature_importance.json`：shortterm 1.48%、sentiment 1.46%、fundflow 1.41%、fundamental 1.38%、technical 1.36%）。
+2. **不再用于选股展示**：推送卡片只展示 code/name/星级/涨幅/总分，不展示维度分。
+3. **watchdog 实时行的输入**：surge_scanner 写 watchdog state 时必须带面板 `dim_scores`，否则 `realtime_row` 的五维度分=0，模型分被系统性压低。
 
-> `quality_combo` 模式下 `total_score` 仅输出 0/95/100；`model_score` 模式下为连续 0–100。
+## 四、面板 = 单一事实源
 
-## 七、缺失处理
+`wiki/raw/limit-up/panel/{date}.parquet` 一日三态：
 
-- 子策略超时 / 报错：该维度记为 `null`（不参与 `total_score`；总分组件因子基于原始 panel 特征，独立于维度评分）
-- 扫描返回空：写零结果文件到 `data/analysis/`
-- 过滤后空：同上
-- Level2 不可用：跳过 L2 观测，直接评分
-- 模型文件缺失 / 加载失败：`factor_model_score` 回退到 `factor_quality_combo`
+| 时点 | 写入者 | 内容 |
+|------|--------|------|
+| 00:01 | panel_builder | T-1 的 64 特征 + 五维度分 + 预评 `model_score`（≥35 的写 `plays/limit_up/data/analysis/{date}.json`） |
+| 09:30 | pipeline | 刷新 `auc_*` + 重算 `shortterm` + 全量重评 `model_score` 写回（终态） |
+| 09:35–15:00 | surge_scanner 读取 | 主闸池 = 面板 `model_score ≥ 20` |
 
-## 八、输出字段
+## 五、推送规则（与模型分配套）
 
-`data/analysis/{HHMM}.json` 每条记录：
+- 排序键：`model_score` 降序（记录中 `total_score` 字段 = `model_score`，`score_mode="model_score"`）。
+- 推送策略：**Top-N 相对标准（`PUSH_TOP_N`，默认 3）+ ≥55 绝对地板（`ULTIMATE_PUSH_THRESHOLD`）**，竞价涨幅 ≥9.8%（已封板）不推。
+- 降噪：同一只股票评分提高 >0.5 才重推（`pipeline_feishu.push_feishu`）。
 
-```json
-{
-  "code": "600176.SH",
-  "name": "中国巨石",
-  "pct_chg": 3.21,
-  "resonance": {"dims_75": 2, "total_score_tier": "⭐⭐⭐⭐"},
-  "scores": {
-    "fundamental": 45, "technical": 68, "fundflow": 30,
-    "sentiment": 72, "shortterm": 55, "first_board": null
-  },
-  "reasons": {...},
-  "factors": {
-    "sentiment_amount_boosted": 22.5,
-    "sentiment_position_combo": 18.0,
-    "sentiment_volatility_combo": 15.7,
-    "limit_up_gene_composite": 12.0,
-    "technical_rebuilt": 55.0
-  },
-  "total_score": 48.7,
-  "meta": {"trade_date": "20260702", "l2": true, "weights_hash": "abc123"}
-}
-```
+## 六、兼容层 `total.py`
 
-## 九、AB 对比
+`plays/limit_up/total.py::total_score(row)` 保留为对外兼容入口，按 `TOTAL_SCORE_COMPONENTS` 加权（`LIMIT_UP_USE_MODEL=true` 时为 `factor_model_score`，否则 `quality_combo`）。生产 pipeline 不经过它，直接调 `factor_model_score_batch`。
 
-如需 AB 对比不同权重或不同组件因子组合，走 `plays/limit_up/backtest/optimize.py`（详见 [`backtest.md`](./backtest.md)）。**不在生产 pipeline 中并行计算多套总分。**
+## 七、历史版本
+
+`new_total_v2 / balanced_total / ultimate_total_v1~v5 / cpt_* / balanced_ensemble` 等全部废弃；`quality_combo`/`quality_gate` 保留在因子库作为模型回退与 watchdog 辅助筛选（`is_worth_watching`），不再是总分。

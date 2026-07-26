@@ -1,4 +1,10 @@
-# 盯盘策略指标
+# 盯盘指标（已废弃，保留存档）
+
+> ⚠️ 本文描述的是旧版 KAMA/ADX/ATR 指标方案，已废弃。
+> 当前 indicators.py 只保留两个函数：`price_features(daily_rows)`（日级特征：
+> position_20d/trailing_5/trailing_10/pullback 等）和 `realtime_row(...)`
+> （L1 快照 + 日级特征 + 维度分 → 模型输入行）。信号见 signal-engine.md。
+> 分钟 K 相关（klines 形参、minute_momentum）已于 2026-07-26 删除（从未使用）。
 
 ## 策略定位
 
@@ -111,9 +117,9 @@ RSI 阈值动态调整：
 3. **趋势反转**：KAMA下穿EMA 且 -DI>+DI → 平仓
 4. **止盈提醒**：浮盈达 3×ATR → 推送提醒建议平50%
 
-## 引擎运行时行为
+## 引擎运行时行为（旧版描述，已不适用）
 
-- 每 30 秒扫描一轮
-- 每日首次扫描时更新日线指标（Tushare daily 接口，取 120 条历史数据）
-- 实时数据（价格/VWAP/分钟K线/盘口）从 l2api 获取
+- 每 60 秒扫描一轮（cron 09:20 拉起，15:05 自退）
+- 每日首次扫描时更新日线（Tushare daily 接口，取 120 条历史数据）
+- 实时数据（价格/VWAP/盘口）从 ws_daemon 共享内存 /dev/shm/ws_snap.json 读取，无分钟 K
 - 信号触发和出场均通过飞书推送
