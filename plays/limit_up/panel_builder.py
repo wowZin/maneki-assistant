@@ -520,7 +520,8 @@ def main():
     except Exception:
         pass
 
-    # 从 stock_basic 获取名称，过滤 ST
+    # 从 stock_basic 获取名称，过滤 ST；同时构建 name_map（panel 缺 name 列）
+    name_map: dict[str, str] = {}
     try:
         r2 = call_tushare("stock_basic", {}, "ts_code,name,list_date")
         for it in r2.get("data", {}).get("items", []):
@@ -528,6 +529,7 @@ def main():
             if tc in basic_cache:
                 if "ST" in (it[1] or "").upper() or "退" in (it[1] or ""):
                     st_codes.add(tc)
+                name_map[tc] = it[1] if it[1] else ""
     except Exception:
         pass
     for tc in st_codes:
@@ -591,6 +593,14 @@ def main():
 
     # 补策略分
     df = _add_strategy_scores(df, fi_cache, basic_cache, mf_cache, tl_cache)
+
+    # 补名称列（stock_basic 已免费提供 name 字段，之前未落盘）
+    df["name"] = df["code"].map(name_map)
+    del name_map  # 释放
+
+    # 删旧 TODO（已在此提交完成）
+    # TODO(2026-07-25): 面板缺 name 列，后续单独补（stock_basic 已在 ST 过滤时加载，
+    # 带上 name 进 feats 即可；pipeline/surge 目前从 analysis/pool 取名）
 
     # QC
     qc_report = data_qc(df)
