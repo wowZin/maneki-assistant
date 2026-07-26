@@ -69,7 +69,7 @@ def _short(code: str) -> str:
 
 logger = logging.getLogger(__name__)
 STATE_FILE = PROJECT_DIR / "plays" / "watchdog" / "data" / "state.json"
-SCAN_INTERVAL = 30  # 每30秒检查一次信号
+SCAN_INTERVAL = 60  # 每60秒扫描一轮（2026-07-26：连续轮询太暴力，回退60s）
 MAX_WATCH = 20      # 手动盯盘上限（surge 通道不设上限，2026-07-26 用户拍板）
 ABNORMAL_COOLDOWN_SECONDS = 300  # 异常推送冷却：同一 level 5 分钟内不重复推送
 
@@ -370,7 +370,7 @@ class WatchdogEngine:
                         codes = list(self._states.keys())
                     if codes:
                         self._scan_round(codes)
-                    time.sleep(1)  # 连续轮询：一轮跑完立刻下一轮（原 30s 固定间隔已废）
+                    time.sleep(SCAN_INTERVAL)
                 else:
                     if trading_day_logged:
                         logger.info("交易时段结束，暂停盯盘扫描")
@@ -846,7 +846,7 @@ def main():
     logger.info("=" * 50)
     logger.info("盯盘引擎已启动！")
     logger.info("状态文件: %s", STATE_FILE)
-    logger.info("轮询模式: 连续（一轮跑完即下一轮）")
+    logger.info("扫描间隔: %ds", SCAN_INTERVAL)
     logger.info("盯盘上限: %d 只", MAX_WATCH)
     logger.info("=" * 50)
     logger.info("通过飞书发送指令: 盯/停/盯盘列表/清盯盘")
