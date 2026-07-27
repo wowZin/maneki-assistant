@@ -453,14 +453,14 @@ def data_qc(df: pd.DataFrame) -> dict:
     """质检：检查空值率/分布/IC。"""
     report = {
         "total_stocks": len(df),
-        "total_features": len([c for c in df.columns if c not in ("code", "pit_date")]),
+        "total_features": len([c for c in df.columns if c not in ("code", "pit_date", "name")]),
         "missing_rate": {},
         "feature_stats": {},
     }
 
     for c in df.columns:
-        if c in ("code", "pit_date"):
-            continue
+        if c in ("code", "pit_date", "name"):
+            continue  # name 是字符串列，不做分位数统计
         null_pct = float(df[c].isna().sum() / len(df) * 100)
         if null_pct > 0:
             report["missing_rate"][c] = round(null_pct, 1)

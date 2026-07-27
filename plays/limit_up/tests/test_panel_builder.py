@@ -63,7 +63,7 @@ class TestDataIntegrity:
     def test_all_values_float64(self, panel_df):
         """所有特征列应为 float64。"""
         for c in panel_df.columns:
-            if c in ("code", "pit_date"):
+            if c in ("code", "pit_date", "name"):
                 continue
             assert panel_df[c].dtype == "float64", f"{c} 类型={panel_df[c].dtype}"
 
