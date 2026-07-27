@@ -524,6 +524,9 @@ def main():
         while True:
             now = datetime.now()
             hhmm = int(now.strftime("%H%M"))
+            if hhmm >= 1500:
+                print(f"[surge] 收盘({hhmm}), 退出")
+                return
             if (935 <= hhmm < 1130 or 1300 <= hhmm < 1500) and _is_trade_day(_today()):
                 try:
                     scan()
