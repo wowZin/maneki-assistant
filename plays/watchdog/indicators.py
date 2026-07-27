@@ -170,13 +170,14 @@ def realtime_row(
     open_price = float(market.get("open") or market.get("open_price") or 0)
     pre_close = float(market.get("pre_close") or 0)
 
-    # fallback：从日线取开盘价/昨收（非交易日测试数据常缺失）
+    # fallback：快照缺 pre_close/open（jvQuant 对盘中新订阅票不下发日级字段）
+    # 昨收 = T-1 日线 close（不是 daily_rows[-1]["pre_close"]——那是 T-2 收盘，差一天，
+    # 2026-07-27 浪潮信息因此 pct 虚报 -5.0% 触发假异常推送）
     if daily_rows:
         latest = daily_rows[-1]
-        if open_price <= 0:
-            open_price = float(latest.get("open", 0))
         if pre_close <= 0:
-            pre_close = float(latest.get("pre_close", 0))
+            pre_close = float(latest.get("close", 0))
+        # open 不做日线回退（T-1 open 不是今日 open，宁缺毋假）
 
     pct = ((last / pre_close - 1) * 100) if pre_close > 0 else 0.0
     gap = ((open_price / pre_close - 1) * 100) if pre_close > 0 else 0.0

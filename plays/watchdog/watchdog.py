@@ -455,6 +455,13 @@ class WatchdogEngine:
 
             vwap_data = _read_ws_snap(f"{_short(code)}_vwap")
             vwap = float(vwap_data) if isinstance(vwap_data, (int, float)) else 0.0
+            # vwap 兜底：jvQuant 对盘中新订阅票无 tick 历史 → get_vwap 返回空。
+            # 快照自带 trade_amount/trade_volume，vwap = 成交额/成交量（精确当日均价）
+            if vwap <= 0:
+                _ta = float(market.get("trade_amount") or 0)
+                _tv = float(market.get("trade_volume") or 0)
+                if _ta > 0 and _tv > 0:
+                    vwap = _ta / _tv
             bid_price = market.get("bid_price", [None] * 10)
             ask_price = market.get("ask_price", [None] * 10)
             bid1 = float(bid_price[0]) if bid_price and bid_price[0] else 0
