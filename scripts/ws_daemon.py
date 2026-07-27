@@ -43,6 +43,18 @@ def _read_sub() -> tuple[list[str], list[str]]:
         return [], []
 
 
+def _subscribe_chunked(ws, level: str, codes: list[str], chunk: int = 10):
+    """分批订阅（每批 chunk 只，批间 0.3s）。
+
+    2026-07-27 实证：一次性 add_lv1(34只) 单命令石沉大海（服务端无报错无推送），
+    分批订阅后 L1 推送恢复。L2 逐笔同样分批。订阅失败抛异常由调用方入重试集。"""
+    fn = ws.subscribe_l1 if level == "l1" else ws.subscribe_l2
+    for i in range(0, len(codes), chunk):
+        fn(codes[i:i + chunk])
+        if i + chunk < len(codes):
+            time.sleep(0.3)
+
+
 def _write_snap(shorts: list[str], ws_client):
     """快照写入共享内存（原子写入：tempfile + rename）。"""
     snap: dict = {}
@@ -87,14 +99,16 @@ def main():
     ws = JvQuantWSClient()
     ws.connect()
     if shorts:
-        ws.subscribe_l1(shorts)
+        _subscribe_chunked(ws, "l1", shorts)
     if l2_shorts:
-        ws.subscribe_l2(l2_shorts)
-    print("[ws_daemon] WS 已连接")
+        _subscribe_chunked(ws, "l2", l2_shorts)
+    print(f"[ws_daemon] WS 已连接, L1={len(shorts)} L2={len(l2_shorts)} 分批订阅完成")
 
     snap_interval = 1.0  # 快照刷新间隔(秒)
     last_snap = 0.0
     last_sub_check = 0.0
+    _retry_l1: set = set()  # L1 订阅失败重试集
+    _retry_l2: set = set()  # L2 订阅失败重试集
     last_health_check = 0.0
 
     while _running:
@@ -109,25 +123,47 @@ def main():
             print(f"[ws_daemon] 收盘({_hhmm}), 退出")
             break
         if _hhmm < 925 or (1130 <= _hhmm < 1300):
-            time.sleep(30)  # 盘前/午休等待
-            continue
+            time.sleep(30)  # 盘前/午休：慢节奏，但照写快照（WS 仍推盘口数据）
+            # 继续执行下面的订阅/快照逻辑（不 continue），接午间快照
         # 检查新订阅（每秒）
+        # 2026-07-27 修复：订阅失败不再静默吞掉（surge 批量 23 只时约一半失败被吞，
+        # 本地标记已订阅但实际没订上 → 18 只盯盘票全天无快照）。
+        # 失败的进入重试集，下轮继续；重连后全量重订。
         if now - last_sub_check >= 2:
             new_shorts, new_l2 = _read_sub()
-            for s in new_shorts:
-                if s not in shorts:
+            # 新票批量收集后分批订阅（surge 一轮+20只时逐条命令易被服务端丢弃）
+            todo_l1 = [s for s in new_shorts if s not in shorts and s not in _retry_l1]
+            if todo_l1:
+                try:
+                    _subscribe_chunked(ws, "l1", todo_l1)
+                    shorts.extend(todo_l1)
+                    print(f"[ws_daemon] L1新增订阅 {len(todo_l1)} 只")
+                except Exception as e:
+                    print(f"[ws_daemon] L1批量订阅失败: {e}，转逐只重试")
+                    _retry_l1.update(todo_l1)
+            for s in list(_retry_l1):
+                try:
+                    ws.subscribe_l1([s])
                     shorts.append(s)
-                    try:
-                        ws.subscribe_l1([s])
-                    except Exception:
-                        pass
-            for s in new_l2:
-                if s not in l2_shorts:
+                    _retry_l1.discard(s)
+                    print(f"[ws_daemon] L1重试成功 {s}")
+                except Exception:
+                    time.sleep(0.2)  # 逐只重试也限速
+            todo_l2 = [s for s in new_l2 if s not in l2_shorts and s not in _retry_l2]
+            if todo_l2:
+                try:
+                    _subscribe_chunked(ws, "l2", todo_l2)
+                    l2_shorts.extend(todo_l2)
+                except Exception as e:
+                    print(f"[ws_daemon] L2批量订阅失败: {e}，转逐只重试")
+                    _retry_l2.update(todo_l2)
+            for s in list(_retry_l2):
+                try:
+                    ws.subscribe_l2([s])
                     l2_shorts.append(s)
-                    try:
-                        ws.subscribe_l2([s])
-                    except Exception:
-                        pass
+                    _retry_l2.discard(s)
+                except Exception:
+                    time.sleep(0.2)
             # 清理退订 L1
             for s in shorts[:]:
                 if s not in new_shorts:
@@ -154,9 +190,9 @@ def main():
                     ws.disconnect()
                     ws = JvQuantWSClient()
                     ws.connect()
-                    # 恢复订阅
-                    if shorts: ws.subscribe_l1(shorts)
-                    if l2_shorts: ws.subscribe_l2(l2_shorts)
+                    # 恢复订阅（分批，防单命令超限）
+                    if shorts: _subscribe_chunked(ws, "l1", shorts)
+                    if l2_shorts: _subscribe_chunked(ws, "l2", l2_shorts)
             except Exception as e:
                 print(f"[ws_daemon] WS 重连失败: {e}")
             last_health_check = now
