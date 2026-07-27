@@ -3,7 +3,7 @@
 
 流程（2026-07-25 重构）：
   1. 交易日判断（非交易日直接退出）
-  2. stk_auction 按日期全量拉当日竞价（重试3次，持续失败→写日志+飞书通知一次）
+  2. stk_auction 按日期全量拉当日竞价（持续重试至拿到当日数据（默认等10分钟），超时→写日志+飞书通知）
   3. 竞价数据刷新面板：auc_amount/auc_vol/auc_amt_ratio/auc_vol_ratio/auc_pct，
      并重算 shortterm 维度分（唯一吃竞价数据的维度，panel_builder 同公式）
   4. 全量静态模型评分（面板 64 特征 + auc_pct 覆盖 pct_chg_score_day）
@@ -85,7 +85,7 @@ def _notify_text(text: str):
 
 
 def _refresh_panel_auction(today: str) -> bool:
-    """① 竞价刷新面板：stk_auction 按日期全量（禁逐股），重试3次。
+    """① 竞价刷新面板：stk_auction 按日期全量（禁逐股），持续重试至当日数据就绪。
 
     刷新列：auc_amount/auc_vol/auc_pct，重算 auc_amt_ratio(÷avg_amount_5d)、
     auc_vol_ratio(÷T-1 vol)，并同步重算 shortterm 维度分（唯一吃竞价的策略分，
@@ -102,21 +102,30 @@ def _refresh_panel_auction(today: str) -> bool:
         return False
 
     # ── 拉取竞价（9:25 快照，按 trade_date 全市场一次调用）──
+    # tushare 竞价数据 9:25 后发布有延迟，持续重试直到拿到"当日"数据为止
+    # （默认等 10 分钟，AUCTION_WAIT_SECONDS 可配）。非当日数据一律视为未就绪。
+    wait_s = float(os.getenv("AUCTION_WAIT_SECONDS", "600"))
+    deadline = time.time() + wait_s
     items, fields = [], []
-    for attempt in range(3):
+    while time.time() < deadline:
         try:
             r = _ct("stk_auction", {"trade_date": today},
                     "ts_code,trade_date,amount,vol,price,pre_close", timeout=120)
-            items = r.get("data", {}).get("items", [])
-            fields = r.get("data", {}).get("fields", [])
-            if items:
+            _items = r.get("data", {}).get("items", [])
+            _fields = r.get("data", {}).get("fields", [])
+            # 抽样校验：返回数据必须含当日记录（防接口侧/封装层回退昨日）
+            if _items and any(
+                    dict(zip(_fields, it)).get("trade_date") == today
+                    for it in _items[:100]):
+                items, fields = _items, _fields
                 break
+            log.info(f"竞价当日数据未就绪（返回{len(_items)}条），20s 后重试...")
         except Exception as e:
-            log.warning(f"竞价拉取失败(attempt {attempt + 1}/3): {e}")
-        time.sleep(2 * (attempt + 1))
+            log.warning(f"竞价拉取异常: {e}，20s 后重试...")
+        time.sleep(20)
 
     if not items:
-        msg = f"{today} 竞价数据(stk_auction)连续3次拉取失败，面板 auc_* 维持 T-1 夜间值"
+        msg = f"{today} 竞价数据(stk_auction)等待 {wait_s:.0f}s 仍无当日数据，面板 auc_* 维持 T-1 夜间值"
         with open(HEALTH_DIR / "pipeline_crash.log", "a") as f:
             f.write(f"[{datetime.now().isoformat()}] {msg}\n")
         _notify_text(f"⚠️ [pipeline] {msg}")
