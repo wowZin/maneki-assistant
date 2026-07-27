@@ -382,8 +382,9 @@ class WatchdogEngine:
                         if not self._running:
                             break
                         time.sleep(1)
-            except Exception as e:
-                logger.error(f"盯盘循环异常: {e}")
+            except Exception:
+                import traceback
+                logger.error(f"盯盘循环异常:\n{traceback.format_exc()}")
                 time.sleep(SCAN_INTERVAL)
         logger.info("盯盘循环退出")
 
@@ -477,7 +478,7 @@ class WatchdogEngine:
             row["vwap"] = vwap
             row["inner_vol"] = market.get("inner_vol", 0)
             row["outer_vol"] = market.get("outer_vol", 0)
-            row["last"] = market.get("last", 0)
+            row["last"] = float(market.get("last") or 0)
 
             last = float(market.get("last") or 0)
 
