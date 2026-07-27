@@ -192,3 +192,22 @@ class TestEdgeCases:
         """振幅在合理范围。"""
         mean = panel_df["amplitude"].mean()
         assert 0 <= mean <= 20, f"振幅均值={mean}%"
+class TestDataQCFunction:
+    """直接调用 data_qc 函数（不走 fixture），防止面板新增列破坏 QC。"""
+
+    def test_qc_with_name_column(self):
+        """带 name 字符串列的 DataFrame 不应导致 data_qc 崩溃。"""
+        from plays.limit_up.panel_builder import data_qc
+        df = pd.DataFrame({
+            "code": ["000001.SZ", "000002.SZ"],
+            "pit_date": ["20260725", "20260725"],
+            "name": ["平安银行", "万科A"],
+            "circ_mv": [1e7, 2e7],
+            "pct_chg": [2.5, -1.0],
+            "model_score": [72.5, 45.0],
+        })
+        report = data_qc(df)
+        assert report["total_stocks"] == 2
+        assert "name" not in report["feature_stats"], "name 列不应进入数值统计"
+        assert "circ_mv" in report["feature_stats"], "数值列应正常统计"
+
