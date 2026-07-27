@@ -124,6 +124,11 @@ def get_last_trade_date_with_data() -> str:
     return result
 
 
+# 盘中数据接口白名单：当日数据在盘中即已发布（9:25 竞价快照等），
+# 禁止日期修正回退到上一交易日（否则 pipeline 竞价刷新会把昨日竞价当今日写入面板，
+# 2026-07-27 实盘事故：面板 auc_pct 全是周五数据）
+_INTRADAY_NO_FALLBACK_APIS = {"stk_auction", "stk_auction_o"}
+
 def call_tushare(api_name, params, fields="", timeout=10):
     """带缓存的Tushare API调用，自动修正交易日参数"""
     # 自动修正 trade_date/start_date/end_date 参数
@@ -131,8 +136,9 @@ def call_tushare(api_name, params, fields="", timeout=10):
     from datetime import datetime
     today = datetime.now().strftime("%Y%m%d")
     # 将 params 中所有 =today 的日期参数统一修正为最近可用交易日
+    # （盘中接口 stk_auction 等除外：当日竞价数据 9:25 即发布，回退会拿到昨日数据）
     resolved = get_last_trade_date_with_data()
-    if resolved != today:
+    if api_name not in _INTRADAY_NO_FALLBACK_APIS and resolved != today:
         needs_copy = any(key in params and params[key] == today
                          for key in ("trade_date", "start_date", "end_date"))
         if needs_copy:

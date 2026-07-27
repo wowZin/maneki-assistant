@@ -123,17 +123,32 @@ def _refresh_panel_auction(today: str) -> bool:
         log.error(msg)
         return False
 
-    auc = {}
+    # 只接受 trade_date == 当日 的行（防御：接口/封装层若回退到昨日数据，
+    # 宁可按失败处理也不把陈旧竞价写进面板——2026-07-27 事故教训）
+    auc, n_stale = {}, 0
     for row in items:
         d = dict(zip(fields, row))
         c = d.get("ts_code", "")
-        if c:
-            amt = float(d.get("amount") or 0)
-            vol = float(d.get("vol") or 0)
-            price = float(d.get("price") or 0)
-            pre = float(d.get("pre_close") or 0)
-            pct = (price / pre - 1.0) * 100 if pre > 0 and price > 0 else None
-            auc[c] = (amt, vol, pct)
+        if not c:
+            continue
+        if d.get("trade_date") != today:
+            n_stale += 1
+            continue
+        amt = float(d.get("amount") or 0)
+        vol = float(d.get("vol") or 0)
+        price = float(d.get("price") or 0)
+        pre = float(d.get("pre_close") or 0)
+        pct = (price / pre - 1.0) * 100 if pre > 0 and price > 0 else None
+        auc[c] = (amt, vol, pct)
+    if n_stale:
+        log.warning(f"竞价数据含 {n_stale} 条非当日记录，已丢弃")
+    if not auc:
+        msg = f"{today} 竞价数据全部非当日（接口日期回退？），拒绝写入面板"
+        with open(HEALTH_DIR / "pipeline_crash.log", "a") as f:
+            f.write(f"[{datetime.now().isoformat()}] {msg}\n")
+        _notify_text(f"⚠️ [pipeline] {msg}")
+        log.error(msg)
+        return False
     log.info(f"竞价拉取成功: 全市场 {len(auc)} 只")
 
     # T-1 日 vol（auc_vol_ratio 分母，与 pit_features 同口径）
