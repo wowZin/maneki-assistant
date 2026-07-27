@@ -608,8 +608,9 @@ class WatchdogEngine:
                 if exit_triggered:
                     pnl_pct = (last / st.entry_price - 1) * 100
                     _surge_tag = "【surge】" if st.source == "surge" else ""
+                    is_profit = "止盈" in exit_reason
                     _push_feishu(
-                        f"🛑 {st.name}({code}) 出场{_surge_tag}\n"
+                        f"{'💰' if is_profit else '🛑'} {st.name}({code}) {'止盈' if is_profit else '出场'}{_surge_tag}\n"
                         f"{exit_reason}\n"
                         f"入场: {st.entry_price:.2f} → 现价: {last:.2f}\n"
                         f"盈亏: {pnl_pct:+.2f}% | 持仓{st.bars_held}轮"
