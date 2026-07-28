@@ -69,7 +69,8 @@ def _short(code: str) -> str:
 
 logger = logging.getLogger(__name__)
 STATE_FILE = PROJECT_DIR / "plays" / "watchdog" / "data" / "state.json"
-SCAN_INTERVAL = 60  # 每60秒扫描一轮（2026-07-26：连续轮询太暴力，回退60s）
+SCAN_INTERVAL = 60
+CONSECUTIVE_ENTRY_ROUNDS = int(os.getenv("CONSECUTIVE_ENTRY_ROUNDS", "3"))  # 连续 N 轮满足入场条件才触发 alerted
 MAX_WATCH = 20      # 手动盯盘上限（surge 通道不设上限，2026-07-26 用户拍板）
 ABNORMAL_COOLDOWN_SECONDS = 300  # 异常推送冷却：同一 level 5 分钟内不重复推送
 
@@ -217,6 +218,8 @@ class WatchdogEngine:
         self._netflow_cache: dict[str, tuple[float, float]] = {}  # code -> (ts, netflow)
         self._netflow_hist_ts: dict[str, float] = {}  # code -> 上次 netflow 采样时间（连续轮询下按真实时间采样）
         self._alert_ts: dict[str, float] = {}         # code -> 入场信号触发时间（连续轮询下按真实时间确认）
+        self._entry_streak: dict[str, int] = {}        # code -> 连续满足入场条件的轮数（3轮=3分钟过滤假突破）
+        self._entry_streak_type: dict[str, str] = {}   # code -> 当前 streak 的信号类型
         self._state_mtime: float = 0.0
         self._load_state()
 
@@ -547,21 +550,36 @@ class WatchdogEngine:
             if st.status == "watching":
                 triggered, sig_type, reason = check_entry(row, scores)
                 if triggered:
-                    st.status = "alerted"
-                    st.signal_type = sig_type
-                    st.signal_reason = reason
-                    st.signal_at = now.strftime("%H:%M:%S")
-                    st.last_alert_at = now.strftime("%H:%M")
-                    self._alert_ts[code] = time.time()
-                    self._save_state()
-                    if st.source != "surge":
-                        # surge 票不发触发信号，只发入场信号
-                        _push_feishu(
-                            f"⏳ {st.name}({code}) 触发信号\n"
-                            f"类型: {sig_type}\n"
-                            f"原因: {reason}\n"
-                            f"现价: {last:.2f} | VWAP: {vwap:.2f}"
-                        )
+                    # 连续确认：同一种信号类型连续满足 N 轮才发 alerted
+                    # （3 轮 = 3 分钟，过滤假突破——贴着 VWAP 穿过去的第 2 轮就掉了）
+                    prev_type = self._entry_streak_type.get(code, "")
+                    if sig_type == prev_type:
+                        self._entry_streak[code] = self._entry_streak.get(code, 0) + 1
+                    else:
+                        self._entry_streak[code] = 1
+                        self._entry_streak_type[code] = sig_type
+                    if self._entry_streak.get(code, 0) >= CONSECUTIVE_ENTRY_ROUNDS:
+                        st.status = "alerted"
+                        st.signal_type = sig_type
+                        st.signal_reason = reason
+                        st.signal_at = now.strftime("%H:%M:%S")
+                        st.last_alert_at = now.strftime("%H:%M")
+                        self._alert_ts[code] = time.time()
+                        self._save_state()
+                        self._entry_streak.pop(code, None)  # 进入 alerted 后清 streak
+                        self._entry_streak_type.pop(code, None)
+                        if st.source != "surge":
+                            # surge 票不发触发信号，只发入场信号
+                            _push_feishu(
+                                f"⏳ {st.name}({code}) 触发信号\n"
+                                f"类型: {sig_type}\n"
+                                f"原因: {reason}\n"
+                                f"现价: {last:.2f} | VWAP: {vwap:.2f}"
+                            )
+                else:
+                    # 条件不满足，重置连续计数
+                    self._entry_streak.pop(code, None)
+                    self._entry_streak_type.pop(code, None)
 
             elif st.status == "alerted":
                 # 信号确认：触发满 30s 后仍满足条件才入场
