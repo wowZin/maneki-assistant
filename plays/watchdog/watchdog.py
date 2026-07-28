@@ -482,6 +482,9 @@ class WatchdogEngine:
             row["inner_vol"] = market.get("inner_vol", 0)
             row["outer_vol"] = market.get("outer_vol", 0)
             row["last"] = float(market.get("last") or 0)
+            # 10档盘口深度（诱多/空识别用）
+            row["bid_qty"] = market.get("bid_qty", [])
+            row["ask_qty"] = market.get("ask_qty", [])
 
             last = float(market.get("last") or 0)
 
@@ -569,13 +572,10 @@ class WatchdogEngine:
                         self._entry_streak.pop(code, None)  # 进入 alerted 后清 streak
                         self._entry_streak_type.pop(code, None)
                         if st.source != "surge":
-                            # surge 票不发触发信号，只发入场信号
-                            _push_feishu(
-                                f"⏳ {st.name}({code}) 触发信号\n"
-                                f"类型: {sig_type}\n"
-                                f"原因: {reason}\n"
-                                f"现价: {last:.2f} | VWAP: {vwap:.2f}"
-                            )
+                            # 盯盘信号通知已关闭，trader 负责实盘下单通知
+                            pass
+                        else:
+                            pass
                 else:
                     # 条件不满足，重置连续计数
                     self._entry_streak.pop(code, None)
@@ -595,12 +595,13 @@ class WatchdogEngine:
                         st.entry_pushed_date = now.strftime("%Y%m%d")
                         self._save_state()
                         _surge_tag = "【surge】" if st.source == "surge" else ""
-                        _push_feishu(
-                            f"📈 {st.name}({code}) 入场!{_surge_tag}\n"
-                            f"入场价: {last:.2f}\n"
-                            f"信号: {st.signal_reason}\n"
-                            f"VWAP: {vwap:.2f}"
-                        )
+                        # 入场通知已关闭，trader 负责实盘下单通知
+                        # _push_feishu(
+                        #     f"📈 {st.name}({code}) 入场!{_surge_tag}\n"
+                        #     f"入场价: {last:.2f}\n"
+                        #     f"信号: {st.signal_reason}\n"
+                        #     f"VWAP: {vwap:.2f}"
+                        # )
                     else:
                         st.status = "watching"
                         st.signal_type = ""
@@ -627,12 +628,13 @@ class WatchdogEngine:
                     pnl_pct = (last / st.entry_price - 1) * 100
                     _surge_tag = "【surge】" if st.source == "surge" else ""
                     is_profit = "止盈" in exit_reason
-                    _push_feishu(
-                        f"{'💰' if is_profit else '🛑'} {st.name}({code}) {'止盈' if is_profit else '出场'}{_surge_tag}\n"
-                        f"{exit_reason}\n"
-                        f"入场: {st.entry_price:.2f} → 现价: {last:.2f}\n"
-                        f"盈亏: {pnl_pct:+.2f}% | 持仓{st.bars_held}轮"
-                    )
+                    # 出场通知已关闭，trader 负责实盘下单通知
+                    # _push_feishu(
+                    #     f"{'💰' if is_profit else '🛑'} {st.name}({code}) {'止盈' if is_profit else '出场'}{_surge_tag}\n"
+                    #     f"{exit_reason}\n"
+                    #     f"入场: {st.entry_price:.2f} → 现价: {last:.2f}\n"
+                    #     f"盈亏: {pnl_pct:+.2f}% | 持仓{st.bars_held}轮"
+                    # )
                     self.remove([code])
 
             self._save_state()

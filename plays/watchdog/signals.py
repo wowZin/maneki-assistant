@@ -128,6 +128,19 @@ def check_entry(row: dict, scores: dict) -> tuple[bool, str, str]:
         spread_ratio = ask1 / bid1
         if spread_ratio > 3:
             l1_reasons.append(f"卖压{ask1:.0f}→买{bid1:.0f}(×{spread_ratio:.1f})")
+    # ── 10档盘口深度检查（诱多：卖盘压顶不追）──
+    ask_qty = row.get("ask_qty", [])
+    bid_qty = row.get("bid_qty", [])
+    if ask_qty and bid_qty and len(ask_qty) >= 3 and len(bid_qty) >= 3:
+        ask_top5 = sum(float(q) for q in ask_qty[:5] if str(q).strip())
+        bid_top5 = sum(float(q) for q in bid_qty[:5] if str(q).strip())
+        if bid_top5 > 0 and ask_top5 > bid_top5 * 2:
+            l1_reasons.append(f"卖盘压顶 卖{ask_top5:.0f}>买{bid_top5:.0f}(×{ask_top5/bid_top5:.1f})")
+        # 二档异常堆量（突破后的第一道防线）
+        ask2 = float(ask_qty[1]) if str(ask_qty[1]).strip() else 0
+        bid1_qty = float(bid_qty[0]) if str(bid_qty[0]).strip() else 1
+        if ask2 > bid1_qty * 3:
+            l1_reasons.append(f"二档压单{ask2:.0f}>一档买单{bid1_qty:.0f}(×{ask2/bid1_qty:.0f})")
     if vwap > 0 and last > 0:
         vwap_dev = (last - vwap) / vwap * 100
         if vwap_dev > 5:

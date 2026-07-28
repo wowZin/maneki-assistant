@@ -546,6 +546,85 @@ tags: [daily, watchdog]
     print(f"  ✅ {page_name} — {len(state)}只盯盘")
 
 
+def compile_trading(trade_date: str):
+    """编译模拟交易交割单到 wiki"""
+    try:
+        from plays.trading.trader import TRADING_REPORTS_DIR
+    except ModuleNotFoundError:
+        return
+
+    report_file = TRADING_REPORTS_DIR / f"{trade_date}.json"
+    if not report_file.exists():
+        return
+
+    try:
+        records = json.loads(report_file.read_text())
+    except Exception:
+        return
+
+    if not records:
+        return
+
+    # 按买卖分组
+    buys = [r for r in records if r.get("direction") == "买入"]
+    sells = [r for r in records if r.get("direction") == "卖出"]
+    total_pnl = sum(r.get("pnl", 0) for r in sells)
+    win_count = sum(1 for r in sells if r.get("pnl", 0) > 0)
+    loss_count = sum(1 for r in sells if r.get("pnl", 0) <= 0)
+    total_sells = len(sells)
+
+    date_display = f"{trade_date[:4]}-{trade_date[4:6]}-{trade_date[6:]}"
+    win_rate = round(win_count / total_sells * 100, 1) if total_sells else 0
+
+    # 明细行
+    detail_rows = []
+    for r in records:
+        pnl_str = f"{r['pnl']:+.0f}元({r['pnl_pct']:+.1f}%)" if r.get("pnl") and r.get("direction") == "卖出" else "—"
+        detail_rows.append(
+            f"| {r['code']} | {r['name']} | {r['direction']} | {r['price']:.2f} | "
+            f"{r['shares']} | {r['amount']:.0f} | {r['time']} | {pnl_str} | {r.get('reason','')} |"
+        )
+
+    content = f"""---
+title: {date_display} 模拟交易交割单
+created: {datetime.now().strftime("%Y-%m-%d")}
+updated: {datetime.now().strftime("%Y-%m-%d")}
+type: trading
+tags: [daily, trading]
+---
+
+# {date_display} 模拟交易交割单
+
+## 汇总
+
+| 指标 | 值 |
+|------|:---:|
+| 买入笔数 | {len(buys)} |
+| 卖出笔数 | {len(sells)} |
+| 总盈亏 | {total_pnl:+.0f} 元 |
+| 胜率 | {win_count}/{total_sells} ({win_rate}%) |
+| 亏损笔数 | {loss_count} |
+
+## 明细
+
+| 代码 | 名称 | 方向 | 价格 | 数量 | 金额 | 时间 | 盈亏 | 原因 |
+|:----:|:----:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+{chr(10).join(detail_rows)}
+"""
+
+    # 写入 wiki
+    entity_dir = WIKI_DIR / "plays" / "trading" / "entities"
+    entity_dir.mkdir(parents=True, exist_ok=True)
+    page_name = f"{trade_date}-模拟交易交割单.md"
+    (entity_dir / page_name).write_text(content, encoding="utf-8")
+    print(f"  ✅ {page_name} — {len(buys)}笔买入/{len(sells)}笔卖出 盈亏{total_pnl:+.0f}")
+
+    # 搬迁原始数据
+    _relocate_raw_data(trade_date, play="trading", play_slug="trading")
+    # gc 残留
+    _gc_stale_raw_data(play="trading", play_slug="trading")
+
+
 def main():
     # 默认取最近交易日
     target_date = ""
@@ -569,6 +648,9 @@ def main():
 
     # watchdog 盯盘状态
     compile_watchdog(target_date)
+
+    # 模拟交易交割单
+    compile_trading(target_date)
 
     print("✅ 编译完成")
 

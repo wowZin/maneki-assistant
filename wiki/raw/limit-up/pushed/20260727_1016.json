@@ -1,0 +1,47 @@
+[
+  {
+    "code": "002396.SZ",
+    "name": "星网锐捷",
+    "model_score": 83.58,
+    "total_score": 83.58,
+    "score_mode": "model_score",
+    "pct_chg": -2.68,
+    "scores": {
+      "technical": 23.0,
+      "fundflow": 22.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 45.0
+  },
+  {
+    "code": "002141.SZ",
+    "name": "贤丰控股",
+    "model_score": 82.94,
+    "total_score": 82.94,
+    "score_mode": "model_score",
+    "pct_chg": -6.14,
+    "scores": {
+      "technical": 18.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 59.0
+  },
+  {
+    "code": "000938.SZ",
+    "name": "紫光股份",
+    "model_score": 82.48,
+    "total_score": 82.48,
+    "score_mode": "model_score",
+    "pct_chg": -3.39,
+    "scores": {
+      "technical": 24.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 66.0
+  }
+]

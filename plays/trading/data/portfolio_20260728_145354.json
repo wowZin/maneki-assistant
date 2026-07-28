@@ -1,0 +1,22 @@
+{
+  "date": "20260728",
+  "capital": 18299.0,
+  "daily_pnl": 0.0,
+  "stopped": false,
+  "positions": [
+    {
+      "code": "600396.SH",
+      "name": "华电辽能",
+      "entry_price": 17.01,
+      "shares": 100,
+      "cost": 1701.0,
+      "entry_at": "2026-07-28 14:49:48",
+      "status": "holding",
+      "exit_price": 0.0,
+      "exit_at": "",
+      "exit_reason": "",
+      "pnl": 0.0,
+      "pnl_pct": 0.0
+    }
+  ]
+}

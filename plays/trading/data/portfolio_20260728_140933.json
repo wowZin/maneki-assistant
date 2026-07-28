@@ -1,0 +1,36 @@
+{
+  "date": "20260728",
+  "capital": 17635.0,
+  "daily_pnl": 0.0,
+  "stopped": false,
+  "positions": [
+    {
+      "code": "600846.SH",
+      "name": "同济科技",
+      "entry_price": 12.15,
+      "shares": 100,
+      "cost": 1215.0,
+      "entry_at": "2026-07-28 13:24:18",
+      "status": "holding",
+      "exit_price": 0.0,
+      "exit_at": "",
+      "exit_reason": "",
+      "pnl": 0.0,
+      "pnl_pct": 0.0
+    },
+    {
+      "code": "000533.SZ",
+      "name": "顺钠股份",
+      "entry_price": 11.5,
+      "shares": 100,
+      "cost": 1150.0,
+      "entry_at": "2026-07-28 13:22:17",
+      "status": "holding",
+      "exit_price": 0.0,
+      "exit_at": "",
+      "exit_reason": "",
+      "pnl": 0.0,
+      "pnl_pct": 0.0
+    }
+  ]
+}
