@@ -37,7 +37,7 @@ pipeline 09:30 追加两组运营列：
 1. 非交易日退出
 2. `_refresh_panel_auction`：stk_auction 按日期全量（重试 3 次，持续失败写
    pipeline_crash.log + 飞书通知一次后静默），刷新 auc_* + 重算 shortterm
-3. `morning_pass`：全量 `factor_model_score_batch`（grid_v1，64 特征 hit-only），
+3. `morning_pass`：全量 `factor_model_score_batch`（64 特征 hit-only），
    model_score 写回面板；主板(00/60)记录合并写 analysis/{date}.json（按 code 去重）
 4. 推送：显式 **Top-N（默认3，PUSH_TOP_N）+ ≥55 地板（PUSH_THRESHOLD）**，
    经 pusher.check_and_push → 飞书卡片（每条三行：代码名称星标/涨幅/总分）
@@ -87,8 +87,7 @@ _wd_add 写后回读校验防 watchdog 引擎覆盖竞态；pid 守卫防多实�
 
 ## 六、评分体系
 
-- **模型分（唯一决策依据）**：grid_v1 XGBoost，64 特征 hit-only
-  （win 头 AUC 0.36 反预测已废弃，blend_hit=1.0）
+- **模型分（唯一决策依据）**：XGBoost，64 特征 hit-only（blend_hit=1.0）
 - **五维度分**：降级为 64 特征中的 5 个普通输入（各占 ~1.4% 重要性），
   不再用于选股展示；推送卡片不展示维度分
 - **加权总分**：已删除（旧 _weighted_total_score，从未进过训练）

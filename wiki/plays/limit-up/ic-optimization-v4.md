@@ -76,14 +76,13 @@ python plays/limit_up/backtest/training.py build --start 20260519 --end 20260702
 
 ```bash
 python plays/limit_up/backtest/train_model.py \
-  --train-start 20260519 --train-end 20260620 \
-  --test-start 20260621 --test-end 20260702 \
+  --train-start 20260420 --train-end 20260707 \
+  --test-start 20260708 --test-end 20260721 \
   --estimator xgboost \
-  --model-dir plays/limit_up/data/backtest/models/xgb_v5_intraday
+  --blend-hit 1.0 --blend-win 0.0
 ```
 
-- 两个分类目标：`hit_limit_3`（命中率）与 `fwd_ret_3 > 0`（胜率）。
-- 混合权重：默认 `0.6 * p_hit + 0.4 * p_win`，输出 0–100 分。
+- 单一分类目标：`hit_limit_3`（3 日内涨停概率），blend_hit=1.0（胜率头因反预测已废弃）。
 - 时间序列切分：训练用前半段，验证用后半段，禁止未来泄漏。
 
 ### 3. 模型上线
@@ -91,14 +90,13 @@ python plays/limit_up/backtest/train_model.py \
 把最佳模型复制到默认目录：
 
 ```bash
-cp plays/limit_up/data/backtest/models/xgb_v5_intraday/* \
-   plays/limit_up/data/backtest/models/
-```
-
-回测验证：
-
-```bash
-LIMIT_UP_USE_MODEL=true python plays/limit_up/backtest/backtest.py --start 20260601 --end 20260702
+# 训练好的模型直接输出到 models/
+python plays/limit_up/backtest/train_model.py \
+  --train-start 20260420 --train-end 20260707 \
+  --test-start 20260708 --test-end 20260721 \
+  --estimator xgboost \
+  --blend-hit 1.0 --blend-win 0.0 \
+  --model-dir plays/limit_up/data/backtest/models
 ```
 
 ## 回测结果

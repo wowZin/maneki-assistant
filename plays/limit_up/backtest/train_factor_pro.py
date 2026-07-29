@@ -10,7 +10,7 @@
 
 用法：
     python plays/limit_up/backtest/train_factor_pro.py
-    python plays/limit_up/backtest/train_factor_pro.py --out plays/limit_up/data/backtest/models/factor_full_v1
+    python plays/limit_up/backtest/train_factor_pro.py --out plays/limit_up/data/backtest/models
 """
 import argparse
 import json
@@ -33,7 +33,7 @@ PANEL_DIR = PROJECT_DIR / "wiki" / "raw" / "limit-up" / "panel"
 FACTOR_PARQUET = PANEL_DIR / "stk_factor_pro.parquet"
 CYQ_PARQUET = PANEL_DIR / "cyq_perf.parquet"
 
-TRAIN_END = "20260625"  # 与此前实验保持同一切分，保证可比
+TRAIN_END = "20260707"
 
 
 def load_factors() -> pd.DataFrame:
@@ -131,7 +131,7 @@ def merge_all() -> pd.DataFrame:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path,
-                    default=PROJECT_DIR / "plays/limit_up/data/backtest/models/factor_full_v1")
+                    default=PROJECT_DIR / "plays/limit_up/data/backtest/models")
     ap.add_argument("--train-end", default=TRAIN_END)
     ap.add_argument("--estimator", default="xgboost", choices=["xgboost", "hist"])
     args = ap.parse_args()
@@ -167,7 +167,7 @@ def main():
         feature_cols=feat_cols,
         hit_estimator=default_estimator(args.estimator),
         win_estimator=default_estimator(args.estimator),
-        blend_hit=0.6,
+        blend_hit=1.0,
         blend_win=0.4,
     )
     print("[train] 拟合 hit+win 双模型 ...")

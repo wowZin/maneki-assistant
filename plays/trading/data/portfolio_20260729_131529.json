@@ -1,0 +1,36 @@
+{
+  "date": "20260729",
+  "capital": 13580.0,
+  "daily_pnl": 0.0,
+  "stopped": false,
+  "positions": [
+    {
+      "code": "000636.SZ",
+      "name": "风华高科",
+      "entry_price": 47.51,
+      "shares": 100,
+      "cost": 4751.0,
+      "entry_at": "2026-07-29 13:07:01",
+      "status": "holding",
+      "exit_price": 0.0,
+      "exit_at": "",
+      "exit_reason": "",
+      "pnl": 0.0,
+      "pnl_pct": 0.0
+    },
+    {
+      "code": "002517.SZ",
+      "name": "恺英网络",
+      "entry_price": 16.69,
+      "shares": 100,
+      "cost": 1669.0,
+      "entry_at": "2026-07-29 13:08:02",
+      "status": "holding",
+      "exit_price": 0.0,
+      "exit_at": "",
+      "exit_reason": "",
+      "pnl": 0.0,
+      "pnl_pct": 0.0
+    }
+  ]
+}

@@ -184,6 +184,9 @@ def build_pit_features(
         "sector_heat": 0.0,
         "sector_rank": 0.0,
         "n_concepts": 0.0,
+        "sector_ret3": 0.0,
+        "sector_up_ratio": 0.5,
+        "sector_streak": 0.0,
         "auc_amount": 0.0,
         "auc_vol": 0.0,
         "auc_amt_ratio": 0.0,
@@ -355,6 +358,10 @@ def build_pit_features(
     feats["n_concepts"] = _safe_float(cm.get("n_concepts"), 0.0)
     # sector_rank：概念数越多→越热门
     feats["sector_rank"] = math.tanh(feats["n_concepts"] / 50.0)
+    # 板块趋势与宽度（新增）
+    feats["sector_ret3"] = _safe_float(cm.get("ret3_avg"), 0.0)       # 概念3日平均收益
+    feats["sector_up_ratio"] = _safe_float(cm.get("up_ratio"), 0.5)   # 概念中上涨比例
+    feats["sector_streak"] = _safe_float(cm.get("up_streak_max"), 0)  # 最大连涨天数
 
     # ═══════════════════════════════════════════════════════
     # 龙虎榜 PIT 特征（T-1 日上榜数据）
@@ -403,6 +410,8 @@ def build_pit_features(
     auc = _mf_on_or_before(auction_by_date, dates[i]) if i >= 0 else {}
     auc_amount = _safe_float(auc.get("amount"), 0.0)  # 元
     auc_vol = _safe_float(auc.get("vol"), 0.0)        # 股
+    auc_price = _safe_float(auc.get("price"), 0.0)    # 竞价价格
+    auc_pre = _safe_float(auc.get("pre_close"), 0.0)  # 前收盘价
     feats["auc_amount"] = auc_amount
     feats["auc_vol"] = auc_vol
     if feats["avg_amount_5d"] > 0:
@@ -410,6 +419,10 @@ def build_pit_features(
     t1_vol = _safe_float(rows[pit_i].get("vol"), 0.0) if pit_i >= 0 else 0.0
     if t1_vol > 0:
         feats["auc_vol_ratio"] = auc_vol / t1_vol
+    # 竞价涨幅覆盖 pct_chg_score_day（生产 pipeline 同样逻辑）
+    if auc_pre > 0 and auc_price > 0:
+        auc_pct = (auc_price / auc_pre - 1.0) * 100
+        feats["pct_chg_score_day"] = auc_pct
 
     # ═══════════════════════════════════════════════════════
     # 日内分时特征（T-1 jvQuant 分钟数据聚合）

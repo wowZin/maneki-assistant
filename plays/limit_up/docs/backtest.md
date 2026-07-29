@@ -41,13 +41,14 @@ python plays/limit_up/backtest/mine.py --label fwd_ret_3 --top 20
 
 ### train_model.py
 
-训练树模型，分别预测 3 日涨停概率（`hit_limit_3`）与 3 日正收益概率（`fwd_ret_3 > 0`），混合输出连续 model score。
+训练 XGBoost 模型预测 3 日涨停概率（`hit_limit_3`），输出 0–100 连续分。胜率头（`fwd_ret_3 > 0`）因 AUC 0.36 反预测已废弃，blend_hit=1.0。
 
 ```bash
 python plays/limit_up/backtest/train_model.py \
-    --train-start 20260519 --train-end 20260620 \
-    --test-start 20260621 --test-end 20260702 \
-    --estimator xgboost
+    --train-start 20260420 --train-end 20260707 \
+    --test-start 20260708 --test-end 20260721 \
+    --estimator xgboost \
+    --blend-hit 1.0 --blend-win 0.0
 ```
 
 支持 `--estimator xgboost` 或 `--estimator hist`。当前默认模型使用 XGBoost；训练前需确认训练集已包含最新特征（含日内 `id_*` 字段），否则新特征重要性为 0。

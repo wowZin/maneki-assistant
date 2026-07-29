@@ -1,6 +1,6 @@
 # 评分体系 — XGBoost 模型分为主
 
-> 2026-07-26 现状：生产环境的唯一评分是 **XGBoost 模型分（`model_score`，0–100 连续分）**。
+> 生产环境的唯一评分是 **XGBoost 模型分（`model_score`，0–100 连续分）**。
 > 五维度分（fundamental/technical/fundflow/sentiment/shortterm）已降级为模型 64 特征中的 5 个普通特征，不再用于选股展示。
 > 面板（`wiki/raw/limit-up/panel/{date}.parquet`）是评分的单一事实源。
 
@@ -37,7 +37,7 @@ watchdog（09:20 起，60s） realtime_row（日级特征 + 面板维度分 + L1
   - 日内分时 T-1（`id_vwap_dev`、`id_range`、`id_morning_vol_ratio` 等）
   - 龙虎榜 PIT（`dt_is_listed`、`dt_net_amount`、`dt_inst_net_buy` 等）
   - **五维度分（`fundamental`、`technical`、`fundflow`、`sentiment`、`shortterm`）— 64 特征中的最后 5 个**
-- 双头训练：`hit_limit_3`（命中率头）+ `fwd_ret_3 > 0`（胜率头），默认 0.6/0.4 混合为 0–100 分（`blend_hit=0.6, blend_win=0.4`）。
+- 训练目标：`hit_limit_3`（3 日内涨停概率），blend_hit=1.0（纯命中率模型，胜率头因 AUC 0.36 反预测已废弃）。
 - 缺失值用训练时中位数填充。
 
 **追高护栏**（乘性，`factor_model_score_batch` 向量化版本）：
@@ -65,7 +65,7 @@ watchdog（09:20 起，60s） realtime_row（日级特征 + 面板维度分 + L1
 
 角色定位：
 
-1. **模型特征**：是 64 特征中的 5 个普通特征，单个特征重要性各约 1.4%（`models/feature_importance.json`：shortterm 1.48%、sentiment 1.46%、fundflow 1.41%、fundamental 1.38%、technical 1.36%）。
+1. **模型特征**：是 64 特征中的 5 个普通特征，单个特征重要性各约 1.4%（详见 `models/feature_importance.json`）。
 2. **不再用于选股展示**：推送卡片只展示 code/name/星级/涨幅/总分，不展示维度分。
 3. **watchdog 实时行的输入**：surge_scanner 写 watchdog state 时必须带面板 `dim_scores`，否则 `realtime_row` 的五维度分=0，模型分被系统性压低。
 
@@ -89,6 +89,4 @@ watchdog（09:20 起，60s） realtime_row（日级特征 + 面板维度分 + L1
 
 `plays/limit_up/total.py::total_score(row)` 保留为对外兼容入口，按 `TOTAL_SCORE_COMPONENTS` 加权（`LIMIT_UP_USE_MODEL=true` 时为 `factor_model_score`，否则 `quality_combo`）。生产 pipeline 不经过它，直接调 `factor_model_score_batch`。
 
-## 七、历史版本
 
-`new_total_v2 / balanced_total / ultimate_total_v1~v5 / cpt_* / balanced_ensemble` 等全部废弃；`quality_combo`/`quality_gate` 保留在因子库作为模型回退与 watchdog 辅助筛选（`is_worth_watching`），不再是总分。

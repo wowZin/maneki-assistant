@@ -1,0 +1,47 @@
+[
+  {
+    "code": "000938.SZ",
+    "name": "紫光股份",
+    "model_score": 83.27,
+    "total_score": 83.27,
+    "score_mode": "model_score",
+    "pct_chg": -1.49,
+    "scores": {
+      "technical": 34.0,
+      "fundflow": 21.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 66.0
+  },
+  {
+    "code": "600396.SH",
+    "name": "华电辽能",
+    "model_score": 70.31,
+    "total_score": 70.31,
+    "score_mode": "model_score",
+    "pct_chg": -3.5,
+    "scores": {
+      "technical": 51.0,
+      "fundflow": 26.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 55.0
+  },
+  {
+    "code": "002935.SZ",
+    "name": "天奥电子",
+    "model_score": 63.42,
+    "total_score": 63.42,
+    "score_mode": "model_score",
+    "pct_chg": 0.94,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 20.0,
+      "sentiment": 75.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 48.0
+  }
+]

@@ -1,9 +1,8 @@
 """limit_up 非线性评分模型。
 
-使用树模型学习 PIT 特征到 3 日涨停/正收益概率的映射，输出 0–100 连续分。
-Estimator 可插拔，默认 scikit-learn HistGradientBoostingClassifier。
-"""
-
+使用树模型学习 PIT 特征到 3 日涨停概率的映射，输出 0–100 连续分。
+仅使用 hit 头（hit_limit_3），win 头（fwd_ret_3 > 0）因反预测已废弃。
+Estimator 可插拔，默认 XGBoost。"""
 from __future__ import annotations
 
 import json
@@ -37,6 +36,7 @@ DEFAULT_FEATURES = [
     "net_mf_amount", "net_mf_ratio", "buy_elg_ratio", "buy_lg_ratio",
     "mf_net", "mf_accel", "mf_pct",
     "sector_heat", "sector_rank", "n_concepts",
+    "sector_ret3", "sector_up_ratio", "sector_streak",
     "auc_amount", "auc_vol", "auc_amt_ratio", "auc_vol_ratio",
     # 日内分时特征（T-1）
     "id_vwap_dev", "id_range", "id_morning_vol_ratio", "id_afternoon_strength",
@@ -140,8 +140,8 @@ class LimitUpModel:
         feature_cols: list[str] | None = None,
         hit_estimator: Any = None,
         win_estimator: Any = None,
-        blend_hit: float = 0.6,
-        blend_win: float = 0.4,
+        blend_hit: float = 1.0,
+        blend_win: float = 0.0,
     ):
         self.feature_cols = feature_cols or DEFAULT_FEATURES
         self.hit_estimator = hit_estimator

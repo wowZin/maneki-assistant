@@ -31,12 +31,12 @@ MODEL_DIR = Path(__file__).resolve().parent.parent / "data" / "backtest" / "mode
 
 def main():
     parser = argparse.ArgumentParser(description="训练 limit_up 模型")
-    parser.add_argument("--train-start", default="20260519")
-    parser.add_argument("--train-end", default="20260620")
-    parser.add_argument("--test-start", default="20260621")
-    parser.add_argument("--test-end", default="20260702")
-    parser.add_argument("--blend-hit", type=float, default=0.6)
-    parser.add_argument("--blend-win", type=float, default=0.4)
+    parser.add_argument("--train-start", default="20260420")
+    parser.add_argument("--train-end", default="20260707")
+    parser.add_argument("--test-start", default="20260708")
+    parser.add_argument("--test-end", default="20260721")
+    parser.add_argument("--blend-hit", type=float, default=1.0)
+    parser.add_argument("--blend-win", type=float, default=0.0)
     parser.add_argument("--model-dir", type=Path, default=MODEL_DIR)
     parser.add_argument("--panel", type=Path, help="从 backtest out/panel.csv 训练（而非 training_set.csv）")
     parser.add_argument("--estimator", choices=["hist", "xgboost"], default="xgboost",

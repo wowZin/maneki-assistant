@@ -1,30 +1,10 @@
 {
-  "auc": 0.571124771556737,
-  "ic": null,
-  "top3": 0.375,
-  "top5": 0.25,
-  "n_features": 83,
-  "new_features": [
-    "ma60_dev",
-    "rsi_qfq_24",
-    "bias3_qfq",
-    "ma20_dev",
-    "rsi_qfq_12",
-    "atr_pct",
-    "kdj_d_qfq",
-    "roc_qfq",
-    "kdj_k_qfq",
-    "bias2_qfq",
-    "dmi_pdi_qfq",
-    "vr_qfq",
-    "psy_qfq",
-    "ma10_dev",
-    "rsi_qfq_6",
-    "mfi_qfq",
-    "cci_qfq",
-    "dmi_mdi_qfq",
-    "bias1_qfq",
-    "wr_qfq",
-    "ma5_dev"
-  ]
+  "auc_hit_limit_3": 0.6175802765733036,
+  "auc_fwd_ret_3_positive": 0.3622977492047834,
+  "ic_hit_limit_3": 0.10523071676890625,
+  "ic_fwd_ret_3": -0.306326296213753,
+  "top3_hit_rate": 0.2222222222222222,
+  "top3_win_rate": 0.3333333333333333,
+  "top5_hit_rate": 0.15555555555555556,
+  "top5_win_rate": 0.2222222222222222
 }

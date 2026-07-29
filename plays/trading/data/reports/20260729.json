@@ -1,0 +1,98 @@
+[
+  {
+    "code": "000636.SZ",
+    "name": "风华高科",
+    "direction": "买入",
+    "price": 47.51,
+    "shares": 100,
+    "amount": 4751.0,
+    "time": "2026-07-29 13:07:01",
+    "reason": "信号: vwap_break",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  },
+  {
+    "code": "000636.SZ",
+    "name": "风华高科",
+    "direction": "买入",
+    "price": 47.51,
+    "shares": 100,
+    "amount": 4751.0,
+    "time": "2026-07-29 13:07:01",
+    "reason": "信号: vwap_break",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  },
+  {
+    "code": "002517.SZ",
+    "name": "恺英网络",
+    "direction": "买入",
+    "price": 16.69,
+    "shares": 100,
+    "amount": 1669.0,
+    "time": "2026-07-29 13:08:02",
+    "reason": "信号: vwap_break",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  },
+  {
+    "code": "002517.SZ",
+    "name": "恺英网络",
+    "direction": "买入",
+    "price": 16.69,
+    "shares": 100,
+    "amount": 1669.0,
+    "time": "2026-07-29 13:08:02",
+    "reason": "信号: vwap_break",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  },
+  {
+    "code": "603727.SH",
+    "name": "博迈科",
+    "direction": "买入",
+    "price": 18.11,
+    "shares": 100,
+    "amount": 1811.0,
+    "time": "2026-07-29 13:16:04",
+    "reason": "信号: vwap_break",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  },
+  {
+    "code": "603727.SH",
+    "name": "博迈科",
+    "direction": "买入",
+    "price": 18.09,
+    "shares": 100,
+    "amount": 1809.0,
+    "time": "2026-07-29 13:16:04",
+    "reason": "信号: vwap_break",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  },
+  {
+    "code": "603399.SH",
+    "name": "永杉锂业",
+    "direction": "买入",
+    "price": 15.81,
+    "shares": 100,
+    "amount": 1581.0,
+    "time": "2026-07-29 13:38:11",
+    "reason": "信号: vwap_break",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  },
+  {
+    "code": "603399.SH",
+    "name": "永杉锂业",
+    "direction": "买入",
+    "price": 15.81,
+    "shares": 100,
+    "amount": 1581.0,
+    "time": "2026-07-29 13:38:11",
+    "reason": "信号: vwap_break",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  }
+]

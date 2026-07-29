@@ -415,10 +415,10 @@ def _add_strategy_scores(df: pd.DataFrame, fi_cache: dict[str, dict],
         mv = mv_yi * 10000 * 10000  # 亿→万元→元 ≈ 流通市值(元)
         if mv > 0 and nm != 0:
             ratio = nm * 10000 / mv * 100  # 净额占比%
-            ff = min(40, max(0, ratio * 5))
+            ff = min(60, max(0, ratio * 5))
         else:
             ff = 0
-        flow_scores.append(min(100, round(ff + 20)))  # base 20
+        flow_scores.append(min(100, round(ff)))  # 去掉 base 20
 
         # ── sentiment: 涨停概念热度 ──
         try:
@@ -426,18 +426,27 @@ def _add_strategy_scores(df: pd.DataFrame, fi_cache: dict[str, dict],
             ensure_loaded()
             clu = get_concept_limit_ups(code)
             cn = [k for k in clu if not k.startswith("_")]
-            best = max((clu.get(n, 0) for n in cn), default=0)
+            values = [clu.get(n, 0) for n in cn]
+            best = max(values) if values else 0
+            # 活跃概念数（≥3只涨停的概念）
+            active = sum(1 for v in values if v >= 3)
         except Exception:
             best = 0
-        sent = min(60, round(best * 10)) + 15  # base 15
+            active = 0
+        import math
+        # 对数评分：best=1→15分, 5→50分, 10→70分, 20→85分
+        sent = round(math.log(best + 1) / math.log(21) * 80) if best > 0 else 0
+        # 多概念共振加分（最多+15）
+        sent += min(15, active * 5)
         sent_scores.append(min(100, sent))
 
         # ── shortterm: 竞价数据评分 ──
         auc = float(row.get("auc_amt_ratio", 0) or 0)
-        st = 10.0
-        if auc > 1: st += 20
-        elif auc > 0.5: st += 10
-        elif auc > 0.1: st += 5
+        st = 0.0
+        if auc > 0.05: st += 20
+        elif auc > 0.02: st += 12
+        elif auc > 0.01: st += 6
+        elif auc > 0.005: st += 3
         short_scores.append(min(100, round(st)))
 
     df["fundamental"] = [float(v) for v in fund_scores]

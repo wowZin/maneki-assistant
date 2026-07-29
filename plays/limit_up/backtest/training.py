@@ -126,6 +126,7 @@ FEATURE_COLS = [
     "net_mf_amount", "net_mf_ratio", "buy_elg_ratio", "buy_lg_ratio",
     "mf_net", "mf_accel", "mf_pct",
     "sector_heat", "sector_rank", "n_concepts",
+    "sector_ret3", "sector_up_ratio", "sector_streak",
     "auc_amount", "auc_vol", "auc_amt_ratio", "auc_vol_ratio",
     # 日内分时特征（T-1）
     "id_vwap_dev", "id_range", "id_morning_vol_ratio", "id_afternoon_strength",

@@ -45,7 +45,7 @@ python3 plays/limit_up/pipeline.py --date 20260724     # 指定日期（测试�
 
 - 输入：当日面板全量（panel_builder 00:01 构建 + ① 竞价刷新）。
 - 竞价涨幅 `auc_pct` 覆盖 `pct_chg_score_day` 特征（09:30 连续竞价尚未开始，用竞价涨幅当当日涨幅）。
-- 评分：`plays.limit_up.factors.optimized.model_score.factor_model_score_batch`（XGBoost grid_v1，64 特征 hit-only，含追高护栏，详见 [score.md](./score.md)）。
+- 评分：`plays.limit_up.factors.optimized.model_score.factor_model_score_batch`（XGBoost，64 特征 hit-only，含追高护栏，详见 [score.md](./score.md)）。
 - `model_score` 全量写回面板 parquet（面板 = T-1 特征 + 当日竞价 + 早盘模型分，终态）。
 
 ### ③ analysis 合并

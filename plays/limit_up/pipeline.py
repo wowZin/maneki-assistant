@@ -226,7 +226,7 @@ def morning_pass(today: str) -> list[dict]:
         has_pct = pit_df["auc_pct"].notna()
         pit_df.loc[has_pct, "pct_chg_score_day"] = pit_df.loc[has_pct, "auc_pct"].astype(float)
 
-    # ── XGBoost 批量评分（grid_v1，64 特征 hit-only）──
+    # ── XGBoost 批量评分（64 特征 hit-only）──
     t0 = time.time()
     pit_df["model_score"] = factor_model_score_batch(pit_df)
     _scores = pit_df["model_score"]
