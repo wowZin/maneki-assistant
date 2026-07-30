@@ -4,7 +4,6 @@
 签名: score_shortterm(code: str, trade_date: str | None = None) -> tuple
 """
 import sys
-import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -17,18 +16,18 @@ from plays.limit_up.utils import safe_float
 
 # ── 日期工具 ─────────────────────────────────────
 
-_DATE_LOCAL = threading.local()
+_TODAY_OVERRIDE: str | None = None
 
 
 def _today() -> str:
-    override = getattr(_DATE_LOCAL, "override", None)
-    if override:
-        return override
+    if _TODAY_OVERRIDE:
+        return _TODAY_OVERRIDE
     return datetime.now().strftime("%Y%m%d")
 
 
 def _set_trade_date(trade_date: str | None):
-    _DATE_LOCAL.override = trade_date
+    global _TODAY_OVERRIDE
+    _TODAY_OVERRIDE = trade_date
 
 
 def _to_df(api: str, params: dict, fields: str = ""):
@@ -110,11 +109,18 @@ def score_shortterm(code: str, fundflow_data: dict = None, trade_date: str | Non
       - 开盘博弈用实时 pct_chg 替代 T-1（盘中看当前涨幅比昨收更有意义）
       - 内外盘比作为尾盘量比代理（IC 0.129 的最强实时信号）
     """
-    from plays.limit_up.strategies.realtime_ctx import (
-        get_realtime_pct, get_inner_outer_ratio, get_turnover,
-    )
+    realtime_pct = None
+    io_ratio = None
+    try:
+        from plays.limit_up.strategies.realtime_ctx import (
+            get_realtime_pct, get_inner_outer_ratio, get_turnover,
+        )
+        realtime_pct = get_realtime_pct(code)
+        io_ratio = get_inner_outer_ratio(code)
+    except ImportError:
+        pass
 
-    old = getattr(_DATE_LOCAL, "override", None)
+    old = _TODAY_OVERRIDE
     _set_trade_date(trade_date)
 
     try:
@@ -130,22 +136,14 @@ def score_shortterm(code: str, fundflow_data: dict = None, trade_date: str | Non
         pct = safe_float(dr.get("pct_chg", 0))
         pre_c = safe_float(dr.get("pre_close", 0))
         op = safe_float(dr.get("open", 0))
-        # 竞价数据覆盖今日真实跳空（盘中 daily_rows[0] 是 T-1）
-        auction = _get_auction(code)
-        if auction.get("price") and auction.get("pre_close"):
-            auc_pc = safe_float(auction.get("pre_close", 0))
-            if auc_pc > 0:
-                op = safe_float(auction.get("price", 0))
-                pre_c = auc_pc
         open_pct = ((op / pre_c) - 1) * 100 if pre_c > 0 else 0
 
-        # 实时增强：用实时 pct_chg 替代 T-1（盘中有就走实时）
-        realtime_pct = get_realtime_pct(code)
+        # 实时pct_chg 已在 try 块中获取
         if realtime_pct is not None:
             pct = realtime_pct  # 盘中用实时涨跌幅
 
-        # 内外盘比（proxy for tail_vol_ratio）
-        io_ratio = get_inner_outer_ratio(code)
+        # 内外盘比（proxy for tail_vol_ratio） — 已在 try 块中获取
+        # 使用上面的 io_ratio
 
         feats = _extract_pit_features(code)
         position = feats["position_20d"]

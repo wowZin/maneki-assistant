@@ -33,6 +33,7 @@ sys.path.insert(0, str(PROJECT_DIR / "scripts"))
 
 from scripts.tu_share import call_tushare  # noqa: E402
 from plays.limit_up.utils import safe_float_none, is_trading_time  # noqa: E402
+from plays.limit_up.pipeline import _get_realtime_fund_cache  # noqa: E402
 from plays.limit_up.strategies import factor_ctx  # noqa: E402
 
 
@@ -83,9 +84,14 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
     turnover = safe_float(today.get("turnover_rate"))
 
     # 实时增强：用 batch_quotes 数据替代 T-1（盘中有就走实时）
-    from plays.limit_up.strategies.realtime_ctx import get_vol_ratio as _rt_vol, get_turnover as _rt_tr
-    rt_vol = _rt_vol(code)
-    rt_tr = _rt_tr(code)
+    rt_vol = None
+    rt_tr = None
+    try:
+        from plays.limit_up.strategies.realtime_ctx import get_vol_ratio as _rt_vol, get_turnover as _rt_tr
+        rt_vol = _rt_vol(code)
+        rt_tr = _rt_tr(code)
+    except ImportError:
+        pass
     if rt_vol is not None:
         vol_ratio = rt_vol
     if rt_tr is not None:
@@ -106,10 +112,20 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
     upper_ratio = (upper_shadow / body) if body > 0 else 0
     lower_ratio = (lower_shadow / body) if body > 0 else 0
 
+    # 盘中优先使用实时量比（替代 T-1 vol_ratio）
+    if is_trading_time():
+        fund_cache = _get_realtime_fund_cache()
+        code_short = code.split(".")[0]
+        rt = fund_cache.get(code_short, {})
+        if rt.get("vol_ratio", 0) > 0:
+            vol_ratio = rt["vol_ratio"]
+
     # vol_ratio 可能为 None (stk_factor_pro 不返回此字段)
-    # 优先从 factor_ctx / daily_basic 取
+    # 优先从实时缓存取, 降级从 factor_ctx / daily_basic 取
     if vol_ratio is None:
         try:
+            # 优先从 pipeline 预取缓存读取
+            from plays.limit_up.strategies import factor_ctx
             basic = factor_ctx.get_daily_basic(code)
             if basic:
                 vol_ratio = safe_float(basic.get("volume_ratio"))
@@ -199,13 +215,11 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
     pit_feats = factor_ctx.get_price_features(code)
     basic = factor_ctx.get_daily_basic(code)
     if basic:
-        pit_feats["circ_mv"] = basic.get("circ_mv") if basic.get("circ_mv") is not None else 0.0
-        pit_feats["pe"] = basic.get("pe") if basic.get("pe") is not None else 999.0
-        pit_feats["pb"] = basic.get("pb") if basic.get("pb") is not None else 999.0
-        tr_val = basic.get("turnover_rate")
-        pit_feats["turnover_rate"] = tr_val if tr_val is not None else pit_feats.get("turnover_rate", 5.0)
-        vr_val = basic.get("volume_ratio")
-        pit_feats["volume_ratio"] = vr_val if vr_val is not None else pit_feats.get("volume_ratio", 1.0)
+        pit_feats["circ_mv"] = basic.get("circ_mv", 0.0)
+        pit_feats["pe"] = basic.get("pe", 999.0)
+        pit_feats["pb"] = basic.get("pb", 999.0)
+        pit_feats["turnover_rate"] = basic.get("turnover_rate", pit_feats.get("turnover_rate", 5.0))
+        pit_feats["volume_ratio"] = basic.get("volume_ratio", pit_feats.get("volume_ratio", 1.0))
 
     gene20 = factor_ctx.get_limit_up_count(code, 20)
     gene60 = factor_ctx.get_limit_up_count(code, 60)

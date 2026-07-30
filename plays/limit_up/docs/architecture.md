@@ -1,123 +1,191 @@
-# 打板玩法 · 架构设计（2026-07-26 定稿）
+# 打板玩法 V2 · 架构设计
 
-## 总览
+## 背景
 
-面板驱动的四层架构：**夜间一次性构建全市场面板，早盘一次性评分推送，盘中 surge 发现 + watchdog 信号**。
-无常驻评分进程（全部 hermes cron 拉起），面板是唯一事实源。
+现有 pipeline 基于同花顺热门榜（100只）+ 缓存扫描，存在三个致命缺陷：
 
-```
-00:01  panel_builder   全市场面板（T-1 特征 64 列 + 五维度分）
-00:30  concept_cache   概念缓存增量刷新
-08:55  ws_daemon       jvQuant WS 独占（共享内存快照）
-09:20  watchdog        盯盘引擎拉起（cron，15:05 自退）
-09:30  pipeline        竞价刷面板 → 全量评分 → Top3+≥55 推送（一次性，~4s）
-09:35  surge_scanner   每 60s 扫描（发现异动 → watchdog/analysis/pushed）
-15:00  watchdog        EOD 汰换（surge 零信号票移除）
-18:00  review          收盘复盘
-20:00  wiki compile    数据归档
-```
+1. **数据源失效**：热门榜按搜索热度排序，涨停/上涨比例极低，活跃信号被大量噪音淹没
+2. **时机缺失**：10 分钟 cron 间隔太长，股票从 +2% 拉到涨停只需 3-5 分钟，每次发现时已买不进去
+3. **候选池窄**：100 只热门股 + ~200 只缓存 = 300 只，每日涨停股超 50% 不在池内
 
-## 一、面板（wiki/raw/limit-up/panel/{date}.parquet）
+## V2 核心思路
 
-panel_builder 每日 00:01 构建：全市场非 ST（SH/SZ 主板+创业+科创，4993 只），
-`build_pit_features()` 产出 59 个 T-1 PIT 特征 + `_add_strategy_scores()` 补 5 个维度分
-（fundamental/technical/fundflow/sentiment/shortterm），共 64 个模型输入列。
-
-pipeline 09:30 追加两组运营列：
-- `auc_*`（auc_amount/auc_vol/auc_amt_ratio/auc_vol_ratio/auc_pct）：当日 9:25 竞价，
-  stk_auction 按日期全量拉取刷新，并重算 shortterm（唯一吃竞价的维度分）
-- `model_score`：全量 XGBoost 评分写回（surge 主闸直接读面板）
-
-面板终态 = T-1 特征 + 当日竞价 + 早盘模型分。
-
-## 二、pipeline（一次性进程，cron 09:30）
-
-`plays/limit_up/pipeline.py`（~300 行，非常驻）。流程：
-
-1. 非交易日退出
-2. `_refresh_panel_auction`：stk_auction 按日期全量（重试 3 次，持续失败写
-   pipeline_crash.log + 飞书通知一次后静默），刷新 auc_* + 重算 shortterm
-3. `morning_pass`：全量 `factor_model_score_batch`（64 特征 hit-only），
-   model_score 写回面板；主板(00/60)记录合并写 analysis/{date}.json（按 code 去重）
-4. 推送：显式 **Top-N（默认3，PUSH_TOP_N）+ ≥55 地板（PUSH_THRESHOLD）**，
-   经 pusher.check_and_push → 飞书卡片（每条三行：代码名称星标/涨幅/总分）
-5. 异常自通知（_notify_text）+ 非零退出；日志 logs/pipeline.log（RotatingFile）
-
-## 三、surge_scanner（每 60s，daemon + cron 09:30 兜底）
-
-`plays/limit_up/surge_scanner.py`。先筛后拉：
+生产者-消费者模式：**每分钟全量扫描 → 涨幅>0的入栈（去重+涨速排序） → 评分线程从栈顶取20只**
 
 ```
-扫描池 = 主闸池(面板 model_score ≥ 20) ∪ 排雷池(昨日涨停∪前20日基因 中 <20 的)
-       ≈ 950 只（vs 旧版全宇宙 3800，THS 调用 -75%）
-行情   = ths_client.get_batch_quotes_fast（24 线程并发，~20s/轮）
-窗口   = 5% ≤ pct < 9.8%
-路由   = 主闸直通；排雷：首板 量比≥2+窄概念联动≥2+筹码不压顶（3项）
-         昨日涨停 量比≥2+筹码不压顶（2项）
-写入   = watchdog state(source=surge, 带 dim_scores/daily_basic)
-         + analysis/{date}.json + pushed/{date}_surge.json（均按 code 去重原子写）
-         + signals/{date}.json（全部路由决策）+ snapshot_log/{date}.parquet（候选快照）
+每分钟循环:
+  batch_quotes(候选池) → 实时行情
+       ↓
+  更新栈：去重 / 涨速排序 / 死票淘汰
+       ↓
+  评分线程取栈顶20只 → 信号池 → 阈值推送
 ```
 
-关键机制：universe 日缓存但**面板无 model_score 时不写缓存**（防"主闸空"锁死全天）；
-_wd_add 写后回读校验防 watchdog 引擎覆盖竞态；pid 守卫防多实例；无数量上限。
+## 数据存储
 
-## 四、watchdog（cron 09:20 拉起，15:05 自退）
+| 数据 | 位置 | 格式 | 更新频率 | 说明 |
+|------|------|------|---------|------|
+| **候选池** | `data/pool/pool_{date}.json` | `list[code]` | 每日1次(开盘) | 50-200亿主板非ST非次新，~1100只 |
+| **栈(待评分)** | `data/queue/queue.json` | `list[{code,pct_chg,speed,ts}]` | 每分钟覆写 | 内存为主，文件做持久化(防重启丢失) |
+| **信号池(评分结果)** | `data/signals/signals.json` | `list[{code,scores,total,ts}]` | 每次评分追加 | 供复盘/飞书推送读取 |
+| **推送记录** | `data/pushed/{datetime}.json` | `list[{code,scores,total}]` | 推送时写入 | 沿用现有格式 |
 
-`plays/watchdog/`。60s 轮询，数据走 ws_daemon 共享内存（零 HTTP）：
+## 模块拆分
+
+### 1. pool_builder.py — 候选池构建（每日1次）
 
 ```
-每轮每股：realtime_row(L1 快照 + 日级特征 + 面板维度分)
-  → compute_factor_scores（16 实时因子 + 同一 XGBoost 实时打分）
-  → check_entry（实时模型分 ≥40 + L1 盘口确认）
-  → watching →(信号满 30s 仍触发)→ entered →(check_exit)→ 移除
+输入: 无（自动从 daily_basic 拉取）
+输出: data/pool/pool_{date}.json
+流程:
+  1. call_tushare('daily_basic') — 全市场，20积分
+  2. 过滤: 主板(00/60) + 非ST + 非次新(>120天) + 市值50-200亿
+  3. 写入 pool.json
 ```
 
-- **surge 票静默**：只发【surge】入场/出场，触发/异常不推；盘后零信号汰换（entered 保留）
-- **时间语义真实化**：netflow 采样 ≥60s/点（10 点≈10 分钟窗）、入场确认按信号满 30s、
-  时间止损按 entry_at 真实持仓分钟
-- **netflow 300s 节流**（jvQuant REST，资金流向是累计值）
-- 上限：手动 20 / surge 无上限
+**单测**: `tests/pipeline/test_pool_builder.py`
+- ✓ 返回list且>=500只
+- ✓ 不含ST股
+- ✓ 不含创业板/科创板/北交所
+- ✓ 市值在50-200亿区间
 
-## 五、pool_builder（全市场主板）
+### 2. stack.py — 待评分栈管理
 
-`data/pool/pool_{date}.json`：主板(00/60) + 非 ST + 上市满 120 天，**无市值带**
-（2026-07-25 取消 50-300 亿，1369→3032 只；小票是首板/连板主力）。
-用途：surge 名称映射 + ad-hoc 流程。
+```
+class ScoreStack:
+    属性:
+      items: dict[code → {pct_chg, speed, ts}]
+      prev_pct: dict[code → 上次pct_chg]  # 用于计算涨速
+    
+    方法:
+      update(quotes: dict[code → batch_quote]):
+        遍历quotes:
+          涨幅<=0 → items剔除(死票)
+          新code(涨幅>0) → 入栈
+          已存code → 更新涨幅+转速
+        
+        for each item:
+          speed = pct_chg - prev_pct[code]
+          score = pct_chg * 0.3 + speed * 0.7
+        
+        按score降序排序
+        prev_pct = 本轮涨幅
+      
+      pop_top(n: int) → list[code]:
+        从栈顶取评分（不移除，下轮重排）
+      
+      to_json() / from_json():
+        持久化/恢复
+```
 
-## 六、评分体系
+**单测**: `tests/pipeline/test_stack.py`
+- ✓ 涨幅>0的票入栈
+- ✓ 涨幅<=0的票踢出
+- ✓ 涨速计算正确
+- ✓ 排序按 score = pct*0.3 + speed*0.7
+- ✓ JSON序列化/反序列化
+- ✓ 空栈pop_top返回空list
 
-- **模型分（唯一决策依据）**：XGBoost，64 特征 hit-only（blend_hit=1.0）
-- **五维度分**：降级为 64 特征中的 5 个普通输入（各占 ~1.4% 重要性），
-  不再用于选股展示；推送卡片不展示维度分
-- **加权总分**：已删除（旧 _weighted_total_score，从未进过训练）
+### 3. scanner.py — 每分钟行情扫描（替代旧 scan_surge）
 
-## 数据源约束
+```
+每60秒循环:
+  1. 读 pool.json
+  2. ths.get_batch_quotes(pool) → ~19s
+  3. 传给 stack.update()
+```
 
-| 场景 | 数据源 | 说明 |
-|------|--------|------|
-| 实时行情（surge/ad-hoc） | ths_client realhead | Cookie 直连，并发 get_batch_quotes_fast |
-| 盯盘实时（watchdog） | jvQuant WS | ws_daemon 独占，共享内存快照（≤400 只） |
-| 日线/基本面/竞价 | Tushare | 按 trade_date 全量，**禁逐股** |
-| 资金流向（watchdog） | jvQuant REST | 300s 节流 |
+**单测**: `tests/pipeline/test_scanner.py`
+- ✓ batch_quotes 返回1100只以上
+- ✓ 每只含 pct_chg 字段
+- ✓ 连接失败时降级（保留上次数据继续运行）
 
-## 定时任务（hermes cron）
+### 4. pipeline.py — 主循环
 
-| 任务 | 时间(工作日) | 说明 |
-|------|------|------|
-| panel-builder-nightly | 00:01 | 全市场面板 |
-| concept-refresh | 00:30 | 概念缓存增量 |
-| ws-daemon | 08:55 | WS 守护（15:00 自退） |
-| watchdog-day | 09:20 | 盯盘引擎（15:05 自退） |
-| pipeline-morning | 09:30 | 早盘评分推送（一次性） |
-| surge-scanner | 09:30 | surge daemon（pid 守卫防重） |
-| review/closing | 18:00 | 复盘 |
-| wiki-compile | 20:00 | 归档 + git push |
+```
+1. pool_builder 初始化(如pool不存在或过期)
+2. 恢复上次的queue.json
+3. while True:
+   a. batch_quotes → stack.update()
+   b. 评分线程从stack取20只 → 评分 → signals.json追加
+   c. if signals有符合阈值的 → 推送 → pushed.json
+   d. 覆写queue.json
+   e. sleep(60秒)
+```
 
-## 已废弃（2026-07-25 重构删除）
+**单测**: `tests/pipeline/test_pipeline.py`
+- ✓ 主循环可启动/停止
+- ✓ 评分线程不阻塞扫描
+- ✓ 崩溃后能从queue.json恢复
 
-- pipeline 常驻 daemon + 心跳/pidfile（systemd 已 disable）
-- 旧扫描栈路径（_run_one_round/stage1_rough/stage2_deep/_raw_score/加权总分）
-- 分钟 K 相关（klines 形参、minute_momentum——从未使用）
-- T-1 预取缓存、WS 直连残留、时间模拟
-- surge≥45 推送分支、每轮/每日限量、SURGE_MAX_WATCH
+### 5. filter.py — 简化（只保留实时规则）
+
+原7条规则拆分：
+- 规则1(ST)/2(次新)/3(板块)/5(市值) → 移到 pool_builder
+- 规则6(换手率) → 旧T-1数据，全部弃用（候选池已50-200亿起步）
+- 规则4(停牌) → batch_quotes无数据自动忽略
+- 规则7(一字板) → 保留，从实时涨幅+换手判断
+
+```python
+def filter_realtime(code: str, quote: dict) -> tuple[bool, str]:
+    \"\"\"实时过滤，只保留一字板判断\"\"\"
+    pct = float(quote.get('pct_chg',0) or 0)
+    turnover = float(quote.get('turnover',0) or 0)
+    if pct >= 9.5 and turnover < 0.5:
+        return True, '一字板'
+    if pct <= -9.5 and turnover < 0.5:
+        return True, '一字跌停'
+    return False, ''
+```
+
+**单测**: `tests/pipeline/test_filter.py`
+- ✓ 一字板(涨幅>9.5%+换手<0.5%)被过滤
+- ✓ 正常涨停(涨幅>9.5%+换手>0.5%)不被过滤
+- ✓ 涨幅不足5%不被过滤
+
+## 数据流全景
+
+```
+pool_builder.py (每日1次, 开盘, 20积分)
+  → data/pool/pool_20260710.json (1100只)
+
+[每分钟循环]
+  scanner:
+    batch_quotes(1100只) → 19s
+       ↓
+  stack.py:
+    更新栈 → 去重/涨速排序/死票淘汰
+       ↓
+       ├── 队列有空? → 取20只 → 评分模块 → signals.json
+       └── 队列忙? → 跳过评分，继续下一轮扫描
+
+signal_pusher (独立逻辑，读signals.json):
+  筛选total_score >= 55的 → 推送飞书 → pushed.json
+```
+
+## 系统服务
+
+```
+systemd pipeline-daemon.service:
+  Type=simple
+  ExecStart=python3 plays/limit_up/pipeline.py --daemon
+  WorkingDirectory=/root/maneki-agent
+  开机自启
+  崩溃自动重启(Restart=always)
+```
+
+## 删除项
+
+- cron job: `maneki-morning-*`, `maneki-afternoon-*`（pipeline cron）
+- `data/scan_cache.json`
+- pipeline.py 中 scan_surge() 热门榜逻辑
+- filter.py 中 Tushare daily_basic 逐股查询（改为 pool_builder 一次搞定）
+
+## 不变项
+
+- `strategies/` 评分维度 — 不变
+- `score.py` / `total.py` 聚合逻辑 — 不变
+- `backtest/` 回测框架 — 不变
+- `factors/` 因子 — 不变
+- `data/pushed/` 推送格式 — 不变
+- 飞书推送卡片格式 — 不变
