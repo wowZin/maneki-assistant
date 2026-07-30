@@ -1,0 +1,26 @@
+[
+  {
+    "code": "002534.SZ",
+    "name": "西子洁能",
+    "direction": "买入",
+    "price": 13.81,
+    "shares": 100,
+    "amount": 1381.0,
+    "time": "2026-07-30 13:16:32",
+    "reason": "信号: vwap_break",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  },
+  {
+    "code": "600661.SH",
+    "name": "昂立教育",
+    "direction": "买入",
+    "price": 8.48,
+    "shares": 100,
+    "amount": 848.0,
+    "time": "2026-07-30 13:16:32",
+    "reason": "信号: volume_surge",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  }
+]

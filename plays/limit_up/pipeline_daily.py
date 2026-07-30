@@ -1,38 +1,43 @@
 #!/usr/bin/env python3
-"""每日预测常驻进程。
+"""每日预测守护进程 — 全内置版。
 
 时间线：
-  00:30  更新概念缓存 → 评分(五维度+模型) → 推送
-  09:26  获取竞价数据 → 重评 → Top5推送
+  00:30  概念缓存 → 面板构建（panel_builder）
+  09:26  竞价刷新面板 → 模型评分（XGBoost 64特征）→ 推送
   期间   sleep
 
-强制模式：python3 pipeline_daily.py --force
+生产管线复用: _refresh_panel_auction + morning_pass 直接从 pipeline.py 调用。
+面板构建通过 subprocess 执行 panel_builder.py。
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import signal
+import subprocess
 import sys
 import time
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 PLAY_DIR = Path(__file__).resolve().parent
-DATA_DIR = PLAY_DIR / "data"
+PANEL_DIR = PROJECT_DIR / "wiki" / "raw" / "limit-up" / "panel"
 LOG_DIR = PROJECT_DIR / "logs"
-LOG_DIR.mkdir(parents=True, exist_ok= True)
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, str(PROJECT_DIR))
 
-from plays.limit_up.utils import is_trading_time
-from scripts.tu_share import call_tushare
+from plays.limit_up.utils import _is_trade_day
 
 _running = True
 _FORCE = False
+
+# ── 今日步骤完成标记（防同一时间段重复跑）──
+_done_concept = False
+_done_panel = False
+_done_morning = False
 
 
 def log(msg: str):
@@ -48,144 +53,102 @@ def _signal_handler(sig, frame):
     _running = False
 
 
-def _is_trade_day(date_str: str) -> bool:
-    try:
-        r = call_tushare("trade_cal", {"cal_date": date_str}, "is_open")
-        items = r.get("data", {}).get("items", [])
-        return items and items[0][0] == 1 if items else False
-    except Exception as e:
-        log(f"交易日判断失败: {e}")
-        return False
+# ═══════════════════════════════════════════════
+# 步骤 1: 概念缓存
+# ═══════════════════════════════════════════════
 
-
-# ── 步骤 1: 概念缓存 ──
 
 def step_concept_cache():
+    global _done_concept
     log("[00:30] 加载概念缓存...")
     from plays.limit_up.strategies import factor_ctx
     cd, cm = factor_ctx.load_concept_data_from_cache()
     log(f"  概念行情 {len(cd)} 行, 成分股 {len(cm)} 行 ✓")
+    _done_concept = True
 
 
-# ── 步骤 2: 评分（复用 pipeline 评分逻辑） ──
+# ═══════════════════════════════════════════════
+# 步骤 2: 面板构建（内置，不依赖外部 cron）
+# ═══════════════════════════════════════════════
 
-def step_score(trade_date: str, is_auction: bool = False):
-    """全量评分：构建候选池 → 五维度评分 → 模型分 → 推送。"""
-    tag = "竞价" if is_auction else "凌晨"
-    log(f"[{tag}] 开始全量评分...")
 
-    # 1. 候选池：从 stock_basic 拉主板股
-    from scripts.tu_share import call_tushare as ts
-    basic = ts("stock_basic", {}, "ts_code,name,list_date")
-    items = basic.get("data", {}).get("items", [])
-    fields = basic.get("data", {}).get("fields", [])
+def step_build_panel(today: str):
+    """执行 panel_builder.py 构建今日面板，供 09:26 评分使用。"""
+    global _done_panel
+    log("[00:30+] 开始构建面板...")
 
-    candidates = []
-    for row in items:
-        r = dict(zip(fields, row))
-        code = r["ts_code"]
-        pure = code.split(".")[0]
-        if not pure.startswith(("00", "60")):
-            continue
-        name = r.get("name", "") or ""
-        if "ST" in name or "*ST" in name:
-            continue
-        candidates.append({"code": code, "name": name})
+    builder = str(PLAY_DIR / "panel_builder.py")
+    t0 = time.time()
 
-    log(f"[{tag}] 候选池 {len(candidates)} 只")
+    proc = subprocess.run(
+        [sys.executable, builder],
+        cwd=str(PROJECT_DIR),
+        capture_output=True, text=True, timeout=900,
+    )
 
-    # 2. 分批评分（一次 20 只，避免太慢）
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-    from plays.limit_up.strategies.fundamental import score_fundamental
-    from plays.limit_up.strategies.technical import score_technical
-    from plays.limit_up.strategies.fundflow import score_fundflow
-    from plays.limit_up.strategies.sentiment import score_sentiment
-    from plays.limit_up.strategies.shortterm import score_shortterm
+    elapsed = time.time() - t0
+    for line in proc.stdout.splitlines():
+        if any(kw in line for kw in ("保存", "完成", "error", "失败", "✓", "⚠", "预评")):
+            log(f"  [panel] {line.strip()}")
+    if proc.stderr:
+        for line in proc.stderr.splitlines():
+            log(f"  [panel:err] {line.strip()}")
+    if proc.returncode != 0:
+        log(f"⚠️ 面板构建异常，退出码 {proc.returncode}（耗时 {elapsed:.0f}s）")
+    else:
+        panel_file = PANEL_DIR / f"{today}.parquet"
+        if panel_file.exists():
+            sz = panel_file.stat().st_size
+            log(f"  面板构建完成 ✓ {panel_file.name} ({sz/1024:.0f}KB, {elapsed:.0f}s)")
+            _done_panel = True
+        else:
+            log(f"⚠️ 面板构建完成但文件不存在: {panel_file}")
 
-    all_results = []
-    batch_size = 20
-    for i in range(0, len(candidates), batch_size):
-        batch = candidates[i:i + batch_size]
-        batch_results = []
-        with ThreadPoolExecutor(max_workers=5) as pool:
-            futures = {}
-            for s in batch:
-                code = s["code"]
-                fn_map = {
-                    "fundamental": score_fundamental,
-                    "technical": score_technical,
-                    "fundflow": score_fundflow,
-                    "sentiment": score_sentiment,
-                    "shortterm": score_shortterm,
-                }
-                for dim, fn in fn_map.items():
-                    futures[pool.submit(fn, code)] = (code, dim, s["name"])
 
-            scores_by_code = {}
-            for future in as_completed(futures):
-                code, dim, name = futures[future]
-                if code not in scores_by_code:
-                    scores_by_code[code] = {"code": code, "name": name, "scores": {}, "reasons": {}}
-                try:
-                    s, r = future.result()
-                    scores_by_code[code]["scores"][dim] = float(s)
-                    scores_by_code[code]["reasons"][dim] = str(r)
-                except Exception as e:
-                    scores_by_code[code]["scores"][dim] = 0.0
-                    scores_by_code[code]["reasons"][dim] = f"err: {e}"
+# ═══════════════════════════════════════════════
+# 步骤 3: 早盘评分（复用生产管线）
+# ═══════════════════════════════════════════════
 
-        for code, data in scores_by_code.items():
-            # Top3 总分
-            weights = {"fundamental": 0.5, "technical": 0.5,
-                       "fundflow": 1.5, "sentiment": 1.0, "shortterm": 0.5}
-            dc = [(data["scores"].get(d, 0), weights.get(d, 1.0)) for d in weights]
-            dc.sort(key=lambda x: x[0] * x[1], reverse=True)
-            top3 = dc[:3]
-            total = sum(s * w for s, w in top3) / sum(w for _, w in top3) if sum(w for _, w in top3) > 0 else 0
-            data["total"] = round(total, 2)
-            data["top3_score"] = round(total, 1)
-            batch_results.append(data)
 
-        all_results.extend(batch_results)
-        log(f"[{tag}]  进度 {min(i + batch_size, len(candidates))}/{len(candidates)}")
+def step_morning_score(today: str):
+    """竞价刷新面板 → XGBoost 模型评分 → 推送。"""
+    global _done_morning
+    log("[09:26] 开始早盘评分流程...")
 
-    # 3. 保存 analysis
-    ts_str = datetime.now().strftime("%Y%m%d_%H%M")
-    analysis_dir = DATA_DIR / "analysis"
-    analysis_dir.mkdir(exist_ok=True)
-    path = analysis_dir / f"{ts_str}.json"
-    with open(path, "w") as f:
-        json.dump(all_results, f, ensure_ascii=False, indent=2)
-    log(f"[{tag}]  分析已保存 → {path.name} ({len(all_results)} 只)")
+    # 1. 等面板就绪（panel 应在步骤 2 已建好，最多等 5 分钟余量）
+    panel_file = PANEL_DIR / f"{today}.parquet"
+    deadline = time.time() + 300
+    while not panel_file.exists() and time.time() < deadline:
+        log("  面板尚未就绪，等待 10s...")
+        time.sleep(10)
 
-    # 4. Top5 推送
-    sorted_results = sorted(all_results, key=lambda x: x.get("total", 0), reverse=True)
-    top5 = sorted_results[:5]
-    log(f"[{tag}]  推送 Top5:")
-    for r in top5:
-        log(f"    {r['code']} {r['name']:<8} total={r['total']:.1f}")
+    if not panel_file.exists():
+        log("❌ 面板 5 分钟后仍未就绪，跳过早盘评分")
+        return
 
+    # 2. 竞价数据刷新面板（失败不阻断，面板有 T-1 夜间值兜底）
     try:
-        from plays.limit_up.pipeline import push_feishu
-        push_feishu(top5)
-        log(f"[{tag}]  已推送飞书")
+        from plays.limit_up.pipeline import _refresh_panel_auction
+        _refresh_panel_auction(today)
     except Exception as e:
-        log(f"[{tag}]  推送失败: {e}")
+        log(f"⚠️ 竞价刷新异常（不阻断）: {e}")
+
+    # 3. morning pass — 模型评分 + 推送
+    try:
+        from plays.limit_up.pipeline import morning_pass
+        morning_pass(today)
+        log("[09:26+] 早盘评分完成 ✓")
+    except Exception as e:
+        tb = traceback.format_exc(limit=3)
+        log(f"❌ 早盘评分失败: {e}\n{tb}")
+
+    _done_morning = True
 
 
-# ── 步骤 3: 竞价重评 ──
+# ═══════════════════════════════════════════════
+# 主循环
+# ═══════════════════════════════════════════════
 
-def step_auction(trade_date: str):
-    """获取竞价数据，重跑评分。"""
-    log("[09:26] 拉取竞价数据...")
-    resp = call_tushare("stk_auction", {"trade_date": trade_date},
-                        "ts_code,vol,amount,turnover_rate,price,pre_close")
-    items = resp.get("data", {}).get("items", [])
-    log(f"  竞价 {len(items)} 条")
-    step_score(trade_date, is_auction=True)
-
-
-# ── 主循环 ──
 
 def main_loop():
     global _running, _FORCE
@@ -198,8 +161,8 @@ def main_loop():
         log("[强制模式] 忽略时间节点，按序执行后退出")
         td = datetime.now().strftime("%Y%m%d")
         step_concept_cache()
-        step_score(td)
-        step_auction(td)
+        step_build_panel(td)
+        step_morning_score(td)
         log("[强制模式] 全部完成")
         return
 
@@ -209,21 +172,32 @@ def main_loop():
         hhmm = now.hour * 100 + now.minute
 
         if not _is_trade_day(td):
-            time.sleep(3600)
+            _done_concept = False
+            _done_panel = False
+            _done_morning = False
+            time.sleep(1800)
             continue
 
-        # 00:30 概念 + 评分
-        if 30 <= hhmm < 100 and now.hour == 0:
+        # 00:30 概念缓存（只跑一次）
+        if 30 <= hhmm < 100 and now.hour == 0 and not _done_concept:
             step_concept_cache()
-            step_score(td)
-            log("[00:30+] 凌晨评分完成，等待 09:26")
             time.sleep(60)
 
-        # 09:26 竞价重评
-        if 926 <= hhmm < 930 and now.hour == 9:
-            step_auction(td)
-            log("[09:26+] 竞价评分完成，今日工作结束")
+        # 概念完后立即建面板（只跑一次）
+        if 30 <= hhmm < 300 and now.hour == 0 and _done_concept and not _done_panel:
+            step_build_panel(td)
             time.sleep(60)
+
+        # 09:26 早盘评分（只跑一次）
+        if 926 <= hhmm < 935 and now.hour == 9 and _done_panel and not _done_morning:
+            step_morning_score(td)
+            time.sleep(60)
+
+        # 收盘后重置标记（跨天就绪）
+        if hhmm >= 1500:
+            _done_concept = False
+            _done_panel = False
+            _done_morning = False
 
         time.sleep(30)
 

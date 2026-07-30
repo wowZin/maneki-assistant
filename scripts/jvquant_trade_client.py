@@ -8,7 +8,9 @@
     client.buy("600519", "贵州茅台", 1572.12, 100)  # 指定价
 
 安全策略:
-    密码从 ~/.ctp_pwd 读取（chmod 600）:
+    - 下单前自动检查可用资金是否够、是否已持仓
+    - 登录失效自动重登录重试
+    - 密码从 ~/.ctp_pwd 读取（chmod 600）:
         echo "CTP_PWD=你的密码" > ~/.ctp_pwd
         chmod 600 ~/.ctp_pwd
 
@@ -31,6 +33,7 @@ import json
 import logging
 import os
 import sys
+import time
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -61,6 +64,34 @@ def _get_password() -> str:
         except Exception:
             pass
     return ""
+
+
+# ── 持仓缓存（防频繁 API 调用）──
+
+_HOLD_CACHE: dict = {}          # 最后查询的 hold 结果
+_HOLD_CACHE_TS: float = 0.0    # 缓存更新时间
+_HOLD_CACHE_TTL = 5.0           # 缓存有效期 5s
+
+
+def _get_hold(client) -> dict:
+    """带缓存的 check_hold，5s 内不重复请求"""
+    global _HOLD_CACHE, _HOLD_CACHE_TS
+    now = time.time()
+    if now - _HOLD_CACHE_TS < _HOLD_CACHE_TTL and _HOLD_CACHE:
+        return _HOLD_CACHE
+    try:
+        _HOLD_CACHE = client.check_hold()
+        _HOLD_CACHE_TS = now
+    except Exception as e:
+        logger.warning("查询持仓异常: %s", e)
+        _HOLD_CACHE = {}
+    return _HOLD_CACHE
+
+
+def _invalidate_hold_cache():
+    """下单后主动失效缓存（下次查询强制刷新）"""
+    global _HOLD_CACHE_TS
+    _HOLD_CACHE_TS = 0.0
 
 
 # ── 全局单例 ──
@@ -157,24 +188,128 @@ def best_sell_price(code: str, vol: int = 100) -> tuple[float, str]:
     return 0.0, "无数据"
 
 
-# ── 交易接口（自动定价）──
+# ── 交易接口（含余额/持仓检查 + 自动重登录）──
 
 def buy(code: str, name: str, price: float | str = None, vol: int | str = 100) -> dict:
-    """买入证券，price=None 时从10档算最优价"""
+    """买入证券，自动检查可用资金和已持仓情况。
+
+    price=None 时从10档算最优价。
+    登录失效自动调 login() 重试一次。
+    """
+    vol_i = int(vol)
+    # 自动定价
     if price is None:
-        price, reason = best_buy_price(code, int(vol))
-        print(f"  [📡] 买入 {code} {name} {vol}股 最优价={price} ({reason})")
+        price_f, _reason = best_buy_price(code, vol_i)
+        print(f"  [📡] 买入 {code} {name} {vol_i}股 最优价={price_f} ({_reason})")
+    else:
+        price_f = float(price)
+
+    if price_f <= 0:
+        return {"code": "-1", "message": f"无法获取{code}有效价格"}
+
     client = get_trade_client()
-    return client.buy(code=code, name=name, price=str(price), vol=str(vol))
+
+    # ── 前置检查：可用资金 + 是否已持仓 ──
+    hold = _get_hold(client)
+    hold_code = _short(code)
+
+    # 是否已持仓
+    if hold.get("hold_list"):
+        for h in hold["hold_list"]:
+            if h.get("code") == hold_code:
+                return {"code": "-2", "message": f"已持仓 {hold_code}({name})，禁止重复买入"}
+
+    # 可用资金是否够
+    usable = float(hold.get("usable", "0"))
+    estimated_cost = price_f * vol_i
+    if usable < estimated_cost:
+        return {"code": "-3", "message": f"可用资金不足: 需{estimated_cost:.0f} 可用{usable:.0f}"}
+
+    # ── 发单 + 失效缓存 ──
+    try:
+        r = client.buy(code=code, name=name, price=str(price_f), vol=str(vol_i))
+    except Exception as e:
+        logger.warning("买入异常(尝试重登录): %s", e)
+        # 重登录重试
+        try:
+            client.login()
+            time.sleep(0.5)
+            r = client.buy(code=code, name=name, price=str(price_f), vol=str(vol_i))
+        except Exception as e2:
+            logger.error("重登录后买入仍失败: %s", e2)
+            return {"code": "-4", "message": f"买入失败(重登录后): {e2}"}
+
+    # 下单失败也尝试重登录
+    if not r or r.get("code", "") != "0":
+        logger.warning("买入返回异常(code=%s), 尝试重登录重试", r.get("code", "?") if r else "空")
+        try:
+            client.login()
+            time.sleep(0.5)
+            r = client.buy(code=code, name=name, price=str(price_f), vol=str(vol_i))
+        except Exception as e2:
+            logger.error("重登录后买入仍异常: %s", e2)
+
+    _invalidate_hold_cache()
+    return r
 
 
 def sale(code: str, name: str, price: float | str = None, vol: int | str = 100) -> dict:
-    """卖出证券，price=None 时从10档算最优价"""
+    """卖出证券，自动检查持仓数量。
+
+    price=None 时从10档算最优价。
+    登录失效自动调 login() 重试一次。
+    """
+    vol_i = int(vol)
+    # 自动定价
     if price is None:
-        price, reason = best_sell_price(code, int(vol))
-        print(f"  [📡] 卖出 {code} {name} {vol}股 最优价={price} ({reason})")
+        price_f, _reason = best_sell_price(code, vol_i)
+        print(f"  [📡] 卖出 {code} {name} {vol_i}股 最优价={price_f} ({_reason})")
+    else:
+        price_f = float(price)
+
+    if price_f <= 0:
+        return {"code": "-1", "message": f"无法获取{code}有效价格"}
+
     client = get_trade_client()
-    return client.sale(code=code, name=name, price=str(price), vol=str(vol))
+
+    # ── 前置检查：确认持仓可用数量 ──
+    hold = _get_hold(client)
+    hold_code = _short(code)
+    usable_vol = 0
+    if hold.get("hold_list"):
+        for h in hold["hold_list"]:
+            if h.get("code") == hold_code:
+                usable_vol = int(h.get("usable_vol", "0"))
+                break
+
+    if usable_vol < vol_i:
+        return {"code": "-2", "message": f"持仓不足: {hold_code}({name}) 可用{usable_vol}股，需{vol_i}股"}
+
+    # ── 发单 + 失效缓存 ──
+    try:
+        r = client.sale(code=code, name=name, price=str(price_f), vol=str(vol_i))
+    except Exception as e:
+        logger.warning("卖出异常(尝试重登录): %s", e)
+        try:
+            client.login()
+            time.sleep(0.5)
+            r = client.sale(code=code, name=name, price=str(price_f), vol=str(vol_i))
+        except Exception as e2:
+            logger.error("重登录后卖出仍失败: %s", e2)
+            return {"code": "-4", "message": f"卖出失败(重登录后): {e2}"}
+
+    # 下单失败也尝试重登录
+    if not r or r.get("code", "") != "0":
+        logger.warning("卖出返回异常(code=%s), 尝试重登录重试", r.get("code", "?") if r else "空")
+        try:
+            client.login()
+            time.sleep(0.5)
+            r = client.sale(code=code, name=name, price=str(price_f), vol=str(vol_i))
+        except Exception as e2:
+            logger.error("重登录后卖出仍异常: %s", e2)
+
+    _invalidate_hold_cache()
+    return r
 
 
 def cancel(order_id: str) -> dict:
@@ -189,7 +324,8 @@ def check_order() -> dict:
 
 def check_hold() -> dict:
     client = get_trade_client()
-    return client.check_hold()
+    r = _get_hold(client)
+    return r
 
 
 # ── CLI ──
@@ -215,6 +351,7 @@ def cli():
     cp.add_argument("order_id")
     sub.add_parser("check_order", help="查询委托")
     sub.add_parser("check_hold", help="查询持仓")
+    sub.add_parser("balance", help="查询可用资金")
 
     args = parser.parse_args()
     if not args.cmd:
@@ -256,6 +393,12 @@ def cli():
         elif args.cmd == "check_hold":
             r = check_hold()
             print(f"持仓: {r}")
+        elif args.cmd == "balance":
+            r = check_hold()
+            print(f"总资产: {r.get('total', '?')}")
+            print(f"可用资金: {r.get('usable', '?')}")
+            print(f"当日盈亏: {r.get('day_earn', '?')}")
+            print(f"持仓盈亏: {r.get('hold_earn', '?')}")
     except Exception as e:
         print(f"错误: {e}", file=sys.stderr)
 

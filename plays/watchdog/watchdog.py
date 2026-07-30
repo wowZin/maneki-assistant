@@ -595,13 +595,43 @@ class WatchdogEngine:
                         st.entry_pushed_date = now.strftime("%Y%m%d")
                         self._save_state()
                         _surge_tag = "【surge】" if st.source == "surge" else ""
-                        # 入场通知已关闭，trader 负责实盘下单通知
-                        # _push_feishu(
-                        #     f"📈 {st.name}({code}) 入场!{_surge_tag}\n"
-                        #     f"入场价: {last:.2f}\n"
-                        #     f"信号: {st.signal_reason}\n"
-                        #     f"VWAP: {vwap:.2f}"
-                        # )
+                        # 下单 + 飞书通知
+                        try:
+                            from scripts.jvquant_trade_client import buy
+                            short = _short(code)
+                            r = buy(short, st.name)
+                            code_r = r.get("code", "?")
+                            if code_r in ("-2", "-3"):
+                                # 风控拒绝：已持仓 / 资金不足，回退状态继续盯盘
+                                logger.warning(f"{code} 跳过买入: {r.get('message', r)}")
+                                st.status = "watching"
+                                st.signal_type = ""
+                                st.signal_reason = ""
+                                st.signal_at = ""
+                                self._save_state()
+                            elif code_r == "0":
+                                order_id = r.get('order_id', '?')
+                                _push_feishu(
+                                    f"📈 {st.name}({code}) 入场{_surge_tag}\n"
+                                    f"入场价: {last:.2f}\n"
+                                    f"信号: {st.signal_reason}\n"
+                                    f"VWAP: {vwap:.2f}\n"
+                                    f"order_id: {order_id}"
+                                )
+                            else:
+                                logger.warning(f"{code} 下单返回异常: code={code_r} msg={r.get('message', r)}")
+                                st.status = "watching"
+                                st.signal_type = ""
+                                st.signal_reason = ""
+                                st.signal_at = ""
+                                self._save_state()
+                        except Exception as e:
+                            logger.error(f"{code} 下单异常: {e}")
+                            st.status = "watching"
+                            st.signal_type = ""
+                            st.signal_reason = ""
+                            st.signal_at = ""
+                            self._save_state()
                     else:
                         st.status = "watching"
                         st.signal_type = ""
@@ -628,13 +658,27 @@ class WatchdogEngine:
                     pnl_pct = (last / st.entry_price - 1) * 100
                     _surge_tag = "【surge】" if st.source == "surge" else ""
                     is_profit = "止盈" in exit_reason
-                    # 出场通知已关闭，trader 负责实盘下单通知
-                    # _push_feishu(
-                    #     f"{'💰' if is_profit else '🛑'} {st.name}({code}) {'止盈' if is_profit else '出场'}{_surge_tag}\n"
-                    #     f"{exit_reason}\n"
-                    #     f"入场: {st.entry_price:.2f} → 现价: {last:.2f}\n"
-                    #     f"盈亏: {pnl_pct:+.2f}% | 持仓{st.bars_held}轮"
-                    # )
+                    # 下单卖出 + 飞书通知
+                    try:
+                        from scripts.jvquant_trade_client import sale
+                        short = _short(code)
+                        r = sale(short, st.name)
+                        code_r = r.get("code", "?")
+                        if code_r == "-2":
+                            logger.warning(f"{code} 跳过卖出: {r.get('message', r)}")
+                        elif code_r == "0":
+                            order_id = r.get('order_id', '?')
+                            _push_feishu(
+                                f"{'💰' if is_profit else '🛑'} {st.name}({code}) {'止盈' if is_profit else '出场'}{_surge_tag}\n"
+                                f"{exit_reason}\n"
+                                f"入场: {st.entry_price:.2f} → 现价: {last:.2f}\n"
+                                f"盈亏: {pnl_pct:+.2f}%\n"
+                                f"order_id: {order_id}"
+                            )
+                        else:
+                            logger.warning(f"{code} 卖出返回异常: code={code_r} msg={r.get('message', r)}")
+                    except Exception as e:
+                        logger.error(f"{code} 卖出异常: {e}")
                     self.remove([code])
 
             self._save_state()

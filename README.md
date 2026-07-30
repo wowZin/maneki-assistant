@@ -1,10 +1,9 @@
 # Maneki Agent — A股量化策略系统
 
-A 股量化策略集合。当前包含 **涨停预测(limit_up)**、**买卖盯盘(watchdog)** 玩法，支持多玩法横向扩展。
+A 股量化策略集合。当前包含 **涨停预测(limit_up)**、**盘中异动扫描(surge)**、**买卖盯盘(watchdog)**，全 systemd 常驻进程。
 
 ```
-面板(00:01) → pipeline(09:30 一次性评分推送) → surge(09:35 每分钟发现)
-            → watchdog(09:20-15:05 盯盘信号) → 飞书
+daily(00:30→09:26) → surge(09:35-15:00) → watchdog(WS盯盘→信号→下单+飞书)
 ```
 
 ## 顶层结构
@@ -13,106 +12,155 @@ A 股量化策略集合。当前包含 **涨停预测(limit_up)**、**买卖盯�
 maneki-agent/
 ├── plays/                  ← 各玩法（垂直隔离，互不依赖）
 │   ├── limit_up/           ← 涨停预测
-│   └── watchdog/           ← 买卖盯盘
+│   ├── watchdog/           ← 买卖盯盘
+│   └── trading/            ← 交易执行
 ├── scripts/                ← 共享基础设施
 │   ├── tu_share.py          ← Tushare API 封装
-│   ├── ths_client.py        ← 同花顺 Cookie 直连（含并发批量 get_batch_quotes_fast）
+│   ├── ths_client.py        ← 同花顺 Cookie 直连（并发批量）
 │   ├── jvquant_client.py    ← jvQuant SQL 客户端（资金流/日内指标）
-│   ├── jvquant_ws_client.py ← jvQuant WebSocket 实时行情 (L1/L2/L10)
-│   └── ws_daemon.py         ← WS 守护（共享内存快照，cron 08:55 拉起）
-├── feishu_bot/             ← 飞书桥梁（只写 inbox，不决策）
-├── pipelines/              ← Claude SDK 管道（LLM 决策中枢）
-├── skills/                 ← LLM 行为定义
-├── wiki/                   ← 知识库（wiki/raw/limit-up/panel/ 为全市场面板）
-├── tests/                  ← 单测（真实 API 调用，禁止 mock）
+│   ├── jvquant_ws_client.py ← jvQuant WebSocket 实时行情
+│   ├── jvquant_trade_client.py ← 实盘下单（CTP 接口）
+│   └── ws_daemon.py         ← WS 守护（共享内存快照）
+├── feishu_bot/             ← 飞书桥梁
+├── wiki/                   ← 知识库
 └── .env                    ← 环境变量
 ```
 
+## 常驻进程（systemd 服务）
+
+| 服务 | 进程 | 职责 |
+|------|------|------|
+| `maneki-ws-daemon` | `ws_daemon.py` | jvQuant WebSocket 共享内存，供 watchdog 读实时行情 |
+| `maneki-daily` | `pipeline_daily.py` | 00:30 概念缓存 → 面板构建 → 09:26 竞价刷新+XGBoost评分+推送 |
+| `maneki-surge` | `surge_scanner.py --daemon` | 09:35-15:00 每60s THS扫描异动，主闸≥20/排雷路由，写state.json |
+| `maneki-watchdog` | `watchdog_daemon.py → watchdog.py` | 交易日 WS盯盘→信号检测→下单(jvquant_trade)+飞书通知 |
+| `maneki-pipe` | 飞书Bot | 飞书消息路由 |
+
+### 全天时间线
+
+```
+00:30  pipeline_daily      概念缓存加载 → 面板构建（逐只64特征×4988只）
+09:26  pipeline_daily      竞价刷新面板(stk_auction) → XGBoost评分(0.8s) → Top3+≥55推送
+09:35  surge_scanner       每60s: THS实时扫描池(~1100只) → 面板分≥20直通/排雷量比≥2
+                             → 通过的票写 state.json(source=surge) + signals/ + pushed/
+09:30  watchdog            每60s: 读 state.json → WS共享内存L1快照 → 信号检测
+      ~15:00               连续3轮确认入场 → 下单(buy) + 飞书通知
+                             止损/止盈/时间止损 → 卖出(sale) + 飞书通知
+15:00  watchdog            EOD 汰换（surge 零信号票移除）
+15:05  watchdog            引擎自退
+15:00  surge_scanner       收盘休眠到次日 09:35
+18:00  cron                收盘复盘
+20:00  cron                wiki 编译推送
+```
+
+### 数据流
+
+```
+daily XGBoost 模型分 (panel/{date}.parquet)
+  ↓
+surge_scanner 主闸≥20 + 排雷检查
+  ↓  写入 state.json (source="surge")
+watchdog.py 自动拾取
+  ↓  WS L1 实时监控 (60s一轮)
+连续3轮满足入场条件 + 30s确认
+  ↓
+jvquant_trade_client.buy() + 飞书通知
+  ↓
+止损/止盈 → sale() + 飞书通知
+```
+
 ## 涨停预测 (plays/limit_up)
-
-面板驱动四层架构：夜间全市场面板 → 早盘一次性评分推送 → 盘中 surge 发现 + watchdog 信号。
-无常驻评分进程（全部 hermes cron 拉起）。详见 `plays/limit_up/docs/architecture.md`。
-
-### 全日时间线
-
-```
-00:01  panel_builder   全市场面板 4993 只（T-1 64特征+五维度分）
-00:30  concept_cache   概念缓存增量
-08:55  ws_daemon       jvQuant WS 共享内存
-09:20  watchdog        盯盘引擎（cron 拉起，15:05 自退）
-09:30  pipeline        竞价刷面板 → XGBoost 全量评分 → Top3+≥55 推送（~4s）
-09:35  surge_scanner   每60s：扫描池(主闸≥20∪排雷) ~950只 → 5-9.8% 窗口
-                       → watchdog/analysis/pushed 三处写入
-15:00  watchdog        EOD 汰换（surge 零信号票移除）
-```
 
 ### 模块
 
 ```
 plays/limit_up/
-├── docs/                   ← 设计文档（与实现一一对应）
-├── strategies/             ← 五维度评分（已降级为模型普通特征）
-├── factors/                ← 因子库（XGBoost 模型分入口 factors/optimized/model_score.py）
-├── backtest/               ← 训练/回测（training.py / model.py / dataset.py）
-├── pipeline.py             ← 早盘一次性评分（cron 09:30，非常驻）
-├── surge_scanner.py        ← 盘中异动发现（每60s，先筛后拉）
-├── panel_builder.py        ← 全市场面板构建（cron 00:01）
-├── pool_builder.py         ← 候选池（全市场主板非ST满120天，无市值带 3032只）
-├── pusher.py               ← 推送判断（Top-N + ≥55 地板 + 9:30 时间闸）
-├── pipeline_feishu.py      ← ad-hoc 个股分析（飞书问股/手动）
-└── data/                   ← 运行时产出（analysis/pushed/signals/snapshot_log/pool）
+├── pipeline_daily.py        ← 常驻入口（00:30→09:26→面板→评分→推送）
+├── pipeline.py              ← 生产管线（被daily调用: 竞价刷新+模型评分+推送）
+├── panel_builder.py         ← 全市场面板构建（被daily调用）
+├── surge_scanner.py         ← 盘中异动扫描（独立常驻进程）
+├── pusher.py                ← 推送判断（Top-N + ≥55 + 评分提高重推）
+├── pipeline_feishu.py       ← ad-hoc 个股分析（飞书问股/手动）
+├── strategies/              ← 五维度评分（模型普通特征）
+├── factors/                 ← 因子库（XGBoost 模型分入口）
+├── backtest/                ← 训练/回测
+├── docs/                    ← 设计文档
+└── data/                    ← 运行时产出（analysis/pushed/signals/pool）
 ```
 
 ## 买卖盯盘 (plays/watchdog)
 
-- cron 09:20 拉起，内部 60s 轮询，15:05 自动退出（代码改动次日生效，无需手动重启）
-- 数据：ws_daemon 共享内存（零 HTTP）；每票每天一次 tushare 日线（120条）
-- 信号：realtime_row → 同一 XGBoost 实时打分（≥40）+ L1 盘口确认 → 入场
-  → 止损/止盈/回撤/时间（真实持仓分钟）出场
-- surge 票静默：只发【surge】入场/出场；盘后零信号汰换
-- 上限：手动 20 / surge 无上限
-- 详见 `plays/watchdog/docs/`
+```
+plays/watchdog/
+├── watchdog_daemon.py       ← 服务管理器，启停 watchdog.py 子进程
+├── watchdog.py              ← 引擎核心（WatchState+WatchdogEngine+扫描循环）
+├── watchdog_client.py       ← state.json 读写 CLI（盯/停/列表/清）
+├── signals.py               ← 入场/出场/异常信号判断
+├── indicators.py            ← 技术指标 (sma/atr/price_features)
+└── docs/                    ← 设计文档
+```
+
+- 数据：ws_daemon 共享内存 `/dev/shm/ws_snap.json`（零 HTTP）
+- 信号：实时因子分 + L1 盘口确认 → 连续3轮入场 → 30s确认 → 下单
+- 出场：止损-3% / 移动止损-2% / 止盈5%/8% / 时间止损60分钟
+- surge 票无上限，盘后零信号自动汰换
 
 ## 数据源
 
 | 场景 | 数据源 | 成本 |
 |------|--------|------|
-| 实时行情（surge/ad-hoc） | 同花顺 ths_client（并发批量） | 免费 |
+| 实时行情（surge） | 同花顺 ths_client（并发批量） | 免费 |
 | 盯盘实时（watchdog） | jvQuant WebSocket（ws_daemon 共享内存） | 免费 |
 | 资金流向（watchdog） | jvQuant REST（300s 节流） | 按量 |
-| 日线/基本面/竞价/涨停名单 | Tushare（按 trade_date 全量，禁逐股） | 积分 |
+| 日线/基本面/竞价/涨停 | Tushare（按 trade_date 全量） | 积分 |
 
-## 定时任务（hermes cron，无 systemd 常驻）
+## 服务管理
 
-| 任务 | 时间(工作日) |
-|------|------|
-| panel-builder-nightly | 00:01 |
-| concept-refresh | 00:30 |
-| ws-daemon | 08:55 |
-| watchdog-day | 09:20 |
-| pipeline-morning | 09:30 |
-| surge-scanner | 09:30（pid 守卫） |
-| toplist 龙虎榜简报 | 09:00 |
-| review 收盘复盘 | 18:00 |
-| wiki-compile | 20:00 |
+```bash
+# 状态查看
+systemctl status maneki-daily maneki-surge maneki-watchdog maneki-pipe
+
+# 日志查看
+journalctl -u maneki-daily -n 50 --no-pager
+journalctl -u maneki-surge -n 50 --no-pager
+tail -f /root/maneki-agent/logs/watchdog.log
+
+# 重新启动
+systemctl restart maneki-daily
+systemctl restart maneki-surge
+systemctl restart maneki-watchdog
+
+# 手动测试
+python3 plays/limit_up/pipeline_daily.py --force   # 手动跑一次全流程
+python3 plays/limit_up/surge_scanner.py --dry-run   # 预览 surge 路由决策
+```
+
+## 定时任务（hermes cron）
+
+| 任务 | 时间 | 说明 |
+|------|------|------|
+| maneki-closing-review | 18:00 周一至五 | 收盘复盘 |
+| wiki-compile | 20:00 周一至五 | wiki 编译推送git |
 
 ## 手动操作
 
 ```bash
-# 早盘评分（cron 自动，手动测试可用 --date）
-python3 plays/limit_up/pipeline.py --date 20260724
+# 飞书指令
+盯 000001.SZ   → 加入盯盘
+停 000001.SZ   → 移除盯盘
+盯盘列表       → 查看监控列表
+清盯盘         → 清空所有
 
-# surge 单次扫描（dry-run 不写 watchdog）
+# surge 预览（不下单不写文件）
 python3 plays/limit_up/surge_scanner.py --dry-run
 
-# 候选池构建
-python3 plays/limit_up/pool_builder.py
-
-# 盯盘指令：飞书发送 盯/停/盯盘列表/清盯盘
+# 盯盘状态查询
+python3 plays/watchdog/watchdog_client.py --status
+python3 plays/watchdog/watchdog_client.py --list
 ```
 
 ## 风险提示
 
 - 本系统仅供研究参考，不构成投资建议
 - 涨停预测受市场环境影响，历史表现不代表未来
-- 不得用于实际交易决策
+- 实盘交易风险自负

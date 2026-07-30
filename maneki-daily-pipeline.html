@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>maneki-daily Pipeline 逻辑图</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #020617;
+      color: #e2e8f0;
+      padding: 1rem;
+    }
+    .container { max-width: 960px; margin: 0 auto; }
+
+    h1 { font-size: 1.1rem; font-weight: 700; color: white; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; }
+    h1::before { content: ""; display: inline-block; width: 8px; height: 8px; background: #22d3ee; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .subtitle { color: #64748b; font-size: 0.75rem; margin-bottom: 1rem; padding-left: 1rem; }
+    .date-badge { font-size: 0.65rem; color: #475569; margin-left: auto; }
+
+    .section { margin-bottom: 1rem; }
+    .section-title { font-size: 0.8rem; font-weight: 600; color: #22d3ee; margin-bottom: 0.5rem; padding-bottom: 0.25rem; border-bottom: 1px solid #1e293b; }
+
+    .card { background: rgba(15,23,42,0.6); border: 1px solid #1e293b; border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 0.5rem; }
+    .card-title { font-size: 0.75rem; font-weight: 600; color: #94a3b8; margin-bottom: 0.5rem; }
+
+    /* Timeline */
+    .timeline { display: flex; align-items: center; gap: 0; background: rgba(15,23,42,0.4); border-radius: 0.5rem; padding: 0.5rem; border: 1px solid #1e293b; overflow-x: auto; }
+    .tl-item { display: flex; flex-direction: column; align-items: center; min-width: 80px; padding: 0.25rem 0.5rem; border-radius: 4px; position: relative; }
+    .tl-time { font-size: 0.65rem; font-weight: 600; color: #94a3b8; }
+    .tl-label { font-size: 0.6rem; color: white; text-align: center; line-height: 1.3; margin-top: 2px; }
+    .tl-arrow { color: #334155; font-size: 0.7rem; margin: 0 2px; }
+    .tl-blue { background: rgba(8,51,68,0.5); }
+    .tl-green { background: rgba(6,78,59,0.4); }
+    .tl-purple { background: rgba(76,29,149,0.4); }
+    .tl-orange { background: rgba(120,53,15,0.3); }
+
+    /* Flow boxes */
+    .flow-row { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin-bottom: 0.5rem; }
+    .flow-box {
+      padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.6rem; line-height: 1.4;
+      border-width: 1px; border-style: solid; text-align: center;
+    }
+    .flow-box span { display: block; color: #94a3b8; font-size: 0.55rem; }
+    .fb-left { background: rgba(8,51,68,0.4); border-color: #22d3ee; }
+    .fb-mid { background: rgba(6,78,59,0.4); border-color: #34d399; }
+    .fb-right { background: rgba(76,29,149,0.4); border-color: #a78bfa; }
+    .fb-out { background: rgba(251,146,60,0.3); border-color: #fb923c; }
+    .fb-warn { background: rgba(136,19,55,0.4); border-color: #fb7185; }
+    .fb-data { background: rgba(120,53,15,0.25); border-color: #fbbf24; }
+    .arrow { color: #475569; font-size: 0.7rem; }
+
+    /* Code block */
+    .code { background: rgba(0,0,0,0.4); border: 1px solid #1e293b; border-radius: 4px; padding: 0.6rem; font-size: 0.55rem; line-height: 1.6; overflow-x: auto; margin-top: 0.5rem; }
+    .code .kw { color: #22d3ee; }
+    .code .cm { color: #64748b; }
+    .code .fn { color: #34d399; }
+
+    /* Table */
+    .params { width: 100%; border-collapse: collapse; font-size: 0.6rem; }
+    .params th { text-align: left; color: #64748b; padding: 0.25rem 0.5rem; border-bottom: 1px solid #1e293b; font-weight: 600; }
+    .params td { padding: 0.25rem 0.5rem; border-bottom: 1px solid rgba(30,41,59,0.5); }
+    .params tr:last-child td { border-bottom: none; }
+    .good { color: #34d399; }
+    .bad { color: #fb7185; }
+    .warn { color: #fbbf24; }
+
+    .fix-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem; }
+    .fix-col { padding: 0.5rem; border-radius: 4px; }
+    .fix-before { background: rgba(136,19,55,0.15); border: 1px solid rgba(251,113,133,0.3); }
+    .fix-after { background: rgba(6,78,59,0.15); border: 1px solid rgba(52,211,153,0.3); }
+    .fix-title { font-size: 0.65rem; font-weight: 600; margin-bottom: 0.3rem; }
+    .fix-before .fix-title { color: #fb7185; }
+    .fix-after .fix-title { color: #34d399; }
+    .fix-code { font-size: 0.55rem; color: #94a3b8; line-height: 1.5; }
+
+    .footer { text-align: center; color: #475569; font-size: 0.55rem; margin-top: 1rem; padding-top: 0.5rem; border-top: 1px solid #1e293b; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>maneki-daily Pipeline 逻辑图 <span class="date-badge">2026-07-30</span></h1>
+  <p class="subtitle">守护进程 00:30 概念缓存 → 09:26 竞价评分推送 · 复用 pipeline.py 生产管线</p>
+
+  <!-- 时间轴 -->
+  <div class="section">
+    <div class="section-title">⏱ 时间轴</div>
+    <div class="timeline">
+      <div class="tl-item tl-blue"><div class="tl-time">00:30</div><div class="tl-label">概念缓存<br><span style="color:#64748b">22320行</span></div></div>
+      <div class="tl-arrow">→</div>
+      <div class="tl-item" style="min-width:40px;background:transparent;"><div class="tl-time" style="color:#334155">⋯</div><div class="tl-label" style="color:#334155">sleep</div></div>
+      <div class="tl-arrow">→</div>
+      <div class="tl-item tl-green"><div class="tl-time">09:26</div><div class="tl-label">竞价刷新<br><span style="color:#64748b">stk_auction</span></div></div>
+      <div class="tl-arrow">→</div>
+      <div class="tl-item tl-purple"><div class="tl-time">09:26</div><div class="tl-label">XGBoost 评分<br><span style="color:#64748b">64特征·4988只</span></div></div>
+      <div class="tl-arrow">→</div>
+      <div class="tl-item tl-orange"><div class="tl-time">09:30</div><div class="tl-label">推送<br><span style="color:#64748b">Top3+≥55</span></div></div>
+      <div class="tl-arrow">→</div>
+      <div class="tl-item" style="min-width:40px;background:transparent;"><div class="tl-time" style="color:#334155">⋯</div><div class="tl-label" style="color:#334155">sleep</div></div>
+      <div class="tl-arrow">→</div>
+      <div class="tl-item"><div class="tl-time" style="color:#fbbf24">15:00</div><div class="tl-label" style="color:#fbbf24">重置标记</div></div>
+    </div>
+  </div>
+
+  <!-- 主循环 -->
+  <div class="section">
+    <div class="section-title">🔄 常驻进程主循环 main_loop()</div>
+    <div class="card">
+      <div class="flow-row">
+        <div class="flow-box fb-data" style="flex:1"><strong>非交易日？</strong><span>sleep 30min · 重置标记</span></div>
+        <div class="arrow">→</div>
+        <div class="flow-box fb-left" style="flex:1.5"><strong>00:30~01:00 &amp; 未跑</strong><span>step_concept_cache()</span></div>
+        <div class="arrow">→</div>
+        <div class="flow-box fb-right" style="flex:1.5"><strong>09:26~09:35 &amp; 未跑</strong><span>step_morning_score(today)</span></div>
+        <div class="arrow">→</div>
+        <div class="flow-box fb-out" style="flex:0.8"><strong>15:00 后</strong><span>重置标记</span></div>
+      </div>
+      <div style="font-size:0.55rem;color:#475569;margin-top:0.25rem;">每 30s 轮询 · _done_concept / _done_morning 防重复</div>
+    </div>
+  </div>
+
+  <!-- step_morning_score 内部 -->
+  <div class="section">
+    <div class="section-title">⚙️ step_morning_score(today) — 评分流程</div>
+    <div class="card">
+      <div class="flow-row">
+        <div class="flow-box fb-data" style="flex:1"><strong>① 等面板</strong><span>panel/{today}.parquet<br>最多5分钟</span></div>
+        <div class="arrow">→</div>
+        <div class="flow-box fb-mid" style="flex:1.5"><strong>② 竞价刷新面板</strong><span>_refresh_panel_auction()<br>stk_auction → auc_* 列</span></div>
+        <div class="arrow">→</div>
+        <div class="flow-box fb-right" style="flex:1.8"><strong>③ 模型评分 + 推送</strong><span>morning_pass(today)<br>factor_model_score_batch</span></div>
+      </div>
+      <div class="code">
+        <span class="kw">def</span> <span class="fn">step_morning_score</span>(today):<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># 1. 等面板就绪（panel_builder 00:01 构建）</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">while not</span> panel_file.exists() <span class="kw">and</span> time.time() &lt; deadline:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;time.sleep(10)<br><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># 2. 竞价刷新（失败不阻断，T-1面板兜底）</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;_refresh_panel_auction(today)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">#   → auc_pct 覆盖 pct_chg_score_day</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">#   → 重算 shortterm 策略分（唯一吃竞价的维度）</span><br><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># 3. XGBoost 模型评分 + 推送</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;morning_pass(today)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">#   → factor_model_score_batch (64特征, 0.8s)</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">#   → model_score 写回面板 + analysis/ + pushed/</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">#   → pusher (Top-N + ≥55) → push_feishu</span><br><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;_done_morning = <span class="kw">True</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 数据流向 -->
+  <div class="section">
+    <div class="section-title">📊 数据流向</div>
+    <div class="card">
+      <div class="flow-row">
+        <div class="flow-box fb-data"><strong>panel_builder</strong><span>00:01 cron</span></div>
+        <div class="arrow">→</div>
+        <div class="flow-box fb-warn"><strong>面板</strong><span>{today}.parquet<br>64特征·4988只</span></div>
+        <div class="arrow">→</div>
+        <div class="flow-box fb-right"><strong>XGBoost 模型</strong><span>limit_up_model.joblib<br>64特征 hit-only</span></div>
+        <div class="arrow">→</div>
+        <div class="flow-box fb-mid"><strong>model_score</strong><span>写回面板+analysis</span></div>
+        <div class="arrow">→</div>
+        <div class="flow-box fb-out"><strong>pusher</strong><span>Top-N + ≥55</span></div>
+        <div class="arrow">→</div>
+        <div class="flow-box fb-left"><strong>飞书</strong><span>卡片推送</span></div>
+      </div>
+      <div style="margin-top:0.5rem;font-size:0.6rem;color:#64748b;">
+        <span style="color:#22d3ee;">概念缓存</span> (parquet) →
+        factor_ctx.get_concept_momentum() →
+        sector_heat / sector_ret3 / sector_up_ratio / sector_streak
+      </div>
+    </div>
+  </div>
+
+  <!-- 板块特征问题对比 -->
+  <div class="section">
+    <div class="section-title">🔧 板块特征问题（今日修复）</div>
+    <div class="fix-compare">
+      <div class="fix-col fix-before">
+        <div class="fix-title">✗ 修复前</div>
+        <div class="fix-code">
+          <span style="color:#fb7185">panel_builder.py:309</span><br>
+          cm = {<br>
+          &nbsp;&nbsp;"n_concepts": n_c,<br>
+          &nbsp;&nbsp;"ret1_avg": <strong>0.0</strong>, &nbsp;<span style="color:#64748b">← 硬编码</span><br>
+          &nbsp;&nbsp;"ret3_avg": <strong>0.0</strong>, &nbsp;<span style="color:#64748b">← 硬编码</span><br>
+          &nbsp;&nbsp;"up_ratio": <strong>0.5</strong>, &nbsp;<span style="color:#64748b">← 硬编码</span><br>
+          }<br><br>
+          → sector_heat=0, sector_ret3=0 <span style="color:#fb7185">∀ 4988只</span><br>
+          → 模型板块IC参数白学
+        </div>
+      </div>
+      <div class="fix-col fix-after">
+        <div class="fix-title">✓ 修复后</div>
+        <div class="fix-code">
+          <span style="color:#34d399">panel_builder.py:305</span><br>
+          cm = <strong>get_concept_momentum(</strong><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;short, trade_date=pit_date<br>
+          <strong>)</strong><br><br>
+          → 从概念缓存 parquet 读实时数据<br>
+          → sector_heat=-2.3, sector_ret3=-8.1<br>
+          → 科技板块冷 → 评分被压低
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 参数配置 -->
+  <div class="section">
+    <div class="section-title">⚙️ 关键配置</div>
+    <div class="card">
+      <table class="params">
+        <tr><th>参数</th><th>值</th><th>说明</th></tr>
+        <tr><td>PUSH_TOP_N</td><td>3</td><td>推送 Top-N 数量</td></tr>
+        <tr><td>ULTIMATE_PUSH_THRESHOLD</td><td>55</td><td>模型分最低阈值</td></tr>
+        <tr><td>候选池</td><td>4988只</td><td>主板00/60 · 过滤ST/退市</td></tr>
+        <tr><td>模型特征</td><td>64维</td><td>含板块×6 + 竞价×4</td></tr>
+        <tr><td>评分耗时</td><td>~0.8s</td><td>batch 预测</td></tr>
+        <tr><td>今日 ≥55</td><td>4只</td><td>max=64.0 mean=13.9</td></tr>
+        <tr><td>轮询间隔</td><td>30s</td><td>主循环 sleep</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    Maneki Daily Daemon / Hermes Agent · 单文件 HTML · 零外部依赖
+  </div>
+
+</div>
+</body>
+</html>

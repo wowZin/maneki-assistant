@@ -117,11 +117,27 @@ def main():
         _hhmm = int(datetime.now().strftime("%H%M"))
         _today = datetime.now().strftime("%Y%m%d")
         if not _is_trade_day(_today):
-            print(f"[ws_daemon] 非交易日({_today}), 退出")
-            break
+            # 非交易日睡到明天早盘
+            from datetime import timedelta
+            next_day = datetime.now() + timedelta(days=1)
+            if next_day.weekday() >= 5:
+                next_day += timedelta(days=7 - next_day.weekday())
+            target = next_day.replace(hour=9, minute=25, second=0, microsecond=0)
+            sleep_s = max((target - datetime.now()).total_seconds(), 60)
+            print(f"[ws_daemon] 非交易日({_today}), 休眠 {sleep_s/3600:.1f}h 到 {target.strftime('%m-%d %H:%M')}")
+            time.sleep(sleep_s)
+            continue
         if _hhmm >= 1500:
-            print(f"[ws_daemon] 收盘({_hhmm}), 退出")
-            break
+            # 收盘睡到明天早盘
+            from datetime import timedelta
+            next_day = datetime.now() + timedelta(days=1)
+            if next_day.weekday() >= 5:
+                next_day += timedelta(days=7 - next_day.weekday())
+            target = next_day.replace(hour=9, minute=25, second=0, microsecond=0)
+            sleep_s = max((target - datetime.now()).total_seconds(), 60)
+            print(f"[ws_daemon] 收盘({_hhmm}), 休眠 {sleep_s/3600:.1f}h 到 {target.strftime('%m-%d %H:%M')}")
+            time.sleep(sleep_s)
+            continue
         if _hhmm < 925 or (1130 <= _hhmm < 1300):
             time.sleep(30)  # 盘前/午休：慢节奏，但照写快照（WS 仍推盘口数据）
             # 继续执行下面的订阅/快照逻辑（不 continue），接午间快照

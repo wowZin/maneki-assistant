@@ -299,20 +299,12 @@ def build_features(codes: list[str], today: str, prev_date: str,
                 mf_bd[p2] = {"net_mf_amount": nm_prev, "buy_elg_amount": 0,
                              "sell_elg_amount": 0, "buy_lg_amount": 0, "sell_lg_amount": 0}
 
-        # concept（从 _STOCK_CONCEPTS 直接取，不依赖实时涨停数据）
+        # concept 动量（用 factor_ctx 从概念缓存查实时板块数据，同训练集一致）
         short = code.split(".")[0]
         try:
-            from plays.limit_up.strategies.concept_cache import _STOCK_CONCEPTS, ensure_loaded
-            ensure_loaded()
-            cc_names = _STOCK_CONCEPTS.get(short, [])
-            n_c = float(len(cc_names))
-            cm = {"n_concepts": n_c,
-                  "ret1_max": 0.0, "ret1_avg": 0.0,
-                  "ret3_max": 0.0, "ret3_avg": 0.0,
-                  "up_ratio": 0.5, "up_streak_max": 0,
-                  "turn_5d_max": 0.0, "turn_5d_avg": 0.0}
+            cm = factor_ctx.get_concept_momentum(short, trade_date=pit_date)
         except Exception:
-            cm = {"n_concepts": 0.0,
+            cm = {"n_concepts": 0,
                   "ret1_max": 0.0, "ret1_avg": 0.0,
                   "ret3_max": 0.0, "ret3_avg": 0.0,
                   "up_ratio": 0.5, "up_streak_max": 0,
@@ -593,6 +585,13 @@ def main():
             print(f"    intraday({prev_date}): {len(intraday_cache)}只")
         except Exception as e:
             print(f"    intraday 加载失败: {e}")
+
+    # ⑦ 加载概念板块数据（供 get_concept_momentum 使用）
+    print(f"  [panel] ⑦ 加载概念缓存...")
+    try:
+        factor_ctx.load_concept_data_from_cache()
+    except Exception as e:
+        print(f"    [!] 概念缓存加载失败: {e}")
 
     # 构建特征
     df = build_features(codes, today, prev_date,

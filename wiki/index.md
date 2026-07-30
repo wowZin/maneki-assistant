@@ -1,7 +1,7 @@
 # Wiki Index
 
 > Content catalog. Every wiki page listed under its type with a one-line summary.
-> Last updated: 2026-07-04 | Total pages: 54
+> Last updated: 2026-07-04 | Total pages: 55
 
 ## Concepts
 
@@ -22,6 +22,7 @@
 - [[plays/limit-up/entities/20260522-扫描汇总]] — 2026-05-22 扫描 620 只股票（推送5只/命中3只）
 
 ## Queries
+- [[20260730-扫描汇总.md]] — 2026-07-30 扫描 3173 只股票
 - [[20260729-扫描汇总.md]] — 2026-07-29 扫描 3059 只股票
 - [[20260728-扫描汇总.md]] — 2026-07-28 扫描 3070 只股票
 - [[20260724-扫描汇总.md]] — 2026-07-24 扫描 388 只股票

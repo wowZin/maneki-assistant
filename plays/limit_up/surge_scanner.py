@@ -22,7 +22,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
@@ -525,8 +525,15 @@ def main():
             now = datetime.now()
             hhmm = int(now.strftime("%H%M"))
             if hhmm >= 1500:
-                print(f"[surge] 收盘({hhmm}), 退出")
-                return
+                # 睡到明天早盘，避免 systemd Restart=always 空转
+                next_day = now + timedelta(days=1)
+                if next_day.weekday() >= 5:
+                    next_day += timedelta(days=7 - next_day.weekday())
+                target = next_day.replace(hour=9, minute=35, second=0, microsecond=0)
+                sleep_s = max((target - datetime.now()).total_seconds(), 60)
+                print(f"[surge] 收盘({hhmm}), 休眠 {sleep_s/3600:.1f}h 到 {target.strftime('%m-%d %H:%M')}")
+                time.sleep(sleep_s)
+                continue
             if (935 <= hhmm < 1130 or 1300 <= hhmm < 1500) and _is_trade_day(_today()):
                 try:
                     scan()

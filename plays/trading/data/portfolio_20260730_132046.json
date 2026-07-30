@@ -1,0 +1,36 @@
+{
+  "date": "20260730",
+  "capital": 17771.0,
+  "daily_pnl": 0.0,
+  "stopped": false,
+  "positions": [
+    {
+      "code": "002534.SZ",
+      "name": "西子洁能",
+      "entry_price": 13.81,
+      "shares": 100,
+      "cost": 1381.0,
+      "entry_at": "2026-07-30 13:16:32",
+      "status": "holding",
+      "exit_price": 0.0,
+      "exit_at": "",
+      "exit_reason": "",
+      "pnl": 0.0,
+      "pnl_pct": 0.0
+    },
+    {
+      "code": "600661.SH",
+      "name": "昂立教育",
+      "entry_price": 8.48,
+      "shares": 100,
+      "cost": 848.0,
+      "entry_at": "2026-07-30 13:16:32",
+      "status": "holding",
+      "exit_price": 0.0,
+      "exit_at": "",
+      "exit_reason": "",
+      "pnl": 0.0,
+      "pnl_pct": 0.0
+    }
+  ]
+}
