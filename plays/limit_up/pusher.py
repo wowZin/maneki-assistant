@@ -26,6 +26,9 @@ def _load_pushed_codes(pushed_dir: Path, today_str: str) -> set[str]:
     if not pushed_dir.exists():
         return codes
     for f in pushed_dir.glob(f"{today_str}*.json"):
+        if f.name.endswith("_surge.json"):
+            # surge 是盘中扫描候选池存档，非推送记录，排除以免污染已推送去重
+            continue
         try:
             with open(f) as fp:
                 pushed = json.load(fp)

@@ -60,6 +60,37 @@ def safe_float(val) -> float:
     except (ValueError, TypeError):
         return 0.0
 
+
+def get_account_float_pnl() -> dict:
+    """从 jvQuant 账户查当前持仓浮动盈亏（元）。
+
+    返回 {"float_pnl": 合计浮盈亏, "positions": [{code,name,hold_vol,hold_earn}]}
+    查询失败返回全 0（复盘不因账户查询失败而失败）。
+    """
+    try:
+        import sys as _sys
+        from pathlib import Path as _Path
+        proj = _Path(__file__).resolve().parent.parent.parent
+        if str(proj) not in _sys.path:
+            _sys.path.insert(0, str(proj))
+        from scripts.jvquant_trade_client import get_trade_client, _get_hold
+        hold = _get_hold(get_trade_client())
+        positions = []
+        total = 0.0
+        for h in (hold.get("hold_list") or []):
+            earn = safe_float(h.get("hold_earn"))
+            total += earn
+            positions.append({
+                "code": h.get("code", ""),
+                "name": h.get("name", ""),
+                "hold_vol": int(h.get("hold_vol", 0) or 0),
+                "hold_earn": earn,
+            })
+        return {"float_pnl": round(total, 2), "positions": positions}
+    except Exception as e:
+        print(f"获取账户浮盈亏失败: {e}")
+        return {"float_pnl": 0.0, "positions": []}
+
 # ===== 1. 检查交易日 =====
 def is_trade_day(check_date: str) -> bool:
     """用Tushare trade_cal检查是否交易日"""
@@ -141,7 +172,11 @@ def load_today_analysis(today: str) -> tuple:
     pushed_dir = PLAY_DIR / "data" / "pushed"
     pushed_items = []
     if pushed_dir.exists():
+        # 只读常规推送 {today}.json；排除 {today}_surge.json
+        # （surge 是盘中扫描候选池存档，非推送给用户的记录）
         for pf in pushed_dir.glob(f"{today}*.json"):
+            if pf.name.endswith("_surge.json"):
+                continue
             try:
                 with open(pf) as fp:
                     pushed_data = json.load(fp)
@@ -520,6 +555,11 @@ def send_feishu_report(report: dict):
                 "tag": "div",
                 "text": {"tag": "lark_md", "content": f"**胜率**\n{report.get('win_rate', 0):.1f}% ({report.get('win_count', 0)}/{report.get('win_total', 0)})"}
             },
+            # 交易记录
+            {
+                "tag": "div",
+                "text": {"tag": "lark_md", "content": _trading_summary(report.get("trading"))}
+            },
             {"tag": "hr"},
             {
                 "tag": "div",
@@ -581,6 +621,26 @@ def send_feishu_report(report: dict):
         return False
 
 # ===== 9. 生成Markdown报告 =====
+def _trading_summary(trading: list | None) -> str:
+    """生成交易摘要文本（飞书卡片用）"""
+    if not trading:
+        return "**今日交易**\n无"
+    buy_count = sum(1 for t in trading if t.get("direction") == "买入")
+    sell_count = sum(1 for t in trading if t.get("direction") == "卖出")
+    float_pnl = get_account_float_pnl()["float_pnl"]
+    lines = [f"**今日交易** 买入{buy_count}笔 卖出{sell_count}笔 持仓浮盈亏{float_pnl:+.0f}元"]
+    for t in trading[:5]:
+        code = t.get("code", "")
+        name = t.get("name", "")
+        direction = t.get("direction", "")
+        price = t.get("price", 0)
+        shares = t.get("shares", 0)
+        pnl = float(t.get("pnl", 0))
+        pnl_s = f" {pnl:+.0f}" if direction == "卖出" else ""
+        lines.append(f"{direction} {name}({code}) {price:.2f}×{shares}{pnl_s}")
+    return "\n".join(lines)
+
+
 def generate_markdown_report(report: dict) -> str:
     """生成人类可读的Markdown格式复盘报告"""
     date = report['date']
@@ -607,6 +667,29 @@ def generate_markdown_report(report: dict) -> str:
     lines.append(f"| 命中率 | **{rate:.1f}%** |")
     lines.append(f"| 胜率 | **{report.get('win_rate', 0):.1f}%** ({report.get('win_count', 0)}/{report.get('win_total', 0)}) |")
     lines.append("")
+
+    # 交易记录
+    trading = report.get("trading")
+    if trading:
+        buy_count = sum(1 for t in trading if t.get("direction") == "买入")
+        sell_count = sum(1 for t in trading if t.get("direction") == "卖出")
+        float_pnl = get_account_float_pnl()["float_pnl"]
+        lines.append("## 💰 今日交易")
+        lines.append("")
+        lines.append(f"买入 {buy_count} 笔 · 卖出 {sell_count} 笔 · 持仓浮盈亏 {float_pnl:+.0f}元")
+        lines.append("")
+        lines.append("| 代码 | 名称 | 方向 | 价格 | 股数 | 金额 | 原因 |")
+        lines.append("|------|------|------|------|------|------|------|")
+        for t in trading:
+            code = t.get("code", "")
+            name = t.get("name", "")
+            direction = t.get("direction", "")
+            price = t.get("price", 0)
+            shares = t.get("shares", 0)
+            amount = t.get("amount", 0)
+            reason = str(t.get("reason", ""))[:20]
+            lines.append(f"| {code} | {name} | {direction} | {price:.2f} | {shares} | {amount:.0f} | {reason} |")
+        lines.append("")
     
     # 命中详情
     if hit_codes:
@@ -734,7 +817,12 @@ def main():
             pushed_codes.add(code)
 
     # 如果推送数据为空，fallback到信号文件
+    # ⚠️ 只接受真正的预测信号文件（{today}.json 中带 stocks 键的 dict 格式），
+    #    排除 surge 路由记录（{today}.json 的 list 格式，route=扫描决策，非预测信号）
     if not pushed_codes:
+        signals = [s for s in signals if s.get("ts_code") or s.get("code") or s.get("代码")]
+        if signals and signals[0].get("route"):
+            signals = []  # surge 路由记录，非预测信号，不使用
         for p in signals:
             code = p.get("ts_code") or p.get("code") or p.get("代码", "")
             if "." not in str(code):
@@ -783,6 +871,16 @@ def main():
     else:
         print(f"权重AB: {ab_result.get('note', '未启用')}")
     
+    # Step 9b: 加载交易交割单
+    trading_report = None
+    trading_report_path = PROJECT_DIR / "plays" / "trading" / "data" / "reports" / f"{today}.json"
+    if trading_report_path.exists():
+        try:
+            trading_report = json.loads(trading_report_path.read_text())
+            print(f"  交易交割单: {len(trading_report)} 条")
+        except Exception as e:
+            print(f"  交割单加载失败: {e}")
+
     # Step 10: 生成报告
     report = {
         "date": today,
@@ -799,6 +897,7 @@ def main():
         "dim_performance": dim_perf,
         "confidence_dist": conf_dist,
         "ab_comparison": ab_result,  # 权重AB
+        "trading": trading_report,  # 交易交割单
     }
     
     # 保存JSON报告（保留用于程序读取）

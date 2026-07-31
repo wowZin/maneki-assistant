@@ -272,18 +272,24 @@ def sale(code: str, name: str, price: float | str = None, vol: int | str = 100) 
 
     client = get_trade_client()
 
-    # ── 前置检查：确认持仓可用数量 ──
+    # ── 前置检查：确认持仓数量 ──
     hold = _get_hold(client)
     hold_code = _short(code)
+    hold_vol = 0
     usable_vol = 0
     if hold.get("hold_list"):
         for h in hold["hold_list"]:
             if h.get("code") == hold_code:
+                hold_vol = int(h.get("hold_vol", "0"))
                 usable_vol = int(h.get("usable_vol", "0"))
                 break
 
-    if usable_vol < vol_i:
+    if hold_vol < vol_i:
         return {"code": "-2", "message": f"持仓不足: {hold_code}({name}) 可用{usable_vol}股，需{vol_i}股"}
+
+    # T+1：总持仓够但可用为 0（当日买入不可卖），区别于"无持仓"
+    if usable_vol < vol_i:
+        return {"code": "-5", "message": f"T+1当日不可卖: {hold_code}({name}) 持仓{hold_vol}股 可用{usable_vol}股，需{vol_i}股"}
 
     # ── 发单 + 失效缓存 ──
     try:

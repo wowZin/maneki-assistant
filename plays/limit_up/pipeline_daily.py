@@ -151,7 +151,7 @@ def step_morning_score(today: str):
 
 
 def main_loop():
-    global _running, _FORCE
+    global _running, _FORCE, _done_concept, _done_panel, _done_morning
 
     signal.signal(signal.SIGINT, _signal_handler)
     signal.signal(signal.SIGTERM, _signal_handler)

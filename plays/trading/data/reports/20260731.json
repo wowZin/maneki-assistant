@@ -1,0 +1,62 @@
+[
+  {
+    "code": "600986.SH",
+    "name": "浙文互联",
+    "direction": "买入",
+    "price": 7.5,
+    "shares": 100,
+    "amount": 750.0,
+    "time": "2026-07-31 10:18:05",
+    "reason": "信号: vwap_break 突破VWAP 7.46>7.36 涨4.9%",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  },
+  {
+    "code": "603226.SH",
+    "name": "菲林格尔",
+    "direction": "买入",
+    "price": 45.71,
+    "shares": 100,
+    "amount": 4571.0,
+    "time": "2026-07-31 10:18:08",
+    "reason": "信号: vwap_break 突破VWAP 45.80>45.69 涨6%",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  },
+  {
+    "code": "603679.SH",
+    "name": "华体科技",
+    "direction": "买入",
+    "price": 19.08,
+    "shares": 100,
+    "amount": 1908.0,
+    "time": "2026-07-31 10:18:11",
+    "reason": "信号: vwap_break 突破VWAP 19.01>18.72 涨8%",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  },
+  {
+    "code": "605598.SH",
+    "name": "上海港湾",
+    "direction": "买入",
+    "price": 24.82,
+    "shares": 100,
+    "amount": 2482.0,
+    "time": "2026-07-31 10:18:14",
+    "reason": "信号: vwap_break 突破VWAP 24.86>24.6",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  },
+  {
+    "code": "002607.SZ",
+    "name": "中公教育",
+    "direction": "买入",
+    "price": 2.14,
+    "shares": 100,
+    "amount": 214.0,
+    "time": "2026-07-31 11:08:15",
+    "reason": "信号: surge 突破VWAP 2.14>2.14 涨",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  }
+]

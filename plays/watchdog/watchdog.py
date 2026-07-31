@@ -17,6 +17,7 @@ from __future__ import annotations
 import glob
 import json
 import os
+import re
 import sys
 import threading
 import time
@@ -126,6 +127,47 @@ def _push_feishu(text: str):
         logger.error(f"飞书推送异常: {e}")
 
 
+def _log_trade_journal(code: str, name: str, direction: str, price: float,
+                       shares: int, entry_price: float | None = None,
+                       entry_at: str = "", reason: str = "") -> None:
+    """写一条交割单到 plays/trading/data/reports/{date}.json（格式对齐旧 trader）。"""
+    try:
+        today = datetime.now().strftime("%Y%m%d")
+        report_dir = PROJECT_DIR / "plays" / "trading" / "data" / "reports"
+        report_dir.mkdir(parents=True, exist_ok=True)
+        report_file = report_dir / f"{today}.json"
+
+        if direction == "买入":
+            pnl, pnl_pct = 0.0, 0.0
+            amount = round(price * shares, 2)
+            t = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            pnl = round((price - (entry_price or 0)) * shares, 2)
+            pnl_pct = round((price / (entry_price or price) - 1) * 100, 2)
+            amount = round(price * shares, 2)
+            t = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        entry = {
+            "code": code, "name": name, "direction": direction,
+            "price": price, "shares": shares, "amount": amount,
+            "time": t, "reason": reason, "pnl": pnl, "pnl_pct": pnl_pct,
+        }
+
+        existing = []
+        if report_file.exists():
+            try:
+                existing = json.loads(report_file.read_text())
+                if not isinstance(existing, list):
+                    existing = []
+            except Exception:
+                existing = []
+        existing.append(entry)
+        report_file.write_text(json.dumps(existing, ensure_ascii=False, indent=2))
+        logger.info(f"交割单写入: {direction} {code} {name} {price}x{shares} -> {report_file}")
+    except Exception as e:
+        logger.error(f"交割单写入失败 {code}: {e}")
+
+
 # ---- 盯盘状态 ----
 
 class WatchState:
@@ -138,6 +180,7 @@ class WatchState:
         self.status = "watching"  # watching | alerted | entered | exited
         self.source = "manual"    # manual | surge —— surge 票只发入场信号，盘后零信号汰换
         self.entry_pushed_date = ""  # 入场信号推送日期 YYYYMMDD（汰换依据）
+        self.t1_blocked_date = ""  # T+1 当日不可卖标记 YYYYMMDD（次日自动恢复出场监控）
         self.entry_price: float = 0.0
         self.entry_at: str = ""
         self.highest_since_entry: float = 0.0
@@ -166,6 +209,7 @@ class WatchState:
             "code": self.code, "name": self.name, "added_at": self.added_at,
             "status": self.status, "entry_price": self.entry_price,
             "source": self.source, "entry_pushed_date": self.entry_pushed_date,
+            "t1_blocked_date": self.t1_blocked_date,
             "entry_at": self.entry_at, "highest_since_entry": self.highest_since_entry,
             "bars_held": self.bars_held, "signal_type": self.signal_type,
             "signal_reason": self.signal_reason, "signal_at": self.signal_at,
@@ -185,6 +229,7 @@ class WatchState:
         s.status = d.get("status", "watching")
         s.source = d.get("source", "manual")
         s.entry_pushed_date = d.get("entry_pushed_date", "")
+        s.t1_blocked_date = d.get("t1_blocked_date", "")
         s.entry_price = d.get("entry_price", 0.0)
         s.entry_at = d.get("entry_at", "")
         s.highest_since_entry = d.get("highest_since_entry", 0.0)
@@ -618,6 +663,10 @@ class WatchdogEngine:
                                     f"VWAP: {vwap:.2f}\n"
                                     f"order_id: {order_id}"
                                 )
+                                _log_trade_journal(
+                                    code, st.name, "买入", last, 100,
+                                    reason=f"信号: {st.signal_type or st.signal_reason}",
+                                )
                             else:
                                 logger.warning(f"{code} 下单返回异常: code={code_r} msg={r.get('message', r)}")
                                 st.status = "watching"
@@ -655,17 +704,45 @@ class WatchdogEngine:
                     st.entry_price, st.highest_since_entry, last,
                     held_minutes, vwap, scores, row)
                 if exit_triggered:
+                    # T+1 当日不可卖已确认：跳过卖出尝试，保留盯盘次日恢复
+                    # （避免每轮调 CTP 重复拿 -5）
+                    if st.t1_blocked_date == now.strftime("%Y%m%d"):
+                        logger.debug(f"{code} T+1冻结中(标记{st.t1_blocked_date}),跳过卖出尝试")
+                        self._save_state()
+                        continue
                     pnl_pct = (last / st.entry_price - 1) * 100
                     _surge_tag = "【surge】" if st.source == "surge" else ""
                     is_profit = "止盈" in exit_reason
                     # 下单卖出 + 飞书通知
+                    # 安全规则(2026-07-31):
+                    #   - sale 成功(code=0)才移除盯盘
+                    #   - 失败/异常保留 entered,下轮重试(防仓位失管)
+                    #   - 持仓不足(-2)解析可用股数,确为 0 才移除
+                    _exit_ok = False
                     try:
                         from scripts.jvquant_trade_client import sale
                         short = _short(code)
                         r = sale(short, st.name)
                         code_r = r.get("code", "?")
-                        if code_r == "-2":
-                            logger.warning(f"{code} 跳过卖出: {r.get('message', r)}")
+                        if code_r == "-5":
+                            # T+1：当日买入可用0，不可卖。保留 entered 继续盯盘，
+                            # 记录 t1_blocked_date，次日可用后自动恢复出场监控
+                            msg = r.get("message", "")
+                            st.t1_blocked_date = datetime.now().strftime("%Y%m%d")
+                            logger.warning(f"{code} T+1当日不可卖,保留盯盘次日恢复: {msg}")
+                            _exit_ok = False
+                        elif code_r == "-2":
+                            msg = r.get("message", "")
+                            # message 形如 "持仓不足: xxx 可用{n}股,需{m}股"
+                            m = re.search(r"可用(\d+)股", str(msg))
+                            usable = int(m.group(1)) if m else 0
+                            if usable == 0:
+                                # 确实无仓(可能已手动卖出),移除盯盘
+                                logger.warning(f"{code} 跳过卖出(无持仓): {msg}")
+                                _exit_ok = True
+                            else:
+                                # 部分持仓不足1手,保留 entered 下轮重试
+                                logger.warning(f"{code} 卖出被拒(可用{usable}股),保留盯盘重试: {msg}")
                         elif code_r == "0":
                             order_id = r.get('order_id', '?')
                             _push_feishu(
@@ -675,11 +752,19 @@ class WatchdogEngine:
                                 f"盈亏: {pnl_pct:+.2f}%\n"
                                 f"order_id: {order_id}"
                             )
+                            _log_trade_journal(
+                                code, st.name, "卖出", last, 100,
+                                entry_price=st.entry_price, entry_at=st.entry_at,
+                                reason=exit_reason,
+                            )
+                            _exit_ok = True
                         else:
-                            logger.warning(f"{code} 卖出返回异常: code={code_r} msg={r.get('message', r)}")
+                            # 其他异常返回(如 -1 无价格/-4 重登录失败),保留盯盘下轮重试
+                            logger.warning(f"{code} 卖出返回异常,保留盯盘重试: code={code_r} msg={r.get('message', r)}")
                     except Exception as e:
-                        logger.error(f"{code} 卖出异常: {e}")
-                    self.remove([code])
+                        logger.error(f"{code} 卖出异常,保留盯盘重试: {e}")
+                    if _exit_ok:
+                        self.remove([code])
 
             self._save_state()
 
