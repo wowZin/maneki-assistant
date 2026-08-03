@@ -38,9 +38,6 @@ DEFAULT_FEATURES = [
     "sector_heat", "sector_rank", "n_concepts",
     "sector_ret3", "sector_up_ratio", "sector_streak",
     "auc_amount", "auc_vol", "auc_amt_ratio", "auc_vol_ratio",
-    # 日内分时特征（T-1）
-    "id_vwap_dev", "id_range", "id_morning_vol_ratio", "id_afternoon_strength",
-    "id_tail_vol_ratio", "id_amount_ratio",
     # 龙虎榜 PIT 特征
     "dt_is_listed", "dt_net_amount", "dt_net_rate", "dt_l_buy_ratio",
     "dt_n_exalter", "dt_inst_net_buy", "dt_hot_net_buy", "dt_inst_sell_ratio",
@@ -150,15 +147,19 @@ class LimitUpModel:
         self.blend_win = blend_win
         self._fill_values: dict[str, float] = {}
 
-    def fit(self, df: pd.DataFrame) -> "LimitUpModel":
-        """在训练集上拟合 hit/win 两个模型。"""
+    def fit(self, df: pd.DataFrame, target_col: str = "hit_limit_3") -> "LimitUpModel":
+        """在训练集上拟合 hit/win 两个模型。
+
+        target_col: 命中目标列。默认 hit_limit_3（未来3日涨停，历史口径）；
+        当日涨停口径传 "label"（2026-07-31 起训练集 label=当日涨停）。
+        """
         x = _clean_features(df, self.feature_cols)
         for c in x.columns:
             self._fill_values[c] = float(x[c].median())
 
         if self.hit_estimator is not None:
-            mask = df["hit_limit_3"].notna()
-            self.hit_estimator.fit(x[mask], df.loc[mask, "hit_limit_3"].astype(int))
+            mask = df[target_col].notna()
+            self.hit_estimator.fit(x[mask], df.loc[mask, target_col].astype(int))
 
         if self.win_estimator is not None:
             mask = df["fwd_ret_3"].notna()
@@ -261,8 +262,13 @@ class LimitUpModel:
         return m
 
 
-def evaluate_model(model: LimitUpModel, df: pd.DataFrame) -> dict:
-    """在验证集上计算 AUC、Top-K 命中率/胜率、Rank IC。"""
+def evaluate_model(model: LimitUpModel, df: pd.DataFrame,
+                   target_col: str = "hit_limit_3") -> dict:
+    """在验证集上计算 AUC、Top-K 命中率/胜率、Rank IC。
+
+    target_col: 命中目标列，与 fit 保持一致（默认 hit_limit_3 历史口径，
+    当日涨停口径传 "label"）。
+    """
     from sklearn.metrics import roc_auc_score
     from plays.limit_up.backtest.metrics import rank_ic, precision_at_k, win_rate
 
@@ -274,12 +280,12 @@ def evaluate_model(model: LimitUpModel, df: pd.DataFrame) -> dict:
     ) * 100.0
 
     out = {}
-    for target in ("hit_limit_3", "fwd_ret_3_positive"):
+    for target in (target_col, "fwd_ret_3_positive"):
         valid = df.dropna(subset=[target, "model_score"])
         if len(valid) > 1 and valid[target].nunique() > 1:
             out[f"auc_{target}"] = float(roc_auc_score(valid[target].astype(int), valid["model_score"]))
 
-    out["ic_hit_limit_3"] = rank_ic(df["model_score"], df["hit_limit_3"])
+    out[f"ic_{target_col}"] = rank_ic(df["model_score"], df[target_col])
     out["ic_fwd_ret_3"] = rank_ic(df["model_score"], df["fwd_ret_3"])
 
     # 按日期分组 Top-K（训练集是一天一只，近似评估）
@@ -289,7 +295,7 @@ def evaluate_model(model: LimitUpModel, df: pd.DataFrame) -> dict:
             if len(sub) < k:
                 continue
             top = sub.nlargest(k, "model_score")
-            hit = top["hit_limit_3"].mean() if top["hit_limit_3"].notna().any() else None
+            hit = top[target_col].mean() if top[target_col].notna().any() else None
             wr = (top["fwd_ret_3"] > 0).mean() if top["fwd_ret_3"].notna().any() else None
             top_k[k].append({"hit": hit, "win": wr})
 

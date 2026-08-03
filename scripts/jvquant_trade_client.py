@@ -207,6 +207,19 @@ def buy(code: str, name: str, price: float | str = None, vol: int | str = 100) -
     if price_f <= 0:
         return {"code": "-1", "message": f"无法获取{code}有效价格"}
 
+    # 2026-08-03 修复：涨停一字板检查——ask1 为空（无卖盘）+ 涨幅≥9.9% = 封死涨停，
+    # 此时按涨停价挂单只会排队买不进、冻结资金（08-03 实盘 4 笔挂单未成交即此因：
+    # 605488/002421/600468/603337 全是涨停封板，资金被挂单冻结到可用仅 2.3 元）。
+    _snap = _snap_of(code)
+    try:
+        _ask_p = _snap.get("ask_price") or []
+        _ask1 = float(_ask_p[0]) if _ask_p and str(_ask_p[0]).strip() else 0
+        _pct = float(_snap.get("pct_chg") or 0)
+    except Exception:
+        _ask1, _pct = 0.0, 0.0
+    if _ask1 <= 0 and _pct >= 9.9:
+        return {"code": "-6", "message": f"{code}({name}) 涨停封板(ask1空 pct={_pct:.1f}%)，挂单买不进，跳过"}
+
     client = get_trade_client()
 
     # ── 前置检查：可用资金 + 是否已持仓 ──

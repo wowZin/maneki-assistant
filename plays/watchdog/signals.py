@@ -57,8 +57,8 @@ ENTRY_CONFIG = {
 EXIT_CONFIG = {
     "stop_loss_pct": 0.98,          # 固定止损
     "trailing_stop_pct": 0.97,      # 移动止损
-    "take_profit_1": 0.05,          # 第一止盈 +5%
-    "take_profit_2": 0.10,          # 第二止盈 +10%
+    "take_profit_1": 0.15,          # 第一止盈 +15%（2026-08-03 调高：原+5%提前跑，离场应以资金流/抛压信号为主）
+    "take_profit_2": 0.30,          # 第二止盈 +30%
     "time_stop_minutes": 30,        # 时间止损预警（分钟）
     "time_force_exit_minutes": 60,  # 强制出场（分钟）
     # 回调出场

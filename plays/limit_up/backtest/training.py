@@ -128,9 +128,6 @@ FEATURE_COLS = [
     "sector_heat", "sector_rank", "n_concepts",
     "sector_ret3", "sector_up_ratio", "sector_streak",
     "auc_amount", "auc_vol", "auc_amt_ratio", "auc_vol_ratio",
-    # 日内分时特征（T-1）
-    "id_vwap_dev", "id_range", "id_morning_vol_ratio", "id_afternoon_strength",
-    "id_tail_vol_ratio", "id_amount_ratio",
     # 龙虎榜 PIT 特征
     "dt_is_listed", "dt_net_amount", "dt_net_rate", "dt_l_buy_ratio",
     "dt_n_exalter", "dt_inst_net_buy", "dt_hot_net_buy", "dt_inst_sell_ratio",
@@ -277,12 +274,14 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
     """为单个交易日构建训练样本（正样本 + 负样本 + 特征 + 标签）。"""
     print(f"[build] {trade_date}")
 
-    # 1. 候选池：当日被扫描到且当日未涨停的股票
-    #    训练目标与生产推送目标一致：预测“今天还没涨停的票，未来 3 日会不会涨停”。
+    # 1. 候选池：当日被扫描到的股票（含当日涨停）
+    #    训练目标与生产推送目标一致：预测“今天会不会涨停”。
+    #    （2026-07-31 变更：原为“当日未涨停 + 未来3日涨停”口径，
+    #     与复盘验证（当日涨停）错位导致行情好但命中 0）
     scanned = get_scanned_codes(trade_date)
     limit_up = get_limit_up_codes(trade_date)
-    candidates = scanned - limit_up
-    print(f"  扫描候选={len(scanned)} 当日涨停={len(limit_up)} 未涨停候选={len(candidates)}")
+    candidates = scanned
+    print(f"  扫描候选={len(scanned)} 当日涨停={len(limit_up)} 候选={len(candidates)}")
 
     if not candidates:
         return pd.DataFrame()
@@ -384,13 +383,10 @@ def build_one_day(trade_date: str, lookback: int = 90) -> pd.DataFrame:
                             top_inst_by_code_date, limit_by_code, dim_scores, dates_all)
         if row is None:
             continue
-        # 正样本：当日未涨停，但未来 3 日内涨停
-        # 负样本：当日未涨停，未来 3 日也未涨停
-        # 数据不足导致 hit_limit_3 缺失则跳过
-        hit = row.get("hit_limit_3")
-        if hit is None:
-            continue
-        row["label"] = 1 if hit == 1 else 0
+        # 正样本：当日涨停（与生产推送/复盘验证口径一致）
+        # 负样本：当日未涨停
+        # （2026-07-31 变更：原为“当日未涨停 + 未来3日涨停”的 hit_limit_3 口径）
+        row["label"] = 1 if code in limit_up else 0
         rows_out.append(row)
 
     df = pd.DataFrame(rows_out)

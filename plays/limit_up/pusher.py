@@ -17,7 +17,7 @@ from pathlib import Path
 
 from plays.limit_up.utils import is_trading_time
 
-PUSH_THRESHOLD = float(os.environ.get("ULTIMATE_PUSH_THRESHOLD", "55"))
+PUSH_THRESHOLD = float(os.environ.get("ULTIMATE_PUSH_THRESHOLD", "50"))
 
 
 def _load_pushed_codes(pushed_dir: Path, today_str: str) -> set[str]:

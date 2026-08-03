@@ -35,7 +35,7 @@ WATCHDOG_STATE = PLAY_DIR.parent.parent / "plays" / "watchdog" / "data" / "state
 
 PCT_LOW = float(os.getenv("SURGE_PCT_LOW", "5.0"))    # 异动涨幅窗口（5%≤涨幅<9.8%，留0.2%防已封板）
 PCT_HIGH = float(os.getenv("SURGE_PCT_HIGH", "9.8"))  # 上限9.8：连板秒板高发，9.0会丢窗口
-SURGE_PANEL_SCORE = float(os.getenv("SURGE_PANEL_SCORE", "20"))  # 主闸：面板早盘评分阈值
+SURGE_PANEL_SCORE = float(os.getenv("SURGE_PANEL_SCORE", "30"))  # 主闸：面板早盘评分阈值（2026-08-01 修复v2模型分布下 20→30，池子减半噪声更少）
 SURGE_VOL_RATIO = float(os.getenv("SURGE_VOL_RATIO", "2.0"))  # 排雷：量比下限
 
 

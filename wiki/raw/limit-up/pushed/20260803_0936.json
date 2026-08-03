@@ -1,0 +1,47 @@
+[
+  {
+    "code": "605588.SH",
+    "name": "冠石科技",
+    "model_score": 71.55000305175781,
+    "total_score": 71.55000305175781,
+    "score_mode": "model_score",
+    "pct_chg": null,
+    "scores": {
+      "technical": 15.0,
+      "fundflow": 1.0,
+      "sentiment": 100.0,
+      "shortterm": 6.0
+    },
+    "fundamental": 28.0
+  },
+  {
+    "code": "603938.SH",
+    "name": "三孚股份",
+    "model_score": 69.9000015258789,
+    "total_score": 69.9000015258789,
+    "score_mode": "model_score",
+    "pct_chg": null,
+    "scores": {
+      "technical": 20.0,
+      "fundflow": 2.0,
+      "sentiment": 100.0,
+      "shortterm": 6.0
+    },
+    "fundamental": 58.0
+  },
+  {
+    "code": "605111.SH",
+    "name": "新洁能",
+    "model_score": 67.72000122070312,
+    "total_score": 67.72000122070312,
+    "score_mode": "model_score",
+    "pct_chg": null,
+    "scores": {
+      "technical": 26.0,
+      "fundflow": 0.0,
+      "sentiment": 100.0,
+      "shortterm": 6.0
+    },
+    "fundamental": 45.0
+  }
+]

@@ -40,7 +40,7 @@ sys.path.insert(0, str(PROJECT_DIR))
 
 from plays.limit_up.utils import _is_trade_day, _today_str  # noqa: E402
 
-PUSH_THRESHOLD = float(os.environ.get("ULTIMATE_PUSH_THRESHOLD", "55"))
+PUSH_THRESHOLD = float(os.environ.get("ULTIMATE_PUSH_THRESHOLD", "50"))
 PANEL_FILE = lambda td: PROJECT_DIR / "wiki" / "raw" / "limit-up" / "panel" / f"{td}.parquet"  # noqa: E731
 ANALYSIS_FILE = lambda td: PLAY_DIR / "data" / "analysis" / f"{td}.json"  # noqa: E731
 
@@ -102,9 +102,11 @@ def _refresh_panel_auction(today: str) -> bool:
         return False
 
     # ── 拉取竞价（9:25 快照，按 trade_date 全市场一次调用）──
-    # tushare 竞价数据 9:25 后发布有延迟，持续重试直到拿到"当日"数据为止
-    # （默认等 10 分钟，AUCTION_WAIT_SECONDS 可配）。非当日数据一律视为未就绪。
+    # tushare 竞价数据 9:25 后发布（实测 9:26~9:29 就绪），
+    # 每分钟重试一次（2026-08-03 修复：原 20s 重试 + 600s 窗口，
+    # 09:30 才开始拉导致错过 09:26~09:29 发布窗口）。
     wait_s = float(os.getenv("AUCTION_WAIT_SECONDS", "600"))
+    retry_s = float(os.getenv("AUCTION_RETRY_SECONDS", "60"))
     deadline = time.time() + wait_s
     items, fields = [], []
     while time.time() < deadline:
@@ -119,10 +121,10 @@ def _refresh_panel_auction(today: str) -> bool:
                     for it in _items[:100]):
                 items, fields = _items, _fields
                 break
-            log.info(f"竞价当日数据未就绪（返回{len(_items)}条），20s 后重试...")
+            log.info(f"竞价当日数据未就绪（返回{len(_items)}条），{retry_s:.0f}s 后重试...")
         except Exception as e:
-            log.warning(f"竞价拉取异常: {e}，20s 后重试...")
-        time.sleep(20)
+            log.warning(f"竞价拉取异常: {e}，{retry_s:.0f}s 后重试...")
+        time.sleep(retry_s)
 
     if not items:
         msg = f"{today} 竞价数据(stk_auction)等待 {wait_s:.0f}s 仍无当日数据，面板 auc_* 维持 T-1 夜间值"

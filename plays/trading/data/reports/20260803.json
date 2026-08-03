@@ -1,0 +1,98 @@
+[
+  {
+    "code": "002607.SZ",
+    "name": "中公教育",
+    "direction": "卖出",
+    "price": 2.12,
+    "shares": 100,
+    "amount": 212.0,
+    "time": "2026-08-03 10:25:05",
+    "reason": "时间止损: 持仓4276分钟未达目标",
+    "pnl": -2.0,
+    "pnl_pct": -0.93
+  },
+  {
+    "code": "600986.SH",
+    "name": "浙文互联",
+    "direction": "卖出",
+    "price": 8.05,
+    "shares": 100,
+    "amount": 805.0,
+    "time": "2026-08-03 10:31:05",
+    "reason": "止盈一档(+7.3%): 建议平50%",
+    "pnl": 55.0,
+    "pnl_pct": 7.33
+  },
+  {
+    "code": "603226.SH",
+    "name": "菲林格尔",
+    "direction": "卖出",
+    "price": 43.8,
+    "shares": 100,
+    "amount": 4380.0,
+    "time": "2026-08-03 10:31:09",
+    "reason": "固定止损: 入场45.71 现价43.80",
+    "pnl": -191.0,
+    "pnl_pct": -4.18
+  },
+  {
+    "code": "605598.SH",
+    "name": "上海港湾",
+    "direction": "卖出",
+    "price": 25.41,
+    "shares": 100,
+    "amount": 2541.0,
+    "time": "2026-08-03 10:31:11",
+    "reason": "时间止损: 持仓4332分钟未达目标",
+    "pnl": 59.0,
+    "pnl_pct": 2.38
+  },
+  {
+    "code": "002747.SZ",
+    "name": "埃斯顿",
+    "direction": "买入",
+    "price": 31.24,
+    "shares": 100,
+    "amount": 3124.0,
+    "time": "2026-08-03 10:32:14",
+    "reason": "信号: vwap_break",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  },
+  {
+    "code": "002181.SZ",
+    "name": "",
+    "direction": "买入",
+    "price": 8.68,
+    "shares": 100,
+    "amount": 868.0,
+    "time": "2026-08-03 10:46:27",
+    "reason": "信号: vwap_break",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  },
+  {
+    "code": "603108.SH",
+    "name": "润达医疗",
+    "direction": "买入",
+    "price": 10.13,
+    "shares": 100,
+    "amount": 1013.0,
+    "time": "2026-08-03 14:44:53",
+    "reason": "信号: vwap_break",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  },
+  {
+    "code": "002067.SZ",
+    "name": "景兴纸业",
+    "direction": "买入",
+    "price": 4.57,
+    "shares": 100,
+    "amount": 457.0,
+    "time": "2026-08-03 14:48:05",
+    "reason": "信号: vwap_break",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  }
+]

@@ -193,3 +193,4 @@ Traceback (most recent call last):
     obj, end = self.scan_once(s, idx)
                ^^^^^^^^^^^^^^^^^^^^^^
 json.decoder.JSONDecodeError: Expecting ':' delimiter: line 395 column 11 (char 7996)
+[2026-08-03T09:36:25.055079] 20260803 竞价数据(stk_auction)等待 600s 仍无当日数据，面板 auc_* 维持 T-1 夜间值

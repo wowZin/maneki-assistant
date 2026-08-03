@@ -199,18 +199,28 @@ def main():
             last_sub_check = now
 
         # WS 连接检测（每 30s）
+        # 2026-08-03 修复：原 `if not ws.is_connected()` 只查本地 _running 标志，
+        # 底层 WebSocket 断连（12:01 Connection lost）后 _running 仍是 True →
+        # 健康检查永不触发重连 → 订阅静默失效（快照只剩聚合键，watchdog 全瞎）。
+        # 改用 _ensure_connection() 探活（cmd("list") 探测死连接）+ 断连后全量重订。
         if now - last_health_check >= 30:
             try:
-                if not ws.is_connected():
-                    print(f"[ws_daemon] WS 断连，尝试重连...")
-                    ws.disconnect()
-                    ws = JvQuantWSClient()
-                    ws.connect()
-                    # 恢复订阅（分批，防单命令超限）
-                    if shorts: _subscribe_chunked(ws, "l1", shorts)
-                    if l2_shorts: _subscribe_chunked(ws, "l2", l2_shorts)
+                if not ws._ensure_connection():
+                    print("[ws_daemon] WS 重连失败，下轮再试")
+                else:
+                    # 探活/重连成功；若期间重连过（订阅集被清空），需恢复订阅
+                    _need_resub = getattr(ws, "_l1_codes", None)
+                    if _need_resub is not None and shorts:
+                        if not set(shorts).issubset(set(_need_resub)):
+                            _subscribe_chunked(ws, "l1", shorts)
+                            print(f"[ws_daemon] 重连后恢复 L1 订阅 {len(shorts)} 只")
+                    if l2_shorts:
+                        _need_resub2 = getattr(ws, "_l2_codes", None)
+                        if _need_resub2 is not None and not set(l2_shorts).issubset(set(_need_resub2)):
+                            _subscribe_chunked(ws, "l2", l2_shorts)
+                            print(f"[ws_daemon] 重连后恢复 L2 订阅 {len(l2_shorts)} 只")
             except Exception as e:
-                print(f"[ws_daemon] WS 重连失败: {e}")
+                print(f"[ws_daemon] WS 探活异常: {e}")
             last_health_check = now
 
         # 快照

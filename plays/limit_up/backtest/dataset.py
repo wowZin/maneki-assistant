@@ -198,7 +198,10 @@ _API_FIELDS: dict[str, dict[str, bool]] = {
 
 # 面板内部名 -> Tushare API 名（多数相同，个别需要映射）
 _API_TUSHARE_NAME: dict[str, str] = {
-    "auction": "stk_auction_o",
+    # 2026-07-31 修复：原 stk_auction_o（盘后）只返回 vol/amount 无 price，
+    # 导致训练集 auc_pct 算不出（pct_chg_score_day 回退 T-1 收盘涨幅），
+    # 与生产 stk_auction（9:25 实时，有 price/pre_close）口径不一致。
+    "auction": "stk_auction",
 }
 
 
@@ -400,10 +403,11 @@ def pull_auction_bars(codes: list[str], start: str, end: str, refresh: bool = Fa
                       cols: list[str] | None = None) -> pd.DataFrame:
     """按天拉/读集合竞价数据（Tushare stk_auction），按列增量。
 
-    默认拉取 vol/amount/turnover_rate/volume_ratio，用于构造 auc_* 特征。
+    默认拉取 price/pre_close/vol/amount/turnover_rate/volume_ratio，
+    用于构造 auc_* 特征 + auc_pct 竞价涨幅（覆盖 pct_chg_score_day）。
     stk_auction 接口响应较慢，默认 timeout 30s。
     """
-    cols = cols or ["vol", "amount", "turnover_rate", "volume_ratio"]
+    cols = cols or ["price", "pre_close", "vol", "amount", "turnover_rate", "volume_ratio"]
     dates = _trade_dates(start, end)
     df = _load_or_fetch_by_day("auction", dates, cols, refresh=refresh, timeout=30)
     if df.empty:

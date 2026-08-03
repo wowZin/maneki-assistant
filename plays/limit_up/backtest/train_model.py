@@ -37,6 +37,8 @@ def main():
     parser.add_argument("--test-end", default="20260721")
     parser.add_argument("--blend-hit", type=float, default=1.0)
     parser.add_argument("--blend-win", type=float, default=0.0)
+    parser.add_argument("--target", default="hit_limit_3",
+                        help="命中目标列: hit_limit_3(未来3日涨停,默认) 或 label(当日涨停)")
     parser.add_argument("--model-dir", type=Path, default=MODEL_DIR)
     parser.add_argument("--panel", type=Path, help="从 backtest out/panel.csv 训练（而非 training_set.csv）")
     parser.add_argument("--estimator", choices=["hist", "xgboost"], default="xgboost",
@@ -78,10 +80,10 @@ def main():
         blend_win=args.blend_win,
     )
     print("[train] 拟合模型...")
-    model.fit(train_df)
+    model.fit(train_df, target_col=args.target)
 
     print("[train] 验证集评估...")
-    metrics = evaluate_model(model, test_df)
+    metrics = evaluate_model(model, test_df, target_col=args.target)
     print(json.dumps(metrics, indent=2, ensure_ascii=False, default=str))
 
     args.model_dir.mkdir(parents=True, exist_ok=True)

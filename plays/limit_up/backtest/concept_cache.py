@@ -167,6 +167,9 @@ def build_concept_daily(start: str, end: str, cache_dir: Path | None = None) -> 
         if df.empty:
             print(f"  [{d}] 无数据")
             continue
+        # 统一列名：新拉数据用 ts_code，存量可能是 cpt_code；concat 前统一
+        if "ts_code" in df.columns and "cpt_code" not in df.columns:
+            df = df.rename(columns={"ts_code": "cpt_code"})
         frames.append(df)
         if (i + 1) % 10 == 0 or i == len(to_fetch) - 1:
             print(f"  已拉取 {i + 1}/{len(to_fetch)} 天")
@@ -176,11 +179,14 @@ def build_concept_daily(start: str, end: str, cache_dir: Path | None = None) -> 
         return existing
 
     combined = pd.concat(frames, ignore_index=True)
-    combined = combined.drop_duplicates(subset=["ts_code", "trade_date"], keep="last")
-    combined = combined.sort_values(["ts_code", "trade_date"]).reset_index(drop=True)
-    # factor_ctx 期望概念代码列为 cpt_code
-    if "ts_code" in combined.columns and "cpt_code" not in combined.columns:
-        combined = combined.rename(columns={"ts_code": "cpt_code"})
+    combined = combined.drop_duplicates(subset=["cpt_code", "trade_date"], keep="last")
+    combined = combined.sort_values(["cpt_code", "trade_date"]).reset_index(drop=True)
+    # 2026-07-31 修复：与 concept_members 一致，只保留 885xxx 真实概念板块
+    # （ths_daily 返回全量 2501 概念含 700/883 非概念指数，必须过滤）
+    if "cpt_code" in combined.columns:
+        before = len(combined)
+        combined = combined[combined["cpt_code"].astype(str).str.startswith("885")].copy()
+        print(f"[concept_daily] 过滤非概念指数: {before} -> {len(combined)} 行")
 
     out_path = cache_dir / CONCEPT_DAILY_FILE
     combined.to_parquet(out_path, index=False)
@@ -188,10 +194,15 @@ def build_concept_daily(start: str, end: str, cache_dir: Path | None = None) -> 
     return combined
 
 
-def build_concept_members(cache_dir: Path | None = None) -> pd.DataFrame:
-    """构建概念成分股映射缓存。
+def build_concept_members(cache_dir: Path | None = None, force: bool = False) -> pd.DataFrame:
+    """构建概念成分股映射缓存（只保留 885xxx 真实概念板块）。
 
-    首次构建较慢（约 1700 个概念），建议每月刷新一次。
+    2026-07-31 修复：原实现把同花顺全部指数（700xxx 宽基/风格指数、
+    883xxx 指数样本股、882xxx 地区指数）也当概念拉入，其中"同花顺全A"
+    等宽基指数挂载 2000~5500 只股票，污染 n_concepts 与板块动量特征
+    （每股票被 11 个假概念污染，sector_heat/ret3 被全市场指数稀释成噪声）。
+
+    首次构建较慢（约 300 个概念），建议每月刷新一次。
     每 100 个概念增量落盘，避免网络中断导致全部丢失。
     """
     cache_dir = _ensure_dir(cache_dir or DEFAULT_CACHE_DIR)
@@ -201,13 +212,19 @@ def build_concept_members(cache_dir: Path | None = None) -> pd.DataFrame:
     existing_codes = set(existing[cpt_col].unique()) if not existing.empty else set()
 
     index_df = _fetch_ths_index()
-    codes = [c for c in index_df["ts_code"].unique() if c not in existing_codes]
+    # 只保留 885xxx 真实概念板块；过滤 700xxx(同花顺指数)/882xxx(地区)/883xxx(指数样本股)
+    real_codes = [c for c in index_df["ts_code"].unique() if str(c).startswith("885")]
+    if force:
+        codes = real_codes
+    else:
+        codes = [c for c in real_codes if c not in existing_codes]
     if not codes:
-        print("[concept_members] 已全部存在，无需拉取")
+        print(f"[concept_members] 已全部存在（真实概念 {len(real_codes)} 个），无需拉取")
         return existing
 
-    print(f"[concept_members] 需拉取 {len(codes)} 个概念（共 {len(index_df)} 个）")
-    frames = [existing] if not existing.empty else []
+    print(f"[concept_members] 需拉取 {len(codes)} 个真实概念（共 {len(real_codes)} 个，"
+          f"过滤非概念指数 {len(index_df) - len(real_codes)} 个）")
+    frames = [existing] if not existing.empty and not force else []
     out_path = cache_dir / CONCEPT_MEMBERS_FILE
 
     for i, cpt in enumerate(codes):
@@ -281,7 +298,8 @@ def _cmd_build(args):
 
 
 def _cmd_build_members(args):
-    build_concept_members(Path(args.cache_dir) if args.cache_dir else None)
+    build_concept_members(Path(args.cache_dir) if args.cache_dir else None,
+                          force=args.force)
 
 
 def _cmd_check(args):
@@ -312,6 +330,8 @@ def main():
     p_build.set_defaults(func=_cmd_build)
 
     p_members = sub.add_parser("build-members", help="构建概念成分股映射缓存")
+    p_members.add_argument("--force", action="store_true",
+                           help="强制重建（过滤非概念指数后重新拉取 885xxx 真实概念）")
     p_members.set_defaults(func=_cmd_build_members)
 
     p_check = sub.add_parser("check", help="检查缓存状态")

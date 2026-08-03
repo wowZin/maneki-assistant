@@ -1,0 +1,47 @@
+[
+  {
+    "code": "603048.SH",
+    "name": "603048",
+    "model_score": 59.099998474121094,
+    "total_score": 59.099998474121094,
+    "score_mode": "model_score",
+    "pct_chg": 6.0,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 1.0,
+      "sentiment": 88.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  },
+  {
+    "code": "603324.SH",
+    "name": "盛剑科技",
+    "model_score": 55.939998626708984,
+    "total_score": 55.939998626708984,
+    "score_mode": "model_score",
+    "pct_chg": 1.38,
+    "scores": {
+      "technical": 20.0,
+      "fundflow": 0.0,
+      "sentiment": 100.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 28.0
+  },
+  {
+    "code": "603011.SH",
+    "name": "603011",
+    "model_score": 55.849998474121094,
+    "total_score": 55.849998474121094,
+    "score_mode": "model_score",
+    "pct_chg": 5.32,
+    "scores": {
+      "technical": 23.0,
+      "fundflow": 0.0,
+      "sentiment": 100.0,
+      "shortterm": 10.0
+    },
+    "fundamental": 38.0
+  }
+]

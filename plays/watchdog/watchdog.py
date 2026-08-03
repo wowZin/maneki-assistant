@@ -420,7 +420,14 @@ class WatchdogEngine:
                         self._scan_round(codes)
                     time.sleep(SCAN_INTERVAL)
                 else:
-                    if trading_day_logged:
+                    # 只有真正收盘（>=15:00）或非交易日才触发盘后汰换。
+                    # 2026-08-03 事故：午休 11:30-13:00 也是非交易时段，
+                    # 原逻辑午休一到就 _eod_purge()，把当天已买入的持仓票
+                    # （状态 watching/alerted）当"零信号票"删掉，07-31 因此
+                    # 丢失 600986/603226/603679/605598 四只持仓盯盘。
+                    _now_eod = datetime.now()
+                    _is_really_eod = _now_eod.hour >= 15 or _now_eod.weekday() >= 5
+                    if trading_day_logged and _is_really_eod:
                         logger.info("交易时段结束，暂停盯盘扫描")
                         trading_day_logged = False
                         self._eod_purge()
@@ -656,17 +663,45 @@ class WatchdogEngine:
                                 self._save_state()
                             elif code_r == "0":
                                 order_id = r.get('order_id', '?')
-                                _push_feishu(
-                                    f"📈 {st.name}({code}) 入场{_surge_tag}\n"
-                                    f"入场价: {last:.2f}\n"
-                                    f"信号: {st.signal_reason}\n"
-                                    f"VWAP: {vwap:.2f}\n"
-                                    f"order_id: {order_id}"
-                                )
-                                _log_trade_journal(
-                                    code, st.name, "买入", last, 100,
-                                    reason=f"信号: {st.signal_type or st.signal_reason}",
-                                )
+                                # 2026-08-03 修复：jvquant buy() 返回 code=0 只是"委托已报"，
+                                # 不是成交（杰克科技事故：status=已报但系统误判入场）。
+                                # 下单后查 check_order 确认"已成"才置 entered+推送；
+                                # 挂单未成交（已报/部分成交）→ 保持 watching 等待，
+                                # 避免资金冻结期间误判持仓、浪费盯盘。
+                                _deal_ok = False
+                                try:
+                                    from scripts.jvquant_trade_client import get_trade_client
+                                    _ord = get_trade_client().check_order()
+                                    _lst = (_ord or {}).get("list") or []
+                                    for _o in _lst:
+                                        if str(_o.get("order_id", "")) == str(order_id):
+                                            _deal_ok = _o.get("status") == "已成"
+                                            break
+                                except Exception as _e:
+                                    logger.warning(f"{code} 查成交状态异常: {_e}")
+                                if _deal_ok:
+                                    _push_feishu(
+                                        f"📈 {st.name}({code}) 入场{_surge_tag}\n"
+                                        f"入场价: {last:.2f}\n"
+                                        f"信号: {st.signal_reason}\n"
+                                        f"VWAP: {vwap:.2f}\n"
+                                        f"order_id: {order_id}"
+                                    )
+                                    _log_trade_journal(
+                                        code, st.name, "买入", last, 100,
+                                        reason=f"信号: {st.signal_type or st.signal_reason}",
+                                    )
+                                else:
+                                    # 委托已报未成交：不置 entered，保持 watching
+                                    # （信号清掉，避免下一轮重复触发买入）
+                                    logger.warning(
+                                        f"{code} 委托{order_id}未成交(status=已报)，"
+                                        f"保持 watching 等成交/复查")
+                                    st.status = "watching"
+                                    st.signal_type = ""
+                                    st.signal_reason = ""
+                                    st.signal_at = ""
+                                    self._save_state()
                             else:
                                 logger.warning(f"{code} 下单返回异常: code={code_r} msg={r.get('message', r)}")
                                 st.status = "watching"
@@ -745,19 +780,41 @@ class WatchdogEngine:
                                 logger.warning(f"{code} 卖出被拒(可用{usable}股),保留盯盘重试: {msg}")
                         elif code_r == "0":
                             order_id = r.get('order_id', '?')
-                            _push_feishu(
-                                f"{'💰' if is_profit else '🛑'} {st.name}({code}) {'止盈' if is_profit else '出场'}{_surge_tag}\n"
-                                f"{exit_reason}\n"
-                                f"入场: {st.entry_price:.2f} → 现价: {last:.2f}\n"
-                                f"盈亏: {pnl_pct:+.2f}%\n"
-                                f"order_id: {order_id}"
-                            )
-                            _log_trade_journal(
-                                code, st.name, "卖出", last, 100,
-                                entry_price=st.entry_price, entry_at=st.entry_at,
-                                reason=exit_reason,
-                            )
-                            _exit_ok = True
+                            # 2026-08-03 修复：sale() 返回 code=0 只是"委托已报"，
+                            # 未成交就移除盯盘=持仓失管（与买入侧同源 bug）。
+                            # 查 check_order 确认"已成"才推送+移除；挂单中保留 entered 重试。
+                            _deal_ok = False
+                            try:
+                                from scripts.jvquant_trade_client import get_trade_client
+                                _ord = get_trade_client().check_order()
+                                _lst = (_ord or {}).get("list") or []
+                                for _o in _lst:
+                                    if str(_o.get("order_id", "")) == str(order_id):
+                                        _deal_ok = _o.get("status") == "已成"
+                                        break
+                            except Exception as _e:
+                                logger.warning(f"{code} 卖出查成交状态异常: {_e}")
+                            if _deal_ok:
+                                _push_feishu(
+                                    f"{'💰' if is_profit else '🛑'} {st.name}({code}) {'止盈' if is_profit else '出场'}{_surge_tag}\n"
+                                    f"{exit_reason}\n"
+                                    f"入场: {st.entry_price:.2f} → 现价: {last:.2f}\n"
+                                    f"盈亏: {pnl_pct:+.2f}%\n"
+                                    f"order_id: {order_id}"
+                                )
+                                _log_trade_journal(
+                                    code, st.name, "卖出", last, 100,
+                                    entry_price=st.entry_price, entry_at=st.entry_at,
+                                    reason=exit_reason,
+                                )
+                                _exit_ok = True
+                            else:
+                                # 卖出委托已报未成交：保留 entered 下轮复查，
+                                # 避免未成交就移除盯盘导致持仓失管
+                                logger.warning(
+                                    f"{code} 卖出委托{order_id}未成交(status=已报)，"
+                                    f"保留 entered 复查")
+                                _exit_ok = False
                         else:
                             # 其他异常返回(如 -1 无价格/-4 重登录失败),保留盯盘下轮重试
                             logger.warning(f"{code} 卖出返回异常,保留盯盘重试: code={code_r} msg={r.get('message', r)}")
