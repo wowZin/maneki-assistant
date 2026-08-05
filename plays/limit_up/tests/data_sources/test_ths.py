@@ -44,17 +44,19 @@ def test_audit_summary_by_api_contains_ths():
 
 
 def test_get_batch_quotes_fast_real_pool():
-    """get_batch_quotes_fast 对真实 pool 前50只：成功率≥90%、字段齐、耗时<30s。"""
-    import json
+    """get_batch_quotes_fast 对面板前50只主板：成功率≥90%、字段齐、耗时<30s。"""
     import time
     from pathlib import Path
+
+    import pandas as pd
 
     play_dir = Path(__file__).resolve().parents[2]  # plays/limit_up
     panel_dir = play_dir.parent.parent / "wiki" / "raw" / "limit-up" / "panel"
     td = max(p.stem for p in panel_dir.glob("*.parquet")
              if p.stem.isdigit() and len(p.stem) == 8)
-    pool = json.loads((play_dir / "data" / "pool" / f"pool_{td}.json").read_text())
-    codes = [s["code"] for s in pool[:50]]
+    # 2026-08-05：pool_builder 已删除，改用面板全量主板 code（权威清单）
+    panel = pd.read_parquet(panel_dir / f"{td}.parquet", columns=["code"])
+    codes = [c for c in panel["code"].tolist() if str(c)[:2] in ("00", "60")][:50]
     assert len(codes) == 50
 
     ths = get_ths_client()

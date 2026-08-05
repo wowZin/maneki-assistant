@@ -59,8 +59,6 @@ EXIT_CONFIG = {
     "trailing_stop_pct": 0.97,      # 移动止损
     "take_profit_1": 0.15,          # 第一止盈 +15%（2026-08-03 调高：原+5%提前跑，离场应以资金流/抛压信号为主）
     "take_profit_2": 0.30,          # 第二止盈 +30%
-    "time_stop_minutes": 30,        # 时间止损预警（分钟）
-    "time_force_exit_minutes": 60,  # 强制出场（分钟）
     # 回调出场
     "pullback_entry_gain": 0.03,    # 入场后涨幅 >= 3% 才启用回调出场
     "min_pullback_exit": 0.05,      # 从最高回撤 5% → 出场
@@ -192,7 +190,6 @@ def check_exit(
     entry_price: float,
     highest_since_entry: float,
     current_price: float,
-    bars_held: int,
     vwap: float,
     scores: dict,
     row: dict | None = None,
@@ -228,10 +225,6 @@ def check_exit(
         return True, f"止盈二档(+{gain_pct*100:.1f}%): 建议全平"
     if gain_pct >= cfg["take_profit_1"]:
         return True, f"止盈一档(+{gain_pct*100:.1f}%): 建议平50%"
-
-    # 时间止损
-    if bars_held >= cfg["time_force_exit_minutes"]:
-        return True, f"时间止损: 持仓{bars_held}分钟未达目标"
 
     # ── 回调出场（用实时量价判断,不依赖特征分）──
     if gain_pct >= cfg["pullback_entry_gain"] and highest_since_entry > entry_price:

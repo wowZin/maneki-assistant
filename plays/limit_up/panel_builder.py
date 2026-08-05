@@ -279,7 +279,7 @@ def build_features(codes: list[str], today: str, prev_date: str,
         if basic_ent:
             basic_by_date[pit_date] = basic_ent
         if prev_basic_ent:
-            prev_pit = (datetime.strptime(pit_date, "%Y%m%d") - timedelta(days=1)).strftime("%Y%m%d")
+            prev_pit = _prev_trade_date(pit_date)
             basic_by_date[prev_pit] = prev_basic_ent
 
         # moneyflow
@@ -350,7 +350,8 @@ def _add_strategy_scores(df: pd.DataFrame, fi_cache: dict[str, dict],
     # 预计算（避免循环内 O(n²)）
     conc_dict = dict(zip(df["code"], df["n_concepts"]))
     row_dict = df.set_index("code")[["close_pos", "amplitude", "volume_ratio",
-                                      "turnover_rate", "positive_5d", "auc_amt_ratio"]].to_dict("index")
+                                      "turnover_rate", "positive_5d", "auc_amt_ratio",
+                                      "dt_inst_net_buy"]].to_dict("index")
     fund_scores, tech_scores, flow_scores, sent_scores, short_scores = [], [], [], [], []
 
     for code in codes:
@@ -401,16 +402,57 @@ def _add_strategy_scores(df: pd.DataFrame, fi_cache: dict[str, dict],
         elif nt >= 3: t += 6
         tech_scores.append(min(100, round(t)))
 
-        # ── fundflow: net_mf_amount 占比评分 ──
-        mf_ent = mf_cache.get(code, {})
-        nm = float(mf_ent.get("net_mf_amount", 0) or 0)
-        mv = mv_yi * 10000 * 10000  # 亿→万元→元 ≈ 流通市值(元)
-        if mv > 0 and nm != 0:
-            ratio = nm * 10000 / mv * 100  # 净额占比%
-            ff = min(60, max(0, ratio * 5))
-        else:
-            ff = 0
-        flow_scores.append(min(100, round(ff)))  # 去掉 base 20
+        # ── fundflow: v2.1 换手率+成交额为核心（2026-08-04 替换旧净额占比公式）──
+        # 旧公式 net_mf_amount/流通市值×5 量纲错误（均值0.8、45%为0），
+        # 与 strategies/fundflow.py v2.1 脱节。新版与训练集一致：
+        # 维度1 换手率35 + 维度2 成交额25 + 维度3 大盘共振10 + 维度4 资金流10 + 维度5 龙虎榜15
+        tr_ff = float(row.get("turnover_rate", 0) or 0)
+        nm_ff = float(mf_cache.get(code, {}).get("net_mf_amount", 0) or 0)  # 万元
+        inst_ff = float(row.get("dt_inst_net_buy", 0) or 0)                 # 元
+        circ_mv_yuan = mv_yi * 10000 * 10000  # 亿→万元→元 ≈ 流通市值(元)
+        # 当日成交额（元）：factor_ctx 日线最后一条 amount 单位千元
+        amount_yuan = 0.0
+        try:
+            _drows = factor_ctx.get_daily(code)
+            if _drows:
+                amount_yuan = float(_drows[-1].get("amount", 0) or 0) * 1000
+        except Exception:
+            pass
+        ff = 0.0
+        # 维度1: 换手率活跃度 (35分)
+        if tr_ff >= 20: ff += 35
+        elif tr_ff >= 15: ff += 28
+        elif tr_ff >= 10: ff += 21
+        elif tr_ff >= 6: ff += 14
+        elif tr_ff >= 3: ff += 7
+        elif tr_ff >= 1: ff += 2
+        # 维度2: 成交额规模 (25分)
+        _amount_wan = amount_yuan / 10000
+        if _amount_wan >= 5000: ff += 25
+        elif _amount_wan >= 2000: ff += 20
+        elif _amount_wan >= 1000: ff += 15
+        elif _amount_wan >= 500: ff += 10
+        elif _amount_wan >= 200: ff += 5
+        # 维度3: 大市值+高换手共振 (10分)
+        if mv_yi >= 100 and tr_ff >= 8: ff += 10
+        elif mv_yi >= 50 and tr_ff >= 6: ff += 6
+        elif mv_yi >= 20 and tr_ff >= 5: ff += 3
+        # 维度4: 资金流向健康度 (10分)
+        if amount_yuan > 0:
+            _net_pct = nm_ff * 10000 / amount_yuan * 100
+            if _net_pct >= 1.0: ff += 5
+            elif _net_pct >= 0.3: ff += 3
+            elif _net_pct <= -1.0: ff -= 3
+        if circ_mv_yuan > 0:
+            _main_vs_circ = nm_ff * 10000 / circ_mv_yuan * 1000  # ‰
+            if _main_vs_circ >= 0.5: ff += 5
+            elif _main_vs_circ >= 0.2: ff += 2
+            elif _main_vs_circ <= -0.3: ff -= 3
+        # 维度5: 龙虎榜机构净买 (15分)
+        if inst_ff > 50000000: ff += 6
+        elif inst_ff > 10000000: ff += 3
+        elif inst_ff < -50000000: ff -= 5
+        flow_scores.append(max(0.0, min(100.0, round(ff))))
 
         # ── sentiment: 涨停概念热度 ──
         try:
@@ -540,7 +582,7 @@ def main():
     print(f"    daily_basic: {time.time()-t0:.1f}s ({len(codes)}只, 过滤ST={len(st_codes)})")
 
     # 补前日 daily_basic（供 prev_vol_ratio / prev_turnover）
-    prev2 = (datetime.strptime(prev_date, "%Y%m%d") - timedelta(days=1)).strftime("%Y%m%d")
+    prev2 = _prev_trade_date(prev_date)
     basic_prev_cache: dict[str, dict] = {}
     try:
         r = call_tushare("daily_basic", {"trade_date": prev2},
@@ -562,7 +604,7 @@ def main():
         codes, today, prev_date, basic_cache)
 
     # 前日 daily_basic
-    prev2 = (datetime.strptime(prev_date, "%Y%m%d") - timedelta(days=1)).strftime("%Y%m%d")
+    prev2 = _prev_trade_date(prev_date)
     basic_prev_cache: dict[str, dict] = {}
     try:
         r = call_tushare("daily_basic", {"trade_date": prev2},

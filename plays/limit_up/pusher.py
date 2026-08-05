@@ -42,6 +42,30 @@ def _load_pushed_codes(pushed_dir: Path, today_str: str) -> set[str]:
     return codes
 
 
+def is_push_window() -> bool:
+    """推送时段：工作日 09:26~11:30 / 13:00~15:00。
+
+    早盘窗口从 09:26 起（而非 is_trading_time 的 09:30）——
+    pipeline_daily 09:26 启动、竞价就绪后立即评分推送，若等到 09:30
+    才放行会形成竞态：竞价数据早就绪时评分在 09:26~09:29 完成，
+    被 is_trading_time() 拦截导致当日 0 推送（2026-08-05 实测：
+    09:27 评分完成 max=66.1 但 pusher 返回空）。
+    """
+    from datetime import datetime
+    now = datetime.now()
+    if now.weekday() >= 5:
+        return False
+    if now.hour < 9 or (now.hour == 9 and now.minute < 26):
+        return False
+    if now.hour >= 15:
+        return False
+    if now.hour == 11 and now.minute >= 30:
+        return False
+    if now.hour == 12:
+        return False
+    return True
+
+
 def check_and_push(results: list[dict], data_dir: Path) -> list[dict]:
     """检查并推送满足条件的股票。
 
@@ -52,7 +76,7 @@ def check_and_push(results: list[dict], data_dir: Path) -> list[dict]:
     Returns:
         实际新推送的股票列表（可能为空）。
     """
-    if not is_trading_time():
+    if not is_push_window():
         return []
 
     from plays.limit_up.pipeline_feishu import push_feishu

@@ -114,17 +114,15 @@ def build_universe(td: str) -> dict:
         uncertain = True
         print(f"  [surge] 面板不存在: {panel_file}，今日无面板分可用（全部走排雷）")
 
-    # 名称：pool 文件（缺失自建）+ 涨停名单
-    pool_file = PLAY_DIR / "data" / "pool" / f"pool_{td}.json"
-    if not pool_file.exists():
-        # pipeline 已改为一次性进程，不再建池；surge 自治补齐
+    # 名称：面板 name 列（pool_builder 已删除，2026-07-30 起不再建池）
+    # 面板在 panel_builder 构建时已带 name 列；缺失的从涨停名单补
+    names: dict[str, str] = {}
+    if panel_file.exists():
         try:
-            from plays.limit_up.pool_builder import ensure_pool
-            ensure_pool(td)
+            _np = pd.read_parquet(panel_file, columns=["code", "name"])
+            names = {r["code"]: str(r.get("name") or "") for _, r in _np.iterrows()}
         except Exception as e:
-            print(f"  [surge] 建池失败: {e}")
-    pool = json.loads(pool_file.read_text()) if pool_file.exists() else []
-    names = {s["code"]: s.get("name", "") for s in pool}
+            print(f"  [surge] 面板名称读取失败: {e}")
 
     # 昨日涨停 + 前20日基因（一次调用拉45天）
     from datetime import timedelta

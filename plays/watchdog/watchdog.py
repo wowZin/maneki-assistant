@@ -728,16 +728,9 @@ class WatchdogEngine:
                     st.highest_since_entry = last
                 st.bars_held += 1
 
-                # 时间止损按真实持仓分钟（bars_held 只是轮数计数，
-                # 连续轮询下按轮换算会让 60 分钟止损在几分钟内误触发）
-                try:
-                    held_minutes = int((datetime.now() - datetime.strptime(
-                        st.entry_at, "%Y-%m-%d %H:%M:%S")).total_seconds() // 60)
-                except Exception:
-                    held_minutes = st.bars_held
                 exit_triggered, exit_reason = check_exit(
                     st.entry_price, st.highest_since_entry, last,
-                    held_minutes, vwap, scores, row)
+                    vwap, scores, row)
                 if exit_triggered:
                     # T+1 当日不可卖已确认：跳过卖出尝试，保留盯盘次日恢复
                     # （避免每轮调 CTP 重复拿 -5）
@@ -772,8 +765,43 @@ class WatchdogEngine:
                             m = re.search(r"可用(\d+)股", str(msg))
                             usable = int(m.group(1)) if m else 0
                             if usable == 0:
-                                # 确实无仓(可能已手动卖出),移除盯盘
-                                logger.warning(f"{code} 跳过卖出(无持仓): {msg}")
+                                # 可用0股：可能是「确实无仓（手动卖出）」也可能是
+                                # 「自己上一轮委托已成交」。2026-08-05 实测：
+                                # 14:22 sale 返回 code=0 委托已报 → 14:23 再次 sale
+                                # 返回 -2 可用0（委托已成），走此分支静默移除，
+                                # 导致离场飞书通知/交割单丢失（天娱数科案例）。
+                                # 修复：先查 check_order，若该票有"已成"卖出委托
+                                # → 按正常离场推送+写交割单；无成交记录才静默移除。
+                                _already_dealt = False
+                                try:
+                                    from scripts.jvquant_trade_client import get_trade_client
+                                    _ord2 = get_trade_client().check_order()
+                                    for _o in (_ord2 or {}).get("list") or []:
+                                        if str(_o.get("code", "")) == _short(code) \
+                                                and "卖出" in str(_o.get("type", "")) \
+                                                and _o.get("status") == "已成":
+                                            _already_dealt = True
+                                            break
+                                except Exception:
+                                    pass
+                                if _already_dealt:
+                                    # 系统自己已卖出成交：补离场推送 + 交割单
+                                    _push_feishu(
+                                        f"{'💰' if is_profit else '🛑'} {st.name}({code}) "
+                                        f"{'止盈' if is_profit else '出场'}{_surge_tag}\n"
+                                        f"{exit_reason}\n"
+                                        f"入场: {st.entry_price:.2f} → 现价: {last:.2f}\n"
+                                        f"盈亏: {pnl_pct:+.2f}%"
+                                    )
+                                    _log_trade_journal(
+                                        code, st.name, "卖出", last, 100,
+                                        entry_price=st.entry_price, entry_at=st.entry_at,
+                                        reason=exit_reason,
+                                    )
+                                    logger.warning(f"{code} 已成交卖出(可用0),补发离场推送+交割单")
+                                else:
+                                    # 确实无仓(可能已手动卖出),移除盯盘
+                                    logger.warning(f"{code} 跳过卖出(无持仓): {msg}")
                                 _exit_ok = True
                             else:
                                 # 部分持仓不足1手,保留 entered 下轮重试

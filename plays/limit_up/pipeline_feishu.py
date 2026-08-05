@@ -983,9 +983,9 @@ def push_feishu(results):
     }
 
     for r in push_list:
-        ts = r.get("total_score", 0)
+        ts = r.get("total_score") or 0
         stars = _stars(ts)
-        pct = r.get("pct_chg", 0)
+        pct = r.get("pct_chg") or 0
         code = r.get("code", "")
         name = r.get("name", "")
         card["elements"].append({

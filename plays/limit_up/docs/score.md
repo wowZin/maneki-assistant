@@ -1,13 +1,13 @@
 # 评分体系 — XGBoost 模型分为主
 
 > 生产环境的唯一评分是 **XGBoost 模型分（`model_score`，0–100 连续分）**。
-> 五维度分（fundamental/technical/fundflow/sentiment/shortterm）已降级为模型 64 特征中的 5 个普通特征，不再用于选股展示。
+> 五维度分（fundamental/technical/fundflow/sentiment/shortterm）已降级为模型 61 特征中的 5 个普通特征，不再用于选股展示。
 > 面板（`wiki/raw/limit-up/panel/{date}.parquet`）是评分的单一事实源。
 
 ## 一、生产评分链路
 
 ```
-panel_builder（00:01）  全市场主板面板：64 特征 + 五维度分列 + 预评 model_score（≥35 写 analysis）
+panel_builder（00:01）  全市场主板面板：61 特征 + 五维度分列 + 预评 model_score（≥35 写 analysis）
       ↓
 pipeline（09:30，一次性） 竞价刷新 auc_* → factor_model_score_batch 全量评分 → model_score 写回面板
       ↓

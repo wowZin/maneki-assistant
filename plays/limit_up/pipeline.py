@@ -240,15 +240,9 @@ def morning_pass(today: str) -> list[dict]:
     pit_df.to_parquet(panel_file, index=False)
     log.info("model_score 已全量写回面板")
 
-    # 名称来源：pool 文件 + analysis 旧记录（面板暂无 name 列，见 panel_builder TODO）
+    # 名称来源：面板 name 列优先 + analysis 旧记录兜底
+    # （pool_builder 已于 2026-07-30 删除，pool_*.json 不再生产）
     name_map: dict[str, str] = {}
-    pool_file = PLAY_DIR / "data" / "pool" / f"pool_{today}.json"
-    if pool_file.exists():
-        try:
-            for s in json.loads(pool_file.read_text()):
-                name_map[s["code"]] = s.get("name", "")
-        except Exception:
-            pass
     af = ANALYSIS_FILE(today)
     existing: dict[str, dict] = {}
     if af.exists():
@@ -270,13 +264,14 @@ def morning_pass(today: str) -> list[dict]:
         ap = r.get("auc_pct")
         pct = round(float(ap), 2) if ap is not None and ap == ap else None
         rec = {"code": code,
-               "name": name_map.get(code, "") or code.split(".")[0],
+               "name": r.get("name") or name_map.get(code, "") or code.split(".")[0],
                "model_score": score, "total_score": score,
                "score_mode": "model_score", "pct_chg": pct,
                "scores": {"technical": float(r.get("technical", 0) or 0),
                           "fundflow": float(r.get("fundflow", 0) or 0),
                           "sentiment": float(r.get("sentiment", 0) or 0),
-                          "shortterm": float(r.get("shortterm", 0) or 0)},
+                          "shortterm": float(r.get("shortterm", 0) or 0),
+                          "fundamental": float(r.get("fundamental", 0) or 0)},
                "fundamental": float(r.get("fundamental", 0) or 0)}
         all_results.append(rec)
         if score >= PUSH_THRESHOLD and not (pct is not None and pct >= 9.8):

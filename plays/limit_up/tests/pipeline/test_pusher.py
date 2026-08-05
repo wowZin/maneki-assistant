@@ -17,27 +17,27 @@ import pytest
 from plays.limit_up import pusher
 
 
-@patch("plays.limit_up.pusher.is_trading_time")
+@patch("plays.limit_up.pusher.is_push_window")
 @patch("plays.limit_up.pipeline_feishu.push_feishu")
 def test_check_and_push_filters_by_threshold(mock_push, mock_trading, tmp_path):
     # 用 tmp_path（固定 /tmp 路径会被历史运行的 pushed 存档去重拦截）
-    with patch.dict(os.environ, {"ULTIMATE_PUSH_THRESHOLD": "55"}):
-        mock_trading.return_value = True
-        mock_push.return_value = None
+    pusher.PUSH_THRESHOLD = 55
+    mock_trading.return_value = True
+    mock_push.return_value = None
 
-        results = [
-            {"code": "000001.SZ", "name": "A", "total_score": 60},
-            {"code": "000002.SZ", "name": "B", "total_score": 50},
-            {"code": "000003.SZ", "name": "C", "total_score": 40},
-        ]
+    results = [
+        {"code": "000001.SZ", "name": "A", "total_score": 60},
+        {"code": "000002.SZ", "name": "B", "total_score": 50},
+        {"code": "000003.SZ", "name": "C", "total_score": 40},
+    ]
 
-        pushed = pusher.check_and_push(results, tmp_path)
-        assert len(pushed) == 1
-        assert pushed[0]["code"] == "000001.SZ"
-        mock_push.assert_called_once()
+    pushed = pusher.check_and_push(results, tmp_path)
+    assert len(pushed) == 1
+    assert pushed[0]["code"] == "000001.SZ"
+    mock_push.assert_called_once()
 
 
-@patch("plays.limit_up.pusher.is_trading_time")
+@patch("plays.limit_up.pusher.is_push_window")
 @patch("plays.limit_up.pipeline_feishu.push_feishu")
 def test_check_and_push_deduplicates(mock_push, mock_trading, tmp_path):
     pusher.PUSH_THRESHOLD = 55
@@ -62,7 +62,7 @@ def test_check_and_push_deduplicates(mock_push, mock_trading, tmp_path):
     assert pushed[0]["code"] == "000002.SZ"
 
 
-@patch("plays.limit_up.pusher.is_trading_time")
+@patch("plays.limit_up.pusher.is_push_window")
 def test_check_and_push_skips_when_not_trading(mock_trading):
     pusher.PUSH_THRESHOLD = 55
     mock_trading.return_value = False
@@ -71,7 +71,7 @@ def test_check_and_push_skips_when_not_trading(mock_trading):
     assert pushed == []
 
 
-@patch("plays.limit_up.pusher.is_trading_time")
+@patch("plays.limit_up.pusher.is_push_window")
 @patch("plays.limit_up.pipeline_feishu.push_feishu")
 def test_check_and_push_empty_results(mock_push, mock_trading):
     pusher.PUSH_THRESHOLD = 55

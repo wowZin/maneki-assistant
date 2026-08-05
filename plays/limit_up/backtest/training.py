@@ -142,6 +142,11 @@ def get_dim_scores_by_code(trade_date: str) -> dict[str, dict[str, float]]:
 
     返回: {code: {"fundamental": x, "technical": x, ...}}
     同一股票多轮扫描时，保留 total 最高的一轮。
+
+    兼容两种格式（2026-08-04 修复）：
+    - 新格式（20260723 起）：维度分在 records 的 scores 字典内
+    - 旧格式（20260420~20260722）：维度分在 records 顶层字段
+    之前只读 scores 字典，导致历史 56 天训练集五维特征全 0。
     """
     dim_cols = ["fundamental", "technical", "fundflow", "sentiment", "shortterm"]
     out: dict[str, dict[str, float]] = {}
@@ -156,7 +161,12 @@ def get_dim_scores_by_code(trade_date: str) -> dict[str, dict[str, float]]:
                         continue
                     code = r["code"]
                     sc = r.get("scores", {}) or {}
-                    dims = {d: float(sc.get(d, 0.0) or 0.0) for d in dim_cols}
+                    dims = {}
+                    for d in dim_cols:
+                        v = sc.get(d)
+                        if v is None:          # 旧格式：读顶层字段
+                            v = r.get(d, 0.0)
+                        dims[d] = float(v or 0.0)
                     total = float(r.get("total", 0.0) or 0.0)
                     existing = out.get(code)
                     if existing is None or total > existing.get("_total", 0.0):

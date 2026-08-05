@@ -28,20 +28,29 @@ _REFRESHED = False
 
 
 def _fetch_limit_up_codes() -> set[str]:
-    """用 THS SDK batch_quotes 扫描全市场,返回涨停股短码集合。"""
+    """扫描主板全量，返回涨停股短码集合。
+
+    扫描范围 = 当日面板全部主板 code（panel_builder 构建，含 name 列）。
+    2026-08-05 修复：原实现读 data/pool/pool_*.json（pool_builder 已于
+    2026-07-30 删除，遗留文件停留在 20260730），导致涨停扫描基数过期——
+    新上市/新纳入股票永远扫不到。面板是全市场唯一权威清单。
+    """
     try:
         from scripts.ths_client import get_ths_client as _ths
-        import json
-        from pathlib import Path
+        import pandas as pd
 
-        # 读取候选池(1416只,开盘前已建好)
-        pool_file = Path(__file__).resolve().parent.parent.parent.parent / "plays" / "limit_up" / "data" / "pool"
-        pools = sorted(pool_file.glob(f"pool_*.json"))
-        if not pools:
-            print("[concept_cache] 无候选池")
+        # 读取当日面板全部主板 code（无面板时回退空集合）
+        from plays.limit_up.panel_builder import RAW_DIR
+        import glob
+        # 只匹配 8 位日期面板（目录内还混有 stk_factor_pro/cyq_perf 因子 parquet）
+        _panels = sorted(p for p in glob.glob(str(RAW_DIR / "*.parquet"))
+                         if Path(p).stem.isdigit() and len(Path(p).stem) == 8)
+        if not _panels:
+            print("[concept_cache] 无面板文件")
             return set()
-        pool = json.loads(pools[-1].read_text())
-        codes = [s["code"] for s in pool if s.get("code")]
+        panel_file = _panels[-1]  # 当日或最近交易日
+        df = pd.read_parquet(panel_file, columns=["code"])
+        codes = [c for c in df["code"].tolist() if str(c)[:2] in ("00", "60")]
 
         ths = _ths()
         limit_codes: set[str] = set()

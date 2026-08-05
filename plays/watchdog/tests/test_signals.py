@@ -112,31 +112,15 @@ def test_entry_model_score_gate_boundary():
 
 
 def test_stop_loss():
-    triggered, reason = check_exit(10.0, 10.5, 9.7, 5, 10.0, {})
+    triggered, reason = check_exit(10.0, 10.5, 9.7, 10.0, {})
     assert triggered
     assert "固定止损" in reason
 
 
 def test_trailing_stop():
-    triggered, reason = check_exit(10.0, 11.0, 10.6, 5, 10.0, {})
+    triggered, reason = check_exit(10.0, 11.0, 10.6, 10.0, {})
     assert triggered
     assert "移动止损" in reason
-
-
-def test_time_stop_held_minutes_boundary():
-    """held_minutes 是真实持仓分钟（非轮数）：59 不触发 / 60 触发时间止损。
-
-    EXIT_CONFIG['time_force_exit_minutes']=60。构造无止损/止盈/回撤干扰的持仓：
-    现价10.1（+1%），未破固定止损9.8、未触移动止损9.894、止盈线5%未到、
-    涨幅1%<3%不启用回调出场、scores 为空无反转/高位出场。
-    """
-    # 59 分钟：不触发任何出场
-    triggered, reason = check_exit(10.0, 10.2, 10.1, 59, 10.0, {})
-    assert not triggered, reason
-    # 60 分钟：触发时间止损
-    triggered, reason = check_exit(10.0, 10.2, 10.1, 60, 10.0, {})
-    assert triggered
-    assert "时间止损" in reason
 
 
 def test_is_worth_watching():
@@ -236,7 +220,6 @@ if __name__ == "__main__":
     test_entry_model_score_gate_boundary()
     test_stop_loss()
     test_trailing_stop()
-    test_time_stop_held_minutes_boundary()
     test_is_worth_watching()
     test_abnormal_low_position_no_critical()
     test_abnormal_high_position_critical()

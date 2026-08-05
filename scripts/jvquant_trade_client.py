@@ -210,15 +210,24 @@ def buy(code: str, name: str, price: float | str = None, vol: int | str = 100) -
     # 2026-08-03 修复：涨停一字板检查——ask1 为空（无卖盘）+ 涨幅≥9.9% = 封死涨停，
     # 此时按涨停价挂单只会排队买不进、冻结资金（08-03 实盘 4 笔挂单未成交即此因：
     # 605488/002421/600468/603337 全是涨停封板，资金被挂单冻结到可用仅 2.3 元）。
+    # 2026-08-04 修正：ws_snap 无 pct_chg 字段（L1 只有价格+盘口），原判断 _pct>=9.9
+    # 永远不成立 → 涨停票没拦住。改用盘口特征：ask1 空（无卖盘）+ bid1 巨额封单
+    # （买一量 ≥ 500万手级 或 ≥ 卖一量的 50 倍）= 涨停封板。
     _snap = _snap_of(code)
     try:
         _ask_p = _snap.get("ask_price") or []
+        _bid_p = _snap.get("bid_price") or []
+        _ask_q = _snap.get("ask_qty") or []
+        _bid_q = _snap.get("bid_qty") or []
         _ask1 = float(_ask_p[0]) if _ask_p and str(_ask_p[0]).strip() else 0
-        _pct = float(_snap.get("pct_chg") or 0)
+        _bid1q = float(_bid_q[0]) if _bid_q and str(_bid_q[0]).strip() else 0
+        _ask1q = float(_ask_q[0]) if _ask_q and str(_ask_q[0]).strip() else 0
     except Exception:
-        _ask1, _pct = 0.0, 0.0
-    if _ask1 <= 0 and _pct >= 9.9:
-        return {"code": "-6", "message": f"{code}({name}) 涨停封板(ask1空 pct={_pct:.1f}%)，挂单买不进，跳过"}
+        _ask1, _bid1q, _ask1q = 0.0, 0.0, 0.0
+    # 涨停封板特征：卖一档无挂单（ask1 空）+ 买一档巨额堆积（封单 ≥ 100万股 或 ≥ 卖一量 50 倍）
+    _limit_up = (_ask1 <= 0) and (_bid1q >= 1000000 or (_ask1q > 0 and _bid1q >= _ask1q * 50))
+    if _limit_up:
+        return {"code": "-6", "message": f"{code}({name}) 涨停封板(ask1空 封单{_bid1q:.0f}股)，挂单买不进，跳过"}
 
     client = get_trade_client()
 

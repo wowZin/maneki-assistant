@@ -45,7 +45,7 @@ maneki-agent/
                              → 通过的票写 state.json(source=surge) + signals/ + pushed/
 09:30  watchdog            每60s: 读 state.json → WS共享内存L1快照 → 信号检测
       ~15:00               连续3轮确认入场 → 下单(buy) + 飞书通知
-                             止损/止盈/时间止损 → 卖出(sale) + 飞书通知
+                             止损/止盈 → 卖出(sale) + 飞书通知
 15:00  watchdog            EOD 汰换（surge 零信号票移除）
 15:05  watchdog            引擎自退
 15:00  surge_scanner       收盘休眠到次日 09:35
@@ -102,7 +102,7 @@ plays/watchdog/
 
 - 数据：ws_daemon 共享内存 `/dev/shm/ws_snap.json`（零 HTTP）
 - 信号：实时因子分 + L1 盘口确认 → 连续3轮入场 → 30s确认 → 下单
-- 出场：止损-3% / 移动止损-2% / 止盈5%/8% / 时间止损60分钟
+- 出场：止损-3% / 移动止损-2% / 止盈15%/30%
 - surge 票无上限，盘后零信号自动汰换
 
 ## 数据源

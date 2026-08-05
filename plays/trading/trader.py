@@ -24,9 +24,8 @@ MAX_PER_POSITION = TOTAL_CAPITAL // 10  # 2000 元/只
 DAILY_LOSS_LIMIT = TOTAL_CAPITAL * 0.03  # 600 元/日
 STOP_LOSS_PCT = 0.03      # 硬止损 -3%
 TRAILING_STOP_PCT = 0.02  # 移动止损 -2%
-TAKE_PROFIT_TIER1 = 0.05  # 止盈一档 5%
-TAKE_PROFIT_TIER2 = 0.08  # 止盈二档 8%
-TIME_STOP_MINUTES = 60    # 时间止损 60 分钟
+TAKE_PROFIT_TIER1 = 0.15  # 止盈一档 15%
+TAKE_PROFIT_TIER2 = 0.30  # 止盈二档 30%
 CONSECUTIVE_STOP_LIMIT = 2  # 连续止损停赛
 
 STATE_FILE = PROJECT_DIR / "plays" / "watchdog" / "data" / "state.json"
@@ -244,13 +243,6 @@ class Simulator:
             return True, f"止盈二档+{pnl_pct*100:.1f}%"
         if pnl_pct >= TAKE_PROFIT_TIER1:
             return True, f"止盈一档+{pnl_pct*100:.1f}%"
-
-        # 时间止损
-        held_seconds = (datetime.now() - datetime.strptime(p.entry_at, "%Y-%m-%d %H:%M:%S")).total_seconds()
-        held_minutes = held_seconds / 60
-        if held_minutes >= TIME_STOP_MINUTES:
-            if pnl_pct < 0.01:  # 60 分钟浮盈不到 1%
-                return True, f"时间止损 持仓{held_minutes:.0f}分钟浮亏{pnl_pct*100:.1f}%"
 
         return False, ""
 

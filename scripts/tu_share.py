@@ -168,7 +168,12 @@ def call_tushare(api_name, params, fields="", timeout=10):
         from scripts.audit import record
         record("tushare", api_name, ok=ok, items=items, latency_ms=latency,
                extra=_tushare_date_extra(params))
-        _TUSHARE_CACHE[cache_key] = result
+        # 2026-08-04 修复：空结果（0 条）不缓存。
+        # 原实现无条件缓存——盘中接口 stk_auction 9:25 后发布，首次调用
+        # 拿到空结果被缓存，后续重试全部命中缓存返回 0 条，永远等不到数据
+        # （08-03/08-04 连续两天竞价获取失败、pipeline 重试 10 分钟全 0 的真因）。
+        if items > 0:
+            _TUSHARE_CACHE[cache_key] = result
         return result
     except Exception as e:
         logger.warning("Tushare %s 失败 (不缓存): %s", api_name, e)

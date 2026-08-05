@@ -46,11 +46,7 @@ def tmp_env(tmp_path, monkeypatch, latest_panel_date):
     shutil.copy(REAL_PANEL_DIR / f"{td}.parquet", panel_copy)
 
     play = tmp_path / "limit_up"
-    (play / "data" / "pool").mkdir(parents=True)
     (play / "data" / "analysis").mkdir(parents=True)
-    pool_src = REAL_PLAY_DIR / "data" / "pool" / f"pool_{td}.json"
-    if pool_src.exists():
-        shutil.copy(pool_src, play / "data" / "pool" / pool_src.name)
     af_src = REAL_PLAY_DIR / "data" / "analysis" / f"{td}.json"
     if af_src.exists():
         shutil.copy(af_src, play / "data" / "analysis" / af_src.name)
@@ -63,7 +59,7 @@ def tmp_env(tmp_path, monkeypatch, latest_panel_date):
     monkeypatch.setattr(pipeline, "HEALTH_DIR", tmp_path / "health")
     # 副作用隔离（非数据接口）：失败告警不发真飞书；推送闸强制关闭，防交易时段误推
     monkeypatch.setattr(pipeline, "_notify_text", lambda text: None)
-    monkeypatch.setattr("plays.limit_up.pusher.is_trading_time", lambda: False)
+    monkeypatch.setattr("plays.limit_up.pusher.is_push_window", lambda: False)
     return td, panel_copy, play
 
 
@@ -99,7 +95,7 @@ class TestMorningPass:
 
     REQUIRED_FIELDS = {"code", "name", "model_score", "total_score",
                        "score_mode", "pct_chg", "scores", "fundamental"}
-    DIM_KEYS = {"technical", "fundflow", "sentiment", "shortterm"}
+    DIM_KEYS = {"technical", "fundflow", "sentiment", "shortterm", "fundamental"}
 
     def test_real_morning_pass(self, tmp_env):
         td, panel_copy, play = tmp_env

@@ -1,0 +1,110 @@
+[
+ {
+  "code": "603373.SH",
+  "name": "",
+  "direction": "卖出",
+  "price": 37.68,
+  "shares": 100,
+  "amount": 3768.0,
+  "time": "2026-08-05 11:11:20",
+  "reason": "高位出场: position_optimal=-10 入场35.54→现价37.68 (+6.0%)",
+  "pnl": 214.0,
+  "pnl_pct": 6.02
+ },
+ {
+  "code": "001229.SZ",
+  "name": "魅视科技",
+  "direction": "卖出",
+  "price": 41.72,
+  "shares": 100,
+  "amount": 4172.0,
+  "time": "2026-08-05 11:11:22",
+  "reason": "日内反转: 强度转负且跌破VWAP(41.91)",
+  "pnl": 430.0,
+  "pnl_pct": 11.49
+ },
+ {
+  "code": "600459.SH",
+  "name": "",
+  "direction": "买入",
+  "price": 20.4,
+  "shares": 100,
+  "amount": 2040.0,
+  "time": "2026-08-05 11:14:46",
+  "reason": "信号: vwap_break",
+  "pnl": 0.0,
+  "pnl_pct": 0.0
+ },
+ {
+  "code": "600641.SH",
+  "name": "先导基电",
+  "direction": "买入",
+  "price": 26.34,
+  "shares": 100,
+  "amount": 2634.0,
+  "time": "2026-08-05 11:14:48",
+  "reason": "信号: vwap_break",
+  "pnl": 0.0,
+  "pnl_pct": 0.0
+ },
+ {
+  "code": "600396.SH",
+  "name": "华电辽能",
+  "direction": "买入",
+  "price": 17.35,
+  "shares": 100,
+  "amount": 1735.0,
+  "time": "2026-08-05 11:15:54",
+  "reason": "信号: vwap_break",
+  "pnl": 0.0,
+  "pnl_pct": 0.0
+ },
+ {
+  "code": "002607.SZ",
+  "name": "中公教育",
+  "direction": "买入",
+  "price": 2.23,
+  "shares": 100,
+  "amount": 223.0,
+  "time": "2026-08-05 11:16:58",
+  "reason": "信号: vwap_break",
+  "pnl": 0.0,
+  "pnl_pct": 0.0
+ },
+ {
+  "code": "603680.SH",
+  "name": "今创集团",
+  "direction": "买入",
+  "price": 10.69,
+  "shares": 100,
+  "amount": 1069.0,
+  "time": "2026-08-05 11:28:31",
+  "reason": "信号: vwap_break",
+  "pnl": 0.0,
+  "pnl_pct": 0.0
+ },
+ {
+  "code": "600650.SH",
+  "name": "",
+  "direction": "买入",
+  "price": 11.03,
+  "shares": 100,
+  "amount": 1103.0,
+  "time": "2026-08-05 14:37:28",
+  "reason": "信号: vwap_break",
+  "pnl": 0.0,
+  "pnl_pct": 0.0
+ },
+ {
+  "code": "002354.SZ",
+  "name": "天娱数科",
+  "direction": "卖出",
+  "price": 7.84,
+  "shares": 100,
+  "amount": 784.0,
+  "time": "2026-08-05 14:22:43",
+  "reason": "离场(委托1851882已成,补录)",
+  "pnl": null,
+  "pnl_pct": null
+ }
+]

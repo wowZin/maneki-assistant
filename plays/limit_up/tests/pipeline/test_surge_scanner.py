@@ -29,14 +29,13 @@ PIPELINE_FIELDS = {"code", "name", "model_score", "total_score",
 def uni(tmp_path, monkeypatch, latest_panel_date):
     """对最近面板日期真实构建扫描宇宙（日缓存打到 tmp_path）。
 
-    返回 (td, universe, pool_dir)。pool 文件用真实副本；面板/limit_list_d 真实读取。
+    返回 (td, universe, pool_dir)。面板/limit_list_d 真实读取。
+    2026-08-05：pool_builder 已删除，名称改读面板 name 列，不再复制 pool 文件。
     """
     td = latest_panel_date
     play = tmp_path / "limit_up"
     pool_dir = play / "data" / "pool"
     pool_dir.mkdir(parents=True)
-    shutil.copy(REAL_PLAY_DIR / "data" / "pool" / f"pool_{td}.json",
-                pool_dir / f"pool_{td}.json")
     monkeypatch.setattr(ss, "PLAY_DIR", play)
     u = ss.build_universe(td)
     return td, u, pool_dir
