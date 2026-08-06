@@ -192,6 +192,9 @@ class WatchState:
         # 异常状态推送去重
         self.last_abnormal_level: str = ""
         self.last_abnormal_pushed_at: float = 0.0
+        # 挂起买单委托复查（2026-08-06 修复：委托已报未成交但实际成交的竞态）
+        self.pending_buy_order_id: str = ""
+        self.pending_buy_since = None  # type: ignore[assignment]
         # 资金流向历史（最近 N 轮扫描）
         self.netflow_history: list[float] = []
         # 日线数据缓存
@@ -216,6 +219,8 @@ class WatchState:
             "last_alert_at": self.last_alert_at,
             "last_abnormal_level": self.last_abnormal_level,
             "last_abnormal_pushed_at": self.last_abnormal_pushed_at,
+            "pending_buy_order_id": self.pending_buy_order_id,
+            "pending_buy_since": self.pending_buy_since,
             "netflow_history": self.netflow_history,
             "daily_basic": self.daily_basic,
             "dim_scores": self.dim_scores,
@@ -240,6 +245,8 @@ class WatchState:
         s.last_alert_at = d.get("last_alert_at", "")
         s.last_abnormal_level = d.get("last_abnormal_level", "")
         s.last_abnormal_pushed_at = d.get("last_abnormal_pushed_at", 0.0)
+        s.pending_buy_order_id = d.get("pending_buy_order_id", "")
+        s.pending_buy_since = d.get("pending_buy_since")
         s.netflow_history = d.get("netflow_history", [])
         s.daily_basic = d.get("daily_basic", {})
         s.dim_scores = d.get("dim_scores", {})
@@ -260,6 +267,7 @@ class WatchdogEngine:
         self._scan_count = 0
         self._subscribed: set[str] = set()
         self._snap_fail_count = 0
+        self._snap_fail_by_code: dict[str, int] = {}  # code -> 无行情连续轮数（单票失效检测）
         self._netflow_cache: dict[str, tuple[float, float]] = {}  # code -> (ts, netflow)
         self._netflow_hist_ts: dict[str, float] = {}  # code -> 上次 netflow 采样时间（连续轮询下按真实时间采样）
         self._alert_ts: dict[str, float] = {}         # code -> 入场信号触发时间（连续轮询下按真实时间确认）
@@ -389,12 +397,21 @@ class WatchdogEngine:
         logger.info("盯盘循环启动")
         trading_day_logged = False
         self._state_mtime = self._get_state_mtime()
+        # 对账节流：每 30 分钟一次，且只在交易时段
+        self._reconcile_last = 0.0
         while self._running:
             try:
                 if _is_trading_time():
                     if not trading_day_logged:
                         logger.info("进入交易时段，开始盯盘扫描")
                         trading_day_logged = True
+
+                    # 持仓对账兜底（2026-08-06：珍宝岛/昭衍新药失管事故）——
+                    # 把 CTP 实际持仓中不在 entered 的票自动加回盯盘，
+                    # 防止买入竞态/状态丢失导致持仓脱离监控。
+                    if time.time() - self._reconcile_last >= 1800:
+                        self._reconcile_last = time.time()
+                        self._reconcile_holds()
 
                     # 日切检测：交易日变更时重新订阅
                     _today_str = datetime.now().strftime("%Y%m%d")
@@ -504,10 +521,22 @@ class WatchdogEngine:
             market = _read_ws_snap(_short(code))
             if not market or not market.get("last"):
                 self._snap_fail_count += 1
+                # 2026-08-06：按 code 统计无行情轮次（原引擎级计数互相污染），
+                # entered 持仓连续 10 轮无行情（≈10分钟）→ 飞书告警。
+                # 只告警不重启 ws_daemon——2026-08-05 教训：贸然重启/重订
+                # 会把好的订阅也搞崩（单票静默失效 ≠ 全量失效）。
+                fail_n = self._snap_fail_by_code.get(code, 0) + 1
+                self._snap_fail_by_code[code] = fail_n
+                if fail_n == 10 and st.status == "entered":
+                    _push_feishu(
+                        f"⚠️ {code} {st.name} 持仓无实时行情 {fail_n} 轮\n"
+                        f"（ws_daemon 单票订阅可能静默失效，离场信号暂时无法判定）"
+                    )
                 if self._scan_count % 10 == 0:
                     logger.warning(f"{code} 无行情数据（共享内存无数据{self._snap_fail_count}次）")
                 continue
             self._snap_fail_count = 0  # 有数据了，重置
+            self._snap_fail_by_code[code] = 0  # 有数据重置单票计数
 
             vwap_data = _read_ws_snap(f"{_short(code)}_vwap")
             vwap = float(vwap_data) if isinstance(vwap_data, (int, float)) else 0.0
@@ -603,6 +632,14 @@ class WatchdogEngine:
                     st.last_abnormal_level = ""
 
             if st.status == "watching":
+                # 2026-08-06：先复查挂起买单委托（委托已报但未确认成交）
+                # 成交 → 补置 entered；未成交 → 本轮跳过入场（避免重复下单）
+                if st.pending_buy_order_id:
+                    if self._check_pending_buy(code, st):
+                        continue
+                    # 未成交仍在挂起：本轮不触发新买入，等下一轮复查
+                    time.sleep(0.1)
+                    continue
                 triggered, sig_type, reason = check_entry(row, scores)
                 if triggered:
                     # 连续确认：同一种信号类型连续满足 N 轮才发 alerted
@@ -694,13 +731,18 @@ class WatchdogEngine:
                                 else:
                                     # 委托已报未成交：不置 entered，保持 watching
                                     # （信号清掉，避免下一轮重复触发买入）
+                                    # 2026-08-06：记录 order_id 挂起复查——委托可能
+                                    # 下一秒成交（封板打开/排队），原逻辑清信号后
+                                    # 不再复查 → 盘后零信号汰换 → 持仓失管（珍宝岛）
                                     logger.warning(
                                         f"{code} 委托{order_id}未成交(status=已报)，"
-                                        f"保持 watching 等成交/复查")
+                                        f"保持 watching 复查委托{order_id}")
                                     st.status = "watching"
                                     st.signal_type = ""
                                     st.signal_reason = ""
                                     st.signal_at = ""
+                                    st.pending_buy_order_id = str(order_id)
+                                    st.pending_buy_since = datetime.now()
                                     self._save_state()
                             else:
                                 logger.warning(f"{code} 下单返回异常: code={code_r} msg={r.get('message', r)}")
@@ -724,6 +766,12 @@ class WatchdogEngine:
                         self._save_state()
 
             elif st.status == "entered":
+                # 2026-08-06：reconcile 加回的持仓可能 entry_price=0（对账时快照未就绪）。
+                # 首个有行情的轮次用 last 初始化入场基准，避免 check_exit 除零。
+                if st.entry_price <= 0 and last > 0:
+                    st.entry_price = last
+                    st.highest_since_entry = max(st.highest_since_entry, last)
+                    logger.info(f"{code} 对账持仓入场基准初始化: {last:.2f}")
                 if last > st.highest_since_entry:
                     st.highest_since_entry = last
                 st.bars_held += 1
@@ -753,12 +801,42 @@ class WatchdogEngine:
                         r = sale(short, st.name)
                         code_r = r.get("code", "?")
                         if code_r == "-5":
-                            # T+1：当日买入可用0，不可卖。保留 entered 继续盯盘，
-                            # 记录 t1_blocked_date，次日可用后自动恢复出场监控
+                            # T+1 判定（2026-08-06 修复）：-5 有两种可能——
+                            #   a) 真·当日买入不可卖（保留盯盘，次日恢复）
+                            #   b) 自己的卖出委托已成交（可用0被误判成 T+1）
+                            # 600650 实测：09:30 卖出委托已成 → 09:31 复查 usable_vol=0
+                            # → 误判 -5 标 T+1，实际已清仓，被当持仓盯了一天。
+                            # 修复：先查 check_order，有已成卖出委托 → 正常离场移除。
                             msg = r.get("message", "")
-                            st.t1_blocked_date = datetime.now().strftime("%Y%m%d")
-                            logger.warning(f"{code} T+1当日不可卖,保留盯盘次日恢复: {msg}")
-                            _exit_ok = False
+                            _sold = False
+                            try:
+                                from scripts.jvquant_trade_client import get_trade_client
+                                _ord3 = get_trade_client().check_order()
+                                for _o in (_ord3 or {}).get("list") or []:
+                                    if str(_o.get("code", "")) == _short(code) \
+                                            and "卖出" in str(_o.get("type", "")) \
+                                            and _o.get("status") == "已成":
+                                        _sold = True
+                                        break
+                            except Exception:
+                                pass
+                            if _sold:
+                                # 自己已卖出成交：按正常离场推送 + 移除
+                                _push_feishu(
+                                    f"{'💰' if is_profit else '🛑'} {st.name}({code}) "
+                                    f"{'止盈' if is_profit else '出场'}{_surge_tag}\n"
+                                    f"{exit_reason}\n"
+                                    f"入场: {st.entry_price:.2f} → 现价: {last:.2f}\n"
+                                    f"盈亏: {pnl_pct:+.2f}%"
+                                )
+                                logger.warning(f"{code} 卖出委托已成交(-5误判T+1),正常离场移除")
+                                _exit_ok = True
+                            else:
+                                # 真 T+1：当日买入可用0，不可卖。保留 entered 继续盯盘，
+                                # 记录 t1_blocked_date，次日可用后自动恢复出场监控
+                                st.t1_blocked_date = datetime.now().strftime("%Y%m%d")
+                                logger.warning(f"{code} T+1当日不可卖,保留盯盘次日恢复: {msg}")
+                                _exit_ok = False
                         elif code_r == "-2":
                             msg = r.get("message", "")
                             # message 形如 "持仓不足: xxx 可用{n}股,需{m}股"
@@ -966,12 +1044,131 @@ class WatchdogEngine:
 
     # ---- 状态持久化 ----
 
+    def _reconcile_holds(self):
+        """持仓对账兜底：CTP 实际持仓 vs 盯盘 entered，失管持仓自动加回。
+
+        2026-08-06 修复（珍宝岛/昭衍新药/神剑股份失管事故）：
+        买入委托"已报"后实际成交，但 watchdog 未确认 → 状态未进 entered →
+        盘后零信号汰换 → 持仓脱离监控（止损/止盈永不检查）。
+        这里每 30 分钟把 CTP 有仓但不在 entered 的票加回盯盘（entered 状态），
+        保证任何原因导致的失管持仓都能被重新接管。
+        """
+        try:
+            from scripts.jvquant_trade_client import check_hold
+            r = check_hold()
+            hl = (r or {}).get("hold_list") or []
+            if not hl:
+                return
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            today = datetime.now().strftime("%Y%m%d")
+            with self._lock:
+                for h in hl:
+                    vol = int(h.get("hold_vol", 0) or 0)
+                    if vol <= 0:
+                        continue
+                    short = str(h.get("code", ""))
+                    if len(short) != 6:
+                        continue
+                    code = f"{short}.SH" if short.startswith("6") else f"{short}.SZ"
+                    st = self._states.get(code)
+                    if st and st.status == "entered":
+                        continue
+                    name = h.get("name", "") or short
+                    if st is None:
+                        st = WatchState(code, name)
+                        st.added_at = now_str
+                        self._states[code] = st
+                    # 置 entered，从当前价/持仓信息恢复入场基准
+                    st.status = "entered"
+                    st.source = "reconcile"
+                    st.entry_at = st.entry_at or now_str
+                    st.entry_pushed_date = today
+                    st.name = name
+                    if st.entry_price <= 0:
+                        # CTP 无成本价字段，用快照当前价近似（比失管好，
+                        # 止损/止盈从该价起算；真实成本价可后续手工修正）
+                        _mkt = _read_ws_snap(short)
+                        _last = float(_mkt.get("last") or 0) if _mkt else 0.0
+                        st.entry_price = _last or 0.0
+                    if st.highest_since_entry <= 0:
+                        st.highest_since_entry = st.entry_price
+                    logger.warning(
+                        f"[对账] {code} {name} CTP持仓{vol}股不在entered盯盘，"
+                        f"自动加回盯盘 (entry={st.entry_price:.2f})")
+                self._save_state()
+            # 新加入的票订阅 WS
+            with self._lock:
+                codes = [c for c, s in self._states.items() if s.status == "entered"]
+            self._subscribe(codes)
+        except Exception as e:
+            logger.warning(f"[对账] 持仓对账异常: {e}")
+
+    def _check_pending_buy(self, code: str, st: WatchState) -> bool:
+        """复查挂起的买单委托：已成则补置 entered + 推送 + 落账。
+
+        2026-08-06 修复（珍宝岛/昭衍新药失管事故）：
+        买入返回 code=0 委托已报时，check_order 那一瞬间可能未成交，
+        实际却成交了（封板打开瞬间/排队成交）。原逻辑清信号保持 watching，
+        之后不再触发买入 → 盘后零信号汰换 → 持仓失管。
+        修复：委托已报后记录 order_id，每轮复查直到确认成交。
+        返回 True 表示本轮已处理（进入 entered 或仍等待）。
+        """
+        oid = st.pending_buy_order_id
+        if not oid:
+            return False
+        now = datetime.now()
+        # 挂起超 10 分钟仍未成交 → 放弃（可能撤单/废单），清 pending 防无限复查
+        if st.pending_buy_since and (now - st.pending_buy_since).total_seconds() > 600:
+            logger.warning(f"{code} 买单委托{oid} 超10分钟未成交，放弃复查")
+            st.pending_buy_order_id = ""
+            st.pending_buy_since = None
+            return False
+        try:
+            from scripts.jvquant_trade_client import get_trade_client
+            _ord = get_trade_client().check_order()
+            for _o in (_ord or {}).get("list") or []:
+                if str(_o.get("order_id", "")) == str(oid):
+                    if _o.get("status") == "已成":
+                        # 确认成交：补置 entered + 推送 + 落账
+                        last = float(st.prev_last or 0) or st.entry_price or 0
+                        _push_feishu(
+                            f"📈 {st.name}({code}) 入场【surge】\n"
+                            f"入场价: {last:.2f} (委托{oid}已成)\n"
+                            f"信号: {st.signal_reason or '挂单成交'}\n"
+                            f"order_id: {oid}"
+                        )
+                        _log_trade_journal(
+                            code, st.name, "买入", last, 100,
+                            reason=f"信号: {st.signal_type or '挂单成交'}",
+                        )
+                        st.status = "entered"
+                        st.entry_price = last if last > 0 else st.entry_price
+                        st.entry_at = now.strftime("%Y-%m-%d %H:%M:%S")
+                        st.highest_since_entry = max(st.highest_since_entry, last)
+                        st.pending_buy_order_id = ""
+                        st.pending_buy_since = None
+                        self._save_state()
+                        logger.info(f"{code} 挂单委托{oid}确认成交，补置 entered")
+                        return True
+                    break
+        except Exception as e:
+            logger.warning(f"{code} 复查买单委托异常: {e}")
+        return False
+
     def _save_state(self):
         try:
             STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
             data = {code: st.to_dict() for code, st in self._states.items()}
-            with open(STATE_FILE, "w") as f:
+            # 2026-08-06：原子写（tempfile + rename）——state.json 被
+            # surge_scanner 和 watchdog 多进程共写，非原子 write_text/open("w")
+            # 会互相截断（实测 10:31 损坏一次）。原子写保证读取方永远看到
+            # 完整 JSON（旧内容或新内容，绝不会半截）。
+            _tmp = STATE_FILE.with_name("state.json.tmp")
+            with open(_tmp, "w") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            _tmp.rename(STATE_FILE)
         except Exception as e:
             logger.error(f"状态保存失败: {e}")
 

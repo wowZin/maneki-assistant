@@ -171,6 +171,58 @@ class THSClient:
             from scripts.audit import record
             record("ths", "quote", ok=ok, items=items, latency_ms=(time.time()-t0)*1000)
 
+    # 指数分时缓存（大盘栅栏用，30s TTL 足够）
+    _index_cache: dict = {}
+    _index_cache_ts: float = 0.0
+
+    def get_index_intraday(self, symbol: str = "1A0001") -> Optional[dict]:
+        """获取指数当日分时（同花顺 v6/time 接口，Cookie 直连零成本）。
+
+        2026-08-06 新增（大盘走势栅栏）：上证指数=1A0001、深证成指=399001、
+        创业板指=399006。返回:
+            {date, pre, is_trading, points: [(hhmm, price), ...], latest, pct_chg}
+        非交易时段返回当日完整分时（最后一条=收盘价）；接口故障返回 None。
+        缓存 30s——栅栏只需要分钟级判断，不追求逐秒。
+        """
+        now = time.time()
+        if self._index_cache and now - self._index_cache_ts < 30:
+            return self._index_cache
+        if not self._cookie:
+            logger.warning("同花顺 Cookie 未配置，无法获取指数行情")
+            return None
+        try:
+            url = f"https://d.10jqka.com.cn/v6/time/hs_{symbol}/last.js"
+            resp = self._session.get(url, timeout=5)
+            if not resp.ok:
+                logger.debug(f"同花顺指数失败: {symbol} HTTP {resp.status_code}")
+                return None
+            text = resp.text
+            if "(" not in text or ")" not in text:
+                return None
+            d = json.loads(text[text.index("(") + 1: text.rindex(")")])
+            idx = d.get(f"hs_{symbol}", {})
+            pre = float(idx.get("pre", 0) or 0)
+            date = idx.get("date", "")
+            is_trading = int(idx.get("isTrading", 0) or 0)
+            points = []
+            for row in str(idx.get("data", "")).split(";"):
+                f = row.split(",")
+                if len(f) >= 2 and f[0].isdigit() and len(f[0]) == 4:
+                    points.append((int(f[0]), float(f[1])))
+            latest = points[-1][1] if points else pre
+            pct_chg = (latest / pre - 1) * 100 if pre else 0.0
+            result = {
+                "symbol": symbol, "date": date, "pre": pre,
+                "is_trading": is_trading, "points": points,
+                "latest": latest, "pct_chg": pct_chg,
+            }
+            self._index_cache = result
+            self._index_cache_ts = now
+            return result
+        except Exception as e:
+            logger.debug(f"同花顺指数异常: {symbol} {e}")
+            return None
+
     def get_batch_quotes(self, codes: list[str]) -> dict[str, dict]:
         """批量获取实时行情（逐只请求，自动缓存，缓存 TTL 过期自动刷新）
 

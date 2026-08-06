@@ -270,7 +270,11 @@ def _wd_add(entries: list[dict], dry_run: bool = False) -> list[str]:
                     "last_daily_update": "",
                 }
                 added.append(e["code"])
-            WATCHDOG_STATE.write_text(json.dumps(states, ensure_ascii=False, indent=2))
+            # 2026-08-06：原子写（tempfile + rename）——与 watchdog 共写 state.json，
+            # 非原子写会互相截断（实测 10:31 损坏）。原子写保证读取方永远见完整 JSON。
+            _tmp = WATCHDOG_STATE.with_name("state.json.tmp")
+            _tmp.write_text(json.dumps(states, ensure_ascii=False, indent=2))
+            _tmp.rename(WATCHDOG_STATE)
             # 回读校验（watchdog 引擎每30秒重写 state，可能覆盖；重写则重试）
             back = json.loads(WATCHDOG_STATE.read_text())
             if all(c in back for c in added):
@@ -400,6 +404,39 @@ def _write_pushed(recs: list[dict], td: str):
 # 主扫描
 # ══════════════════════════════════════════════════════
 
+# 大盘弱势阈值：上证指数 ≤ -0.3% 视为弱势市（2026-08-06 定，用户拍板）
+MKT_WEAK_THRESHOLD = float(os.getenv("SURGE_MKT_WEAK", "-0.3"))
+
+
+def _mkt_gate() -> bool:
+    """大盘走势栅栏：上证指数 ≤ -0.3% → 弱势（True），关排雷池。
+
+    数据源：同花顺 v6/time/hs_1A0001 当日分时（Cookie 直连，30s 缓存）。
+    接口故障/异常 → 保守返回 True（关排雷池，宁可少扫不可乱买）。
+    返回 True=弱势（只放主闸池），False=正常（主闸+排雷全开）。
+    """
+    try:
+        from scripts.ths_client import get_ths_client as _ths_idx
+        _idx = _ths_idx().get_index_intraday("1A0001")
+        if _idx is None:
+            print("  [surge] 大盘栅栏: 指数获取失败 → 保守关排雷池")
+            return True
+        _pct = _idx.get("pct_chg", 0.0)
+        # NaN/None/非数值 → 保守关排雷池（NaN <= -0.3 在 Python 恒 False，
+        # 不防御会误判"正常全开"——2026-08-06 实测）
+        if _pct is None or not isinstance(_pct, (int, float)) \
+                or _pct != _pct:
+            print(f"  [surge] 大盘栅栏: 指数数据异常({_pct!r}) → 保守关排雷池")
+            return True
+        _weak = _pct <= MKT_WEAK_THRESHOLD
+        print(f"  [surge] 大盘栅栏: 上证{_idx.get('latest'):.2f} "
+              f"{_pct:+.2f}% → {'弱势关排雷池' if _weak else '正常全开'}")
+        return _weak
+    except Exception as _e:
+        print(f"  [surge] 大盘栅栏异常 → 保守关排雷池: {_e}")
+        return True
+
+
 def scan(dry_run: bool = False):
     td = _today()
     uni = build_universe(td)
@@ -414,6 +451,16 @@ def scan(dry_run: bool = False):
     main_pool = {c for c, s in scores.items() if s >= SURGE_PANEL_SCORE}
     # 排雷池：昨日涨停 ∪ 前20日基因 中不在主闸池的（分<20或无分的票）
     screen_pool = (yesterday_limit | gene) - main_pool
+
+    # ── 大盘走势栅栏（2026-08-06）──
+    # 弱势市（上证指数 ≤ -0.3%）：只放面板分≥30 的主闸池，排雷池全关。
+    # 依据：打板吃大盘 beta——午盘大盘向下时排雷票（低分+基因）大面积亏损
+    #（08-06 实测：13时大盘 -0.09% 时买入的排雷票几乎全绿）。
+    # 接口故障（None）→ 按保守处理关排雷池（宁可少扫，不可乱买）。
+    # 强势/震荡市：正常全开。
+    _mkt_weak = _mkt_gate()
+    if _mkt_weak:
+        screen_pool = set()
     watch = sorted(main_pool | screen_pool)
     print(f"  [surge] 扫描池 {len(watch)} 只（主闸{len(main_pool)} + 排雷{len(screen_pool)}）")
 

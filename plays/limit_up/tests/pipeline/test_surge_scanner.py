@@ -101,6 +101,65 @@ class TestRouting:
             assert isinstance(ss.cyq_no_pressure(c_lb, td), bool)
 
 
+class TestMarketGate:
+    """大盘走势栅栏：弱势市只放主闸池（面板分≥30），排雷池全关。"""
+
+    def _fake_index(self, pct: float) -> dict:
+        return {"symbol": "1A0001", "date": "20260806", "pre": 3878.43,
+                "is_trading": 1, "points": [], "latest": 3878.43 * (1 + pct / 100),
+                "pct_chg": pct}
+
+    def test_weak_market_closes_screen_pool(self):
+        """大盘 -0.5% ≤ -0.3% → _mkt_gate 返回 True（关排雷池）"""
+        from unittest.mock import patch
+        from plays.limit_up import surge_scanner as ss
+        with patch("scripts.ths_client.THSClient.get_index_intraday",
+                   return_value=self._fake_index(-0.5)):
+            assert ss._mkt_gate() is True
+
+    def test_strong_market_keeps_screen_pool(self):
+        """大盘 +0.5% > -0.3% → _mkt_gate 返回 False（正常全开）"""
+        from unittest.mock import patch
+        from plays.limit_up import surge_scanner as ss
+        with patch("scripts.ths_client.THSClient.get_index_intraday",
+                   return_value=self._fake_index(0.5)):
+            assert ss._mkt_gate() is False
+
+    def test_index_failure_conservative(self):
+        """指数接口失败 → 保守关排雷池（True）"""
+        from unittest.mock import patch
+        from plays.limit_up import surge_scanner as ss
+        with patch("scripts.ths_client.THSClient.get_index_intraday",
+                   return_value=None):
+            assert ss._mkt_gate() is True
+
+    def test_index_nan_conservative(self):
+        """指数 pct_chg=NaN → 保守关排雷池（NaN<=-0.3 恒 False 会误判全开）"""
+        from unittest.mock import patch
+        from plays.limit_up import surge_scanner as ss
+        import math
+        idx = self._fake_index(0.5)
+        idx["pct_chg"] = float("nan")
+        with patch("scripts.ths_client.THSClient.get_index_intraday",
+                   return_value=idx):
+            assert ss._mkt_gate() is True
+
+    def test_scan_weak_market_screen_pool_empty(self, uni):
+        """弱势市 scan：排雷池清空，扫描池=主闸池"""
+        from unittest.mock import patch
+        from plays.limit_up import surge_scanner as ss
+        td, u, _ = uni
+        main_pool = {c for c, s in u["scores"].items() if s >= ss.SURGE_PANEL_SCORE}
+        with patch("scripts.ths_client.THSClient.get_index_intraday",
+                   return_value=self._fake_index(-0.5)):
+            # 复刻 scan 内栅栏后的池子计算
+            screen = (set(u["yesterday_limit"]) | set(u["gene"])) - main_pool
+            if ss._mkt_gate():
+                screen = set()
+            watch = sorted(main_pool | screen)
+        assert watch == sorted(main_pool)  # 弱势只留主闸
+
+
 class TestSurgeRecord:
     """_surge_record：score_mode 路由 + 与 pipeline 记录同构。"""
 

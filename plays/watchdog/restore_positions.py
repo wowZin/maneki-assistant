@@ -52,7 +52,10 @@ def main():
             "last_daily_update": "",
         }
         print(f"找回 {code} {name} entry={entry} entered")
-    STATE_FILE.write_text(json.dumps(states, ensure_ascii=False, indent=2))
+    # 原子写（与 watchdog/surge 一致，避免并发截断）
+    tmp = STATE_FILE.with_name("state.json.tmp")
+    tmp.write_text(json.dumps(states, ensure_ascii=False, indent=2))
+    tmp.rename(STATE_FILE)
     print(f"\n已写回 {len(RECORDS)} 只，state.json 现有 {len(states)} 条")
 
 
