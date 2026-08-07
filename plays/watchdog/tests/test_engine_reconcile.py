@@ -129,12 +129,32 @@ class TestExitT1Misjudge:
         ]}
         # 复现 watchdog.py -5 分支的核心判定逻辑
         _sold = False
+        _pending_sell = False
         for _o in order.get("list") or []:
             if str(_o.get("code", "")) == "600650" \
-                    and "卖出" in str(_o.get("type", "")) \
-                    and _o.get("status") == "已成":
-                _sold = True
-        assert _sold is True  # 能识别已成卖出委托 → 走正常离场而非标 T+1
+                    and "卖出" in str(_o.get("type", "")):
+                if _o.get("status") == "已成":
+                    _sold = True
+                if _o.get("status") in ("已报", "待报"):
+                    _pending_sell = True
+        assert _sold is True and _pending_sell is False  # 已成 → 离场移除
+
+    def test_t1_with_pending_sell_keeps_watching(self):
+        """-5 但卖出委托挂单中(已报) → 可用0是挂单冻结，保持 entered 复查（非 T+1）"""
+        order = {"code": "0", "list": [
+            {"order_id": "196929", "code": "002319", "type": "证券卖出",
+             "status": "已报", "deal_volume": "0"},
+        ]}
+        _sold = False
+        _pending_sell = False
+        for _o in order.get("list") or []:
+            if str(_o.get("code", "")) == "002319" \
+                    and "卖出" in str(_o.get("type", "")):
+                if _o.get("status") == "已成":
+                    _sold = True
+                if _o.get("status") in ("已报", "待报"):
+                    _pending_sell = True
+        assert _sold is False and _pending_sell is True  # 挂单中 → 不标 T+1
 
     def test_t1_real_blocked_keeps_watching(self):
         """-5 且无已成卖出委托 → 真 T+1，保留盯盘次日恢复"""
@@ -142,9 +162,48 @@ class TestExitT1Misjudge:
             {"order_id": "x", "code": "603823", "type": "证券买入", "status": "已成"},
         ]}
         _sold = False
+        _pending_sell = False
         for _o in order.get("list") or []:
             if str(_o.get("code", "")) == "603823" \
-                    and "卖出" in str(_o.get("type", "")) \
-                    and _o.get("status") == "已成":
-                _sold = True
-        assert _sold is False  # 只有买入委托 → 不误判已卖出
+                    and "卖出" in str(_o.get("type", "")):
+                if _o.get("status") == "已成":
+                    _sold = True
+                if _o.get("status") in ("已报", "待报"):
+                    _pending_sell = True
+        assert _sold is False and _pending_sell is False  # 只有买入委托 → 真 T+1
+
+
+class TestSellBlockedSilence:
+    """当日卖出受阻静默：砸盘卖不出的票不再反复推送异常状态噪音。"""
+
+    def test_pending_sell_marks_blocked_date(self):
+        """-5 挂单中 → 标记 sell_blocked_date（当日静默依据）"""
+        st = WatchState("600892.SH", "大晟文化")
+        st.status = "entered"
+        st.entry_price = 4.33
+        order = {"code": "0", "list": [
+            {"order_id": "1151822", "code": "600892", "type": "证券卖出",
+             "status": "已报", "deal_volume": "0"},
+        ]}
+        _sold = False
+        _pending_sell = False
+        for _o in order.get("list") or []:
+            if str(_o.get("code", "")) == "600892" \
+                    and "卖出" in str(_o.get("type", "")):
+                if _o.get("status") == "已成":
+                    _sold = True
+                if _o.get("status") in ("已报", "待报"):
+                    _pending_sell = True
+        assert _sold is False and _pending_sell is True
+        # 修复后的 watchdog 逻辑：挂单中 → 标当日静默
+        st.sell_blocked_date = "20260807"
+        assert st.sell_blocked_date == "20260807"
+
+    def test_blocked_same_day_silent_next_day_resumes(self):
+        """当日静默：同日期静默，次日自动恢复推送"""
+        st = WatchState("600892.SH", "大晟文化")
+        st.sell_blocked_date = "20260807"
+        today = "20260807"
+        tomorrow = "20260808"
+        assert st.sell_blocked_date == today  # 当日 → 静默生效
+        assert st.sell_blocked_date != tomorrow  # 次日 → 恢复

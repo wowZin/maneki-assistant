@@ -195,6 +195,9 @@ class WatchState:
         # 挂起买单委托复查（2026-08-06 修复：委托已报未成交但实际成交的竞态）
         self.pending_buy_order_id: str = ""
         self.pending_buy_since = None  # type: ignore[assignment]
+        # 今日卖出受阻静默（2026-08-07：砸盘卖不出/挂单不成交的票，
+        # 不再反复推送异常状态噪音；次日自动恢复）
+        self.sell_blocked_date: str = ""
         # 资金流向历史（最近 N 轮扫描）
         self.netflow_history: list[float] = []
         # 日线数据缓存
@@ -221,6 +224,7 @@ class WatchState:
             "last_abnormal_pushed_at": self.last_abnormal_pushed_at,
             "pending_buy_order_id": self.pending_buy_order_id,
             "pending_buy_since": self.pending_buy_since,
+            "sell_blocked_date": self.sell_blocked_date,
             "netflow_history": self.netflow_history,
             "daily_basic": self.daily_basic,
             "dim_scores": self.dim_scores,
@@ -247,6 +251,7 @@ class WatchState:
         s.last_abnormal_pushed_at = d.get("last_abnormal_pushed_at", 0.0)
         s.pending_buy_order_id = d.get("pending_buy_order_id", "")
         s.pending_buy_since = d.get("pending_buy_since")
+        s.sell_blocked_date = d.get("sell_blocked_date", "")
         s.netflow_history = d.get("netflow_history", [])
         s.daily_basic = d.get("daily_basic", {})
         s.dim_scores = d.get("dim_scores", {})
@@ -610,18 +615,29 @@ class WatchdogEngine:
                         self.remove([code])
                         continue
                 else:
-                    icon = "🚨" if level == "critical" else "⚠️"
-                    msg = (
-                        f"{icon} {st.name}({code}) 异常状态 [{level}]\n"
-                        f"{abnormal_reason}\n"
-                        f"现价: {last:.2f} | VWAP: {vwap:.2f}"
-                    )
-                    # 冷却期内不重复推送
-                    since_last = time.time() - st.last_abnormal_pushed_at
-                    if level != st.last_abnormal_level or since_last >= ABNORMAL_COOLDOWN_SECONDS:
-                        _push_feishu(msg)
-                        st.last_abnormal_level = level
-                        st.last_abnormal_pushed_at = time.time()
+                    # 当日卖出受阻的票（砸盘卖不出）：异常状态只记日志不推送，
+                    # 避免每 5 分钟刷一条噪音（2026-08-07 大晟文化 12 次/小时）
+                    if st.sell_blocked_date == now.strftime("%Y%m%d"):
+                        if level != st.last_abnormal_level or \
+                                time.time() - st.last_abnormal_pushed_at >= ABNORMAL_COOLDOWN_SECONDS:
+                            logger.warning(
+                                f"{code} 异常状态 [{level}] {abnormal_reason} "
+                                f"(当日卖出受阻，静默不推送)")
+                            st.last_abnormal_level = level
+                            st.last_abnormal_pushed_at = time.time()
+                    else:
+                        icon = "🚨" if level == "critical" else "⚠️"
+                        msg = (
+                            f"{icon} {st.name}({code}) 异常状态 [{level}]\n"
+                            f"{abnormal_reason}\n"
+                            f"现价: {last:.2f} | VWAP: {vwap:.2f}"
+                        )
+                        # 冷却期内不重复推送
+                        since_last = time.time() - st.last_abnormal_pushed_at
+                        if level != st.last_abnormal_level or since_last >= ABNORMAL_COOLDOWN_SECONDS:
+                            _push_feishu(msg)
+                            st.last_abnormal_level = level
+                            st.last_abnormal_pushed_at = time.time()
                     if level == "critical":
                         self.remove([code])
                         continue
@@ -801,23 +817,31 @@ class WatchdogEngine:
                         r = sale(short, st.name)
                         code_r = r.get("code", "?")
                         if code_r == "-5":
-                            # T+1 判定（2026-08-06 修复）：-5 有两种可能——
+                            # T+1 判定（2026-08-06 修复）：-5 有三种可能——
                             #   a) 真·当日买入不可卖（保留盯盘，次日恢复）
                             #   b) 自己的卖出委托已成交（可用0被误判成 T+1）
-                            # 600650 实测：09:30 卖出委托已成 → 09:31 复查 usable_vol=0
-                            # → 误判 -5 标 T+1，实际已清仓，被当持仓盯了一天。
-                            # 修复：先查 check_order，有已成卖出委托 → 正常离场移除。
+                            #   c) 自己的卖出委托挂单中（已报未成交）冻结可用股
+                            # 600650 实测：委托已成 → 误判 T+1 被当持仓盯一天。
+                            # 002319 实测：委托挂单中(已报) → 可用0 被误判 T+1，
+                            #   标 t1_blocked_date 后当日不再尝试卖出 → 挂单永不成交、
+                            #   持仓永远冻结（2026-08-07）。
+                            # 修复：查 check_order 区分 b/c——已成→离场移除；
+                            #   已报挂单→保持 entered 复查（不标 T+1）；
+                            #   无卖出委托→真 T+1。
                             msg = r.get("message", "")
                             _sold = False
+                            _pending_sell = False
                             try:
                                 from scripts.jvquant_trade_client import get_trade_client
                                 _ord3 = get_trade_client().check_order()
                                 for _o in (_ord3 or {}).get("list") or []:
                                     if str(_o.get("code", "")) == _short(code) \
-                                            and "卖出" in str(_o.get("type", "")) \
-                                            and _o.get("status") == "已成":
-                                        _sold = True
-                                        break
+                                            and "卖出" in str(_o.get("type", "")):
+                                        if _o.get("status") == "已成":
+                                            _sold = True
+                                            break
+                                        if _o.get("status") in ("已报", "待报"):
+                                            _pending_sell = True
                             except Exception:
                                 pass
                             if _sold:
@@ -831,6 +855,16 @@ class WatchdogEngine:
                                 )
                                 logger.warning(f"{code} 卖出委托已成交(-5误判T+1),正常离场移除")
                                 _exit_ok = True
+                            elif _pending_sell:
+                                # 自己挂的卖单还在盘口（已报未成交）：可用0是挂单冻结，
+                                # 不是 T+1。保持 entered 复查，等挂单成交/撤单。
+                                # 2026-08-07：标记当日卖出受阻——砸盘卖不出的票
+                                # 不再反复推送异常状态噪音（大晟文化 12 次/小时）。
+                                st.sell_blocked_date = datetime.now().strftime("%Y%m%d")
+                                logger.warning(
+                                    f"{code} 卖出委托挂单中(已报)冻结可用股,"
+                                    f"保持 entered 复查(当日静默): {msg}")
+                                _exit_ok = False
                             else:
                                 # 真 T+1：当日买入可用0，不可卖。保留 entered 继续盯盘，
                                 # 记录 t1_blocked_date，次日可用后自动恢复出场监控

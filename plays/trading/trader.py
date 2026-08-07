@@ -24,8 +24,8 @@ MAX_PER_POSITION = TOTAL_CAPITAL // 10  # 2000 元/只
 DAILY_LOSS_LIMIT = TOTAL_CAPITAL * 0.03  # 600 元/日
 STOP_LOSS_PCT = 0.03      # 硬止损 -3%
 TRAILING_STOP_PCT = 0.02  # 移动止损 -2%
-TAKE_PROFIT_TIER1 = 0.15  # 止盈一档 15%
-TAKE_PROFIT_TIER2 = 0.30  # 止盈二档 30%
+TAKE_PROFIT_TIER1 = 0.30  # 止盈一档 30%（2026-08-07 调高：原 15%）
+TAKE_PROFIT_TIER2 = 0.50  # 止盈二档 50%（2026-08-07 调高：原 30%）
 CONSECUTIVE_STOP_LIMIT = 2  # 连续止损停赛
 
 STATE_FILE = PROJECT_DIR / "plays" / "watchdog" / "data" / "state.json"
