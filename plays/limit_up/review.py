@@ -446,8 +446,8 @@ def confidence_distribution(analysis_results: list) -> dict:
     for r in analysis_results:
         conf = r.get("confidence")
         if conf is None or conf == '':
-            # 用total综合分替代
-            conf = r.get("total", 0) or 0
+            # 用total综合分替代（analysis JSON 实际字段是 total_score）
+            conf = r.get("total_score") or r.get("total", 0) or 0
 
         conf = safe_float(conf)
         if conf >= 50:

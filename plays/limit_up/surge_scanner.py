@@ -33,7 +33,12 @@ SIGNALS_DIR = PLAY_DIR / "data" / "signals"
 PANEL_DIR = PLAY_DIR.parent.parent / "wiki" / "raw" / "limit-up" / "panel"
 WATCHDOG_STATE = PLAY_DIR.parent.parent / "plays" / "watchdog" / "data" / "state.json"
 
-PCT_LOW = float(os.getenv("SURGE_PCT_LOW", "5.0"))    # 异动涨幅窗口（5%≤涨幅<9.8%，留0.2%防已封板）
+PCT_LOW = float(os.getenv("SURGE_PCT_LOW", "3.0"))    # 异动涨幅窗口（3%≤涨幅<9.8%，留0.2%防已封板）
+# 2026-08-10 调低 5.0→3.0：5%门槛+3轮确认延迟=系统性买在高位（用户分时图实证：
+# 立新能源/运机集团/三羊马 5分钟内完成拉升，5%捕获时已在半山腰）。
+# 回测(20260810主闸316只)：3%触发109只 vs 5%触发56只；30min胜率31% vs 22%、
+# 收盘胜率39% vs 29%、30min均收益-0.15% vs -0.51%——3%全面占优。
+# 代价：扫描池变大（更多3%+票进池），依赖 check_entry L1 过滤假突破。
 PCT_HIGH = float(os.getenv("SURGE_PCT_HIGH", "9.8"))  # 上限9.8：连板秒板高发，9.0会丢窗口
 SURGE_PANEL_SCORE = float(os.getenv("SURGE_PANEL_SCORE", "30"))  # 主闸：面板早盘评分阈值（2026-08-01 修复v2模型分布下 20→30，池子减半噪声更少）
 SURGE_VOL_RATIO = float(os.getenv("SURGE_VOL_RATIO", "2.0"))  # 排雷：量比下限
@@ -272,7 +277,9 @@ def _wd_add(entries: list[dict], dry_run: bool = False) -> list[str]:
                 added.append(e["code"])
             # 2026-08-06：原子写（tempfile + rename）——与 watchdog 共写 state.json，
             # 非原子写会互相截断（实测 10:31 损坏）。原子写保证读取方永远见完整 JSON。
-            _tmp = WATCHDOG_STATE.with_name("state.json.tmp")
+            # 2026-08-10：tmp 名带 pid，避免与 watchdog/restore_positions 共用
+            # state.json.tmp 并发冲突（A 写被 B 覆盖 → A rename 失败，13:03 实测）。
+            _tmp = WATCHDOG_STATE.with_name(f"state.json.tmp.{os.getpid()}")
             _tmp.write_text(json.dumps(states, ensure_ascii=False, indent=2))
             _tmp.rename(WATCHDOG_STATE)
             # 回读校验（watchdog 引擎每30秒重写 state，可能覆盖；重写则重试）
@@ -404,37 +411,55 @@ def _write_pushed(recs: list[dict], td: str):
 # 主扫描
 # ══════════════════════════════════════════════════════
 
-# 大盘弱势阈值：上证指数 ≤ -0.3% 视为弱势市（2026-08-06 定，用户拍板）
-MKT_WEAK_THRESHOLD = float(os.getenv("SURGE_MKT_WEAK", "-0.3"))
+# 大盘弱势阈值：上证指数 < 0% 视为弱势市（2026-08-10 调高敏感度：原 -0.3%→0%，
+# 大盘翻绿即收闸——打板吃 beta，绿盘时段追突破胜率骤降）
+MKT_WEAK_THRESHOLD = float(os.getenv("SURGE_MKT_WEAK", "0.0"))
+# 大盘强势阈值：上证指数 ≥ +0.5% 视为强势市（2026-08-10 动态门槛新增）
+MKT_STRONG_THRESHOLD = float(os.getenv("SURGE_MKT_STRONG", "0.5"))
+# 动态捕获门槛（2026-08-10 用户拍板）：行情好往下放，行情不好往上收。
+# 强市 2% / 中性 3% / 弱市 5%——弱势档与 5% 旧门槛一致，保证不劣于改动前。
+PCT_LOW_STRONG = float(os.getenv("SURGE_PCT_LOW_STRONG", "2.0"))
+PCT_LOW_NORMAL = float(os.getenv("SURGE_PCT_LOW_NORMAL", "3.0"))
+PCT_LOW_WEAK = float(os.getenv("SURGE_PCT_LOW_WEAK", "5.0"))
 
 
-def _mkt_gate() -> bool:
-    """大盘走势栅栏：上证指数 ≤ -0.3% → 弱势（True），关排雷池。
+def _mkt_gate() -> tuple[str, float]:
+    """大盘走势栅栏 + 动态捕获门槛。
 
     数据源：同花顺 v6/time/hs_1A0001 当日分时（Cookie 直连，30s 缓存）。
-    接口故障/异常 → 保守返回 True（关排雷池，宁可少扫不可乱买）。
-    返回 True=弱势（只放主闸池），False=正常（主闸+排雷全开）。
+    返回 (mkt_state, pct_low)：
+      mkt_state: 'weak' 弱势（≤-0.3%，关排雷池 + 门槛收 5%）
+                 'strong' 强势（≥+0.5%，门槛放 2%）
+                 'normal' 中性（门槛 3%）
+    接口故障/异常 → 保守返回 ('weak', 5.0)（宁可少扫不可乱买）。
     """
     try:
         from scripts.ths_client import get_ths_client as _ths_idx
         _idx = _ths_idx().get_index_intraday("1A0001")
         if _idx is None:
-            print("  [surge] 大盘栅栏: 指数获取失败 → 保守关排雷池")
-            return True
+            print("  [surge] 大盘栅栏: 指数获取失败 → 保守弱市(关排雷池+门槛5%)")
+            return "weak", PCT_LOW_WEAK
         _pct = _idx.get("pct_chg", 0.0)
-        # NaN/None/非数值 → 保守关排雷池（NaN <= -0.3 在 Python 恒 False，
-        # 不防御会误判"正常全开"——2026-08-06 实测）
+        # NaN/None/非数值 → 保守弱市（NaN <= -0.3 在 Python 恒 False，
+        # 不防御会误判"正常"——2026-08-06 实测）
         if _pct is None or not isinstance(_pct, (int, float)) \
                 or _pct != _pct:
-            print(f"  [surge] 大盘栅栏: 指数数据异常({_pct!r}) → 保守关排雷池")
-            return True
-        _weak = _pct <= MKT_WEAK_THRESHOLD
-        print(f"  [surge] 大盘栅栏: 上证{_idx.get('latest'):.2f} "
-              f"{_pct:+.2f}% → {'弱势关排雷池' if _weak else '正常全开'}")
-        return _weak
+            print(f"  [surge] 大盘栅栏: 指数数据异常({_pct!r}) → 保守弱市")
+            return "weak", PCT_LOW_WEAK
+        if _pct >= MKT_STRONG_THRESHOLD:
+            print(f"  [surge] 大盘栅栏: 上证{_idx.get('latest'):.2f} {_pct:+.2f}% "
+                  f"→ 强势(门槛{PCT_LOW_STRONG:.1f}%全开)")
+            return "strong", PCT_LOW_STRONG
+        if _pct < MKT_WEAK_THRESHOLD:
+            print(f"  [surge] 大盘栅栏: 上证{_idx.get('latest'):.2f} {_pct:+.2f}% "
+                  f"→ 弱势(关排雷池+门槛{PCT_LOW_WEAK:.1f}%)")
+            return "weak", PCT_LOW_WEAK
+        print(f"  [surge] 大盘栅栏: 上证{_idx.get('latest'):.2f} {_pct:+.2f}% "
+              f"→ 中性(门槛{PCT_LOW_NORMAL:.1f}%全开)")
+        return "normal", PCT_LOW_NORMAL
     except Exception as _e:
-        print(f"  [surge] 大盘栅栏异常 → 保守关排雷池: {_e}")
-        return True
+        print(f"  [surge] 大盘栅栏异常 → 保守弱市: {_e}")
+        return "weak", PCT_LOW_WEAK
 
 
 def scan(dry_run: bool = False):
@@ -452,17 +477,18 @@ def scan(dry_run: bool = False):
     # 排雷池：昨日涨停 ∪ 前20日基因 中不在主闸池的（分<20或无分的票）
     screen_pool = (yesterday_limit | gene) - main_pool
 
-    # ── 大盘走势栅栏（2026-08-06）──
-    # 弱势市（上证指数 ≤ -0.3%）：只放面板分≥30 的主闸池，排雷池全关。
-    # 依据：打板吃大盘 beta——午盘大盘向下时排雷票（低分+基因）大面积亏损
-    #（08-06 实测：13时大盘 -0.09% 时买入的排雷票几乎全绿）。
-    # 接口故障（None）→ 按保守处理关排雷池（宁可少扫，不可乱买）。
-    # 强势/震荡市：正常全开。
-    _mkt_weak = _mkt_gate()
-    if _mkt_weak:
+    # ── 大盘走势栅栏 + 动态捕获门槛（2026-08-06/08-10）──
+    # 弱势市（上证 ≤ -0.3%）：只放主闸池（排雷全关）+ 门槛收 5%（不劣于旧配置）。
+    # 强势市（上证 ≥ +0.5%）：门槛放 2%（早捕获，多吃拉升段）。
+    # 中性市：门槛 3%。
+    # 依据：打板吃大盘 beta——午盘大盘向下时排雷票大面积亏损（08-06 实测）；
+    #       用户分时图实证 5% 门槛+确认延迟=系统性买在高位（08-10 立新能源等）。
+    _mkt_state, _pct_low = _mkt_gate()
+    if _mkt_state == "weak":
         screen_pool = set()
     watch = sorted(main_pool | screen_pool)
-    print(f"  [surge] 扫描池 {len(watch)} 只（主闸{len(main_pool)} + 排雷{len(screen_pool)}）")
+    print(f"  [surge] 扫描池 {len(watch)} 只（主闸{len(main_pool)} + 排雷{len(screen_pool)}）| "
+          f"动态门槛 {_pct_low:.1f}%")
 
     # THS 并发批量实时行情（ths_client.get_batch_quotes_fast，线程池）
     from scripts.ths_client import get_ths_client as _ths
@@ -474,7 +500,7 @@ def scan(dry_run: bool = False):
         if q is None:
             continue
         pct = float(q.get("pct_chg", 0) or 0)
-        if not (PCT_LOW <= pct < PCT_HIGH):
+        if not (_pct_low <= pct < PCT_HIGH):
             continue
         full = f"{code}.SH" if code.startswith("6") else f"{code}.SZ"
         vr = float(q.get("vol_ratio", 0) or 0)
@@ -566,7 +592,15 @@ def main():
         atexit.register(lambda: pid_file.unlink() if pid_file.exists() else None)
 
         print(f"[surge] daemon 模式启动, 每60s扫描一次 → watchdog (窗口 09:35-11:30/13:00-15:00)")
+        # 心跳文件：每轮循环更新 mtime，巡检脚本据此判断"进程活着但卡死"
+        #（2026-08-05/08-10 两次实测：进程卡 futex 3天+，systemd 检测不到假死）
+        heartbeat = PLAY_DIR / "data" / "health" / "surge_heartbeat"
+        heartbeat.parent.mkdir(parents=True, exist_ok=True)
         while True:
+            try:
+                heartbeat.write_text(datetime.now().isoformat())
+            except Exception:
+                pass  # 心跳写失败不阻塞主循环
             now = datetime.now()
             hhmm = int(now.strftime("%H%M"))
             if hhmm >= 1500:

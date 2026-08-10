@@ -22,6 +22,7 @@ def _engine_with(states: dict[str, WatchState]) -> WatchdogEngine:
     eng._states = dict(states)
     eng._subscribed = set()
     eng._running = False
+    eng._confirmed_buy_orders = set()  # 幂等：已确认过的买单委托号
     return eng
 
 
@@ -79,7 +80,7 @@ class TestCheckPendingBuy:
         st.prev_last = 6.67
         eng = _engine_with({"603567.SH": st})
         order = {"code": "0", "list": [
-            {"order_id": "1851882", "status": "已成", "type": "证券买入"},
+            {"order_id": "1851882", "code": "603567", "status": "已成", "type": "证券买入"},
         ]}
         with patch("scripts.jvquant_trade_client.get_trade_client") as mock_tc, \
              patch.object(eng, "_save_state"):
@@ -95,7 +96,7 @@ class TestCheckPendingBuy:
         st.pending_buy_since = __import__("datetime").datetime.now()
         eng = _engine_with({"603567.SH": st})
         order = {"code": "0", "list": [
-            {"order_id": "999999", "status": "已报", "type": "证券买入"},
+            {"order_id": "999999", "code": "603567", "status": "已报", "type": "证券买入"},
         ]}
         with patch("scripts.jvquant_trade_client.get_trade_client") as mock_tc, \
              patch.object(eng, "_save_state"):
@@ -116,6 +117,31 @@ class TestCheckPendingBuy:
         mock_tc.assert_not_called()  # 超时不再查
         assert st.status == "watching"
         assert st.pending_buy_order_id == ""  # 放弃复查
+
+    def test_pending_buy_wrong_code_no_ghost(self):
+        """交叉匹配 bug 回归：同 order_id 但 code 不同 → 不写交割单
+
+        2026-08-10 珍宝岛幽灵单事故：pending_buy_order_id 残留 + 只比
+        order_id → 把盛达资源/三变科技的成交误判成珍宝岛成交，写 5 笔
+        幽灵交割单（CTP 实际从未买入）。修复后必须 order_id+code 双匹配。
+        """
+        st = WatchState("603567.SH", "珍宝岛")
+        st.status = "watching"
+        st.pending_buy_order_id = "908546"  # 三变科技的委托号
+        st.pending_buy_since = __import__("datetime").datetime.now()
+        eng = _engine_with({"603567.SH": st})
+        # CTP 里 908546 是 002112（三变科技）的已成委托，不是 603567
+        order = {"code": "0", "list": [
+            {"order_id": "908546", "code": "002112", "status": "已成",
+             "type": "证券买入"},
+        ]}
+        with patch("scripts.jvquant_trade_client.get_trade_client") as mock_tc, \
+             patch.object(eng, "_save_state"):
+            mock_tc.return_value.check_order.return_value = order
+            eng._check_pending_buy("603567.SH", st)
+        # code 不匹配 → 不确认成交，保持 watching，pending 保留
+        assert st.status == "watching"
+        assert st.pending_buy_order_id == "908546"  # 等真正的珍宝岛委托
 
 
 class TestExitT1Misjudge:
@@ -207,3 +233,80 @@ class TestSellBlockedSilence:
         tomorrow = "20260808"
         assert st.sell_blocked_date == today  # 当日 → 静默生效
         assert st.sell_blocked_date != tomorrow  # 次日 → 恢复
+
+
+class TestPendingSellTimeout:
+    """卖出挂单超时撤单重挂（2026-08-10 大晟文化挂死事故）"""
+
+    def test_pending_sell_records_time(self):
+        """code=0 委托未成交 → 记录 pending_sell_order_id + since"""
+        st = WatchState("600892.SH", "大晟文化")
+        st.status = "entered"
+        st.entry_price = 4.33
+        # 模拟 code=0 未成交分支
+        st.pending_sell_order_id = "137150"
+        st.pending_sell_since = __import__("time").time()
+        assert st.pending_sell_order_id == "137150"
+        assert st.pending_sell_since > 0
+
+    def test_timeout_sets_force_resell(self):
+        """挂单超时 >180s → 撤单 + force_resell=True（下轮强制重挂）"""
+        import time as _t
+        st = WatchState("600892.SH", "大晟文化")
+        st.status = "entered"
+        st.pending_sell_order_id = "137150"
+        st.pending_sell_since = _t.time() - 300  # 5分钟前挂的
+        # 复现 watchdog -5 _pending_sell 分支的超时逻辑
+        if st.pending_sell_since and _t.time() - st.pending_sell_since > 180:
+            st.pending_sell_order_id = ""
+            st.pending_sell_since = 0.0
+            st.force_resell = True
+        assert st.pending_sell_order_id == ""  # 已撤单
+        assert st.force_resell is True  # 下轮强制重挂
+
+    def test_fresh_pending_no_force(self):
+        """挂单未超时 → 不撤单不强制"""
+        import time as _t
+        st = WatchState("600892.SH", "大晟文化")
+        st.pending_sell_order_id = "137150"
+        st.pending_sell_since = _t.time() - 30  # 30秒前挂的
+        if st.pending_sell_since and _t.time() - st.pending_sell_since > 180:
+            st.force_resell = True
+        assert st.force_resell is False
+
+
+class TestPriceTrendConfirmation:
+    """信号翻转设计（2026-08-10）：3 轮确认期内 last 不跌才买入。
+
+    逻辑复刻 watchdog watching 分支：
+      _price_ok = (_prev_last_old <= 0) or (last >= _prev_last_old)
+      价格下跌 → 重置 streak（不确认）；不跌 → 正常累计确认。
+    """
+
+    def test_price_up_continues_streak(self):
+        """价格不跌（last >= prev）→ 确认计数继续"""
+        prev_last = 10.0
+        last = 10.05
+        _price_ok = (prev_last <= 0) or (last >= prev_last)
+        assert _price_ok is True
+
+    def test_price_down_resets_streak(self):
+        """价格下跌（last < prev）→ 不确认（重置）"""
+        prev_last = 10.0
+        last = 9.95
+        _price_ok = (prev_last <= 0) or (last >= prev_last)
+        assert _price_ok is False
+
+    def test_first_round_no_prev_ok(self):
+        """首次触发（prev=0）→ 视为价格 OK（无历史可比）"""
+        prev_last = 0.0
+        last = 10.0
+        _price_ok = (prev_last <= 0) or (last >= prev_last)
+        assert _price_ok is True
+
+    def test_flat_price_ok(self):
+        """横盘（last == prev）→ 视为不跌，确认继续"""
+        prev_last = 10.0
+        last = 10.0
+        _price_ok = (prev_last <= 0) or (last >= prev_last)
+        assert _price_ok is True

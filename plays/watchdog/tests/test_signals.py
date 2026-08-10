@@ -123,6 +123,25 @@ def test_trailing_stop():
     assert "移动止损" in reason
 
 
+def test_high_position_no_pullback_holds():
+    """高位回撤出场（2026-08-10 修卖飞）：位置高但未回撤 → 不卖。
+
+    招金黄金 08-10 实测：09:38 +2.9% 旧逻辑触发高位出场卖飞，
+    尾盘涨停 +10%。新逻辑要求从最高点回撤 ≥2% 才离场。
+    """
+    scores = {"position_optimal": -10}
+    # 现价 == 最高（无回撤）→ 不卖
+    triggered, reason = check_exit(18.01, 18.53, 18.53, 18.40, scores)
+    assert not triggered, f"未回撤不应离场: {reason}"
+    # 微回撤 0.4% → 不卖（正常波动）
+    triggered, _ = check_exit(18.01, 18.60, 18.53, 18.40, scores)
+    assert not triggered
+    # 回撤 2.1% → 卖（真回落才离场）
+    triggered, reason = check_exit(18.01, 18.90, 18.50, 18.40, scores)
+    assert triggered
+    assert "高位回撤" in reason
+
+
 def test_is_worth_watching():
     row = _make_row(pct=4.0, gap=2.0, turnover=15.0, vol_ratio=1.8,
                     technical=35.0, shortterm=28.0, fundflow=15.0,

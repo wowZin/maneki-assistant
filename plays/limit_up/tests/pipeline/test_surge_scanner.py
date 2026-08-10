@@ -110,31 +110,57 @@ class TestMarketGate:
                 "pct_chg": pct}
 
     def test_weak_market_closes_screen_pool(self):
-        """大盘 -0.5% ≤ -0.3% → _mkt_gate 返回 True（关排雷池）"""
+        """大盘 -0.5% < 0% → 弱势（关排雷池 + 门槛 5%）"""
         from unittest.mock import patch
         from plays.limit_up import surge_scanner as ss
         with patch("scripts.ths_client.THSClient.get_index_intraday",
                    return_value=self._fake_index(-0.5)):
-            assert ss._mkt_gate() is True
+            state, pct_low = ss._mkt_gate()
+            assert state == "weak"
+            assert pct_low == 5.0
+
+    def test_weak_market_sensitive_at_negative(self):
+        """大盘 -0.1% < 0% → 弱势（敏感度调高：翻绿即收闸）"""
+        from unittest.mock import patch
+        from plays.limit_up import surge_scanner as ss
+        with patch("scripts.ths_client.THSClient.get_index_intraday",
+                   return_value=self._fake_index(-0.1)):
+            state, pct_low = ss._mkt_gate()
+            assert state == "weak"
+            assert pct_low == 5.0
 
     def test_strong_market_keeps_screen_pool(self):
-        """大盘 +0.5% > -0.3% → _mkt_gate 返回 False（正常全开）"""
+        """大盘 +0.5% ≥ +0.5% → 强势（门槛 2%，全开）"""
         from unittest.mock import patch
         from plays.limit_up import surge_scanner as ss
         with patch("scripts.ths_client.THSClient.get_index_intraday",
                    return_value=self._fake_index(0.5)):
-            assert ss._mkt_gate() is False
+            state, pct_low = ss._mkt_gate()
+            assert state == "strong"
+            assert pct_low == 2.0
+
+    def test_normal_market_mid_gate(self):
+        """大盘 0% 中性（0~0.5 区间）→ 门槛 3%"""
+        from unittest.mock import patch
+        from plays.limit_up import surge_scanner as ss
+        with patch("scripts.ths_client.THSClient.get_index_intraday",
+                   return_value=self._fake_index(0.0)):
+            state, pct_low = ss._mkt_gate()
+            assert state == "normal"
+            assert pct_low == 3.0
 
     def test_index_failure_conservative(self):
-        """指数接口失败 → 保守关排雷池（True）"""
+        """指数接口失败 → 保守弱市（门槛 5%）"""
         from unittest.mock import patch
         from plays.limit_up import surge_scanner as ss
         with patch("scripts.ths_client.THSClient.get_index_intraday",
                    return_value=None):
-            assert ss._mkt_gate() is True
+            state, pct_low = ss._mkt_gate()
+            assert state == "weak"
+            assert pct_low == 5.0
 
     def test_index_nan_conservative(self):
-        """指数 pct_chg=NaN → 保守关排雷池（NaN<=-0.3 恒 False 会误判全开）"""
+        """指数 pct_chg=NaN → 保守弱市（门槛 5%）"""
         from unittest.mock import patch
         from plays.limit_up import surge_scanner as ss
         import math
@@ -142,7 +168,9 @@ class TestMarketGate:
         idx["pct_chg"] = float("nan")
         with patch("scripts.ths_client.THSClient.get_index_intraday",
                    return_value=idx):
-            assert ss._mkt_gate() is True
+            state, pct_low = ss._mkt_gate()
+            assert state == "weak"
+            assert pct_low == 5.0
 
     def test_scan_weak_market_screen_pool_empty(self, uni):
         """弱势市 scan：排雷池清空，扫描池=主闸池"""
@@ -154,7 +182,8 @@ class TestMarketGate:
                    return_value=self._fake_index(-0.5)):
             # 复刻 scan 内栅栏后的池子计算
             screen = (set(u["yesterday_limit"]) | set(u["gene"])) - main_pool
-            if ss._mkt_gate():
+            state, _ = ss._mkt_gate()
+            if state == "weak":
                 screen = set()
             watch = sorted(main_pool | screen)
         assert watch == sorted(main_pool)  # 弱势只留主闸

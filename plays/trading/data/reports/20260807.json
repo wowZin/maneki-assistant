@@ -336,18 +336,6 @@
     "pnl_pct": -4.49
   },
   {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 100,
-    "amount": 667.0,
-    "time": "2026-08-07 10:43:17",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
     "code": "600237.SH",
     "name": "铜峰电子",
     "direction": "买入",
@@ -504,18 +492,6 @@
     "pnl_pct": 0.0
   },
   {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 100,
-    "amount": 667.0,
-    "time": "2026-08-07 14:25:41",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
     "code": "002755.SZ",
     "name": "奥赛康",
     "direction": "买入",
@@ -524,18 +500,6 @@
     "amount": 1383.0,
     "time": "2026-08-07 14:48:38",
     "reason": "信号: vwap_break",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 100,
-    "amount": 667.0,
-    "time": "2026-08-07 15:34:44",
-    "reason": "信号: 挂单成交",
     "pnl": 0.0,
     "pnl_pct": 0.0
   }

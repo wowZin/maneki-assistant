@@ -261,13 +261,21 @@ def check_exit(
     if intraday < 0 and current_price < vwap:
         return True, f"日内反转: 强度转负且跌破VWAP({vwap:.2f})"
 
-    # 高位最优位置出场
+    # 高位回撤出场（2026-08-10 改：原"位置高+微利就卖"误杀强势股）
+    # 招金黄金 08-10 实测：09:38 +2.9% 触发高位出场卖 18.53，
+    # 尾盘涨停 19.94（卖飞 +7.6%）；盛达资源同理（+3.6% 卖、尾盘 +6.8%）。
+    # 根因：position_optimal 只看 20 日位置（强势股天然 >0.85 高分位），
+    # 位置高 ≠ 见顶。改为"位置高 + 从持仓最高点回撤 ≥2%"双条件——
+    # 位置高但还在涨/横盘 → 持有（让利润奔跑）；位置高且回落 → 离场。
     pos_opt = scores.get("position_optimal", 0.0)
-    if pos_opt <= -10 and gain_pct >= 0.02:
-        return True, (
-            f"高位出场: position_optimal={pos_opt:.0f} "
-            f"入场{entry_price:.2f}→现价{current_price:.2f} (+{gain_pct*100:.1f}%)"
-        )
+    if pos_opt <= -10 and highest_since_entry > 0:
+        hi_pullback = (highest_since_entry - current_price) / highest_since_entry
+        if hi_pullback >= 0.02:
+            return True, (
+                f"高位回撤: 位置{pos_opt:.0f} 从最高{highest_since_entry:.2f} "
+                f"回撤{hi_pullback*100:.1f}% 现价{current_price:.2f} "
+                f"(入场{entry_price:.2f} {gain_pct*100:+.1f}%)"
+            )
 
     return False, ""
 

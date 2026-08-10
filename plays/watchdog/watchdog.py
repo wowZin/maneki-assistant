@@ -198,6 +198,11 @@ class WatchState:
         # 今日卖出受阻静默（2026-08-07：砸盘卖不出/挂单不成交的票，
         # 不再反复推送异常状态噪音；次日自动恢复）
         self.sell_blocked_date: str = ""
+        # 卖出挂单时间（2026-08-10：挂单超时撤单重挂，防"挂死"）
+        self.pending_sell_order_id: str = ""
+        self.pending_sell_since: float = 0.0
+        # 撤单后强制重卖标记（2026-08-10：即使 check_exit 未再触发也重挂）
+        self.force_resell: bool = False
         # 资金流向历史（最近 N 轮扫描）
         self.netflow_history: list[float] = []
         # 日线数据缓存
@@ -223,8 +228,14 @@ class WatchState:
             "last_abnormal_level": self.last_abnormal_level,
             "last_abnormal_pushed_at": self.last_abnormal_pushed_at,
             "pending_buy_order_id": self.pending_buy_order_id,
-            "pending_buy_since": self.pending_buy_since,
+            # 2026-08-10：datetime 不能直接 json 序列化（10:00 实测
+            # "Object of type datetime is not JSON serializable" → state 保存失败）
+            "pending_buy_since": self.pending_buy_since.isoformat()
+            if self.pending_buy_since else None,
             "sell_blocked_date": self.sell_blocked_date,
+            "pending_sell_order_id": self.pending_sell_order_id,
+            "pending_sell_since": self.pending_sell_since,
+            "force_resell": self.force_resell,
             "netflow_history": self.netflow_history,
             "daily_basic": self.daily_basic,
             "dim_scores": self.dim_scores,
@@ -250,8 +261,12 @@ class WatchState:
         s.last_abnormal_level = d.get("last_abnormal_level", "")
         s.last_abnormal_pushed_at = d.get("last_abnormal_pushed_at", 0.0)
         s.pending_buy_order_id = d.get("pending_buy_order_id", "")
-        s.pending_buy_since = d.get("pending_buy_since")
+        _pbs = d.get("pending_buy_since")
+        s.pending_buy_since = datetime.fromisoformat(_pbs) if isinstance(_pbs, str) else None
         s.sell_blocked_date = d.get("sell_blocked_date", "")
+        s.pending_sell_order_id = d.get("pending_sell_order_id", "")
+        s.pending_sell_since = d.get("pending_sell_since", 0.0)
+        s.force_resell = d.get("force_resell", False)
         s.netflow_history = d.get("netflow_history", [])
         s.daily_basic = d.get("daily_basic", {})
         s.dim_scores = d.get("dim_scores", {})
@@ -272,6 +287,9 @@ class WatchdogEngine:
         self._scan_count = 0
         self._subscribed: set[str] = set()
         self._snap_fail_count = 0
+        # 已确认过的买单委托号（2026-08-10 幂等防重：state 保存失败时
+        # pending 不清会导致同一委托重复落账，用集合兜底）
+        self._confirmed_buy_orders: set[str] = set()
         self._snap_fail_by_code: dict[str, int] = {}  # code -> 无行情连续轮数（单票失效检测）
         self._netflow_cache: dict[str, tuple[float, float]] = {}  # code -> (ts, netflow)
         self._netflow_hist_ts: dict[str, float] = {}  # code -> 上次 netflow 采样时间（连续轮询下按真实时间采样）
@@ -598,6 +616,10 @@ class WatchdogEngine:
             )
 
             # 保存本轮快照供下一轮诱空检测
+            # 2026-08-10：prev_last 在状态分支前先保存旧值到局部变量，
+            # 供 watching 分支的"价格不跌"判断（last >= prev_last）使用；
+            # 更新仍在这里做（异常检测需要本轮前的旧值，已在上方 check_abnormal 用到）。
+            _prev_last_old = st.prev_last
             st.prev_last = last
             st.prev_vwap = vwap
             st.prev_vol_ratio = row.get("vol_ratio_proxy", 1.0)
@@ -658,29 +680,41 @@ class WatchdogEngine:
                     continue
                 triggered, sig_type, reason = check_entry(row, scores)
                 if triggered:
-                    # 连续确认：同一种信号类型连续满足 N 轮才发 alerted
-                    # （3 轮 = 3 分钟，过滤假突破——贴着 VWAP 穿过去的第 2 轮就掉了）
-                    prev_type = self._entry_streak_type.get(code, "")
-                    if sig_type == prev_type:
-                        self._entry_streak[code] = self._entry_streak.get(code, 0) + 1
-                    else:
-                        self._entry_streak[code] = 1
-                        self._entry_streak_type[code] = sig_type
-                    if self._entry_streak.get(code, 0) >= CONSECUTIVE_ENTRY_ROUNDS:
-                        st.status = "alerted"
-                        st.signal_type = sig_type
-                        st.signal_reason = reason
-                        st.signal_at = now.strftime("%H:%M:%S")
-                        st.last_alert_at = now.strftime("%H:%M")
-                        self._alert_ts[code] = time.time()
-                        self._save_state()
-                        self._entry_streak.pop(code, None)  # 进入 alerted 后清 streak
+                    # 2026-08-10 信号翻转设计：3 轮确认期内价格必须不跌
+                    #（last >= 上一轮 last，用 _prev_last_old 局部旧值——
+                    #  st.prev_last 已被本轮更新为 last，直接用会恒 True）。
+                    # 连续下跌趋势的票（冲高回落）在确认期被淘汰，避免买在
+                    # 山顶——今天运机集团等 12/13 笔浮亏的主因。真突破（3
+                    # 分钟持续不跌）照常买入。
+                    _price_ok = (_prev_last_old <= 0) or (last >= _prev_last_old)
+                    if not _price_ok:
+                        # 价格在跌：重置连续计数，不确认（重新等信号）
+                        self._entry_streak.pop(code, None)
                         self._entry_streak_type.pop(code, None)
-                        if st.source != "surge":
-                            # 盯盘信号通知已关闭，trader 负责实盘下单通知
-                            pass
+                    else:
+                        # 连续确认：同一种信号类型连续满足 N 轮才发 alerted
+                        # （3 轮 = 3 分钟，过滤假突破——贴着 VWAP 穿过去的第 2 轮就掉了）
+                        prev_type = self._entry_streak_type.get(code, "")
+                        if sig_type == prev_type:
+                            self._entry_streak[code] = self._entry_streak.get(code, 0) + 1
                         else:
-                            pass
+                            self._entry_streak[code] = 1
+                            self._entry_streak_type[code] = sig_type
+                        if self._entry_streak.get(code, 0) >= CONSECUTIVE_ENTRY_ROUNDS:
+                            st.status = "alerted"
+                            st.signal_type = sig_type
+                            st.signal_reason = reason
+                            st.signal_at = now.strftime("%H:%M:%S")
+                            st.last_alert_at = now.strftime("%H:%M")
+                            self._alert_ts[code] = time.time()
+                            self._save_state()
+                            self._entry_streak.pop(code, None)  # 进入 alerted 后清 streak
+                            self._entry_streak_type.pop(code, None)
+                            if st.source != "surge":
+                                # 盯盘信号通知已关闭，trader 负责实盘下单通知
+                                pass
+                            else:
+                                pass
                 else:
                     # 条件不满足，重置连续计数
                     self._entry_streak.pop(code, None)
@@ -795,6 +829,11 @@ class WatchdogEngine:
                 exit_triggered, exit_reason = check_exit(
                     st.entry_price, st.highest_since_entry, last,
                     vwap, scores, row)
+                # 2026-08-10：撤单后强制重卖（即使 check_exit 未再触发，
+                # 也要按最新盘口追价重挂——否则挂单撤了就没人卖了）
+                if st.force_resell and not exit_triggered:
+                    exit_triggered = True
+                    exit_reason = f"挂单超时撤单重挂(现价{last:.2f})"
                 if exit_triggered:
                     # T+1 当日不可卖已确认：跳过卖出尝试，保留盯盘次日恢复
                     # （避免每轮调 CTP 重复拿 -5）
@@ -861,6 +900,23 @@ class WatchdogEngine:
                                 # 2026-08-07：标记当日卖出受阻——砸盘卖不出的票
                                 # 不再反复推送异常状态噪音（大晟文化 12 次/小时）。
                                 st.sell_blocked_date = datetime.now().strftime("%Y%m%d")
+                                # 2026-08-10：挂单超时（>180s）→ 撤单追价重挂
+                                #（大晟文化 09:30 挂 4.09，价格跌到 3.80 永不成交）
+                                if st.pending_sell_since and \
+                                        time.time() - st.pending_sell_since > 180:
+                                    try:
+                                        from scripts.jvquant_trade_client import cancel
+                                        cancel(st.pending_sell_order_id)
+                                        logger.warning(
+                                            f"{code} 卖出挂单{st.pending_sell_order_id} "
+                                            f"超时{time.time()-st.pending_sell_since:.0f}s "
+                                            f"未成交，撤单追价重挂")
+                                    except Exception as _ce:
+                                        logger.warning(f"{code} 撤单失败: {_ce}")
+                                    finally:
+                                        st.pending_sell_order_id = ""
+                                        st.pending_sell_since = 0.0
+                                        st.force_resell = True
                                 logger.warning(
                                     f"{code} 卖出委托挂单中(已报)冻结可用股,"
                                     f"保持 entered 复查(当日静默): {msg}")
@@ -923,6 +979,8 @@ class WatchdogEngine:
                             # 2026-08-03 修复：sale() 返回 code=0 只是"委托已报"，
                             # 未成交就移除盯盘=持仓失管（与买入侧同源 bug）。
                             # 查 check_order 确认"已成"才推送+移除；挂单中保留 entered 重试。
+                            # 2026-08-10：新委托发出 → 清撤单重卖标记（避免重复卖）
+                            st.force_resell = False
                             _deal_ok = False
                             try:
                                 from scripts.jvquant_trade_client import get_trade_client
@@ -951,6 +1009,11 @@ class WatchdogEngine:
                             else:
                                 # 卖出委托已报未成交：保留 entered 下轮复查，
                                 # 避免未成交就移除盯盘导致持仓失管
+                                # 2026-08-10：记录挂单时间，超时自动撤单重挂
+                                #（大晟文化 09:30 挂单 4.09 到 10:03 未成交，
+                                #  价格跌到 3.80，挂单永不成交——必须追价重挂）
+                                st.pending_sell_order_id = str(order_id)
+                                st.pending_sell_since = time.time()
                                 logger.warning(
                                     f"{code} 卖出委托{order_id}未成交(status=已报)，"
                                     f"保留 entered 复查")
@@ -1150,6 +1213,15 @@ class WatchdogEngine:
         oid = st.pending_buy_order_id
         if not oid:
             return False
+        # 2026-08-10 幂等保护：同一委托号已被确认过 → 不再重复写交割单。
+        #（珍宝岛实测：08-07 3笔 + 08-10 2笔"挂单成交"买入，同一 order_id
+        #  被重复确认——根因是 state 保存失败后 pending 未清，下轮又复查
+        #  同一委托。用已处理集合兜底，即使 state 再丢也能防重复落账。）
+        if oid in self._confirmed_buy_orders:
+            logger.warning(f"{code} 买单委托{oid} 已确认过，跳过重复落账")
+            st.pending_buy_order_id = ""
+            st.pending_buy_since = None
+            return True
         now = datetime.now()
         # 挂起超 10 分钟仍未成交 → 放弃（可能撤单/废单），清 pending 防无限复查
         if st.pending_buy_since and (now - st.pending_buy_since).total_seconds() > 600:
@@ -1161,7 +1233,13 @@ class WatchdogEngine:
             from scripts.jvquant_trade_client import get_trade_client
             _ord = get_trade_client().check_order()
             for _o in (_ord or {}).get("list") or []:
-                if str(_o.get("order_id", "")) == str(oid):
+                # 2026-08-10 交叉匹配 bug 修复：必须 order_id + code 双匹配。
+                # 原逻辑只比 order_id——state 残留的 pending_buy_order_id 若
+                # 恰好等于其他票的委托号（委托号复用），会把别人的成交误判
+                # 成该票成交，写幽灵交割单（珍宝岛 5 笔幽灵单实测：08-07 3笔
+                # + 08-10 2笔，CTP 实际从未买入）。
+                if str(_o.get("order_id", "")) == str(oid) \
+                        and str(_o.get("code", "")) == _short(code):
                     if _o.get("status") == "已成":
                         # 确认成交：补置 entered + 推送 + 落账
                         last = float(st.prev_last or 0) or st.entry_price or 0
@@ -1181,6 +1259,7 @@ class WatchdogEngine:
                         st.highest_since_entry = max(st.highest_since_entry, last)
                         st.pending_buy_order_id = ""
                         st.pending_buy_since = None
+                        self._confirmed_buy_orders.add(oid)  # 幂等：已确认过
                         self._save_state()
                         logger.info(f"{code} 挂单委托{oid}确认成交，补置 entered")
                         return True
@@ -1197,7 +1276,10 @@ class WatchdogEngine:
             # surge_scanner 和 watchdog 多进程共写，非原子 write_text/open("w")
             # 会互相截断（实测 10:31 损坏一次）。原子写保证读取方永远看到
             # 完整 JSON（旧内容或新内容，绝不会半截）。
-            _tmp = STATE_FILE.with_name("state.json.tmp")
+            # 2026-08-10：tmp 名必须带 pid——三个进程（watchdog/surge/
+            # restore_positions）原先共用 state.json.tmp，并发时 A 写 tmp
+            # 被 B 覆盖 → A rename 报 FileNotFoundError（13:03 实测）。
+            _tmp = STATE_FILE.with_name(f"state.json.tmp.{os.getpid()}")
             with open(_tmp, "w") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
                 f.flush()

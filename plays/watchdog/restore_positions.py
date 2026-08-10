@@ -7,6 +7,7 @@
 watchdog 自动接手离场管理（T+1 已解冻，下一轮即检查离场信号）。
 """
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -52,8 +53,8 @@ def main():
             "last_daily_update": "",
         }
         print(f"找回 {code} {name} entry={entry} entered")
-    # 原子写（与 watchdog/surge 一致，避免并发截断）
-    tmp = STATE_FILE.with_name("state.json.tmp")
+    # 原子写（与 watchdog/surge 一致，避免并发截断；tmp 名带 pid 防共用冲突）
+    tmp = STATE_FILE.with_name(f"state.json.tmp.{os.getpid()}")
     tmp.write_text(json.dumps(states, ensure_ascii=False, indent=2))
     tmp.rename(STATE_FILE)
     print(f"\n已写回 {len(RECORDS)} 只，state.json 现有 {len(states)} 条")

@@ -1,0 +1,50 @@
+[
+  {
+    "code": "001358.SZ",
+    "name": "兴欣新材",
+    "model_score": 58.810001373291016,
+    "total_score": 58.810001373291016,
+    "score_mode": "model_score",
+    "pct_chg": 2.99,
+    "scores": {
+      "technical": 37.0,
+      "fundflow": 33.0,
+      "sentiment": 100.0,
+      "shortterm": 10.0,
+      "fundamental": 15.0
+    },
+    "fundamental": 15.0
+  },
+  {
+    "code": "000428.SZ",
+    "name": "华天酒店",
+    "model_score": 56.130001068115234,
+    "total_score": 56.130001068115234,
+    "score_mode": "model_score",
+    "pct_chg": -1.02,
+    "scores": {
+      "technical": 20.0,
+      "fundflow": 29.0,
+      "sentiment": 100.0,
+      "shortterm": 10.0,
+      "fundamental": 28.0
+    },
+    "fundamental": 28.0
+  },
+  {
+    "code": "001330.SZ",
+    "name": "博纳影业",
+    "model_score": 56.08000183105469,
+    "total_score": 56.08000183105469,
+    "score_mode": "model_score",
+    "pct_chg": 3.52,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 29.0,
+      "sentiment": 87.0,
+      "shortterm": 10.0,
+      "fundamental": 48.0
+    },
+    "fundamental": 48.0
+  }
+]
