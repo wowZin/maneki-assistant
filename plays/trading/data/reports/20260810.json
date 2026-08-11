@@ -636,30 +636,6 @@
     "pnl_pct": 0.0
   },
   {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 100,
-    "amount": 667.0,
-    "time": "2026-08-10 13:40:08",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 100,
-    "amount": 667.0,
-    "time": "2026-08-10 13:41:11",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
     "code": "002162.SZ",
     "name": "悦心健康",
     "direction": "买入",
@@ -680,18 +656,6 @@
     "amount": 2639.0,
     "time": "2026-08-10 13:47:23",
     "reason": "信号: vwap_break",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 100,
-    "amount": 667.0,
-    "time": "2026-08-10 13:49:03",
-    "reason": "信号: 挂单成交",
     "pnl": 0.0,
     "pnl_pct": 0.0
   },
@@ -1038,19 +1002,7 @@
     "price": 6.67,
     "shares": 100,
     "amount": 667.0,
-    "time": "2026-08-10 15:54:06",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 100,
-    "amount": 667.0,
-    "time": "2026-08-10 15:55:12",
+    "time": "2026-08-10 21:30:05",
     "reason": "信号: 挂单成交",
     "pnl": 0.0,
     "pnl_pct": 0.0
