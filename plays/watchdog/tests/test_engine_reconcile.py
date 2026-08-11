@@ -235,6 +235,36 @@ class TestSellBlockedSilence:
         assert st.sell_blocked_date != tomorrow  # 次日 → 恢复
 
 
+class TestRestartClearsPendingBuy:
+    """重启清空残留挂单复查（2026-08-10 幽灵单根治）"""
+
+    def test_load_state_clears_pending(self):
+        """_load_state 后残留 pending_buy_order_id 应被清空"""
+        from plays.watchdog import watchdog as wd
+        import tempfile, json as _json
+        # 构造带残留 pending 的 state
+        st = WatchState("603567.SH", "珍宝岛")
+        st.status = "watching"
+        st.pending_buy_order_id = "908546"
+        st.pending_buy_since = __import__("datetime").datetime.now()
+        state = {"603567.SH": st.to_dict()}
+        # 用临时文件模拟 STATE_FILE
+        tmpdir = tempfile.mkdtemp()
+        fake_state = tmpdir + "/state.json"
+        _json.dump(state, open(fake_state, "w"), ensure_ascii=False)
+        orig = wd.STATE_FILE
+        try:
+            wd.STATE_FILE = __import__("pathlib").Path(fake_state)
+            eng = WatchdogEngine.__new__(WatchdogEngine)
+            eng._states = {}
+            eng._load_state()
+            loaded = eng._states["603567.SH"]
+            assert loaded.pending_buy_order_id == ""  # 重启后清空
+            assert loaded.pending_buy_since is None
+        finally:
+            wd.STATE_FILE = orig
+
+
 class TestPendingSellTimeout:
     """卖出挂单超时撤单重挂（2026-08-10 大晟文化挂死事故）"""
 

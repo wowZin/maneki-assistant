@@ -33,7 +33,6 @@ sys.path.insert(0, str(PROJECT_DIR / "scripts"))
 
 from scripts.tu_share import call_tushare  # noqa: E402
 from plays.limit_up.utils import safe_float_none, is_trading_time  # noqa: E402
-from plays.limit_up.pipeline import _get_realtime_fund_cache  # noqa: E402
 from plays.limit_up.strategies import factor_ctx  # noqa: E402
 
 
@@ -113,12 +112,17 @@ def score_technical(code: str, trade_date: str | None = None) -> tuple[int | flo
     lower_ratio = (lower_shadow / body) if body > 0 else 0
 
     # 盘中优先使用实时量比（替代 T-1 vol_ratio）
-    if is_trading_time():
-        fund_cache = _get_realtime_fund_cache()
-        code_short = code.split(".")[0]
-        rt = fund_cache.get(code_short, {})
-        if rt.get("vol_ratio", 0) > 0:
-            vol_ratio = rt["vol_ratio"]
+    # 注: 原 _get_realtime_fund_cache 已随 fcc8876 从 pipeline 移除，此处降级用 realtime_ctx（上面已取 rt_vol）
+    if is_trading_time() and rt_vol is None:
+        try:
+            from plays.limit_up.pipeline import _get_realtime_fund_cache
+            fund_cache = _get_realtime_fund_cache()
+            code_short = code.split(".")[0]
+            rt = fund_cache.get(code_short, {})
+            if rt.get("vol_ratio", 0) > 0:
+                vol_ratio = rt["vol_ratio"]
+        except (ImportError, AttributeError):
+            pass
 
     # vol_ratio 可能为 None (stk_factor_pro 不返回此字段)
     # 优先从实时缓存取, 降级从 factor_ctx / daily_basic 取

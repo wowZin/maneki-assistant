@@ -104,10 +104,16 @@ class TestRouting:
 class TestMarketGate:
     """大盘走势栅栏：弱势市只放主闸池（面板分≥30），排雷池全关。"""
 
-    def _fake_index(self, pct: float) -> dict:
+    def _fake_index(self, pct: float, delta: float = 0.0) -> dict:
+        """构造指数 mock。delta>0 表示 3 分钟急拉（强势），delta<0 跳水。
+        points 构造：最后一点 = latest，3 分钟前点 = latest/(1+delta%)。
+        """
+        latest = 3878.43 * (1 + pct / 100)
+        prev3 = latest / (1 + delta / 100) if delta != 0 else latest
         return {"symbol": "1A0001", "date": "20260806", "pre": 3878.43,
-                "is_trading": 1, "points": [], "latest": 3878.43 * (1 + pct / 100),
-                "pct_chg": pct}
+                "is_trading": 1,
+                "points": [(1430, prev3), (1431, latest * 0.999), (1433, latest)],
+                "latest": latest, "pct_chg": pct}
 
     def test_weak_market_closes_screen_pool(self):
         """大盘 -0.5% < 0% → 弱势（关排雷池 + 门槛 5%）"""
@@ -119,28 +125,62 @@ class TestMarketGate:
             assert state == "weak"
             assert pct_low == 5.0
 
-    def test_weak_market_sensitive_at_negative(self):
-        """大盘 -0.1% < 0% → 弱势（敏感度调高：翻绿即收闸）"""
+    def test_mild_negative_stays_normal(self):
+        """大盘 -0.1%（微跌）> -0.3% → 中性（2026-08-11 调回：翻绿不立即收闸）"""
         from unittest.mock import patch
         from plays.limit_up import surge_scanner as ss
         with patch("scripts.ths_client.THSClient.get_index_intraday",
                    return_value=self._fake_index(-0.1)):
             state, pct_low = ss._mkt_gate()
-            assert state == "weak"
-            assert pct_low == 5.0
+            assert state == "normal"
+            assert pct_low == 3.0
 
-    def test_strong_market_keeps_screen_pool(self):
-        """大盘 +0.5% ≥ +0.5% → 强势（门槛 2%，全开）"""
+    def test_weak_market_below_threshold(self):
+        """大盘 -0.5% ≤ -0.3% → 弱势（收闸）"""
         from unittest.mock import patch
         from plays.limit_up import surge_scanner as ss
         with patch("scripts.ths_client.THSClient.get_index_intraday",
-                   return_value=self._fake_index(0.5)):
+                   return_value=self._fake_index(-0.5)):
+            state, pct_low = ss._mkt_gate()
+            assert state == "weak"
+            assert pct_low == 5.0
+
+    def test_strong_market_requires_rally(self):
+        """大盘急拉（3min +0.3% 且瞬时为正）→ 强势（门槛 2%，全开）"""
+        from unittest.mock import patch
+        from plays.limit_up import surge_scanner as ss
+        with patch("scripts.ths_client.THSClient.get_index_intraday",
+                   return_value=self._fake_index(0.6, delta=0.3)):
             state, pct_low = ss._mkt_gate()
             assert state == "strong"
             assert pct_low == 2.0
 
+    def test_tail_rally_high_instant_but_slow_not_strong(self):
+        """尾盘放水回归：瞬时 +0.52% 但 3min 仅 +0.05%（缓涨）→ 中性 3%
+
+        2026-08-10 事故：14:30 大盘瞬时 +0.52% 触发旧"强势"判 → 门槛 3%→2%
+        → 24 笔尾盘杂毛票买入。新逻辑看 3 分钟变化率，缓涨按中性不放水。
+        """
+        from unittest.mock import patch
+        from plays.limit_up import surge_scanner as ss
+        with patch("scripts.ths_client.THSClient.get_index_intraday",
+                   return_value=self._fake_index(0.52, delta=0.05)):
+            state, pct_low = ss._mkt_gate()
+            assert state == "normal"
+            assert pct_low == 3.0
+
+    def test_dive_detected_by_delta(self):
+        """盘中跳水（3min -0.3%）即使瞬时为正 → 弱势（收闸）"""
+        from unittest.mock import patch
+        from plays.limit_up import surge_scanner as ss
+        with patch("scripts.ths_client.THSClient.get_index_intraday",
+                   return_value=self._fake_index(0.2, delta=-0.3)):
+            state, pct_low = ss._mkt_gate()
+            assert state == "weak"
+            assert pct_low == 5.0
+
     def test_normal_market_mid_gate(self):
-        """大盘 0% 中性（0~0.5 区间）→ 门槛 3%"""
+        """大盘 0% 平缓 → 中性（门槛 3%）"""
         from unittest.mock import patch
         from plays.limit_up import surge_scanner as ss
         with patch("scripts.ths_client.THSClient.get_index_intraday",

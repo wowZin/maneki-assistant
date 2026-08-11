@@ -73,6 +73,9 @@ STATE_FILE = PROJECT_DIR / "plays" / "watchdog" / "data" / "state.json"
 SCAN_INTERVAL = 60
 CONSECUTIVE_ENTRY_ROUNDS = int(os.getenv("CONSECUTIVE_ENTRY_ROUNDS", "3"))  # 连续 N 轮满足入场条件才触发 alerted
 MAX_WATCH = 20      # 手动盯盘上限（surge 通道不设上限，2026-07-26 用户拍板）
+# 买入股数（2026-08-11 用户拍板：全部买入 2 手=200 股，放大收益/亏损额度。
+# 之前固定 1 手 100 股，单票盈亏太小；放大到 2 手后单票波动 ×2。）
+BUY_VOL = int(os.getenv("WATCHDOG_BUY_VOL", "200"))
 ABNORMAL_COOLDOWN_SECONDS = 300  # 异常推送冷却：同一 level 5 分钟内不重复推送
 
 # 候选池来源：limit_up pipeline 产出的 analysis
@@ -734,11 +737,26 @@ class WatchdogEngine:
                         st.entry_pushed_date = now.strftime("%Y%m%d")
                         self._save_state()
                         _surge_tag = "【surge】" if st.source == "surge" else ""
+                        # 2026-08-11：大盘弱势闸门（复用 surge 的 _mkt_gate）——
+                        # 大盘 < -0.3% 时暂停新买入（存量 watching 票也不买），
+                        # 只做离场。原闸门只在 surge 扫描端，弱势日存量票照买
+                        #（14:08 实测：大盘 -0.43% 仍对城地香江/恒银科技下单）。
+                        try:
+                            from plays.limit_up.surge_scanner import _mkt_gate as _wd_gate
+                            _wd_state, _ = _wd_gate()
+                            if _wd_state == "weak":
+                                logger.warning(
+                                    f"{code} 跳过买入: 大盘弱势({_wd_state})，只做离场")
+                                st.status = "watching"
+                                st.signal_type = ""
+                                continue
+                        except Exception as _ge:
+                            logger.warning(f"{code} 大盘闸门检查失败: {_ge}")
                         # 下单 + 飞书通知
                         try:
                             from scripts.jvquant_trade_client import buy
                             short = _short(code)
-                            r = buy(short, st.name)
+                            r = buy(short, st.name, vol=BUY_VOL)
                             code_r = r.get("code", "?")
                             if code_r in ("-2", "-3"):
                                 # 风控拒绝：已持仓 / 资金不足，回退状态继续盯盘
@@ -775,7 +793,7 @@ class WatchdogEngine:
                                         f"order_id: {order_id}"
                                     )
                                     _log_trade_journal(
-                                        code, st.name, "买入", last, 100,
+                                        code, st.name, "买入", last, BUY_VOL,
                                         reason=f"信号: {st.signal_type or st.signal_reason}",
                                     )
                                 else:
@@ -853,7 +871,14 @@ class WatchdogEngine:
                     try:
                         from scripts.jvquant_trade_client import sale
                         short = _short(code)
-                        r = sale(short, st.name)
+                        r = sale(short, st.name, vol=BUY_VOL)
+                        # 2026-08-11：存量 1 手持仓（100股，BUY_VOL 改 200 前买入）
+                        # 卖 200 股会返回 -2 持仓不足 → 降档 100 股重试，避免存量
+                        # 持仓永远卖不出（离场信号触发但 sale 失败）。
+                        if str(r.get("code")) == "-2":
+                            r = sale(short, st.name, vol=100)
+                            logger.warning(
+                                f"{code} 持仓不足(2手)，降档 100 股重试: {r.get('message', r)}")
                         code_r = r.get("code", "?")
                         if code_r == "-5":
                             # T+1 判定（2026-08-06 修复）：-5 有三种可能——
@@ -962,7 +987,7 @@ class WatchdogEngine:
                                         f"盈亏: {pnl_pct:+.2f}%"
                                     )
                                     _log_trade_journal(
-                                        code, st.name, "卖出", last, 100,
+                                        code, st.name, "卖出", last, BUY_VOL,
                                         entry_price=st.entry_price, entry_at=st.entry_at,
                                         reason=exit_reason,
                                     )
@@ -1001,7 +1026,7 @@ class WatchdogEngine:
                                     f"order_id: {order_id}"
                                 )
                                 _log_trade_journal(
-                                    code, st.name, "卖出", last, 100,
+                                    code, st.name, "卖出", last, BUY_VOL,
                                     entry_price=st.entry_price, entry_at=st.entry_at,
                                     reason=exit_reason,
                                 )
@@ -1250,7 +1275,7 @@ class WatchdogEngine:
                             f"order_id: {oid}"
                         )
                         _log_trade_journal(
-                            code, st.name, "买入", last, 100,
+                            code, st.name, "买入", last, BUY_VOL,
                             reason=f"信号: {st.signal_type or '挂单成交'}",
                         )
                         st.status = "entered"
@@ -1297,6 +1322,17 @@ class WatchdogEngine:
                 new_states = {}
                 for code, d in data.items():
                     new_states[code] = WatchState.from_dict(d)
+                # 2026-08-10：重启后清空所有 pending_buy_order_id——
+                # 重启时挂单可能已成交也可能已废，跨重启复查会把历史委托
+                # 误判成新成交写幽灵交割单（13:41/15:54 珍宝岛 5 笔幽灵单
+                # 全是我部署重启触发：重启→加载残留 pending→复查→写单）。
+                # 清空后 watch 票重新走 check_entry，若真持仓由对账兜底找回。
+                for st in new_states.values():
+                    if st.pending_buy_order_id:
+                        logger.warning(
+                            f"{st.code} 重启清空残留挂单复查(pending={st.pending_buy_order_id})")
+                        st.pending_buy_order_id = ""
+                        st.pending_buy_since = None
                 self._states.clear()
                 self._states.update(new_states)
                 logger.info(f"加载盯盘状态: {len(self._states)} 只")

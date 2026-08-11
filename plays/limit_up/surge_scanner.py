@@ -411,11 +411,17 @@ def _write_pushed(recs: list[dict], td: str):
 # 主扫描
 # ══════════════════════════════════════════════════════
 
-# 大盘弱势阈值：上证指数 < 0% 视为弱势市（2026-08-10 调高敏感度：原 -0.3%→0%，
-# 大盘翻绿即收闸——打板吃 beta，绿盘时段追突破胜率骤降）
-MKT_WEAK_THRESHOLD = float(os.getenv("SURGE_MKT_WEAK", "0.0"))
-# 大盘强势阈值：上证指数 ≥ +0.5% 视为强势市（2026-08-10 动态门槛新增）
-MKT_STRONG_THRESHOLD = float(os.getenv("SURGE_MKT_STRONG", "0.5"))
+# 大盘弱势阈值：上证指数 < -0.3% 视为弱势市（2026-08-11 调回：
+# 08-10 曾从 -0.3%→0% 提高敏感度，但 08-11 实测大盘 -0.15% 微跌即全收，
+# 扫描池骤减（主闸76只+5%门槛+关排雷），行情不该如此静默——0% 过于谨慎，
+# 误伤轻度回调日。改回 -0.3%，翻绿不立即收闸。）
+MKT_WEAK_THRESHOLD = float(os.getenv("SURGE_MKT_WEAK", "-0.3"))
+# 大盘强势判定（2026-08-10 改）：不再看瞬时涨幅，改看 3 分钟变化率。
+# 尾盘放水事故实测：14:30 大盘瞬时 +0.52% 触发旧"强势"判 → 门槛 3%→2% →
+# 24 笔尾盘杂毛票买入（申华控股 1.71 等）。但 3 分钟变化仅 +0.05%（缓涨），
+# 并非真强势。改为急拉（3min ≥ +0.2%）才算强势；缓涨/尾盘异动按中性。
+MKT_STRONG_DELTA = float(os.getenv("SURGE_MKT_STRONG_DELTA", "0.2"))  # 3分钟变化率 ≥0.2% 才算强势
+MKT_WEAK_DELTA = float(os.getenv("SURGE_MKT_WEAK_DELTA", "-0.2"))      # 3分钟变化率 ≤-0.2% 判弱势
 # 动态捕获门槛（2026-08-10 用户拍板）：行情好往下放，行情不好往上收。
 # 强市 2% / 中性 3% / 弱市 5%——弱势档与 5% 旧门槛一致，保证不劣于改动前。
 PCT_LOW_STRONG = float(os.getenv("SURGE_PCT_LOW_STRONG", "2.0"))
@@ -427,10 +433,10 @@ def _mkt_gate() -> tuple[str, float]:
     """大盘走势栅栏 + 动态捕获门槛。
 
     数据源：同花顺 v6/time/hs_1A0001 当日分时（Cookie 直连，30s 缓存）。
-    返回 (mkt_state, pct_low)：
-      mkt_state: 'weak' 弱势（≤-0.3%，关排雷池 + 门槛收 5%）
-                 'strong' 强势（≥+0.5%，门槛放 2%）
-                 'normal' 中性（门槛 3%）
+    判定逻辑（2026-08-10 改，修复尾盘放水）：
+      - 强势：分时 3 分钟变化率 ≥ +0.2%（急拉才算真强势）→ 门槛 2%
+      - 弱势：瞬时 < 0% 或 3 分钟变化率 ≤ -0.2%（跳水）→ 门槛 5% + 关排雷池
+      - 中性：其余（缓涨/横盘，即使瞬时 +0.5%+）→ 门槛 3%
     接口故障/异常 → 保守返回 ('weak', 5.0)（宁可少扫不可乱买）。
     """
     try:
@@ -446,16 +452,29 @@ def _mkt_gate() -> tuple[str, float]:
                 or _pct != _pct:
             print(f"  [surge] 大盘栅栏: 指数数据异常({_pct!r}) → 保守弱市")
             return "weak", PCT_LOW_WEAK
-        if _pct >= MKT_STRONG_THRESHOLD:
+        # 3 分钟变化率：取最近分时点 vs 3 分钟前的点
+        _delta = 0.0
+        _pts = _idx.get("points") or []
+        if len(_pts) >= 2:
+            _t_now, _p_now = _pts[-1]
+            _p_prev = None
+            for _t, _p in reversed(_pts):
+                if _t <= _t_now - 3:
+                    _p_prev = _p
+                    break
+            if _p_prev:
+                _delta = (_p_now / _p_prev - 1) * 100 if _p_prev > 0 else 0.0
+        # 判定顺序：急拉强势 > 跳水/翻绿弱势 > 中性
+        if _delta >= MKT_STRONG_DELTA and _pct > 0:
             print(f"  [surge] 大盘栅栏: 上证{_idx.get('latest'):.2f} {_pct:+.2f}% "
-                  f"→ 强势(门槛{PCT_LOW_STRONG:.1f}%全开)")
+                  f"3min{_delta:+.2f}% → 强势(门槛{PCT_LOW_STRONG:.1f}%全开)")
             return "strong", PCT_LOW_STRONG
-        if _pct < MKT_WEAK_THRESHOLD:
+        if _pct < MKT_WEAK_THRESHOLD or _delta <= MKT_WEAK_DELTA:
             print(f"  [surge] 大盘栅栏: 上证{_idx.get('latest'):.2f} {_pct:+.2f}% "
-                  f"→ 弱势(关排雷池+门槛{PCT_LOW_WEAK:.1f}%)")
+                  f"3min{_delta:+.2f}% → 弱势(关排雷池+门槛{PCT_LOW_WEAK:.1f}%)")
             return "weak", PCT_LOW_WEAK
         print(f"  [surge] 大盘栅栏: 上证{_idx.get('latest'):.2f} {_pct:+.2f}% "
-              f"→ 中性(门槛{PCT_LOW_NORMAL:.1f}%全开)")
+              f"3min{_delta:+.2f}% → 中性(门槛{PCT_LOW_NORMAL:.1f}%全开)")
         return "normal", PCT_LOW_NORMAL
     except Exception as _e:
         print(f"  [surge] 大盘栅栏异常 → 保守弱市: {_e}")
