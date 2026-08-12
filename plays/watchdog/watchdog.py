@@ -34,7 +34,8 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
 from plays.watchdog.indicators import price_features, realtime_row, sma, atr
-from plays.watchdog.signals import check_entry, check_exit, check_abnormal, compute_factor_scores, is_worth_watching
+from plays.watchdog.signals import check_entry, check_abnormal, compute_factor_scores
+from plays.watchdog.confirm import check_buy_confirm, check_sell_confirm
 from scripts.tu_share import call_tushare  # noqa: E402
 
 # WS 数据通过 ws_daemon 共享内存读取
@@ -217,6 +218,19 @@ class WatchState:
         self.prev_last: float = 0.0
         self.prev_vwap: float = 0.0
         self.prev_vol_ratio: float = 0.0
+        # 确认期基准价（2026-08-12：连续上涨确认的起点）
+        # watching 首次触发信号时记录，后续轮次要求 last >= base×1.005
+        #（净上涨 0.5% 才算"趋势向上"，横盘/缓慢爬升不确认——
+        #  原"last>=prev_last"只防急跌，横盘高位票照买（共达电声/武汉凡谷实测））
+        self.entry_base_price: float = 0.0
+        # ── 确认器状态（2026-08-12 简化蓝图，plays/watchdog/confirm.py）──
+        # 买入确认器：创新高+放量触发 → 站稳 3 轮 → 买入
+        self.confirm_base: float = 0.0
+        self.confirm_count: int = 0
+        # 卖出确认器：最高点回撤 4% 连续 2 轮 → 卖出（防插针/趋势恢复重置）
+        self.pullback_count: int = 0
+        # 确认器已站稳 3 轮（alerted 分支直接买入，跳过 30s 二次确认；不持久化）
+        self._confirm_ready: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -243,6 +257,10 @@ class WatchState:
             "daily_basic": self.daily_basic,
             "dim_scores": self.dim_scores,
             "last_daily_update": self.last_daily_update,
+            "entry_base_price": self.entry_base_price,
+            "confirm_base": self.confirm_base,
+            "confirm_count": self.confirm_count,
+            "pullback_count": self.pullback_count,
         }
 
     @classmethod
@@ -274,6 +292,10 @@ class WatchState:
         s.daily_basic = d.get("daily_basic", {})
         s.dim_scores = d.get("dim_scores", {})
         s.last_daily_update = d.get("last_daily_update", "")
+        s.entry_base_price = d.get("entry_base_price", 0.0)
+        s.confirm_base = d.get("confirm_base", 0.0)
+        s.confirm_count = d.get("confirm_count", 0)
+        s.pullback_count = d.get("pullback_count", 0)
         return s
 
 
@@ -287,6 +309,11 @@ class WatchdogEngine:
         self._states: dict[str, WatchState] = {}
         self._running = False
         self._thread: Optional[threading.Thread] = None
+        # ── 确认器历史缓存（2026-08-12 简化蓝图）──
+        # 每只票最近 15 轮 last / 分钟量（60s 轮询差分），供买入确认器判定
+        self._price_hist: dict[str, list[float]] = {}
+        self._vol_hist: dict[str, list[float]] = {}
+        self._prev_tv: dict[str, float] = {}
         self._scan_count = 0
         self._subscribed: set[str] = set()
         self._snap_fail_count = 0
@@ -297,8 +324,6 @@ class WatchdogEngine:
         self._netflow_cache: dict[str, tuple[float, float]] = {}  # code -> (ts, netflow)
         self._netflow_hist_ts: dict[str, float] = {}  # code -> 上次 netflow 采样时间（连续轮询下按真实时间采样）
         self._alert_ts: dict[str, float] = {}         # code -> 入场信号触发时间（连续轮询下按真实时间确认）
-        self._entry_streak: dict[str, int] = {}        # code -> 连续满足入场条件的轮数（3轮=3分钟过滤假突破）
-        self._entry_streak_type: dict[str, str] = {}   # code -> 当前 streak 的信号类型
         self._state_mtime: float = 0.0
         self._load_state()
 
@@ -522,6 +547,109 @@ class WatchdogEngine:
                 self._unsubscribe(list(removed))
             self._state_mtime = mtime
 
+    def _execute_buy(self, code: str, st: WatchState, last: float, vwap: float, now: datetime):
+        """买入执行：置 entered → 大盘弱势闸 → buy() → 成交确认/挂起复查。
+
+        2026-08-12 提取：确认器 ready 与旧 30s 确认两条路径共用，
+        避免两处 ~70 行重复（之前两处不同步会埋 bug）。
+        大盘弱势闸拦下时回退 watching 并重置确认状态；委托未成交挂起复查。
+        """
+        st.status = "entered"
+        st.entry_price = last
+        st.entry_at = now.strftime("%Y-%m-%d %H:%M:%S")
+        st.highest_since_entry = last
+        st.bars_held = 0
+        st.entry_pushed_date = now.strftime("%Y%m%d")
+        self._save_state()
+        _surge_tag = "【surge】" if st.source == "surge" else ""
+        # 2026-08-11：大盘弱势闸门（复用 surge 的 _mkt_gate）——
+        # 大盘 < -0.5% 时暂停新买入（存量 watching 票也不买），只做离场。
+        try:
+            from plays.limit_up.surge_scanner import _mkt_gate as _wd_gate
+            _wd_state, _, _ = _wd_gate()
+            if _wd_state == "weak":
+                logger.warning(
+                    f"{code} 跳过买入: 大盘弱势({_wd_state})，只做离场")
+                st.status = "watching"
+                st.signal_type = ""
+                st.confirm_base = 0.0
+                st.confirm_count = 0
+                self._save_state()
+                return
+        except Exception as _ge:
+            logger.warning(f"{code} 大盘闸门检查失败: {_ge}")
+        # 下单 + 飞书通知
+        try:
+            from scripts.jvquant_trade_client import buy
+            short = _short(code)
+            r = buy(short, st.name, vol=BUY_VOL)
+            code_r = r.get("code", "?")
+            if code_r in ("-2", "-3"):
+                # 风控拒绝：已持仓 / 资金不足，回退状态继续盯盘
+                logger.warning(f"{code} 跳过买入: {r.get('message', r)}")
+                st.status = "watching"
+                st.signal_type = ""
+                st.signal_reason = ""
+                st.signal_at = ""
+                self._save_state()
+            elif code_r == "0":
+                order_id = r.get('order_id', '?')
+                # 2026-08-03 修复：jvquant buy() 返回 code=0 只是"委托已报"，
+                # 不是成交（杰克科技事故：status=已报但系统误判入场）。
+                # 下单后查 check_order 确认"已成"才置 entered+推送；
+                # 挂单未成交（已报/部分成交）→ 保持 watching 等待，
+                # 避免资金冻结期间误判持仓、浪费盯盘。
+                _deal_ok = False
+                try:
+                    from scripts.jvquant_trade_client import get_trade_client
+                    _ord = get_trade_client().check_order()
+                    _lst = (_ord or {}).get("list") or []
+                    for _o in _lst:
+                        if str(_o.get("order_id", "")) == str(order_id):
+                            _deal_ok = _o.get("status") == "已成"
+                            break
+                except Exception as _e:
+                    logger.warning(f"{code} 查成交状态异常: {_e}")
+                if _deal_ok:
+                    _push_feishu(
+                        f"📈 {st.name}({code}) 入场{_surge_tag}\n"
+                        f"入场价: {last:.2f}\n"
+                        f"信号: {st.signal_reason}\n"
+                        f"VWAP: {vwap:.2f}\n"
+                        f"order_id: {order_id}"
+                    )
+                    _log_trade_journal(
+                        code, st.name, "买入", last, BUY_VOL,
+                        reason=f"信号: {st.signal_type or st.signal_reason}",
+                    )
+                else:
+                    # 委托已报未成交：不置 entered，保持 watching
+                    #（信号清掉，避免下一轮重复触发买入）
+                    logger.warning(
+                        f"{code} 委托{order_id}未成交(status=已报)，"
+                        f"保持 watching 复查委托{order_id}")
+                    st.status = "watching"
+                    st.signal_type = ""
+                    st.signal_reason = ""
+                    st.signal_at = ""
+                    st.pending_buy_order_id = str(order_id)
+                    st.pending_buy_since = datetime.now()
+                    self._save_state()
+            else:
+                logger.warning(f"{code} 下单返回异常: code={code_r} msg={r.get('message', r)}")
+                st.status = "watching"
+                st.signal_type = ""
+                st.signal_reason = ""
+                st.signal_at = ""
+                self._save_state()
+        except Exception as e:
+            logger.error(f"{code} 下单异常: {e}")
+            st.status = "watching"
+            st.signal_type = ""
+            st.signal_reason = ""
+            st.signal_at = ""
+            self._save_state()
+
     def _scan_round(self, codes: list[str]):
         today = datetime.now().strftime("%Y%m%d")
         now = datetime.now()
@@ -594,6 +722,25 @@ class WatchdogEngine:
             row["ask_qty"] = market.get("ask_qty", [])
 
             last = float(market.get("last") or 0)
+
+            # ── 确认器历史维护（2026-08-12：最近 15 轮 last + 分钟量差分）──
+            _ph = self._price_hist.setdefault(code, [])
+            _ph.append(last)
+            if len(_ph) > 15:
+                self._price_hist[code] = _ph[-15:]
+            _tv = float(market.get("trade_volume") or 0)
+            # 首次遇到该 code 只记录基线，不产生"全天累计量"假差分
+            #（否则盘中重启后第一轮 _dv=全天累计，巨量污染 vol_hist 前 10 轮，
+            #  放量判定被抬高 → 确认器 10 分钟内难触发）
+            if code in self._prev_tv:
+                _dv = max(0.0, _tv - self._prev_tv[code])
+            else:
+                _dv = 0.0
+            self._prev_tv[code] = _tv
+            _vh = self._vol_hist.setdefault(code, [])
+            _vh.append(_dv)
+            if len(_vh) > 15:
+                self._vol_hist[code] = _vh[-15:]
 
             # 资金流向历史：按真实时间采样（≥60s 一个点，10点≈10分钟窗口；
             # 连续轮询下若按轮追加，窗口会从5分钟塌缩到几十秒）
@@ -681,151 +828,65 @@ class WatchdogEngine:
                     # 未成交仍在挂起：本轮不触发新买入，等下一轮复查
                     time.sleep(0.1)
                     continue
-                triggered, sig_type, reason = check_entry(row, scores)
-                if triggered:
-                    # 2026-08-10 信号翻转设计：3 轮确认期内价格必须不跌
-                    #（last >= 上一轮 last，用 _prev_last_old 局部旧值——
-                    #  st.prev_last 已被本轮更新为 last，直接用会恒 True）。
-                    # 连续下跌趋势的票（冲高回落）在确认期被淘汰，避免买在
-                    # 山顶——今天运机集团等 12/13 笔浮亏的主因。真突破（3
-                    # 分钟持续不跌）照常买入。
-                    _price_ok = (_prev_last_old <= 0) or (last >= _prev_last_old)
-                    if not _price_ok:
-                        # 价格在跌：重置连续计数，不确认（重新等信号）
-                        self._entry_streak.pop(code, None)
-                        self._entry_streak_type.pop(code, None)
-                    else:
-                        # 连续确认：同一种信号类型连续满足 N 轮才发 alerted
-                        # （3 轮 = 3 分钟，过滤假突破——贴着 VWAP 穿过去的第 2 轮就掉了）
-                        prev_type = self._entry_streak_type.get(code, "")
-                        if sig_type == prev_type:
-                            self._entry_streak[code] = self._entry_streak.get(code, 0) + 1
-                        else:
-                            self._entry_streak[code] = 1
-                            self._entry_streak_type[code] = sig_type
-                        if self._entry_streak.get(code, 0) >= CONSECUTIVE_ENTRY_ROUNDS:
-                            st.status = "alerted"
-                            st.signal_type = sig_type
-                            st.signal_reason = reason
-                            st.signal_at = now.strftime("%H:%M:%S")
-                            st.last_alert_at = now.strftime("%H:%M")
-                            self._alert_ts[code] = time.time()
-                            self._save_state()
-                            self._entry_streak.pop(code, None)  # 进入 alerted 后清 streak
-                            self._entry_streak_type.pop(code, None)
-                            if st.source != "surge":
-                                # 盯盘信号通知已关闭，trader 负责实盘下单通知
-                                pass
-                            else:
-                                pass
-                else:
-                    # 条件不满足，重置连续计数
-                    self._entry_streak.pop(code, None)
-                    self._entry_streak_type.pop(code, None)
+                # ── 买入确认器（2026-08-12 简化蓝图，替代 check_entry/3轮确认/净上涨门禁）──
+                # 创新高+窗口放量触发 → 站稳 3 轮 → ready 买入；
+                # 防诱多由站稳天然覆盖（冲高回落=站不稳=重置）。
+                # 依据：19 笔追高全在"非新高"位置买入；早盘确认器触发买入收盘 +1.96% vs -0.13%。
+                _ph = self._price_hist.get(code, [])
+                _vh = self._vol_hist.get(code, [])
+                # 重启恢复：价格历史清空但 confirm_base 持久化残留 → 若价格已涨离
+                # 基准(如 +5%)，3 轮站稳后会在远离触发价的位置追高买入。价格历史
+                # 为空即确认状态失效，重置重新触发。
+                if st.confirm_base > 0 and not _ph:
+                    logger.warning(f"{code} 重启后确认状态失效, 重置重新触发")
+                    st.confirm_base = 0.0
+                    st.confirm_count = 0
+                _action, _base, _cnt = check_buy_confirm(
+                    _ph, _vh, st.confirm_base, st.confirm_count)
+                if _action == "trigger":
+                    st.confirm_base = _base
+                    st.confirm_count = 0
+                    st.signal_type = "trend_up"
+                    st.signal_reason = f"趋势确认: 创新高+放量({_base:.2f})"
+                elif _action == "stand":
+                    st.confirm_count = _cnt
+                    st.signal_reason = f"趋势确认: 站稳{_cnt}轮"
+                elif _action == "ready":
+                    st.confirm_base = 0.0
+                    st.confirm_count = 0
+                    st.status = "alerted"
+                    st._confirm_ready = True
+                    st.signal_type = "trend_up"
+                    st.signal_reason = "趋势确认: 站稳3轮"
+                    st.signal_at = now.strftime("%H:%M:%S")
+                    st.last_alert_at = now.strftime("%H:%M")
+                    self._alert_ts[code] = time.time()
+                    self._save_state()
+                elif _action == "reset":
+                    # 站不稳/跌破站稳线 → 重新等触发
+                    st.confirm_base = 0.0
+                    st.confirm_count = 0
 
             elif st.status == "alerted":
+                # 2026-08-12 简化蓝图：确认器 ready（创新高+站稳3轮）→ 直接买入，
+                # 跳过 30s 二次确认 + check_entry（站稳 3 轮本身就是确认）。
+                if getattr(st, "_confirm_ready", False):
+                    st._confirm_ready = False
+                    self._execute_buy(code, st, last, vwap, now)
+                    continue
+
                 # 信号确认：触发满 30s 后仍满足条件才入场
                 # （连续轮询下按真实时间判断，保持原 30s 间隔的确认语义）
                 if time.time() - self._alert_ts.get(code, 0.0) >= 30:
                     triggered, _, _ = check_entry(row, scores)
-                    if triggered:
-                        st.status = "entered"
-                        st.entry_price = last
-                        st.entry_at = now.strftime("%Y-%m-%d %H:%M:%S")
-                        st.highest_since_entry = last
-                        st.bars_held = 0
-                        st.entry_pushed_date = now.strftime("%Y%m%d")
-                        self._save_state()
-                        _surge_tag = "【surge】" if st.source == "surge" else ""
-                        # 2026-08-11：大盘弱势闸门（复用 surge 的 _mkt_gate）——
-                        # 大盘 < -0.3% 时暂停新买入（存量 watching 票也不买），
-                        # 只做离场。原闸门只在 surge 扫描端，弱势日存量票照买
-                        #（14:08 实测：大盘 -0.43% 仍对城地香江/恒银科技下单）。
-                        try:
-                            from plays.limit_up.surge_scanner import _mkt_gate as _wd_gate
-                            _wd_state, _ = _wd_gate()
-                            if _wd_state == "weak":
-                                logger.warning(
-                                    f"{code} 跳过买入: 大盘弱势({_wd_state})，只做离场")
-                                st.status = "watching"
-                                st.signal_type = ""
-                                continue
-                        except Exception as _ge:
-                            logger.warning(f"{code} 大盘闸门检查失败: {_ge}")
-                        # 下单 + 飞书通知
-                        try:
-                            from scripts.jvquant_trade_client import buy
-                            short = _short(code)
-                            r = buy(short, st.name, vol=BUY_VOL)
-                            code_r = r.get("code", "?")
-                            if code_r in ("-2", "-3"):
-                                # 风控拒绝：已持仓 / 资金不足，回退状态继续盯盘
-                                logger.warning(f"{code} 跳过买入: {r.get('message', r)}")
-                                st.status = "watching"
-                                st.signal_type = ""
-                                st.signal_reason = ""
-                                st.signal_at = ""
-                                self._save_state()
-                            elif code_r == "0":
-                                order_id = r.get('order_id', '?')
-                                # 2026-08-03 修复：jvquant buy() 返回 code=0 只是"委托已报"，
-                                # 不是成交（杰克科技事故：status=已报但系统误判入场）。
-                                # 下单后查 check_order 确认"已成"才置 entered+推送；
-                                # 挂单未成交（已报/部分成交）→ 保持 watching 等待，
-                                # 避免资金冻结期间误判持仓、浪费盯盘。
-                                _deal_ok = False
-                                try:
-                                    from scripts.jvquant_trade_client import get_trade_client
-                                    _ord = get_trade_client().check_order()
-                                    _lst = (_ord or {}).get("list") or []
-                                    for _o in _lst:
-                                        if str(_o.get("order_id", "")) == str(order_id):
-                                            _deal_ok = _o.get("status") == "已成"
-                                            break
-                                except Exception as _e:
-                                    logger.warning(f"{code} 查成交状态异常: {_e}")
-                                if _deal_ok:
-                                    _push_feishu(
-                                        f"📈 {st.name}({code}) 入场{_surge_tag}\n"
-                                        f"入场价: {last:.2f}\n"
-                                        f"信号: {st.signal_reason}\n"
-                                        f"VWAP: {vwap:.2f}\n"
-                                        f"order_id: {order_id}"
-                                    )
-                                    _log_trade_journal(
-                                        code, st.name, "买入", last, BUY_VOL,
-                                        reason=f"信号: {st.signal_type or st.signal_reason}",
-                                    )
-                                else:
-                                    # 委托已报未成交：不置 entered，保持 watching
-                                    # （信号清掉，避免下一轮重复触发买入）
-                                    # 2026-08-06：记录 order_id 挂起复查——委托可能
-                                    # 下一秒成交（封板打开/排队），原逻辑清信号后
-                                    # 不再复查 → 盘后零信号汰换 → 持仓失管（珍宝岛）
-                                    logger.warning(
-                                        f"{code} 委托{order_id}未成交(status=已报)，"
-                                        f"保持 watching 复查委托{order_id}")
-                                    st.status = "watching"
-                                    st.signal_type = ""
-                                    st.signal_reason = ""
-                                    st.signal_at = ""
-                                    st.pending_buy_order_id = str(order_id)
-                                    st.pending_buy_since = datetime.now()
-                                    self._save_state()
-                            else:
-                                logger.warning(f"{code} 下单返回异常: code={code_r} msg={r.get('message', r)}")
-                                st.status = "watching"
-                                st.signal_type = ""
-                                st.signal_reason = ""
-                                st.signal_at = ""
-                                self._save_state()
-                        except Exception as e:
-                            logger.error(f"{code} 下单异常: {e}")
-                            st.status = "watching"
-                            st.signal_type = ""
-                            st.signal_reason = ""
-                            st.signal_at = ""
-                            self._save_state()
+                    # 2026-08-12：alerted 最终确认也要查价格不跌——原逻辑只
+                    # 查 check_entry 信号（价格还在 VWAP 上即可），但票可能已
+                    # 从高点冲高回落（恒为科技 -3.9%、天娱数科距高点 -5.7%
+                    # 实测仍可入）。alerted 最终防线：30s 确认期内价格不跌
+                    #（watching 已用基准价净上涨确认，此处兜底防止确认后急跌）
+                    _price_ok = (_prev_last_old <= 0) or (last >= _prev_last_old)
+                    if triggered and _price_ok:
+                        self._execute_buy(code, st, last, vwap, now)
                     else:
                         st.status = "watching"
                         st.signal_type = ""
@@ -844,10 +905,14 @@ class WatchdogEngine:
                     st.highest_since_entry = last
                 st.bars_held += 1
 
-                exit_triggered, exit_reason = check_exit(
-                    st.entry_price, st.highest_since_entry, last,
-                    vwap, scores, row)
-                # 2026-08-10：撤单后强制重卖（即使 check_exit 未再触发，
+                # ── 卖出确认器（2026-08-12 简化蓝图，替代 check_exit 多规则）──
+                # 最高点回撤 4% 连续 2 轮 → 卖出；防插针（单轮下砸收回）/趋势恢复（反弹
+                # 回最高点 98%）重置计数。依据：16 笔卖出 7 笔卖飞（安记收盘涨停 +11.34%），
+                # 旧"高位回撤 2%"阈值过灵敏。
+                _sell_ok, _sell_reason, st.pullback_count = check_sell_confirm(
+                    st.highest_since_entry, last, st.prev_last, st.pullback_count)
+                exit_triggered, exit_reason = _sell_ok, _sell_reason
+                # 2026-08-10：撤单后强制重卖（即使确认器未触发，
                 # 也要按最新盘口追价重挂——否则挂单撤了就没人卖了）
                 if st.force_resell and not exit_triggered:
                     exit_triggered = True
@@ -868,6 +933,7 @@ class WatchdogEngine:
                     #   - 失败/异常保留 entered,下轮重试(防仓位失管)
                     #   - 持仓不足(-2)解析可用股数,确为 0 才移除
                     _exit_ok = False
+                    _sell_vol = BUY_VOL  # 实际下单股数（降档后更新，交割单用它）
                     try:
                         from scripts.jvquant_trade_client import sale
                         short = _short(code)
@@ -875,7 +941,10 @@ class WatchdogEngine:
                         # 2026-08-11：存量 1 手持仓（100股，BUY_VOL 改 200 前买入）
                         # 卖 200 股会返回 -2 持仓不足 → 降档 100 股重试，避免存量
                         # 持仓永远卖不出（离场信号触发但 sale 失败）。
+                        # 2026-08-12：降档后 _sell_vol 同步 100——否则交割单记 200
+                        # 股但实际成交 100 股，盈亏统计翻倍（13 笔卖出实测全错）。
                         if str(r.get("code")) == "-2":
+                            _sell_vol = 100
                             r = sale(short, st.name, vol=100)
                             logger.warning(
                                 f"{code} 持仓不足(2手)，降档 100 股重试: {r.get('message', r)}")
@@ -987,7 +1056,7 @@ class WatchdogEngine:
                                         f"盈亏: {pnl_pct:+.2f}%"
                                     )
                                     _log_trade_journal(
-                                        code, st.name, "卖出", last, BUY_VOL,
+                                        code, st.name, "卖出", last, _sell_vol,
                                         entry_price=st.entry_price, entry_at=st.entry_at,
                                         reason=exit_reason,
                                     )
@@ -1026,7 +1095,7 @@ class WatchdogEngine:
                                     f"order_id: {order_id}"
                                 )
                                 _log_trade_journal(
-                                    code, st.name, "卖出", last, BUY_VOL,
+                                    code, st.name, "卖出", last, _sell_vol,
                                     entry_price=st.entry_price, entry_at=st.entry_at,
                                     reason=exit_reason,
                                 )

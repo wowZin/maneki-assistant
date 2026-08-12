@@ -1,0 +1,664 @@
+[
+ {
+  "code": "002678.SZ",
+  "name": "珠江钢琴",
+  "entry_price": 4.63,
+  "model_score": 8.9,
+  "scores": {
+   "fundamental": 72.2,
+   "shortterm": 3.0,
+   "fundflow": 10.0,
+   "technical": 0.0,
+   "sentiment": 74
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 4.25,
+   "pct_chg": -1.62,
+   "trend_3d": 1.01,
+   "net_order": -135200,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "605388.SH",
+  "name": "均瑶健康",
+  "entry_price": 6.14,
+  "model_score": 6.36,
+  "scores": {
+   "fundamental": 53.5,
+   "technical": 0.0,
+   "shortterm": 12.0,
+   "fundflow": 12.0,
+   "sentiment": 79
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 6.12,
+   "pct_chg": 10.07,
+   "trend_3d": 2.24,
+   "net_order": -257400,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "600653.SH",
+  "name": "申华控股",
+  "entry_price": 1.71,
+  "model_score": 5.63,
+  "scores": {
+   "fundamental": 49.0,
+   "shortterm": 0,
+   "fundflow": 2.0,
+   "sentiment": 74,
+   "technical": 0.0
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 1.65,
+   "pct_chg": -1.2,
+   "trend_3d": 0.0,
+   "net_order": -148500,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002679.SZ",
+  "name": "福建金森",
+  "entry_price": 8.99,
+  "model_score": 1.83,
+  "scores": {
+   "fundamental": 53.5,
+   "technical": 30.400000000000002,
+   "shortterm": 3.0,
+   "fundflow": 9.0,
+   "sentiment": 74
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 8.34,
+   "pct_chg": -0.48,
+   "trend_3d": 1.54,
+   "net_order": -59100,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "000670.SZ",
+  "name": "盈方微",
+  "entry_price": 7.09,
+  "model_score": 24.91,
+  "scores": {
+   "fundamental": 72.2,
+   "technical": 0.0,
+   "shortterm": 12.0,
+   "fundflow": 30.0,
+   "sentiment": 78
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 7.0,
+   "pct_chg": 4.32,
+   "trend_3d": 0.05,
+   "net_order": 60800,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002354.SZ",
+  "name": "天娱数科",
+  "entry_price": 8.52,
+  "model_score": 8.8,
+  "scores": {
+   "fundamental": 84.8,
+   "fundflow": 0.0,
+   "shortterm": 34.0,
+   "sentiment": 83,
+   "technical": 0.0
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 5.92,
+   "pct_chg": -4.36,
+   "trend_3d": 5.2,
+   "net_order": 21600,
+   "near_ratio": 1.0,
+   "signals": [
+    "3日涨+5.2%过热"
+   ],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002440.SZ",
+  "name": "闰土股份",
+  "entry_price": 13.6,
+  "model_score": 3.73,
+  "scores": {
+   "fundamental": 56.8,
+   "shortterm": 32.0,
+   "fundflow": 22.0,
+   "sentiment": 79,
+   "technical": 84
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 13.64,
+   "pct_chg": 0.0,
+   "trend_3d": -1.58,
+   "net_order": 272700,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002532.SZ",
+  "name": "天山铝业",
+  "entry_price": 14.52,
+  "model_score": 18.69,
+  "scores": {
+   "fundamental": 50.0,
+   "shortterm": 16.0,
+   "fundflow": 22.0,
+   "technical": 69,
+   "sentiment": 78
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 13.13,
+   "pct_chg": 0.69,
+   "trend_3d": -0.17,
+   "net_order": -277200,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002655.SZ",
+  "name": "共达电声",
+  "entry_price": 32.56,
+  "model_score": 10.92,
+  "scores": {
+   "fundamental": 74.8,
+   "shortterm": 30.0,
+   "fundflow": 23.8,
+   "sentiment": 80,
+   "technical": 54.400000000000006
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 21.29,
+   "pct_chg": -10.02,
+   "trend_3d": -1.6,
+   "net_order": 187300,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002585.SZ",
+  "name": "双星新材",
+  "entry_price": 10.84,
+  "model_score": 14.67,
+  "scores": {
+   "fundamental": 75.8,
+   "shortterm": 45.4,
+   "technical": 0.0,
+   "fundflow": 44.2,
+   "sentiment": 97
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 8.66,
+   "pct_chg": 10.04,
+   "trend_3d": 3.57,
+   "net_order": -33400,
+   "near_ratio": 1.0,
+   "signals": [
+    "3日涨+3.6%过热"
+   ],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002842.SZ",
+  "name": "翔鹭钨业",
+  "entry_price": 41.48,
+  "model_score": 28.75,
+  "scores": {
+   "fundamental": 84.8,
+   "shortterm": 27.0,
+   "technical": 40.32000000000001,
+   "fundflow": 44.2,
+   "sentiment": 82
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 28.78,
+   "pct_chg": -4.99,
+   "trend_3d": -0.71,
+   "net_order": 185200,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002903.SZ",
+  "name": "宇环数控",
+  "entry_price": 29.27,
+  "model_score": 11.9,
+  "scores": {
+   "fundamental": 49.0,
+   "shortterm": 13.0,
+   "fundflow": 28.5,
+   "sentiment": 77,
+   "technical": 0.0
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 23.1,
+   "pct_chg": -8.51,
+   "trend_3d": -2.35,
+   "net_order": 15100,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "603161.SH",
+  "name": "科华控股",
+  "entry_price": 16.37,
+  "model_score": 24.13,
+  "scores": {
+   "technical": 68.992,
+   "fundamental": 44.5,
+   "shortterm": 29.0,
+   "fundflow": 24.8,
+   "sentiment": 79
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 13.89,
+   "pct_chg": -6.4,
+   "trend_3d": -2.06,
+   "net_order": -58600,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "000596.SZ",
+  "name": "古井贡酒",
+  "entry_price": 99.39,
+  "model_score": 15.82,
+  "scores": {
+   "fundamental": 40.0,
+   "shortterm": 18.0,
+   "technical": 64.8,
+   "fundflow": 12.0,
+   "sentiment": 76
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 92.59,
+   "pct_chg": 1.85,
+   "trend_3d": 0.95,
+   "net_order": -5700,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002279.SZ",
+  "name": "久其软件",
+  "entry_price": 7.18,
+  "model_score": 8.55,
+  "scores": {
+   "fundamental": 73.8,
+   "shortterm": 16.0,
+   "fundflow": 37.0,
+   "sentiment": 78,
+   "technical": 59.2
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 6.8,
+   "pct_chg": 1.95,
+   "trend_3d": 1.14,
+   "net_order": -86800,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "600272.SH",
+  "name": "开开实业",
+  "entry_price": 16.6,
+  "model_score": 52.54,
+  "scores": {
+   "fundamental": 52.0,
+   "fundflow": 0.0,
+   "technical": 35.84,
+   "shortterm": 39.4,
+   "sentiment": 94
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 10.3,
+   "pct_chg": -1.06,
+   "trend_3d": 1.22,
+   "net_order": 16300,
+   "near_ratio": 1.0,
+   "signals": [
+    "尾盘拉升+3.8%",
+    "20260812龙虎榜净买8392万，今日主力净卖3672万 — 拉高出货"
+   ],
+   "verdict": "❌ 不建议追",
+   "advice": "卖压重或过热"
+  }
+ },
+ {
+  "code": "603093.SH",
+  "name": "南华期货",
+  "entry_price": 12.47,
+  "model_score": 10.97,
+  "scores": {
+   "technical": 36,
+   "fundamental": 56.8,
+   "shortterm": 13.0,
+   "fundflow": 4.0,
+   "sentiment": 87
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 17.52,
+   "pct_chg": 1.45,
+   "trend_3d": 1.15,
+   "net_order": 298300,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "000952.SZ",
+  "name": "广济药业",
+  "entry_price": 6.43,
+  "model_score": 14.07,
+  "scores": {
+   "fundamental": 53.5,
+   "shortterm": 3.0,
+   "fundflow": 12.0,
+   "sentiment": 64,
+   "technical": 0.0
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 5.44,
+   "pct_chg": -1.27,
+   "trend_3d": 1.69,
+   "net_order": -274500,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "603399.SH",
+  "name": "永杉锂业",
+  "entry_price": 16.94,
+  "model_score": 33.45,
+  "scores": {
+   "fundamental": 77.8,
+   "fundflow": 0.0,
+   "technical": 0.0,
+   "shortterm": 39.0,
+   "sentiment": 81
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 15.97,
+   "pct_chg": 1.01,
+   "trend_3d": -2.17,
+   "net_order": 20300,
+   "near_ratio": 1.0,
+   "signals": [
+    "20260812龙虎榜净买10699万，今日主力继续买入"
+   ],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002687.SZ",
+  "name": "乔治白",
+  "entry_price": 6.23,
+  "model_score": 3.41,
+  "scores": {
+   "fundamental": 41.5,
+   "technical": 63.2,
+   "shortterm": 55.4,
+   "fundflow": 22.1,
+   "sentiment": 98
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 4.59,
+   "pct_chg": -7.27,
+   "trend_3d": -0.42,
+   "net_order": -299200,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "603011.SH",
+  "name": "合锻智能",
+  "entry_price": 24.9,
+  "model_score": 21.74,
+  "scores": {
+   "fundamental": 74.8,
+   "shortterm": 25.0,
+   "fundflow": 45.0,
+   "sentiment": 80,
+   "technical": 0.0
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 16.5,
+   "pct_chg": -6.83,
+   "trend_3d": 1.88,
+   "net_order": -23200,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "603918.SH",
+  "name": "金桥信息",
+  "entry_price": 12.13,
+  "model_score": 34.48,
+  "scores": {
+   "fundamental": 49.0,
+   "technical": 0.0,
+   "shortterm": 32.0,
+   "fundflow": 33.0,
+   "sentiment": 87
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 11.13,
+   "pct_chg": 6.51,
+   "trend_3d": 2.28,
+   "net_order": 6100,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002792.SZ",
+  "name": "通宇通讯",
+  "entry_price": 36.54,
+  "model_score": 33.17,
+  "scores": {
+   "fundamental": 74.8,
+   "fundflow": 0.0,
+   "shortterm": 34.0,
+   "technical": 60.160000000000004,
+   "sentiment": 83
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 22.55,
+   "pct_chg": -5.92,
+   "trend_3d": 3.16,
+   "net_order": 97200,
+   "near_ratio": 1.0,
+   "signals": [
+    "3日涨+3.2%过热"
+   ],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "003023.SZ",
+  "name": "彩虹集团",
+  "entry_price": 26.74,
+  "model_score": 28.54,
+  "scores": {
+   "technical": 39.040000000000006,
+   "fundamental": 41.5,
+   "shortterm": 0,
+   "fundflow": 22.1,
+   "sentiment": 76
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 19.68,
+   "pct_chg": -0.61,
+   "trend_3d": 1.49,
+   "net_order": -133500,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "600611.SH",
+  "name": "大众交通",
+  "entry_price": 5.16,
+  "model_score": 11.77,
+  "scores": {
+   "fundamental": 67.8,
+   "shortterm": 49.4,
+   "technical": 89.76,
+   "fundflow": 33.1,
+   "sentiment": 93
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 4.05,
+   "pct_chg": 0.5,
+   "trend_3d": 1.55,
+   "net_order": -62600,
+   "near_ratio": 1.0,
+   "signals": [
+    "尾盘跳水-2.6%",
+    "最近(20260811)龙虎榜净买8008万，今日主力净卖4103万 — 拉高出货"
+   ],
+   "verdict": "❌ 不建议追",
+   "advice": "卖压重或过热"
+  }
+ },
+ {
+  "code": "600327.SH",
+  "name": "大东方",
+  "entry_price": 4.02,
+  "model_score": 9.2,
+  "scores": {
+   "fundamental": 49.0,
+   "technical": 0.0,
+   "shortterm": 15.0,
+   "fundflow": 15.0,
+   "sentiment": 80
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 3.55,
+   "pct_chg": -1.39,
+   "trend_3d": 0.28,
+   "net_order": 18800,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002194.SZ",
+  "name": "武汉凡谷",
+  "entry_price": 10.88,
+  "model_score": 3.8,
+  "scores": {
+   "fundamental": 67.8,
+   "shortterm": 46.0,
+   "fundflow": 33.1,
+   "sentiment": 90,
+   "technical": 0.0
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 8.67,
+   "pct_chg": -1.48,
+   "trend_3d": 0.5,
+   "net_order": -35800,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ }
+]

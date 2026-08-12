@@ -304,20 +304,37 @@ class THSClient:
 
         if new_codes:
             t0, success = time.time(), 0
-            with ThreadPoolExecutor(max_workers=workers) as pool:
+            # 2026-08-12：用 ThreadPoolExecutor + 手动 shutdown(wait=False)。
+            # with 块退出会 shutdown(wait=True) 死等挂起线程（09:35 假死 40 分钟
+            # 实锤），必须超时后立即放弃挂起线程，主循环继续下一轮。
+            pool = ThreadPoolExecutor(max_workers=workers)
+            try:
                 futs = {pool.submit(self.get_quote, c): c for c in new_codes}
-                for fut in as_completed(futs):
-                    c = futs[fut]
-                    try:
-                        quote = fut.result()
-                    except Exception:
-                        quote = None
-                    if quote:
-                        self._cache[c] = quote
-                        results[c] = quote
-                        success += 1
-                    else:
-                        results[c] = None
+                try:
+                    # as_completed 加 timeout：挂起的 future 永远不会完成，
+                    # 无 timeout 会在此无限等待（09:35 假死的真正挂点）
+                    _iter = as_completed(futs, timeout=max(15, len(new_codes) / workers * 8 + 5))
+                    for fut in _iter:
+                        c = futs[fut]
+                        try:
+                            # fut.result() 无 timeout → 连接池耗尽/半开连接时
+                            # get_quote 可能无限挂起 → 必须加超时，超时票置 None。
+                            quote = fut.result(timeout=10)
+                        except Exception:
+                            quote = None
+                        if quote:
+                            self._cache[c] = quote
+                            results[c] = quote
+                            success += 1
+                        else:
+                            results[c] = None
+                except TimeoutError:
+                    # 整体超时：未完成的票本轮放弃（results 缺失），下轮重试
+                    pass
+            finally:
+                # wait=False：不等待仍挂起的 worker（它们持有 requests 连接，
+                # 随进程继续存活无害；主线程绝不阻塞在它们身上）
+                pool.shutdown(wait=False)
             from scripts.audit import record
             record("ths", "batch_quote_fast", ok=success > 0,
                    items=success, latency_ms=(time.time() - t0) * 1000,

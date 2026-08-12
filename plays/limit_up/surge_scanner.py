@@ -411,47 +411,50 @@ def _write_pushed(recs: list[dict], td: str):
 # 主扫描
 # ══════════════════════════════════════════════════════
 
-# 大盘弱势阈值：上证指数 < -0.3% 视为弱势市（2026-08-11 调回：
-# 08-10 曾从 -0.3%→0% 提高敏感度，但 08-11 实测大盘 -0.15% 微跌即全收，
-# 扫描池骤减（主闸76只+5%门槛+关排雷），行情不该如此静默——0% 过于谨慎，
-# 误伤轻度回调日。改回 -0.3%，翻绿不立即收闸。）
-MKT_WEAK_THRESHOLD = float(os.getenv("SURGE_MKT_WEAK", "-0.3"))
+# 大盘弱势阈值（2026-08-12 数据定值，32 天回测）：
+# 上证指数 < -0.5% 视为弱势市（关排雷池 + watchdog 不买入）。
+# 依据：大盘 <-0.8% 深跌日竞价放量票上涨率仅 33.6%/均涨 -1.53%（明确差）；
+# -0.8~-0.5% 表现正常（+0.68%），但 08-03(-0.59%) 是实盘唯一亏损日，
+# 防御倾向保留；-0.3% 旧值触发 19/52 天(37%) 误伤浅跌日，收紧到 -0.5%(16/52 天)。
+MKT_WEAK_THRESHOLD = float(os.getenv("SURGE_MKT_WEAK", "-0.5"))
 # 大盘强势判定（2026-08-10 改）：不再看瞬时涨幅，改看 3 分钟变化率。
 # 尾盘放水事故实测：14:30 大盘瞬时 +0.52% 触发旧"强势"判 → 门槛 3%→2% →
 # 24 笔尾盘杂毛票买入（申华控股 1.71 等）。但 3 分钟变化仅 +0.05%（缓涨），
 # 并非真强势。改为急拉（3min ≥ +0.2%）才算强势；缓涨/尾盘异动按中性。
 MKT_STRONG_DELTA = float(os.getenv("SURGE_MKT_STRONG_DELTA", "0.2"))  # 3分钟变化率 ≥0.2% 才算强势
-MKT_WEAK_DELTA = float(os.getenv("SURGE_MKT_WEAK_DELTA", "-0.2"))      # 3分钟变化率 ≤-0.2% 判弱势
+# 3分钟跳水阈值（2026-08-12 收紧 -0.2→-0.4）：盘中 3min 跌 0.2% 常见（波动），
+# 频繁误触会反复关排雷；-0.4% 才是真跳水。
+MKT_WEAK_DELTA = float(os.getenv("SURGE_MKT_WEAK_DELTA", "-0.4"))      # 3分钟变化率 ≤-0.4% 判弱势
 # 动态捕获门槛（2026-08-10 用户拍板）：行情好往下放，行情不好往上收。
 # 强市 2% / 中性 3% / 弱市 5%——弱势档与 5% 旧门槛一致，保证不劣于改动前。
-PCT_LOW_STRONG = float(os.getenv("SURGE_PCT_LOW_STRONG", "2.0"))
-PCT_LOW_NORMAL = float(os.getenv("SURGE_PCT_LOW_NORMAL", "3.0"))
-PCT_LOW_WEAK = float(os.getenv("SURGE_PCT_LOW_WEAK", "5.0"))
+# 2026-08-12 简化蓝图（用户拍板）：动态窗口三档 → 固定窗口。
+# 买入/卖出门禁已由 watchdog 确认器（confirm.py）接管，surge 窗口只做效率过滤：
+#   固定 1.0%~9.8%（下限过滤 0~1% 噪音，上限防已封板）；大盘弱势只关排雷池。
+PCT_LOW_DEFAULT = float(os.getenv("SURGE_PCT_LOW", "1.0"))
+PCT_HIGH = float(os.getenv("SURGE_PCT_HIGH", "9.8"))
 
 
-def _mkt_gate() -> tuple[str, float]:
-    """大盘走势栅栏 + 动态捕获门槛。
+def _mkt_gate() -> tuple[str, float, float]:
+    """大盘温度栅栏（2026-08-12 简化：只判弱势，窗口固定 1%~9.8%）。
 
     数据源：同花顺 v6/time/hs_1A0001 当日分时（Cookie 直连，30s 缓存）。
-    判定逻辑（2026-08-10 改，修复尾盘放水）：
-      - 强势：分时 3 分钟变化率 ≥ +0.2%（急拉才算真强势）→ 门槛 2%
-      - 弱势：瞬时 < 0% 或 3 分钟变化率 ≤ -0.2%（跳水）→ 门槛 5% + 关排雷池
-      - 中性：其余（缓涨/横盘，即使瞬时 +0.5%+）→ 门槛 3%
-    接口故障/异常 → 保守返回 ('weak', 5.0)（宁可少扫不可乱买）。
+      - 弱势：瞬时 < -0.5% 或 3 分钟变化率 ≤ -0.4%（跳水）→ 关排雷池
+      - 强势/中性：正常全开（确认器负责个股质量）
+    接口故障/异常 → 保守返回 ('weak', 1.0, 9.8)（宁可少扫不可乱买）。
     """
     try:
         from scripts.ths_client import get_ths_client as _ths_idx
         _idx = _ths_idx().get_index_intraday("1A0001")
         if _idx is None:
-            print("  [surge] 大盘栅栏: 指数获取失败 → 保守弱市(关排雷池+门槛5%)")
-            return "weak", PCT_LOW_WEAK
+            print("  [surge] 大盘栅栏: 指数获取失败 → 保守弱市(关排雷池)")
+            return "weak", PCT_LOW_DEFAULT, PCT_HIGH
         _pct = _idx.get("pct_chg", 0.0)
         # NaN/None/非数值 → 保守弱市（NaN <= -0.3 在 Python 恒 False，
         # 不防御会误判"正常"——2026-08-06 实测）
         if _pct is None or not isinstance(_pct, (int, float)) \
                 or _pct != _pct:
             print(f"  [surge] 大盘栅栏: 指数数据异常({_pct!r}) → 保守弱市")
-            return "weak", PCT_LOW_WEAK
+            return "weak", PCT_LOW_DEFAULT, PCT_HIGH
         # 3 分钟变化率：取最近分时点 vs 3 分钟前的点
         _delta = 0.0
         _pts = _idx.get("points") or []
@@ -467,18 +470,18 @@ def _mkt_gate() -> tuple[str, float]:
         # 判定顺序：急拉强势 > 跳水/翻绿弱势 > 中性
         if _delta >= MKT_STRONG_DELTA and _pct > 0:
             print(f"  [surge] 大盘栅栏: 上证{_idx.get('latest'):.2f} {_pct:+.2f}% "
-                  f"3min{_delta:+.2f}% → 强势(门槛{PCT_LOW_STRONG:.1f}%全开)")
-            return "strong", PCT_LOW_STRONG
+                  f"3min{_delta:+.2f}% → 强势(窗口{PCT_LOW_DEFAULT:.1f}~{PCT_HIGH:.1f}%全开)")
+            return "strong", PCT_LOW_DEFAULT, PCT_HIGH
         if _pct < MKT_WEAK_THRESHOLD or _delta <= MKT_WEAK_DELTA:
             print(f"  [surge] 大盘栅栏: 上证{_idx.get('latest'):.2f} {_pct:+.2f}% "
-                  f"3min{_delta:+.2f}% → 弱势(关排雷池+门槛{PCT_LOW_WEAK:.1f}%)")
-            return "weak", PCT_LOW_WEAK
+                  f"3min{_delta:+.2f}% → 弱势(关排雷池)")
+            return "weak", PCT_LOW_DEFAULT, PCT_HIGH
         print(f"  [surge] 大盘栅栏: 上证{_idx.get('latest'):.2f} {_pct:+.2f}% "
-              f"3min{_delta:+.2f}% → 中性(门槛{PCT_LOW_NORMAL:.1f}%全开)")
-        return "normal", PCT_LOW_NORMAL
+              f"3min{_delta:+.2f}% → 中性(窗口{PCT_LOW_DEFAULT:.1f}~{PCT_HIGH:.1f}%全开)")
+        return "normal", PCT_LOW_DEFAULT, PCT_HIGH
     except Exception as _e:
         print(f"  [surge] 大盘栅栏异常 → 保守弱市: {_e}")
-        return "weak", PCT_LOW_WEAK
+        return "weak", PCT_LOW_DEFAULT, PCT_HIGH
 
 
 def scan(dry_run: bool = False):
@@ -502,12 +505,12 @@ def scan(dry_run: bool = False):
     # 中性市：门槛 3%。
     # 依据：打板吃大盘 beta——午盘大盘向下时排雷票大面积亏损（08-06 实测）；
     #       用户分时图实证 5% 门槛+确认延迟=系统性买在高位（08-10 立新能源等）。
-    _mkt_state, _pct_low = _mkt_gate()
+    _mkt_state, _pct_low, _pct_high = _mkt_gate()
     if _mkt_state == "weak":
         screen_pool = set()
     watch = sorted(main_pool | screen_pool)
     print(f"  [surge] 扫描池 {len(watch)} 只（主闸{len(main_pool)} + 排雷{len(screen_pool)}）| "
-          f"动态门槛 {_pct_low:.1f}%")
+          f"动态窗口 {_pct_low:.1f}%~{_pct_high:.1f}%")
 
     # THS 并发批量实时行情（ths_client.get_batch_quotes_fast，线程池）
     from scripts.ths_client import get_ths_client as _ths
@@ -519,7 +522,7 @@ def scan(dry_run: bool = False):
         if q is None:
             continue
         pct = float(q.get("pct_chg", 0) or 0)
-        if not (_pct_low <= pct < PCT_HIGH):
+        if not (_pct_low <= pct < _pct_high):
             continue
         full = f"{code}.SH" if code.startswith("6") else f"{code}.SZ"
         vr = float(q.get("vol_ratio", 0) or 0)

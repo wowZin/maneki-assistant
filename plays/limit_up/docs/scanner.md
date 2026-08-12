@@ -32,7 +32,7 @@ python3 plays/limit_up/surge_scanner.py --dry-run  # 只打印路由决策，不
 ## 行情与异动窗口
 
 - 行情源：`ths_client.get_batch_quotes_fast`（并发线程池，默认 24 线程，`SURGE_QUOTE_WORKERS`）。
-- 异动窗口：**5.0% ≤ 涨幅 < 9.8%**（`SURGE_PCT_LOW` / `SURGE_PCT_HIGH`；上限 9.8 留 0.2% 防已封板，9.0 会丢连板秒板窗口）。
+- 异动窗口（2026-08-12 简化蓝图）：**固定 1.0%~9.8%**（`SURGE_PCT_LOW` / `SURGE_PCT_HIGH`）——只做效率过滤（下限滤 0~1% 噪音，上限防已封板）。买入/卖出门禁已由 watchdog 确认器（`plays/watchdog/confirm.py`）接管，不再靠窗口调档位。
 
 ## 排雷条件
 
@@ -72,8 +72,12 @@ python3 plays/limit_up/surge_scanner.py --dry-run  # 只打印路由决策，不
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `SURGE_PCT_LOW` | 5.0 | 异动涨幅下限 |
-| `SURGE_PCT_HIGH` | 9.8 | 异动涨幅上限（不含） |
+| `SURGE_PCT_LOW` | 1.0 | 异动窗口下限（效率过滤） |
+| `SURGE_PCT_HIGH` | 9.8 | 异动窗口上限（不含，防已封板） |
+| `SURGE_MKT_STRONG` | 0.5 | 强势判定瞬时涨幅（仅日志，窗口已固定） |
+| `SURGE_MKT_STRONG_DELTA` | 0.2 | 强势判定 3min 变化率（仅日志，窗口已固定） |
+| `SURGE_MKT_WEAK` | -0.5 | 弱势判定瞬时阈值（< 此值关排雷池+不买入） |
+| `SURGE_MKT_WEAK_DELTA` | -0.4 | 弱势判定 3min 跳水阈值 |
 | `SURGE_PANEL_SCORE` | 20 | 主闸面板分阈值 |
 | `SURGE_VOL_RATIO` | 2.0 | 排雷量比下限 |
 | `SURGE_CONCEPT_MAX_SIZE` | 300 | 窄概念成员上限 |
