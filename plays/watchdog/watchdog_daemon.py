@@ -65,8 +65,31 @@ def _watchdog_already_running() -> bool:
         return False
 
 
+def _kill_stale_engines():
+    """强杀残留 watchdog 引擎进程。
+
+    2026-08-13 修复（幽灵单根因）：systemctl restart 时旧引擎子进程可能残留
+    （daemon 收 SIGTERM 后 engine terminate wait(5) 超时 → 引擎变孤儿继续跑
+    约 1-2 分钟）。残留引擎不执行 _load_state 的"重启清空 pending"，带内存
+    pending_buy_order_id 复查 → 把历史委托误判成新成交写幽灵交割单
+    （8/13 珍宝岛 2 笔：10:04:52 我 restart 后 2 分钟、10:38:39 又一次重启后）。
+    启动引擎前一律清掉残留，只允许当前 daemon 拉起的引擎存在。
+    """
+    try:
+        r = subprocess.run(
+            ["pgrep", "-f", r"watchdog/watchdog\.py"],
+            capture_output=True, text=True, timeout=5)
+        pids = [p for p in r.stdout.split() if p.isdigit()]
+        if pids:
+            log(f"[引擎] 清理残留引擎进程: {','.join(pids)}")
+            subprocess.run(["kill", "-9"] + pids, capture_output=True, timeout=5)
+    except Exception:
+        pass
+
+
 def run_watchdog_engine():
     """启动原 watchdog 引擎（子进程）。"""
+    _kill_stale_engines()
     if _watchdog_already_running():
         log("[引擎] watchdog.py 已在运行，跳过启动")
         return None

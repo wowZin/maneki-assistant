@@ -149,7 +149,25 @@ def main() -> int:
             try:
                 st = json.loads(state.read_text())
                 watching = sum(1 for v in st.values() if v.get("status") in ("watching", "alerted"))
-                _check("state.json 可解析", True, f"watching={watching} entered={sum(1 for v in st.values() if v.get('status')=='entered')}")
+                entered = sum(1 for v in st.values() if v.get("status") == "entered")
+                # 确认器状态监控（2026-08-12 简化蓝图）：
+                # - confirm_base>0 = 已触发等待站稳的票（正常应有少量在途）
+                # - 全部为 0 且已过 10:00 且 watching>0 → 确认器从未触发，疑似逻辑故障
+                # - 触发中 >30 只 → 确认器过松/异常堆积
+                confirming = sum(1 for v in st.values()
+                                 if v.get("status") == "watching" and v.get("confirm_base", 0) > 0)
+                alerted = sum(1 for v in st.values() if v.get("status") == "alerted")
+                _check("state.json 可解析", True,
+                       f"watching={watching} entered={entered} confirming={confirming} alerted={alerted}")
+                hh = int(_now()[:2])
+                mm = int(_now()[3:5])
+                # 确认器最早 09:40 才有首次触发（需 10 轮价格历史），09:50 起检查
+                if watching > 0 and hh * 60 + mm >= 9 * 60 + 50 and confirming == 0 and alerted == 0:
+                    _check("确认器触发", False,
+                           f"{hh:02d}:{mm:02d} 已过 09:50 但 0 只触发/alerted，确认器疑似未工作")
+                elif confirming > 30:
+                    _check("确认器触发", False,
+                           f"confirming={confirming} > 30，确认器过松或状态堆积")
             except Exception as e:
                 _check("state.json", False, f"解析失败: {e}")
 

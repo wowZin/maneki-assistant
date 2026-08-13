@@ -144,54 +144,6 @@
     "pnl_pct": 0.0
   },
   {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 100,
-    "amount": 667.0,
-    "time": "2026-08-06 10:25:49",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 100,
-    "amount": 667.0,
-    "time": "2026-08-06 10:27:41",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603106.SH",
-    "name": "恒银科技",
-    "direction": "买入",
-    "price": 9.86,
-    "shares": 100,
-    "amount": 986.0,
-    "time": "2026-08-06 10:32:49",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "002971.SZ",
-    "name": "和远气体",
-    "direction": "买入",
-    "price": 40.25,
-    "shares": 100,
-    "amount": 4025.0,
-    "time": "2026-08-06 10:32:50",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
     "code": "600985.SH",
     "name": "淮北矿业",
     "direction": "买入",
@@ -296,30 +248,6 @@
     "amount": 853.0,
     "time": "2026-08-06 11:24:50",
     "reason": "信号: vwap_break",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 100,
-    "amount": 667.0,
-    "time": "2026-08-06 11:30:33",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 100,
-    "amount": 667.0,
-    "time": "2026-08-06 11:32:54",
-    "reason": "信号: 挂单成交",
     "pnl": 0.0,
     "pnl_pct": 0.0
   },

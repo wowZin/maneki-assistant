@@ -96,10 +96,22 @@ class TestSellConfirm:
         assert not ok and cnt == 0
 
     def test_pin_resets_count(self):
-        # 插针: 上一轮 9.50(相对最高跌5%), 本轮收回 9.60 → 重置
-        ok, reason, cnt = cf.check_sell_confirm(10.0, 9.60, 9.50, 1)
+        # 插针: 上一轮 9.50(深跌5%), 本轮收回 9.70(回到回撤线以上) → 洗盘重置
+        ok, reason, cnt = cf.check_sell_confirm(10.0, 9.70, 9.50, 1)
         assert not ok and cnt == 0
-        assert "插针" in reason or "恢复" in reason
+        assert "插针" in reason
+
+    def test_continuous_drop_not_pin(self):
+        # 2026-08-13 回归: 持续下跌中微小反弹(13.40→13.43, 未回回撤线)
+        # 不算插针, 回撤计数继续 → 连续 2 轮触发卖出
+        # 第1轮: 回撤 7.8% count=0 → 1(不卖)
+        ok, reason, cnt = cf.check_sell_confirm(14.56, 13.43, 13.40, 0)
+        assert not ok and cnt == 1, reason
+        assert "回撤" in reason
+        # 第2轮: 中间微小反弹(13.43→13.40)不算插针, 仍触发卖出
+        ok2, reason2, cnt2 = cf.check_sell_confirm(14.56, 13.40, 13.43, 1)
+        assert ok2, reason2
+        assert "连续2轮" in reason2
 
     def test_recovery_resets_count(self):
         # 反弹回最高 98% 以上 → 取消
@@ -110,3 +122,22 @@ class TestSellConfirm:
     def test_no_data(self):
         ok, reason, cnt = cf.check_sell_confirm(0.0, 9.0, 9.0, 0)
         assert not ok
+
+
+class TestRiseCondition:
+    """2026-08-13 拉升条件：横盘创新高不触发（冲高完横住的票不是趋势）。"""
+
+    def test_no_trigger_flat_high(self):
+        # 横盘序列: 10 轮都在 10.0~10.02 附近, 最后 10.01 创新高但拉升 <2%
+        prices = [10.0, 10.01, 10.0, 10.01, 10.02, 10.0, 10.01, 10.0, 10.01, 10.02, 10.01]
+        vols = [100] * 11
+        ok, reason = cf.trend_up_trigger(prices, vols)
+        assert not ok
+        assert "拉升" in reason
+
+    def test_trigger_with_rise(self):
+        # 前 10 轮从 9.8 拉到 10.3 (拉升 5%), 最后 10.35 创新高 + 放量
+        prices = [9.8, 9.85, 9.9, 9.95, 10.0, 10.05, 10.1, 10.15, 10.2, 10.3, 10.35]
+        vols = [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 300]
+        ok, reason = cf.trend_up_trigger(prices, vols)
+        assert ok, reason

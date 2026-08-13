@@ -72,6 +72,11 @@ def _short(code: str) -> str:
 logger = logging.getLogger(__name__)
 STATE_FILE = PROJECT_DIR / "plays" / "watchdog" / "data" / "state.json"
 SCAN_INTERVAL = 60
+# L1 行情熔断（2026-08-13 新增）：交易时段内 ws_snap 快照冻结 ≥ 此秒数 → 
+# 浮亏持仓市价卖出（CTP 交易不依赖 jvQuant 行情，ticket 独立，能卖）。
+# 背景：8/13 13:02 起 jvQuant WS 网关 502 超 30 分钟，持仓无行情监控，
+# 断链期间若票下跌，卖出确认器无法止损 → 损失放大。熔断主动止损防放大。
+FUSE_TRIGGER_SEC = int(os.getenv("WATCHDOG_FUSE_SECONDS", "300"))
 CONSECUTIVE_ENTRY_ROUNDS = int(os.getenv("CONSECUTIVE_ENTRY_ROUNDS", "3"))  # 连续 N 轮满足入场条件才触发 alerted
 MAX_WATCH = 20      # 手动盯盘上限（surge 通道不设上限，2026-07-26 用户拍板）
 # 买入股数（2026-08-11 用户拍板：全部买入 2 手=200 股，放大收益/亏损额度。
@@ -325,6 +330,8 @@ class WatchdogEngine:
         self._netflow_hist_ts: dict[str, float] = {}  # code -> 上次 netflow 采样时间（连续轮询下按真实时间采样）
         self._alert_ts: dict[str, float] = {}         # code -> 入场信号触发时间（连续轮询下按真实时间确认）
         self._state_mtime: float = 0.0
+        # L1 行情熔断标志（2026-08-13）：当天只熔断一次
+        self._fuse_triggered: bool = False
         self._load_state()
 
     # ---- 生命周期 ----
@@ -480,6 +487,21 @@ class WatchdogEngine:
                         logger.warning(f"ws_daemon 共享内存未就绪")
                         time.sleep(5)
                         continue
+                    # L1 行情熔断（2026-08-13）：交易时段内快照冻结超阈值 →
+                    # 浮亏持仓市价卖出，避免断链期间损失放大。
+                    # 持久化 marker（当天只熔断一次，重启不重复触发——
+                    # V1 实测：重启后 _fuse_triggered 重置又触发一轮，反复发卖单）。
+                    _fuse_marker = STATE_FILE.parent / f"fuse_{datetime.now().strftime('%Y%m%d')}.marker"
+                    if not _fuse_marker.exists():
+                        try:
+                            _mt = WS_SNAP.stat().st_mtime
+                            _frozen = time.time() - _mt
+                            if _frozen >= FUSE_TRIGGER_SEC:
+                                _fuse_marker.write_text(
+                                    datetime.now().isoformat())
+                                self._fuse_sell_losers(_frozen)
+                        except Exception as _fe:
+                            logger.warning(f"熔断检查异常: {_fe}")
                     # 动态加载外部 state.json 变更（用户通过 client 添加/删除）
                     self._reload_state_if_changed()
                     with self._lock:
@@ -780,10 +802,13 @@ class WatchdogEngine:
                     st.last_abnormal_level = level
                     st.last_abnormal_pushed_at = time.time()
                 elif st.source == "surge":
-                    # surge 票保持静默（只发入场信号）；critical 仍移除
+                    # surge 票保持静默（只发入场信号）
                     st.last_abnormal_level = level
                     st.last_abnormal_pushed_at = time.time()
-                    if level == "critical":
+                    # 2026-08-13 修复：critical 只移除未持仓的 watching/alerted 票；
+                    # entered(持仓)不移除——否则持仓脱离离场监控（永杉锂业 08-13
+                    # 实测：critical 移除后 CTP 200 股失管，回撤 2.8% 无人管）。
+                    if level == "critical" and st.status != "entered":
                         self.remove([code])
                         continue
                 else:
@@ -1234,6 +1259,76 @@ class WatchdogEngine:
         return [(c[0], c[1]) for c in candidates[:MAX_WATCH]]
 
     # ---- 状态持久化 ----
+
+    def _fuse_sell_losers(self, frozen_sec: float):
+        """L1 行情熔断：快照冻结超阈值 → 浮亏持仓市价卖出。
+
+        2026-08-13 新增（用户拍板）：jvQuant WS 行情丢失时（如 8/13 502 超
+        30 分钟），持仓无实时监控，断链期间票若下跌确认器无法止损 → 损失
+        放大。熔断主动卖出浮亏持仓（CTP 交易走 ticket 独立通道，不依赖
+        jvQuant 行情，能卖）。浮盈持仓保留（平台恢复后继续监控）。
+        """
+        logger.warning(f"L1 行情熔断: 快照冻结 {frozen_sec:.0f}s，浮亏持仓止损")
+        with self._lock:
+            codes = [c for c, v in self._states.items() if v.status == "entered"]
+        sold, kept, failed = [], [], []
+        for code in codes:
+            st = self._states[code]
+            _mkt = _read_ws_snap(_short(code))
+            last = float(_mkt.get("last") or 0) if _mkt else 0.0
+            if st.entry_price <= 0 or last <= 0:
+                failed.append(f"{st.name}({code} 无价格)")
+                continue
+            if last >= st.entry_price:
+                kept.append(f"{st.name}({code})")
+                continue
+            try:
+                from scripts.jvquant_trade_client import sale, get_trade_client
+                short = _short(code)
+                r = sale(short, st.name, vol=BUY_VOL)
+                if str(r.get("code")) == "-2":
+                    r = sale(short, st.name, vol=100)
+                # 2026-08-13 熔断 V2：sale 返回 0 只是"委托已报"，必须查
+                # check_order 确认"已成"才写交割单+移除（V1 实测：5 只卖单
+                # 仅盈方微成交，翔鹭/宇环/久其/南华已报未成 → 写幽灵交割单）。
+                if str(r.get("code")) == "0":
+                    _oid = r.get("order_id", "")
+                    _deal_ok = False
+                    try:
+                        _ord = get_trade_client().check_order()
+                        for _o in (_ord or {}).get("list") or []:
+                            if str(_o.get("order_id", "")) == str(_oid):
+                                _deal_ok = _o.get("status") == "已成"
+                                break
+                    except Exception as _ce:
+                        logger.warning(f"{code} 熔断查成交异常: {_ce}")
+                    if _deal_ok:
+                        _log_trade_journal(
+                            code, st.name, "卖出", last, BUY_VOL,
+                            reason="熔断: 行情丢失")
+                        with self._lock:
+                            self._states.pop(code, None)
+                        sold.append(f"{st.name}({code}@{last:.2f})")
+                    else:
+                        # 已报未成：保持 entered，等待（行情恢复后确认器接管）
+                        failed.append(f"{st.name}({code} 卖单已报未成{_oid})")
+                else:
+                    failed.append(f"{st.name}({code} {str(r.get('message', r))[:30]})")
+            except Exception as e:
+                failed.append(f"{st.name}({code} {str(e)[:30]})")
+            finally:
+                if sold or failed:
+                    self._save_state()
+        msg = (f"🚨 L1 行情熔断: 快照冻结 {frozen_sec:.0f}s\n"
+               f"浮亏止损卖出 {len(sold)} 只: {sold}\n"
+               f"浮盈保留 {len(kept)} 只: {kept[:8]}\n")
+        if failed:
+            msg += f"失败 {len(failed)} 只: {failed[:5]}"
+        logger.warning(msg)
+        try:
+            _push_feishu(msg)
+        except Exception as _e:
+            logger.warning(f"熔断飞书推送失败: {_e}")
 
     def _reconcile_holds(self):
         """持仓对账兜底：CTP 实际持仓 vs 盯盘 entered，失管持仓自动加回。

@@ -312,42 +312,6 @@
     "pnl_pct": 0.0
   },
   {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 200,
-    "amount": 1334.0,
-    "time": "2026-08-11 14:02:49",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 200,
-    "amount": 1334.0,
-    "time": "2026-08-11 14:03:55",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 200,
-    "amount": 1334.0,
-    "time": "2026-08-11 14:11:32",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
     "code": "605128.SH",
     "name": "上海沿浦",
     "direction": "卖出",

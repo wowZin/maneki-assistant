@@ -19,12 +19,19 @@
 
 from __future__ import annotations
 
+import os
+
 # ── 买入确认器参数 ──
 HI_WINDOW = 10        # 创新高窗口（轮）：当前价需 ≥ 前 10 轮最高
 HI_TOL = 0.995        # 创新高容差：允许 0.5%（分钟噪声）
 VOL_MULT = 1.5        # 放量倍数：窗口内任一轮量 > 前 5 轮均量 × 1.5
 STAND_ROUNDS = 3      # 站稳轮数：触发后连续 3 轮不跌回触发价 0.5% 以下
 STAND_TOL = 0.995
+# 2026-08-13 拉升条件：触发前窗口内必须从低点明显拉升 ≥ 此百分比。
+# 根因（8/13 实盘 18 买 0 持续）：确认器"创新高+站稳"偏爱横盘票——
+# 冲高完横住的票完美满足站稳 3 轮，买入即趋势停滞（买完就回落）；
+# 真趋势票是"拉升中"（价格仍在加速），横盘创新高（拉升 <2%）不触发。
+RISE_MIN_PCT = float(os.getenv("CONFIRM_RISE_MIN_PCT", "2.0"))
 
 # ── 卖出确认器参数 ──
 SELL_PULLBACK = 0.04  # 最高点回撤 4%
@@ -46,13 +53,19 @@ def trend_up_trigger(price_hist: list[float], vol_hist: list[float]) -> tuple[bo
     hi = max(price_hist[-HI_WINDOW - 1:-1])
     if last < hi * HI_TOL:
         return False, f"非新高(前{HI_WINDOW}轮高{hi:.2f}, 现{last:.2f})"
+    # 2026-08-13 拉升条件：入场前窗口内必须从低点明显拉升（≥ RISE_MIN_PCT）。
+    # 横盘创新高（拉升不足）＝冲高完横住＝趋势停滞，买完即回落，不触发。
+    _lo = min(price_hist[-HI_WINDOW - 1:-1])
+    _rise = (last / _lo - 1) * 100 if _lo > 0 else 0
+    if _rise < RISE_MIN_PCT:
+        return False, f"横盘创新高(拉升{_rise:.1f}%<{RISE_MIN_PCT}%)"
     # 窗口内任一轮放量（量 > 该轮前 5 轮均量 × VOL_MULT）
     for j in range(len(vol_hist) - HI_WINDOW, len(vol_hist)):
         v5 = vol_hist[max(0, j - 5):j]
         v5 = [v for v in v5 if v > 0]
         if len(v5) >= 3 and vol_hist[j] > sum(v5) / len(v5) * VOL_MULT:
-            return True, f"创新高{last:.2f}+窗口放量"
-    return False, f"创新高但窗口无放量"
+            return True, f"创新高{last:.2f}+拉升{_rise:.1f}%+窗口放量"
+    return False, f"创新高+拉升{_rise:.1f}%但窗口无放量"
 
 
 def check_buy_confirm(price_hist: list[float], vol_hist: list[float],
@@ -96,8 +109,13 @@ def check_sell_confirm(highest: float, last: float, prev_last: float,
     # 趋势恢复：反弹回最高点 98% 以上 → 取消卖出
     if last >= highest * RECOVER_TOL:
         return False, "趋势恢复", 0
-    # 插针：单轮大跌后立即收回 → 洗盘，不计数
-    if prev_last > 0 and last >= prev_last and prev_last < highest * (1 - PIN_DROP):
+    # 插针：上一轮深跌(>2%) + 本轮收回 + 价格回到回撤线以上 → 洗盘，不计数
+    # 2026-08-13 修复：原条件(last>=prev_last 且 prev_last<最高×0.98)过宽——
+    # 持续下跌中的微小反弹(13.40→13.43)也被判"插针收回"，回撤计数永远清零，
+    # 回撤 7.8% 仍不卖（天山铝业/金桥/武汉凡谷 08-13 实测）。
+    if prev_last > 0 and last >= prev_last \
+            and prev_last < highest * (1 - PIN_DROP) \
+            and last > highest * (1 - SELL_PULLBACK):
         return False, "插针收回", 0
     # 回撤判定
     if last <= highest * (1 - SELL_PULLBACK):

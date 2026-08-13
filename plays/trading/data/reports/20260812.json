@@ -156,18 +156,6 @@
     "pnl_pct": -1.88
   },
   {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 200,
-    "amount": 1334.0,
-    "time": "2026-08-12 10:19:13",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
     "code": "002585.SZ",
     "name": "双星新材",
     "direction": "买入",
@@ -324,18 +312,6 @@
     "pnl_pct": 0.0
   },
   {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 200,
-    "amount": 1334.0,
-    "time": "2026-08-12 11:13:02",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
     "code": "600611.SH",
     "name": "大众交通",
     "direction": "买入",
@@ -440,138 +416,6 @@
     "amount": 1436.0,
     "time": "2026-08-12 14:47:13",
     "reason": "信号: vwap_break",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 200,
-    "amount": 1334.0,
-    "time": "2026-08-12 15:39:49",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 200,
-    "amount": 1334.0,
-    "time": "2026-08-12 16:33:41",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 200,
-    "amount": 1334.0,
-    "time": "2026-08-12 16:52:49",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 200,
-    "amount": 1334.0,
-    "time": "2026-08-12 17:14:59",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 200,
-    "amount": 1334.0,
-    "time": "2026-08-12 17:58:12",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 200,
-    "amount": 1334.0,
-    "time": "2026-08-12 18:00:06",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 200,
-    "amount": 1334.0,
-    "time": "2026-08-12 18:02:11",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 200,
-    "amount": 1334.0,
-    "time": "2026-08-12 19:00:53",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 200,
-    "amount": 1334.0,
-    "time": "2026-08-12 19:02:40",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 200,
-    "amount": 1334.0,
-    "time": "2026-08-12 19:03:48",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 200,
-    "amount": 1334.0,
-    "time": "2026-08-12 19:04:34",
-    "reason": "信号: 挂单成交",
     "pnl": 0.0,
     "pnl_pct": 0.0
   }

@@ -172,21 +172,25 @@ class THSClient:
             record("ths", "quote", ok=ok, items=items, latency_ms=(time.time()-t0)*1000)
 
     # 指数分时缓存（大盘栅栏用，30s TTL 足够）
+    # 2026-08-13 修复：原缓存不按 symbol 区分——30s 内查任何 symbol 都返回
+    # 第一只的缓存（个股分时诊断时 9 只数据全串）。改按 symbol 缓存。
     _index_cache: dict = {}
-    _index_cache_ts: float = 0.0
+    _index_cache_ts: dict = {}
 
     def get_index_intraday(self, symbol: str = "1A0001") -> Optional[dict]:
         """获取指数当日分时（同花顺 v6/time 接口，Cookie 直连零成本）。
 
         2026-08-06 新增（大盘走势栅栏）：上证指数=1A0001、深证成指=399001、
-        创业板指=399006。返回:
+        创业板指=399006。个股同样适用（hs_600327 等）。
+        返回:
             {date, pre, is_trading, points: [(hhmm, price), ...], latest, pct_chg}
         非交易时段返回当日完整分时（最后一条=收盘价）；接口故障返回 None。
-        缓存 30s——栅栏只需要分钟级判断，不追求逐秒。
+        缓存 30s（按 symbol）——栅栏只需要分钟级判断，不追求逐秒。
         """
         now = time.time()
-        if self._index_cache and now - self._index_cache_ts < 30:
-            return self._index_cache
+        _c = self._index_cache.get(symbol)
+        if _c and now - self._index_cache_ts.get(symbol, 0) < 30:
+            return _c
         if not self._cookie:
             logger.warning("同花顺 Cookie 未配置，无法获取指数行情")
             return None
@@ -216,8 +220,8 @@ class THSClient:
                 "is_trading": is_trading, "points": points,
                 "latest": latest, "pct_chg": pct_chg,
             }
-            self._index_cache = result
-            self._index_cache_ts = now
+            self._index_cache[symbol] = result
+            self._index_cache_ts[symbol] = now
             return result
         except Exception as e:
             logger.debug(f"同花顺指数异常: {symbol} {e}")

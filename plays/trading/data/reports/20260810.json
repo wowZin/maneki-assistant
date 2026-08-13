@@ -300,18 +300,6 @@
     "pnl_pct": 14.95
   },
   {
-    "code": "001376.SZ",
-    "name": "百通能源",
-    "direction": "买入",
-    "price": 11.75,
-    "shares": 100,
-    "amount": 1175.0,
-    "time": "2026-08-10 10:26:51",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
     "code": "600693.SH",
     "name": "东百集团",
     "direction": "买入",
@@ -432,18 +420,6 @@
     "pnl_pct": 0.0
   },
   {
-    "code": "001258.SZ",
-    "name": "立新能源",
-    "direction": "买入",
-    "price": 14.44,
-    "shares": 100,
-    "amount": 1444.0,
-    "time": "2026-08-10 11:15:57",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
     "code": "600429.SH",
     "name": "三元股份",
     "direction": "买入",
@@ -476,18 +452,6 @@
     "amount": 1103.0,
     "time": "2026-08-10 13:06:42",
     "reason": "信号: volume_surge",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "002440.SZ",
-    "name": "闰土股份",
-    "direction": "买入",
-    "price": 13.72,
-    "shares": 100,
-    "amount": 1372.0,
-    "time": "2026-08-10 13:06:44",
-    "reason": "信号: 挂单成交",
     "pnl": 0.0,
     "pnl_pct": 0.0
   },
@@ -684,18 +648,6 @@
     "pnl_pct": 0.0
   },
   {
-    "code": "002882.SZ",
-    "name": "金龙羽",
-    "direction": "买入",
-    "price": 23.94,
-    "shares": 100,
-    "amount": 2394.0,
-    "time": "2026-08-10 13:58:44",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
     "code": "000862.SZ",
     "name": "银星能源",
     "direction": "买入",
@@ -876,18 +828,6 @@
     "pnl_pct": 0.0
   },
   {
-    "code": "002679.SZ",
-    "name": "福建金森",
-    "direction": "买入",
-    "price": 8.99,
-    "shares": 100,
-    "amount": 899.0,
-    "time": "2026-08-10 14:38:48",
-    "reason": "信号: 挂单成交",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
     "code": "600661.SH",
     "name": "昂立教育",
     "direction": "买入",
@@ -992,18 +932,6 @@
     "amount": 1570.0,
     "time": "2026-08-10 14:50:16",
     "reason": "信号: vwap_break",
-    "pnl": 0.0,
-    "pnl_pct": 0.0
-  },
-  {
-    "code": "603567.SH",
-    "name": "珍宝岛",
-    "direction": "买入",
-    "price": 6.67,
-    "shares": 100,
-    "amount": 667.0,
-    "time": "2026-08-10 21:30:05",
-    "reason": "信号: 挂单成交",
     "pnl": 0.0,
     "pnl_pct": 0.0
   }
