@@ -31,13 +31,58 @@ STAND_TOL = 0.995
 # 根因（8/13 实盘 18 买 0 持续）：确认器"创新高+站稳"偏爱横盘票——
 # 冲高完横住的票完美满足站稳 3 轮，买入即趋势停滞（买完就回落）；
 # 真趋势票是"拉升中"（价格仍在加速），横盘创新高（拉升 <2%）不触发。
-RISE_MIN_PCT = float(os.getenv("CONFIRM_RISE_MIN_PCT", "2.0"))
+# 2026-08-17 调 2.0→1.5：两天 snapshot_log 回放（0814 弱势/0817 强势），
+# 触发 +63%~+97%，30min 均收益改善（-0.58→-0.43 / -0.22→-0.15），
+# 胜率持平——watching 票主要卡"拉升不足 2%"，放宽只提转化不降质。
+RISE_MIN_PCT = float(os.getenv("CONFIRM_RISE_MIN_PCT", "1.5"))
+# 2026-08-17 触发时"仍在涨"容差（D 变体，回放 0814/0817 验证）：
+# 当前轮 ≥ 上一轮×此容差 才算"拉升中"；否则是"拉高后横盘"（603284 实测
+# 13:19 急拉 45.95 → 13:20 横盘 45.85 仍被创新高 0.5% 容差放行，买在滞涨位）。
+# 回放：触发仅 -3%（vs 只放宽拉升门槛），胜率/30min 收益不降（0817 50%/-0.03%）。
+RISE_RISING_TOL = float(os.getenv("CONFIRM_RISE_RISING_TOL", "0.998"))
+# 2026-08-14 拉升持续性（用户拍板，8/14 实盘 5 买 4 亏验证）：
+# 拉升必须跨越 ≥RISE_SPAN_ROUNDS 轮且创新高 ≥RISE_PEAKS 次（多波）。
+# 根因：仅"拉升≥2%"仍捕捉 1-3 分钟急拉（索菱/江海/黄河 8/14 实测）——
+# 急拉正是脉冲形态；趋势是持续多波推进（大东方 8/13：6 分钟 3 次新高）。
+RISE_SPAN_ROUNDS = int(os.getenv("CONFIRM_RISE_SPAN", "4"))
+RISE_PEAKS = int(os.getenv("CONFIRM_RISE_PEAKS", "2"))
+# 2026-08-14 当日形态过滤（1 周 117 笔验证：high_decay 35% 胜率 -0.86%，
+# 唯一明显负收益形态；rising 58% +0.39% 最好，不能拦）。触发候选时由
+# watchdog 拉 THS 当日分时算形态，high_decay（高位衰落）不触发。
+SHAPE_HIGH_DECAY_POS = float(os.getenv("SHAPE_HIGH_DECAY_POS", "0.65"))
+SHAPE_HIGH_DECAY_DROP = float(os.getenv("SHAPE_HIGH_DECAY_DROP", "-1.5"))
+# 2026-08-14 去钝化（用户拍板）：站稳 3 轮→2 轮。原 3 轮=横盘容忍 3 分钟，
+# 买入时已错过拉升段（老百姓 8/14：09:51 冲高，3 轮站稳后买入已在回落）。
+STAND_ROUNDS = int(os.getenv("STAND_ROUNDS", "2"))
 
 # ── 卖出确认器参数 ──
 SELL_PULLBACK = 0.04  # 最高点回撤 4%
-SELL_ROUNDS = 2       # 连续 2 轮回撤才卖
+# 2026-08-14 去钝化（用户拍板）：回撤确认 2 轮→1 轮。原 2 轮=等 2 分钟确认，
+# 确认时已 -5~6%（天山 8/13 -7.4% 才卖，第一轮 -4% 就该跑）。
+# 防插针由 PIN_DROP 判定保留（单轮下砸>2% 且收回且回到回撤线以上 → 不卖）。
+SELL_ROUNDS = int(os.getenv("SELL_ROUNDS", "1"))
 PIN_DROP = 0.02       # 防插针：单轮下砸 >2%
 RECOVER_TOL = 0.98    # 趋势恢复：反弹 ≥ 最高 × 0.98 → 取消卖出
+
+
+def classify_intraday_shape(prices: list[float]) -> str:
+    """当日分时形态分类（2026-08-14，基于 THS 当日分钟价序列）。
+
+    返回: 'high_decay' 高位衰落(高点回落+高位反抽=脉冲, 不买)
+          'rising' 持续拉升(贴顶) / 'low_rise' 低位震荡向上 / 'flat' 横盘
+    验证(1周117笔): high_decay 35%胜率-0.86% 最差; rising 58%+0.39% 最好。
+    """
+    if len(prices) < 10:
+        return "flat"
+    hi, lo = max(prices), min(prices)
+    last = prices[-1]
+    if hi <= lo:
+        return "flat"
+    pos = (last - lo) / (hi - lo)
+    drop_hi = (last / hi - 1) * 100
+    if pos > SHAPE_HIGH_DECAY_POS and drop_hi < SHAPE_HIGH_DECAY_DROP:
+        return "high_decay"
+    return "ok"
 
 
 def trend_up_trigger(price_hist: list[float], vol_hist: list[float]) -> tuple[bool, str]:
@@ -50,6 +95,11 @@ def trend_up_trigger(price_hist: list[float], vol_hist: list[float]) -> tuple[bo
     if len(price_hist) < HI_WINDOW + 1 or len(vol_hist) < HI_WINDOW + 1:
         return False, "窗口不足"
     last = price_hist[-1]
+    # 2026-08-17 触发时"仍在涨"（D 变体）：当前轮 ≥ 上一轮×容差才算拉升中。
+    # 拦"拉高后横盘"——603284 13:19 急拉 45.95 → 13:20 横盘 45.85 仍被
+    # 创新高 0.5% 容差判为"新高"放行，买在滞涨位；真趋势触发时点还在涨。
+    if len(price_hist) >= 2 and last < price_hist[-2] * RISE_RISING_TOL:
+        return False, f"触发轮回落(现{last:.2f}<上轮{price_hist[-2]:.2f})"
     hi = max(price_hist[-HI_WINDOW - 1:-1])
     if last < hi * HI_TOL:
         return False, f"非新高(前{HI_WINDOW}轮高{hi:.2f}, 现{last:.2f})"
@@ -59,12 +109,28 @@ def trend_up_trigger(price_hist: list[float], vol_hist: list[float]) -> tuple[bo
     _rise = (last / _lo - 1) * 100 if _lo > 0 else 0
     if _rise < RISE_MIN_PCT:
         return False, f"横盘创新高(拉升{_rise:.1f}%<{RISE_MIN_PCT}%)"
+    # 2026-08-14 拉升持续性：排除 1-3 分钟急拉（脉冲形态）。
+    # ① 拉升跨越轮数：窗口内低点 → 当前 ≥ RISE_SPAN_ROUNDS 轮
+    _seg = price_hist[-HI_WINDOW - 1:-1]
+    _lo_idx = min(range(len(_seg)), key=lambda i: _seg[i])
+    _span = len(_seg) - 1 - _lo_idx
+    if _span < RISE_SPAN_ROUNDS:
+        return False, f"急拉(仅{_span}轮<{RISE_SPAN_ROUNDS})"
+    # ② 多波：窗口内创新高次数 ≥ RISE_PEAKS（单波冲高=脉冲，多波推进=趋势）
+    _peaks = 0
+    _h = _seg[0]
+    for _p in _seg:
+        if _p > _h:
+            _peaks += 1
+            _h = _p
+    if _peaks < RISE_PEAKS:
+        return False, f"单波(峰{_peaks}<{RISE_PEAKS})"
     # 窗口内任一轮放量（量 > 该轮前 5 轮均量 × VOL_MULT）
     for j in range(len(vol_hist) - HI_WINDOW, len(vol_hist)):
         v5 = vol_hist[max(0, j - 5):j]
         v5 = [v for v in v5 if v > 0]
         if len(v5) >= 3 and vol_hist[j] > sum(v5) / len(v5) * VOL_MULT:
-            return True, f"创新高{last:.2f}+拉升{_rise:.1f}%+窗口放量"
+            return True, f"创新高{last:.2f}+拉升{_rise:.1f}%/{_span}轮/{_peaks}峰+放量"
     return False, f"创新高+拉升{_rise:.1f}%但窗口无放量"
 
 

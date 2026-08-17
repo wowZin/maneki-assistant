@@ -11,7 +11,7 @@ python3 plays/limit_up/surge_scanner.py --daemon   # 每 60s 循环（生产模�
 python3 plays/limit_up/surge_scanner.py --dry-run  # 只打印路由决策，不写 watchdog/signals
 ```
 
-- daemon 扫描窗口：**09:35–11:30 / 13:00–15:00**（代码 `935 <= hhmm < 1130 or 1300 <= hhmm < 1500`），非交易日不扫（tushare `trade_cal`，接口失败按星期兜底）。
+- daemon 扫描窗口：**09:30–11:30 / 13:00–15:00**（代码 `930 <= hhmm < 1130 or 1300 <= hhmm < 1500`），非交易日不扫（tushare `trade_cal`，接口失败按星期兜底）。
 - pid 守卫：`data/health/surge_scanner.pid`，防 cron 与手动启动撞车。
 - 单轮异常（THS 超时/文件竞争）吞掉打印，下轮重试，不杀 daemon。
 

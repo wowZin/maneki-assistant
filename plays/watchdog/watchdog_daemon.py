@@ -17,7 +17,7 @@ import subprocess
 import sys
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
@@ -83,6 +83,9 @@ def _kill_stale_engines():
         if pids:
             log(f"[引擎] 清理残留引擎进程: {','.join(pids)}")
             subprocess.run(["kill", "-9"] + pids, capture_output=True, timeout=5)
+            # 2026-08-17：kill -9 后等进程死透，否则紧跟的 _watchdog_already_
+            # running pgrep 仍匹配 zombie → 误判"已在运行"跳过启动（引擎不启动）
+            time.sleep(0.5)
     except Exception:
         pass
 
@@ -135,16 +138,40 @@ def main_loop():
             time.sleep(3600)
             continue
 
+        # 2026-08-17 收盘后不拉起引擎（幽灵单根治配套）：
+        # 引擎 15:05 自退后 daemon 10s 又拉起 → 收盘后死循环空转
+        #（0812 记录：幽灵单载体 + CPU 空转，main_loop 只查交易日不查时段）。
+        now = datetime.now()
+        _hhmm = now.hour * 100 + now.minute
+        if not (920 <= _hhmm < 1505):  # 09:20-15:05 交易时段窗口
+            _kill_stale_engines()
+            engine_proc = None
+            target = now.replace(hour=9, minute=20, second=0, microsecond=0)
+            if target <= now:
+                target += timedelta(days=1)
+            sleep_s = max((target - now).total_seconds(), 60)
+            log(f"非交易时段，休眠 {sleep_s/3600:.1f}h 到 {target.strftime('%m-%d %H:%M')}")
+            time.sleep(sleep_s)
+            continue
+
         # 交易时段管理引擎
         if engine_proc is None or engine_proc.poll() is not None:
             engine_proc = run_watchdog_engine()
 
         time.sleep(10)
 
-    # 清理
+    # 清理：先强杀所有残留引擎再退出（2026-08-17 幽灵单根治）。
+    # 原实现 terminate()+wait(5)——引擎收到 SIGTERM 若卡在 check_order 网络
+    # 请求 5 秒未死 → daemon 退出，引擎变孤儿继续跑 _check_pending_buy 复查
+    # 写假交割单（8/17 实测：4 次部署重启产生 5 笔珍宝岛"挂单成交"幽灵单，
+    # 写入时间全落在 restart 前 1-2 秒）。SIGKILL 立即死，不留复查窗口。
+    _kill_stale_engines()
     if engine_proc:
-        engine_proc.terminate()
-        engine_proc.wait(timeout=5)
+        try:
+            engine_proc.kill()
+            engine_proc.wait(timeout=3)
+        except Exception:
+            pass
     log("盯盘守护进程已停止")
 
 

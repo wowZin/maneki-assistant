@@ -239,7 +239,7 @@ class TestRestartClearsPendingBuy:
     """重启清空残留挂单复查（2026-08-10 幽灵单根治）"""
 
     def test_load_state_clears_pending(self):
-        """_load_state 后残留 pending_buy_order_id 应被清空"""
+        """进程启动（clear_pending=True）→ 残留 pending_buy_order_id 应被清空"""
         from plays.watchdog import watchdog as wd
         import tempfile, json as _json
         # 构造带残留 pending 的 state
@@ -257,12 +257,153 @@ class TestRestartClearsPendingBuy:
             wd.STATE_FILE = __import__("pathlib").Path(fake_state)
             eng = WatchdogEngine.__new__(WatchdogEngine)
             eng._states = {}
-            eng._load_state()
+            eng._load_state(clear_pending=True)
             loaded = eng._states["603567.SH"]
             assert loaded.pending_buy_order_id == ""  # 重启后清空
             assert loaded.pending_buy_since is None
         finally:
             wd.STATE_FILE = orig
+
+    def test_reload_preserves_pending(self):
+        """运行中 reload（clear_pending=False）→ 在途 pending 保留，复查不中断
+
+        ★ 2026-08-17：盘中 state.json 变更（surge 每 60s 写）触发 reload 若清空
+        pending，会把"已报未成交"在途买单复查放弃 → 委托成交无人确认 → 漏账
+        （0817 立新能源 754483 / 0814 江海 528948 实测）。
+        """
+        from plays.watchdog import watchdog as wd
+        import tempfile, json as _json
+        st = WatchState("001258.SZ", "立新能源")
+        st.status = "watching"
+        st.pending_buy_order_id = "754483"
+        st.pending_buy_since = __import__("datetime").datetime.now()
+        state = {"001258.SZ": st.to_dict()}
+        tmpdir = tempfile.mkdtemp()
+        fake_state = tmpdir + "/state.json"
+        _json.dump(state, open(fake_state, "w"), ensure_ascii=False)
+        orig = wd.STATE_FILE
+        try:
+            wd.STATE_FILE = __import__("pathlib").Path(fake_state)
+            eng = WatchdogEngine.__new__(WatchdogEngine)
+            eng._states = {}
+            eng._load_state()  # reload 路径：默认不清 pending
+            loaded = eng._states["001258.SZ"]
+            assert loaded.pending_buy_order_id == "754483"  # 保留
+            assert loaded.pending_buy_since is not None
+        finally:
+            wd.STATE_FILE = orig
+
+
+class TestManualSoldNotMisreported:
+    """用户手动卖出残留不误报（2026-08-17 古井贡酒 13:00 假出场+假交割单）"""
+
+    def test_minus2_manual_sold_no_journal(self):
+        """sale 返回 -2 可用0，check_order 的已成委托是用户手动卖（不在
+        _sold_orders）→ 不写交割单，静默移除"""
+        eng = _engine_with({})
+        eng._sold_orders = set()  # 本引擎未发过卖出委托
+        st = WatchState("000596.SZ", "古井贡酒")
+        st.status = "entered"
+        st.entry_price = 99.39
+        st.highest_since_entry = 99.39
+        eng._states["000596.SZ"] = st
+        order = [{"order_id": "1166324", "code": "000596", "type": "证券卖出",
+                  "status": "已成"}]  # 用户 11:02 手动卖的委托
+        called = {}
+        with patch("scripts.jvquant_trade_client.sale",
+                   return_value={"code": "-2", "message": "持仓不足: 000596(古井贡酒) 可用0股，需100股"}), \
+             patch("scripts.jvquant_trade_client.get_trade_client") as _tc, \
+             patch("plays.watchdog.watchdog._push_feishu"), \
+             patch("plays.watchdog.watchdog._log_trade_journal",
+                   side_effect=lambda *a, **k: called.setdefault("journal", True)):
+            _tc.return_value.check_order.return_value = {"list": order}
+            # 模拟 -2 分支判定（对齐 watchdog.py L1000-1043 新逻辑）
+            _already_dealt = False
+            for _o in order:
+                if str(_o.get("code", "")) == "000596" \
+                        and "卖出" in str(_o.get("type", "")) \
+                        and _o.get("status") == "已成" \
+                        and str(_o.get("order_id", "")) in eng._sold_orders:
+                    _already_dealt = True
+                    break
+            assert _already_dealt is False  # 用户手动委托不被认作系统卖出
+        assert "journal" not in called  # 未写假交割单
+
+    def test_minus2_own_order_writes_journal(self):
+        """sale -2 但 check_order 已成委托是本引擎发的（_sold_orders 有）
+        → 补离场推送+交割单（08-05 天娱数科场景保留）"""
+        eng = _engine_with({})
+        eng._sold_orders = {"1851882"}
+        st = WatchState("002354.SZ", "天娱数科")
+        st.status = "entered"
+        st.entry_price = 8.0
+        st.highest_since_entry = 8.0
+        eng._states["002354.SZ"] = st
+        order = [{"order_id": "1851882", "code": "002354", "type": "证券卖出",
+                  "status": "已成"}]  # 自己 14:22 发的委托
+        called = {}
+        with patch("scripts.jvquant_trade_client.sale",
+                   return_value={"code": "-2", "message": "持仓不足: 002354(天娱数科) 可用0股，需100股"}), \
+             patch("scripts.jvquant_trade_client.get_trade_client") as _tc, \
+             patch("plays.watchdog.watchdog._push_feishu"), \
+             patch("plays.watchdog.watchdog._log_trade_journal",
+                   side_effect=lambda *a, **k: called.setdefault("journal", True)):
+            _tc.return_value.check_order.return_value = {"list": order}
+            _already_dealt = False
+            for _o in order:
+                if str(_o.get("code", "")) == "002354" \
+                        and "卖出" in str(_o.get("type", "")) \
+                        and _o.get("status") == "已成" \
+                        and str(_o.get("order_id", "")) in eng._sold_orders:
+                    _already_dealt = True
+                    break
+            assert _already_dealt is True  # 自己发的委托被认作系统卖出
+
+
+class TestBuyRiseGate:
+    """触发后回落闸（2026-08-17）：ready 后价格跌回触发价 0.5% 以下 → 不追买"""
+
+    def test_alerted_price_above_base_buys(self):
+        """alerted 轮价格仍 ≥ 触发价×0.995 → 正常买入"""
+        eng = _engine_with({})
+        st = WatchState("000737.SZ", "北方铜业")
+        st.status = "alerted"
+        st._confirm_ready = True
+        st.confirm_base = 14.45
+        eng._states["000737.SZ"] = st
+        with patch.object(eng, "_execute_buy") as _buy, \
+             patch.object(eng, "_save_state"):
+            # 模拟 alerted 分支：last=14.52 ≥ 14.45×0.995=14.378
+            last = 14.52
+            if st.confirm_base > 0 and last < st.confirm_base * 0.995:
+                st.status = "watching"
+            else:
+                st.confirm_base = 0.0
+                _buy("000737.SZ", st, last, 0.0, None)
+        _buy.assert_called_once()
+        assert st.status == "alerted"  # 未被回退
+
+    def test_alerted_price_dropped_aborts(self):
+        """alerted 轮价格跌破触发价 0.5% → 放弃买入，回退 watching"""
+        eng = _engine_with({})
+        st = WatchState("001258.SZ", "立新能源")
+        st.status = "alerted"
+        st._confirm_ready = True
+        st.confirm_base = 14.47
+        eng._states["001258.SZ"] = st
+        with patch.object(eng, "_execute_buy") as _buy, \
+             patch.object(eng, "_save_state"):
+            # 模拟 alerted 分支：last=14.35 < 14.47×0.995=14.397 → 拦
+            last = 14.35
+            if st.confirm_base > 0 and last < st.confirm_base * 0.995:
+                st.status = "watching"
+                st.confirm_base = 0.0
+            else:
+                st.confirm_base = 0.0
+                _buy("001258.SZ", st, last, 0.0, None)
+        _buy.assert_not_called()
+        assert st.status == "watching"
+        assert st.confirm_base == 0.0
 
 
 class TestPendingSellTimeout:

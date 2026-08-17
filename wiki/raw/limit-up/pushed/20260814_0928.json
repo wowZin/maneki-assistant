@@ -1,0 +1,50 @@
+[
+  {
+    "code": "605286.SH",
+    "name": "同力天启",
+    "model_score": 71.58000183105469,
+    "total_score": 71.58000183105469,
+    "score_mode": "model_score",
+    "pct_chg": 4.99,
+    "scores": {
+      "technical": 27.0,
+      "fundflow": 21.0,
+      "sentiment": 94.0,
+      "shortterm": 15.0,
+      "fundamental": 18.0
+    },
+    "fundamental": 18.0
+  },
+  {
+    "code": "000692.SZ",
+    "name": "惠天热电",
+    "model_score": 64.62999725341797,
+    "total_score": 64.62999725341797,
+    "score_mode": "model_score",
+    "pct_chg": 4.92,
+    "scores": {
+      "technical": 40.0,
+      "fundflow": 39.0,
+      "sentiment": 71.0,
+      "shortterm": 15.0,
+      "fundamental": 48.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "000802.SZ",
+    "name": "北京文化",
+    "model_score": 60.540000915527344,
+    "total_score": 60.540000915527344,
+    "score_mode": "model_score",
+    "pct_chg": -0.96,
+    "scores": {
+      "technical": 56.0,
+      "fundflow": 50.0,
+      "sentiment": 57.0,
+      "shortterm": 15.0,
+      "fundamental": 44.0
+    },
+    "fundamental": 44.0
+  }
+]

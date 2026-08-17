@@ -15,11 +15,12 @@ class TestTrendUpTrigger:
 
     def test_not_trigger_below_high(self):
         # 当前 9.99 < 前10轮最高 10.0×0.995=9.95 → 还是高于9.95, 会触发? 用明显低于的
+        # 9.85 同时低于上一轮 9.99 → 新 D 条件"触发轮回落"先拦（也属"当前低于高位"）
         prices = [9.8, 9.9, 9.95, 9.9, 9.85, 9.9, 9.95, 9.98, 10.0, 9.99, 9.85]
         vols = [100, 120, 90, 110, 100, 300, 120, 130, 140, 150, 160]
         ok, reason = cf.trend_up_trigger(prices, vols)
         assert not ok, reason
-        assert "非新高" in reason
+        assert ("非新高" in reason) or ("触发轮回落" in reason)
 
     def test_not_trigger_no_volume(self):
         # 创新高但窗口内无放量
@@ -50,14 +51,9 @@ class TestBuyConfirmFSM:
         vols.append(150)
         action, base, count = cf.check_buy_confirm(prices[-cf.HI_WINDOW-1:], vols[-cf.HI_WINDOW-1:], base, count)
         assert action == "stand", action
-        # 站稳轮 2
+        # 站稳轮 2 → ready (2026-08-14 去钝化: 3轮→2轮)
         prices.append(10.07)
         vols.append(140)
-        action, base, count = cf.check_buy_confirm(prices[-cf.HI_WINDOW-1:], vols[-cf.HI_WINDOW-1:], base, count)
-        assert action == "stand", action
-        # 站稳轮 3 → ready
-        prices.append(10.08)
-        vols.append(130)
         action, base, count = cf.check_buy_confirm(prices[-cf.HI_WINDOW-1:], vols[-cf.HI_WINDOW-1:], base, count)
         assert action == "ready", action
 
@@ -83,11 +79,9 @@ class TestBuyConfirmFSM:
 
 
 class TestSellConfirm:
-    def test_pullback_two_rounds_sell(self):
-        # 最高 10.0, 回撤 4% = 9.60; 连续 2 轮 ≤ 9.60 → 卖
+    def test_pullback_one_round_sell(self):
+        # 2026-08-14 去钝化: 回撤 4% 第 1 轮就卖(原 2 轮)
         ok, reason, cnt = cf.check_sell_confirm(10.0, 9.59, 9.90, 0)
-        assert not ok and cnt == 1
-        ok, reason, cnt = cf.check_sell_confirm(10.0, 9.58, 9.59, 1)
         assert ok, reason
         assert "回撤" in reason
 
@@ -101,17 +95,11 @@ class TestSellConfirm:
         assert not ok and cnt == 0
         assert "插针" in reason
 
-    def test_continuous_drop_not_pin(self):
-        # 2026-08-13 回归: 持续下跌中微小反弹(13.40→13.43, 未回回撤线)
-        # 不算插针, 回撤计数继续 → 连续 2 轮触发卖出
-        # 第1轮: 回撤 7.8% count=0 → 1(不卖)
+    def test_continuous_drop_sells_immediately(self):
+        # 2026-08-14: 回撤 4% 第 1 轮立即卖(持续下跌不误判插针)
         ok, reason, cnt = cf.check_sell_confirm(14.56, 13.43, 13.40, 0)
-        assert not ok and cnt == 1, reason
+        assert ok, reason
         assert "回撤" in reason
-        # 第2轮: 中间微小反弹(13.43→13.40)不算插针, 仍触发卖出
-        ok2, reason2, cnt2 = cf.check_sell_confirm(14.56, 13.40, 13.43, 1)
-        assert ok2, reason2
-        assert "连续2轮" in reason2
 
     def test_recovery_resets_count(self):
         # 反弹回最高 98% 以上 → 取消
@@ -137,6 +125,26 @@ class TestRiseCondition:
 
     def test_trigger_with_rise(self):
         # 前 10 轮从 9.8 拉到 10.3 (拉升 5%), 最后 10.35 创新高 + 放量
+        prices = [9.8, 9.85, 9.9, 9.95, 10.0, 10.05, 10.1, 10.15, 10.2, 10.3, 10.35]
+        vols = [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 300]
+        ok, reason = cf.trend_up_trigger(prices, vols)
+        assert ok, reason
+
+    def test_no_trigger_last_round_drop(self):
+        """2026-08-17 D 变体：触发轮回落（当前 < 上一轮×0.998）→ 不触发。
+
+        603284 实测：13:19 急拉 45.95 → 13:20 横盘 45.85 仍被创新高 0.5%
+        容差放行买在滞涨位；触发时点必须在涨才是"趋势持续"。
+        """
+        # 序列整体拉升但最后一轮从 10.35 回落到 10.30（拉高后横盘）
+        prices = [9.8, 9.85, 9.9, 9.95, 10.0, 10.05, 10.1, 10.15, 10.2, 10.35, 10.30]
+        vols = [100, 100, 100, 100, 100, 100, 100, 100, 100, 300, 100]
+        ok, reason = cf.trend_up_trigger(prices, vols)
+        assert not ok
+        assert "触发轮回落" in reason
+
+    def test_trigger_last_round_still_rising(self):
+        """D 变体：触发轮仍高于上一轮（拉升中）→ 正常触发"""
         prices = [9.8, 9.85, 9.9, 9.95, 10.0, 10.05, 10.1, 10.15, 10.2, 10.3, 10.35]
         vols = [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 300]
         ok, reason = cf.trend_up_trigger(prices, vols)

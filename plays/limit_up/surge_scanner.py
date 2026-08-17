@@ -40,7 +40,7 @@ PCT_LOW = float(os.getenv("SURGE_PCT_LOW", "3.0"))    # 异动涨幅窗口（3%�
 # 收盘胜率39% vs 29%、30min均收益-0.15% vs -0.51%——3%全面占优。
 # 代价：扫描池变大（更多3%+票进池），依赖 check_entry L1 过滤假突破。
 PCT_HIGH = float(os.getenv("SURGE_PCT_HIGH", "9.8"))  # 上限9.8：连板秒板高发，9.0会丢窗口
-SURGE_PANEL_SCORE = float(os.getenv("SURGE_PANEL_SCORE", "30"))  # 主闸：面板早盘评分阈值（2026-08-01 修复v2模型分布下 20→30，池子减半噪声更少）
+SURGE_PANEL_SCORE = float(os.getenv("SURGE_PANEL_SCORE", "20"))  # 主闸：面板早盘评分阈值（2026-08-01 调 30 后过度收紧：全市场仅 45 只达标(0.9%)；0817 当日验证 20~30 段 68 只平均+3.33%/85%上涨/12涨停/0大跌，质量≈主闸 → 08-17 调回 20）
 SURGE_VOL_RATIO = float(os.getenv("SURGE_VOL_RATIO", "2.0"))  # 排雷：量比下限
 
 
@@ -203,6 +203,21 @@ def cyq_no_pressure(code: str, td: str) -> bool:
 
 
 _concept_cache: dict = {}
+
+# 2026-08-17 当日累积异动候选（跨轮共振）：sector_resonance 原用"本轮 60s
+# 窗口"round_codes——同概念伙伴不在同一轮异动被时间窗拆开（0817 实测排雷
+# 90% 卡联动，但全天候选集下 454/454 都能找到 ≥5 只同概念伙伴）。
+_day_candidates: set = set()
+_day_candidates_date: str = ""
+
+
+def _get_day_candidates(td: str) -> set:
+    """当日累积异动候选（跨日自动重置）。"""
+    global _day_candidates, _day_candidates_date
+    if _day_candidates_date != td:
+        _day_candidates = set()
+        _day_candidates_date = td
+    return _day_candidates
 
 
 def _load_concepts():
@@ -532,6 +547,8 @@ def scan(dry_run: bool = False):
     if not candidates:
         print(f"  [surge] 无异动候选")
         return
+    # 2026-08-17 跨轮共振：本轮候选累积进当日集（sector_resonance 用它）
+    _get_day_candidates(td).update(full for full, _, _ in candidates)
     print(f"  [surge] 异动候选 {len(candidates)} 只: "
           + ", ".join(f"{c}({p:.1f}%)" for c, p, _ in candidates[:8]))
 
@@ -555,7 +572,9 @@ def scan(dry_run: bool = False):
             if cyq_no_pressure(c, td):
                 checks.append("筹码")
             if not is_lb:
-                if sector_resonance(c, round_codes):
+                # 2026-08-17 跨轮共振：用当日累积候选集替代本轮 round_codes
+                #（单轮 60s 窗口把同概念伙伴拆散 → 0817 排雷 90% 卡联动）
+                if sector_resonance(c, list(_get_day_candidates(td))):
                     checks.append("联动")
                 ok = len(checks) == 3
             else:
@@ -613,7 +632,7 @@ def main():
         import atexit
         atexit.register(lambda: pid_file.unlink() if pid_file.exists() else None)
 
-        print(f"[surge] daemon 模式启动, 每60s扫描一次 → watchdog (窗口 09:35-11:30/13:00-15:00)")
+        print(f"[surge] daemon 模式启动, 每60s扫描一次 → watchdog (窗口 09:30-11:30/13:00-15:00)")
         # 心跳文件：每轮循环更新 mtime，巡检脚本据此判断"进程活着但卡死"
         #（2026-08-05/08-10 两次实测：进程卡 futex 3天+，systemd 检测不到假死）
         heartbeat = PLAY_DIR / "data" / "health" / "surge_heartbeat"
@@ -630,12 +649,12 @@ def main():
                 next_day = now + timedelta(days=1)
                 if next_day.weekday() >= 5:
                     next_day += timedelta(days=7 - next_day.weekday())
-                target = next_day.replace(hour=9, minute=35, second=0, microsecond=0)
+                target = next_day.replace(hour=9, minute=30, second=0, microsecond=0)
                 sleep_s = max((target - datetime.now()).total_seconds(), 60)
                 print(f"[surge] 收盘({hhmm}), 休眠 {sleep_s/3600:.1f}h 到 {target.strftime('%m-%d %H:%M')}")
                 time.sleep(sleep_s)
                 continue
-            if (935 <= hhmm < 1130 or 1300 <= hhmm < 1500) and _is_trade_day(_today()):
+            if (930 <= hhmm < 1130 or 1300 <= hhmm < 1500) and _is_trade_day(_today()):
                 try:
                     scan()
                 except Exception as e:

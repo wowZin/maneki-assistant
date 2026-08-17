@@ -1,0 +1,50 @@
+[
+  {
+    "code": "000692.SZ",
+    "name": "惠天热电",
+    "model_score": 61.0099983215332,
+    "total_score": 61.0099983215332,
+    "score_mode": "model_score",
+    "pct_chg": 1.09,
+    "scores": {
+      "technical": 28.0,
+      "fundflow": 50.0,
+      "sentiment": 57.0,
+      "shortterm": 10.0,
+      "fundamental": 48.0
+    },
+    "fundamental": 48.0
+  },
+  {
+    "code": "000892.SZ",
+    "name": "欢瑞世纪",
+    "model_score": 58.720001220703125,
+    "total_score": 58.720001220703125,
+    "score_mode": "model_score",
+    "pct_chg": 3.0,
+    "scores": {
+      "technical": 24.0,
+      "fundflow": 36.0,
+      "sentiment": 86.0,
+      "shortterm": 10.0,
+      "fundamental": 29.0
+    },
+    "fundamental": 29.0
+  },
+  {
+    "code": "603466.SH",
+    "name": "风语筑",
+    "model_score": 53.41999816894531,
+    "total_score": 53.41999816894531,
+    "score_mode": "model_score",
+    "pct_chg": 1.99,
+    "scores": {
+      "technical": 34.0,
+      "fundflow": 55.0,
+      "sentiment": 99.0,
+      "shortterm": 10.0,
+      "fundamental": 38.0
+    },
+    "fundamental": 38.0
+  }
+]

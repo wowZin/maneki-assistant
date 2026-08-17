@@ -1,0 +1,398 @@
+[
+ {
+  "code": "600653.SH",
+  "name": "申华控股",
+  "entry_price": 1.71,
+  "model_score": 2.94,
+  "scores": {
+   "fundamental": 49.0,
+   "technical": 0.0,
+   "shortterm": 5.0,
+   "fundflow": 2.0,
+   "sentiment": 66
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 1.67,
+   "pct_chg": 0.6,
+   "trend_3d": 0.0,
+   "net_order": -268900,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002679.SZ",
+  "name": "福建金森",
+  "entry_price": 8.99,
+  "model_score": 2.25,
+  "scores": {
+   "fundamental": 53.5,
+   "shortterm": 0,
+   "technical": 20.0,
+   "fundflow": 0.0,
+   "sentiment": 66
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 8.77,
+   "pct_chg": 3.54,
+   "trend_3d": 0.84,
+   "net_order": 5200,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "603161.SH",
+  "name": "科华控股",
+  "entry_price": 16.37,
+  "model_score": 14.08,
+  "scores": {
+   "fundamental": 44.5,
+   "technical": 53.96000000000001,
+   "shortterm": 26.0,
+   "fundflow": 9.0,
+   "sentiment": 69
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 13.92,
+   "pct_chg": 0.07,
+   "trend_3d": 1.17,
+   "net_order": 7600,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "000596.SZ",
+  "name": "古井贡酒",
+  "entry_price": 99.39,
+  "model_score": 5.22,
+  "scores": {
+   "fundamental": 40.0,
+   "shortterm": 28.0,
+   "fundflow": 0.0,
+   "sentiment": 68,
+   "technical": 58
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 93.49,
+   "pct_chg": -1.54,
+   "trend_3d": -1.77,
+   "net_order": -10300,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "000952.SZ",
+  "name": "广济药业",
+  "entry_price": 6.43,
+  "model_score": 4.93,
+  "scores": {
+   "fundamental": 53.5,
+   "fundflow": 4.0,
+   "shortterm": 3.0,
+   "sentiment": 57,
+   "technical": 0.0
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 5.79,
+   "pct_chg": 4.32,
+   "trend_3d": 1.91,
+   "net_order": -54000,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "003023.SZ",
+  "name": "彩虹集团",
+  "entry_price": 26.74,
+  "model_score": 4.25,
+  "scores": {
+   "technical": 37.120000000000005,
+   "fundamental": 41.5,
+   "shortterm": 0,
+   "fundflow": 16.1,
+   "sentiment": 62
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 20.69,
+   "pct_chg": 2.99,
+   "trend_3d": 2.55,
+   "net_order": -100500,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002432.SZ",
+  "name": "九安医疗",
+  "entry_price": 73.26,
+  "model_score": 11.7,
+  "scores": {
+   "fundamental": 58.0,
+   "technical": 58.9,
+   "shortterm": 50.0,
+   "fundflow": 14.0,
+   "sentiment": 74
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 64.65,
+   "pct_chg": -5.57,
+   "trend_3d": 0.69,
+   "net_order": 3400,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "601199.SH",
+  "name": "江南水务",
+  "entry_price": 6.52,
+  "model_score": 15.44,
+  "scores": {
+   "fundamental": 42.7,
+   "technical": 38.0,
+   "shortterm": 15.0,
+   "fundflow": 7.0,
+   "sentiment": 67
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 5.63,
+   "pct_chg": 0.18,
+   "trend_3d": 0.18,
+   "net_order": 168100,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "600664.SH",
+  "name": "哈药股份",
+  "entry_price": 8.94,
+  "model_score": 14.78,
+  "scores": {
+   "fundamental": 83.0,
+   "shortterm": 22.0,
+   "fundflow": 37.4,
+   "sentiment": 74,
+   "technical": 39.040000000000006
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 5.99,
+   "pct_chg": 1.7,
+   "trend_3d": 4.78,
+   "net_order": 3270900,
+   "near_ratio": 1.0,
+   "signals": [
+    "3日涨+4.8%过热"
+   ],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002484.SZ",
+  "name": "江海股份",
+  "entry_price": 71.29,
+  "model_score": 14.91,
+  "scores": {
+   "fundamental": 84.5,
+   "technical": 76.56,
+   "shortterm": 50.0,
+   "fundflow": 32.2,
+   "sentiment": 77
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 53.92,
+   "pct_chg": -8.16,
+   "trend_3d": 3.38,
+   "net_order": -22800,
+   "near_ratio": 1.0,
+   "signals": [
+    "3日涨+3.4%过热"
+   ],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "600172.SH",
+  "name": "黄河旋风",
+  "entry_price": 12.4,
+  "model_score": 28.67,
+  "scores": {
+   "fundamental": 80.8,
+   "technical": 0.0,
+   "shortterm": 27.0,
+   "fundflow": 23.9,
+   "sentiment": 73
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 9.59,
+   "pct_chg": -1.34,
+   "trend_3d": 5.01,
+   "net_order": 149100,
+   "near_ratio": 1.0,
+   "signals": [
+    "3日涨+5.0%过热"
+   ],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "601026.SH",
+  "name": "道生天合",
+  "entry_price": 17.4,
+  "model_score": 14.0,
+  "scores": {
+   "technical": 79.8,
+   "fundamental": 46.5,
+   "shortterm": 33.4,
+   "fundflow": 43.0,
+   "sentiment": 85
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 15.36,
+   "pct_chg": 2.54,
+   "trend_3d": 0.81,
+   "net_order": 55000,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "603496.SH",
+  "name": "恒为科技",
+  "entry_price": 26.88,
+  "model_score": 36.45,
+  "scores": {
+   "fundamental": 73.8,
+   "shortterm": 21.0,
+   "fundflow": 37.0,
+   "sentiment": 67,
+   "technical": 57.760000000000005
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 23.99,
+   "pct_chg": 2.0,
+   "trend_3d": 3.38,
+   "net_order": -10700,
+   "near_ratio": 1.0,
+   "signals": [
+    "3日涨+3.4%过热"
+   ],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "603883.SH",
+  "name": "老百姓",
+  "entry_price": 14.05,
+  "model_score": 4.41,
+  "scores": {
+   "technical": 92,
+   "fundamental": 51.2,
+   "shortterm": 17.0,
+   "fundflow": 12.0,
+   "sentiment": 69
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 12.95,
+   "pct_chg": 1.09,
+   "trend_3d": -0.65,
+   "net_order": 41600,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002766.SZ",
+  "name": "索菱股份",
+  "entry_price": 4.33,
+  "model_score": 79.54,
+  "scores": {
+   "fundamental": 49.0,
+   "technical": 0.0,
+   "shortterm": 44.0,
+   "fundflow": 33.0,
+   "sentiment": 69
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 3.95,
+   "pct_chg": 0.25,
+   "trend_3d": 3.76,
+   "net_order": 326400,
+   "near_ratio": 1.0,
+   "signals": [
+    "3日涨+3.8%过热"
+   ],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002491.SZ",
+  "name": "通鼎互联",
+  "entry_price": 19.15,
+  "model_score": 37.23,
+  "scores": {
+   "fundamental": 90.0,
+   "shortterm": 24.0,
+   "technical": 0.0,
+   "fundflow": 42.5,
+   "sentiment": 74
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 13.86,
+   "pct_chg": -0.72,
+   "trend_3d": 4.87,
+   "net_order": -1500900,
+   "near_ratio": 1.0,
+   "signals": [
+    "3日涨+4.9%过热"
+   ],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ }
+]

@@ -35,7 +35,8 @@ sys.path.insert(0, str(PROJECT_DIR))
 
 from plays.watchdog.indicators import price_features, realtime_row, sma, atr
 from plays.watchdog.signals import check_entry, check_abnormal, compute_factor_scores
-from plays.watchdog.confirm import check_buy_confirm, check_sell_confirm
+from plays.watchdog.confirm import (STAND_TOL, check_buy_confirm,
+                                     check_sell_confirm, trend_up_trigger)
 from scripts.tu_share import call_tushare  # noqa: E402
 
 # WS 数据通过 ws_daemon 共享内存读取
@@ -236,6 +237,9 @@ class WatchState:
         self.pullback_count: int = 0
         # 确认器已站稳 3 轮（alerted 分支直接买入，跳过 30s 二次确认；不持久化）
         self._confirm_ready: bool = False
+        # 2026-08-14 日线更新失败标记（内存字段）：当天失败不重试，
+        # 避免失败票每轮串行重试 Tushare 拖慢确认器判定（钝化根因之一）。
+        self._daily_fail_today: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -325,14 +329,21 @@ class WatchdogEngine:
         # 已确认过的买单委托号（2026-08-10 幂等防重：state 保存失败时
         # pending 不清会导致同一委托重复落账，用集合兜底）
         self._confirmed_buy_orders: set[str] = set()
+        # 2026-08-17 本引擎发出的卖出委托 order_id（-2/-5 分支区分
+        # "自己上一轮委托已成交" vs "用户手动卖出"——古井贡酒 13:00 误报
+        # 假出场+假交割单案例：手动卖出的已成委托被当成系统自己刚卖）
+        self._sold_orders: set[str] = set()
         self._snap_fail_by_code: dict[str, int] = {}  # code -> 无行情连续轮数（单票失效检测）
+        # 2026-08-17 确认器拒绝原因分布（转化率诊断黑盒）：reason 类别 -> 次数
+        self._confirm_reject_counts: dict[str, int] = {}
         self._netflow_cache: dict[str, tuple[float, float]] = {}  # code -> (ts, netflow)
         self._netflow_hist_ts: dict[str, float] = {}  # code -> 上次 netflow 采样时间（连续轮询下按真实时间采样）
         self._alert_ts: dict[str, float] = {}         # code -> 入场信号触发时间（连续轮询下按真实时间确认）
         self._state_mtime: float = 0.0
         # L1 行情熔断标志（2026-08-13）：当天只熔断一次
         self._fuse_triggered: bool = False
-        self._load_state()
+        # 进程启动：清空残留 pending（防跨重启幽灵单）；运行中 reload 保留
+        self._load_state(clear_pending=True)
 
     # ---- 生命周期 ----
 
@@ -677,10 +688,35 @@ class WatchdogEngine:
         now = datetime.now()
         self._scan_count += 1
 
+        # 2026-08-14 并行日线更新：需要更新的票一次线程池批量(8 并发)。
+        # 原实现：每只票在循环内串行调 Tushare(daily+daily_basic 2 个请求)，
+        # 100 只票一轮 3-10 分钟，确认器 60s 轮询被拖成几分钟 → 买入/卖出
+        # 全部钝化(8/14 09:30 实测 29 只串行花了 90s)。并行后一轮几十秒。
+        try:
+            from concurrent.futures import ThreadPoolExecutor
+            _need = []
+            for _c in codes:
+                with self._lock:
+                    _st = self._states.get(_c)
+                if _st and not _st._daily_fail_today \
+                        and (_st.last_daily_update != today or not _st.daily_rows):
+                    _need.append(_st)
+            if _need:
+                with ThreadPoolExecutor(max_workers=8) as _ex:
+                    list(_ex.map(self._update_daily, _need))
+        except Exception as _de:
+            logger.warning(f"并行日线更新异常: {_de}")
+
         if self._scan_count % 20 == 1:
             with self._lock:
                 summary = ", ".join(f"{st.name}({st.code})[{st.status}]" for st in self._states.values())
             logger.info(f"盯盘心跳 #{self._scan_count}: {len(codes)}只 [{summary}]")
+            # 2026-08-17 转化率诊断：确认器拒绝原因分布（每20轮打印一次）
+            if self._confirm_reject_counts:
+                _top = sorted(self._confirm_reject_counts.items(),
+                              key=lambda x: -x[1])[:8]
+                logger.info("确认器拒绝分布: " + ", ".join(
+                    f"{k}={v}" for k, v in _top))
 
         for code in codes:
             with self._lock:
@@ -688,12 +724,7 @@ class WatchdogEngine:
                 if not st:
                     continue
 
-            if st.last_daily_update != today or not st.daily_rows:
-                self._update_daily(st)
-
-            if not st.daily_rows:
-                continue
-
+            # ── ① 行情读取(快, 共享内存) ──
             market = _read_ws_snap(_short(code))
             if not market or not market.get("last"):
                 self._snap_fail_count += 1
@@ -723,29 +754,9 @@ class WatchdogEngine:
                 _tv = float(market.get("trade_volume") or 0)
                 if _ta > 0 and _tv > 0:
                     vwap = _ta / _tv
-            bid_price = market.get("bid_price", [None] * 10)
-            ask_price = market.get("ask_price", [None] * 10)
-            bid1 = float(bid_price[0]) if bid_price and bid_price[0] else 0
-            ask1 = float(ask_price[0]) if ask_price and ask_price[0] else 0
-            ask_bid = bid1 / ask1 if ask1 > 0 else 1.0
-            daily_features = price_features(st.daily_rows)
-            row = realtime_row(code, market, vwap, daily_features, st.daily_basic, st.dim_scores, st.daily_rows)
-            scores = compute_factor_scores(row)
-
-            # 补充 L1/L2 实时信号到 row（供 check_entry 入场确认）
-            row["bid1"] = bid1
-            row["ask1"] = ask1
-            row["vwap"] = vwap
-            row["inner_vol"] = market.get("inner_vol", 0)
-            row["outer_vol"] = market.get("outer_vol", 0)
-            row["last"] = float(market.get("last") or 0)
-            # 10档盘口深度（诱多/空识别用）
-            row["bid_qty"] = market.get("bid_qty", [])
-            row["ask_qty"] = market.get("ask_qty", [])
-
             last = float(market.get("last") or 0)
 
-            # ── 确认器历史维护（2026-08-12：最近 15 轮 last + 分钟量差分）──
+            # ── ② 确认器历史维护（2026-08-12：最近 15 轮 last + 分钟量差分）──
             _ph = self._price_hist.setdefault(code, [])
             _ph.append(last)
             if len(_ph) > 15:
@@ -764,86 +775,13 @@ class WatchdogEngine:
             if len(_vh) > 15:
                 self._vol_hist[code] = _vh[-15:]
 
-            # 资金流向历史：按真实时间采样（≥60s 一个点，10点≈10分钟窗口；
-            # 连续轮询下若按轮追加，窗口会从5分钟塌缩到几十秒）
-            _now_ts = time.time()
-            if _now_ts - self._netflow_hist_ts.get(code, 0.0) >= 60:
-                netflow = self._get_netflow(code)
-                st.netflow_history.append(netflow)
-                if len(st.netflow_history) > 10:
-                    st.netflow_history = st.netflow_history[-10:]
-                self._netflow_hist_ts[code] = _now_ts
-            else:
-                netflow = (st.netflow_history[-1] if st.netflow_history
-                           else self._get_netflow(code))
-
-            # ── 异常状态检测（资金离场 / 抛压 / 诱空）──
-            abnormal, level, abnormal_reason = check_abnormal(
-                row, scores, netflow, ask_bid,
-                entry_price=st.entry_price if st.status == "entered" else 0.0,
-                netflow_history=st.netflow_history,
-                prev_last=st.prev_last,
-                prev_vwap=st.prev_vwap,
-                prev_vol_ratio=st.prev_vol_ratio,
-            )
-
-            # 保存本轮快照供下一轮诱空检测
-            # 2026-08-10：prev_last 在状态分支前先保存旧值到局部变量，
-            # 供 watching 分支的"价格不跌"判断（last >= prev_last）使用；
-            # 更新仍在这里做（异常检测需要本轮前的旧值，已在上方 check_abnormal 用到）。
+            # prev_last 快照：确认器(卖出)用 st.prev_last，异常检测用旧值——
+            # 2026-08-14 重构后先保存旧值再更新（确认器提前不再依赖慢操作）
             _prev_last_old = st.prev_last
             st.prev_last = last
-            st.prev_vwap = vwap
-            st.prev_vol_ratio = row.get("vol_ratio_proxy", 1.0)
 
-            if abnormal:
-                if level == "bear_trap":
-                    # 诱空不移出盯盘,不推送
-                    st.last_abnormal_level = level
-                    st.last_abnormal_pushed_at = time.time()
-                elif st.source == "surge":
-                    # surge 票保持静默（只发入场信号）
-                    st.last_abnormal_level = level
-                    st.last_abnormal_pushed_at = time.time()
-                    # 2026-08-13 修复：critical 只移除未持仓的 watching/alerted 票；
-                    # entered(持仓)不移除——否则持仓脱离离场监控（永杉锂业 08-13
-                    # 实测：critical 移除后 CTP 200 股失管，回撤 2.8% 无人管）。
-                    if level == "critical" and st.status != "entered":
-                        self.remove([code])
-                        continue
-                else:
-                    # 当日卖出受阻的票（砸盘卖不出）：异常状态只记日志不推送，
-                    # 避免每 5 分钟刷一条噪音（2026-08-07 大晟文化 12 次/小时）
-                    if st.sell_blocked_date == now.strftime("%Y%m%d"):
-                        if level != st.last_abnormal_level or \
-                                time.time() - st.last_abnormal_pushed_at >= ABNORMAL_COOLDOWN_SECONDS:
-                            logger.warning(
-                                f"{code} 异常状态 [{level}] {abnormal_reason} "
-                                f"(当日卖出受阻，静默不推送)")
-                            st.last_abnormal_level = level
-                            st.last_abnormal_pushed_at = time.time()
-                    else:
-                        icon = "🚨" if level == "critical" else "⚠️"
-                        msg = (
-                            f"{icon} {st.name}({code}) 异常状态 [{level}]\n"
-                            f"{abnormal_reason}\n"
-                            f"现价: {last:.2f} | VWAP: {vwap:.2f}"
-                        )
-                        # 冷却期内不重复推送
-                        since_last = time.time() - st.last_abnormal_pushed_at
-                        if level != st.last_abnormal_level or since_last >= ABNORMAL_COOLDOWN_SECONDS:
-                            _push_feishu(msg)
-                            st.last_abnormal_level = level
-                            st.last_abnormal_pushed_at = time.time()
-                    if level == "critical":
-                        self.remove([code])
-                        continue
-            else:
-                # 状态恢复正常，清空冷却记录（下次异常立即推送）
-                # bear_trap 不移出盯盘，不清冷却，防止高频重复
-                if st.last_abnormal_level != "bear_trap":
-                    st.last_abnormal_level = ""
-
+            # ── ③ 确认器判定（2026-08-14 提前：纯内存/行情，不受日线/因子/
+            #     资金流等慢操作阻塞——日线失败票不再被 continue 跳过信号）──
             if st.status == "watching":
                 # 2026-08-06：先复查挂起买单委托（委托已报但未确认成交）
                 # 成交 → 补置 entered；未成交 → 本轮跳过入场（避免重复下单）
@@ -854,35 +792,53 @@ class WatchdogEngine:
                     time.sleep(0.1)
                     continue
                 # ── 买入确认器（2026-08-12 简化蓝图，替代 check_entry/3轮确认/净上涨门禁）──
-                # 创新高+窗口放量触发 → 站稳 3 轮 → ready 买入；
+                # 创新高+窗口放量触发 → 站稳 2 轮 → ready 买入；
                 # 防诱多由站稳天然覆盖（冲高回落=站不稳=重置）。
-                # 依据：19 笔追高全在"非新高"位置买入；早盘确认器触发买入收盘 +1.96% vs -0.13%。
-                _ph = self._price_hist.get(code, [])
-                _vh = self._vol_hist.get(code, [])
+                _ph2 = self._price_hist.get(code, [])
+                _vh2 = self._vol_hist.get(code, [])
                 # 重启恢复：价格历史清空但 confirm_base 持久化残留 → 若价格已涨离
-                # 基准(如 +5%)，3 轮站稳后会在远离触发价的位置追高买入。价格历史
+                # 基准(如 +5%)，站稳后会在远离触发价的位置追高买入。价格历史
                 # 为空即确认状态失效，重置重新触发。
-                if st.confirm_base > 0 and not _ph:
+                if st.confirm_base > 0 and not _ph2:
                     logger.warning(f"{code} 重启后确认状态失效, 重置重新触发")
                     st.confirm_base = 0.0
                     st.confirm_count = 0
                 _action, _base, _cnt = check_buy_confirm(
-                    _ph, _vh, st.confirm_base, st.confirm_count)
-                if _action == "trigger":
-                    st.confirm_base = _base
-                    st.confirm_count = 0
-                    st.signal_type = "trend_up"
-                    st.signal_reason = f"趋势确认: 创新高+放量({_base:.2f})"
+                    _ph2, _vh2, st.confirm_base, st.confirm_count)
+                if _action == "wait":
+                    # 2026-08-17 转化率诊断：记录拒绝原因分布（黑盒打破）。
+                    # check_buy_confirm 丢弃 trend_up_trigger 的 reason，这里
+                    # 单独再算一次（纯内存，便宜）。类别取主因（括号前）。
+                    _ok2, _rs = trend_up_trigger(_ph2, _vh2)
+                    if not _ok2:
+                        _k = _rs.split("(")[0]
+                        self._confirm_reject_counts[_k] = \
+                            self._confirm_reject_counts.get(_k, 0) + 1
+                elif _action == "trigger":
+                    # 2026-08-14 当日形态过滤：高位衰落(high_decay)不触发。
+                    # 1 周 117 笔验证：high_decay 35%胜率 -0.86% 唯一明显负收益；
+                    # rising/low_rise/flat 不能拦(rising 58%+0.39% 最好)。
+                    if self._shape_high_decay(code):
+                        logger.info(
+                            f"{code} 当日形态高位衰落, 不触发(跳过买入)")
+                        st.signal_reason = "形态高位衰落, 不触发"
+                    else:
+                        st.confirm_base = _base
+                        st.confirm_count = 0
+                        st.signal_type = "trend_up"
+                        st.signal_reason = f"趋势确认: 创新高+放量({_base:.2f})"
                 elif _action == "stand":
                     st.confirm_count = _cnt
                     st.signal_reason = f"趋势确认: 站稳{_cnt}轮"
                 elif _action == "ready":
-                    st.confirm_base = 0.0
+                    # 保留 confirm_base（触发价）供 alerted 分支做"触发后不回落"闸
+                    #（2026-08-17：立新 14.47触发→14.35成交 / 紫光 40.92→40.66，
+                    #  站稳 2 轮窗口内回落 0.6-0.8% 仍放行，买在回落位）
                     st.confirm_count = 0
                     st.status = "alerted"
                     st._confirm_ready = True
                     st.signal_type = "trend_up"
-                    st.signal_reason = "趋势确认: 站稳3轮"
+                    st.signal_reason = "趋势确认: 站稳2轮"
                     st.signal_at = now.strftime("%H:%M:%S")
                     st.last_alert_at = now.strftime("%H:%M")
                     self._alert_ts[code] = time.time()
@@ -893,31 +849,31 @@ class WatchdogEngine:
                     st.confirm_count = 0
 
             elif st.status == "alerted":
-                # 2026-08-12 简化蓝图：确认器 ready（创新高+站稳3轮）→ 直接买入，
-                # 跳过 30s 二次确认 + check_entry（站稳 3 轮本身就是确认）。
+                # 2026-08-12 简化蓝图：确认器 ready（创新高+站稳2轮）→ 直接买入，
+                # 跳过 30s 二次确认 + check_entry（站稳本身就是确认）。
                 if getattr(st, "_confirm_ready", False):
                     st._confirm_ready = False
-                    self._execute_buy(code, st, last, vwap, now)
-                    continue
-
-                # 信号确认：触发满 30s 后仍满足条件才入场
-                # （连续轮询下按真实时间判断，保持原 30s 间隔的确认语义）
-                if time.time() - self._alert_ts.get(code, 0.0) >= 30:
-                    triggered, _, _ = check_entry(row, scores)
-                    # 2026-08-12：alerted 最终确认也要查价格不跌——原逻辑只
-                    # 查 check_entry 信号（价格还在 VWAP 上即可），但票可能已
-                    # 从高点冲高回落（恒为科技 -3.9%、天娱数科距高点 -5.7%
-                    # 实测仍可入）。alerted 最终防线：30s 确认期内价格不跌
-                    #（watching 已用基准价净上涨确认，此处兜底防止确认后急跌）
-                    _price_ok = (_prev_last_old <= 0) or (last >= _prev_last_old)
-                    if triggered and _price_ok:
-                        self._execute_buy(code, st, last, vwap, now)
-                    else:
+                    # ★ 2026-08-17 触发后回落闸（买趋势持续，不追回落）：
+                    # ready 后价格跌回触发价 0.5% 以下 → 放弃买入，回退 watching
+                    # 重新等。根因：确认器判定"过去10分钟拉升形态"，触发点常是
+                    # 短期尖峰，站稳 2 轮窗口内回落 0.6-0.8% 仍放行（立新 14.47→
+                    # 14.35 / 紫光 40.92→40.66 实盘买在回落位）。
+                    if st.confirm_base > 0 and last < st.confirm_base * STAND_TOL:
+                        logger.warning(
+                            f"{code} 触发价{st.confirm_base:.2f}回落至{last:.2f}, "
+                            f"放弃买入重新等")
+                        st.confirm_base = 0.0
+                        st.confirm_count = 0
                         st.status = "watching"
                         st.signal_type = ""
                         st.signal_reason = ""
                         st.signal_at = ""
                         self._save_state()
+                        continue
+                    st.confirm_base = 0.0
+                    self._execute_buy(code, st, last, vwap, now)
+                    continue
+                # 30s 确认路径(check_entry 需要 row/scores)在慢操作后处理(见 ⑤)
 
             elif st.status == "entered":
                 # 2026-08-06：reconcile 加回的持仓可能 entry_price=0（对账时快照未就绪）。
@@ -931,9 +887,8 @@ class WatchdogEngine:
                 st.bars_held += 1
 
                 # ── 卖出确认器（2026-08-12 简化蓝图，替代 check_exit 多规则）──
-                # 最高点回撤 4% 连续 2 轮 → 卖出；防插针（单轮下砸收回）/趋势恢复（反弹
-                # 回最高点 98%）重置计数。依据：16 笔卖出 7 笔卖飞（安记收盘涨停 +11.34%），
-                # 旧"高位回撤 2%"阈值过灵敏。
+                # 最高点回撤 4% 第 1 轮即卖（2026-08-14 去钝化，原 2 轮）；
+                # 防插针（单轮下砸收回）/趋势恢复（反弹回最高点 98%）重置计数。
                 _sell_ok, _sell_reason, st.pullback_count = check_sell_confirm(
                     st.highest_since_entry, last, st.prev_last, st.pullback_count)
                 exit_triggered, exit_reason = _sell_ok, _sell_reason
@@ -995,10 +950,13 @@ class WatchdogEngine:
                                 for _o in (_ord3 or {}).get("list") or []:
                                     if str(_o.get("code", "")) == _short(code) \
                                             and "卖出" in str(_o.get("type", "")):
-                                        if _o.get("status") == "已成":
+                                        if _o.get("status") == "已成" \
+                                                and str(_o.get("order_id", "")) in self._sold_orders:
+                                            # 2026-08-17 只认本引擎发出的卖出委托
                                             _sold = True
                                             break
-                                        if _o.get("status") in ("已报", "待报"):
+                                        if _o.get("status") in ("已报", "待报") \
+                                                and str(_o.get("order_id", "")) in self._sold_orders:
                                             _pending_sell = True
                             except Exception:
                                 pass
@@ -1066,7 +1024,12 @@ class WatchdogEngine:
                                     for _o in (_ord2 or {}).get("list") or []:
                                         if str(_o.get("code", "")) == _short(code) \
                                                 and "卖出" in str(_o.get("type", "")) \
-                                                and _o.get("status") == "已成":
+                                                and _o.get("status") == "已成" \
+                                                and str(_o.get("order_id", "")) in self._sold_orders:
+                                            # 2026-08-17 只认本引擎发出的卖出委托
+                                            #（否则用户手动卖出的已成委托被误判成
+                                            #  系统自己刚卖 → 假出场+假交割单，
+                                            #  古井贡酒 13:00 实测 93.92x100）
                                             _already_dealt = True
                                             break
                                 except Exception:
@@ -1095,6 +1058,9 @@ class WatchdogEngine:
                                 logger.warning(f"{code} 卖出被拒(可用{usable}股),保留盯盘重试: {msg}")
                         elif code_r == "0":
                             order_id = r.get('order_id', '?')
+                            # 2026-08-17 记录本引擎发出的卖出委托（-2/-5 分支
+                            # 据此区分"自己刚卖" vs "用户手动卖"）
+                            self._sold_orders.add(str(order_id))
                             # 2026-08-03 修复：sale() 返回 code=0 只是"委托已报"，
                             # 未成交就移除盯盘=持仓失管（与买入侧同源 bug）。
                             # 查 check_order 确认"已成"才推送+移除；挂单中保留 entered 重试。
@@ -1145,7 +1111,161 @@ class WatchdogEngine:
                     if _exit_ok:
                         self.remove([code])
 
+            # ── ④ 慢操作（日线/因子/资金流/异常检测——确认器判定已在 ③ 完成，
+            #      这些不再阻塞买卖信号）──
+            if st.last_daily_update != today or not st.daily_rows:
+                # 2026-08-14: 日线更新已在 _scan_round 开头并行批量完成；
+                # 此处兜底只做单只重试(并行更新失败/新加入票)
+                self._update_daily(st)
+
+            if not st.daily_rows:
+                # 日线失败/缺失：只跳过依赖日线的慢操作(因子/异常)，确认器已判定
+                self._save_state()
+                continue
+
+            bid_price = market.get("bid_price", [None] * 10)
+            ask_price = market.get("ask_price", [None] * 10)
+            bid1 = float(bid_price[0]) if bid_price and bid_price[0] else 0
+            ask1 = float(ask_price[0]) if ask_price and ask_price[0] else 0
+            ask_bid = bid1 / ask1 if ask1 > 0 else 1.0
+            daily_features = price_features(st.daily_rows)
+            row = realtime_row(code, market, vwap, daily_features, st.daily_basic, st.dim_scores, st.daily_rows)
+            scores = compute_factor_scores(row)
+
+            # 补充 L1/L2 实时信号到 row（供 check_entry 入场确认）
+            row["bid1"] = bid1
+            row["ask1"] = ask1
+            row["vwap"] = vwap
+            row["inner_vol"] = market.get("inner_vol", 0)
+            row["outer_vol"] = market.get("outer_vol", 0)
+            row["last"] = float(market.get("last") or 0)
+            # 10档盘口深度（诱多/空识别用）
+            row["bid_qty"] = market.get("bid_qty", [])
+            row["ask_qty"] = market.get("ask_qty", [])
+
+            # 资金流向历史：按真实时间采样（≥60s 一个点，10点≈10分钟窗口；
+            # 连续轮询下若按轮追加，窗口会从5分钟塌缩到几十秒）
+            _now_ts = time.time()
+            if _now_ts - self._netflow_hist_ts.get(code, 0.0) >= 60:
+                netflow = self._get_netflow(code)
+                st.netflow_history.append(netflow)
+                if len(st.netflow_history) > 10:
+                    st.netflow_history = st.netflow_history[-10:]
+                self._netflow_hist_ts[code] = _now_ts
+            else:
+                netflow = (st.netflow_history[-1] if st.netflow_history
+                           else self._get_netflow(code))
+
+            # ── 异常状态检测（资金离场 / 抛压 / 诱空）──
+            abnormal, level, abnormal_reason = check_abnormal(
+                row, scores, netflow, ask_bid,
+                entry_price=st.entry_price if st.status == "entered" else 0.0,
+                netflow_history=st.netflow_history,
+                prev_last=_prev_last_old,
+                prev_vwap=st.prev_vwap,
+                prev_vol_ratio=st.prev_vol_ratio,
+            )
+
+            # 保存本轮快照供下一轮诱空检测
+            st.prev_vwap = vwap
+            st.prev_vol_ratio = row.get("vol_ratio_proxy", 1.0)
+
+            if abnormal:
+                if level == "bear_trap":
+                    # 诱空不移出盯盘,不推送
+                    st.last_abnormal_level = level
+                    st.last_abnormal_pushed_at = time.time()
+                elif st.source == "surge":
+                    # surge 票保持静默（只发入场信号）
+                    st.last_abnormal_level = level
+                    st.last_abnormal_pushed_at = time.time()
+                    # 2026-08-13 修复：critical 只移除未持仓的 watching/alerted 票；
+                    # entered(持仓)不移除——否则持仓脱离离场监控（永杉锂业 08-13
+                    # 实测：critical 移除后 CTP 200 股失管，回撤 2.8% 无人管）。
+                    if level == "critical" and st.status != "entered":
+                        self.remove([code])
+                        continue
+                else:
+                    # 当日卖出受阻的票（砸盘卖不出）：异常状态只记日志不推送，
+                    # 避免每 5 分钟刷一条噪音（2026-08-07 大晟文化 12 次/小时）
+                    if st.sell_blocked_date == now.strftime("%Y%m%d"):
+                        if level != st.last_abnormal_level or \
+                                time.time() - st.last_abnormal_pushed_at >= ABNORMAL_COOLDOWN_SECONDS:
+                            logger.warning(
+                                f"{code} 异常状态 [{level}] {abnormal_reason} "
+                                f"(当日卖出受阻，静默不推送)")
+                            st.last_abnormal_level = level
+                            st.last_abnormal_pushed_at = time.time()
+                    else:
+                        icon = "🚨" if level == "critical" else "⚠️"
+                        msg = (
+                            f"{icon} {st.name}({code}) 异常状态 [{level}]\n"
+                            f"{abnormal_reason}\n"
+                            f"现价: {last:.2f} | VWAP: {vwap:.2f}"
+                        )
+                        # 冷却期内不重复推送
+                        since_last = time.time() - st.last_abnormal_pushed_at
+                        if level != st.last_abnormal_level or since_last >= ABNORMAL_COOLDOWN_SECONDS:
+                            _push_feishu(msg)
+                            st.last_abnormal_level = level
+                            st.last_abnormal_pushed_at = time.time()
+                    if level == "critical":
+                        self.remove([code])
+                        continue
+            else:
+                # 状态恢复正常，清空冷却记录（下次异常立即推送）
+                # bear_trap 不移出盯盘，不清冷却，防止高频重复
+                if st.last_abnormal_level != "bear_trap":
+                    st.last_abnormal_level = ""
+
+            # ── ⑤ alerted 30s 确认路径（需要 row/scores，2026-08-14 重构后移此）──
+            if st.status == "alerted" and not getattr(st, "_confirm_ready", False):
+                # 信号确认：触发满 30s 后仍满足条件才入场
+                # （连续轮询下按真实时间判断，保持原 30s 间隔的确认语义）
+                if time.time() - self._alert_ts.get(code, 0.0) >= 30:
+                    triggered, _, _ = check_entry(row, scores)
+                    # 2026-08-12：alerted 最终确认也要查价格不跌——原逻辑只
+                    # 查 check_entry 信号（价格还在 VWAP 上即可），但票可能已
+                    # 从高点冲高回落（恒为科技 -3.9%、天娱数科距高点 -5.7%
+                    # 实测仍可入）。alerted 最终防线：30s 确认期内价格不跌
+                    #（watching 已用基准价净上涨确认，此处兜底防止确认后急跌）
+                    _price_ok = (_prev_last_old <= 0) or (last >= _prev_last_old)
+                    if triggered and _price_ok:
+                        self._execute_buy(code, st, last, vwap, now)
+                    else:
+                        st.status = "watching"
+                        st.signal_type = ""
+                        st.signal_reason = ""
+                        st.signal_at = ""
+                        self._save_state()
+
             self._save_state()
+
+    def _shape_high_decay(self, code: str) -> bool:
+        """拉 THS 当日分时判断高位衰落形态（2026-08-14）。
+
+        返回 True = high_decay（高点回落+高位反抽=脉冲，不买）。
+        数据/接口失败一律放行(False)——形态过滤是锦上添花，不因
+        数据缺失阻断买入（THS 反爬/限流时不误伤正常信号）。
+        """
+        try:
+            from plays.watchdog.confirm import classify_intraday_shape
+            ths = self._ths_singleton()
+            r = ths.get_index_intraday(_short(code))
+            if not r or not r.get("points") or len(r["points"]) < 10:
+                return False
+            prices = [p for _, p in r["points"]]
+            return classify_intraday_shape(prices) == "high_decay"
+        except Exception as e:
+            logger.warning(f"{code} 形态判定失败(放行): {e}")
+            return False
+
+    def _ths_singleton(self):
+        """THSClient 懒加载单例（形态判定复用连接，避免每票新建触发反爬）。"""
+        if getattr(self, "_ths_inst", None) is None:
+            from scripts.ths_client import THSClient
+            self._ths_inst = THSClient()
+        return self._ths_inst
 
     def _last_price(self, code: str) -> float:
         market = _read_ws_snap(_short(code))
@@ -1204,9 +1324,11 @@ class WatchdogEngine:
             # 五维度分：从最新 analysis 文件读取
             st.dim_scores = self._load_dim_scores(st.code)
             st.last_daily_update = datetime.now().strftime("%Y%m%d")
+            st._daily_fail_today = False
             logger.info(f"{st.code} 日线数据更新完成({len(rows)}条)")
             return True
         except Exception as e:
+            st._daily_fail_today = True  # 2026-08-14: 当天失败不重试(防每轮串行阻塞)
             logger.error(f"{st.code} 日线更新失败: {e}")
             return False
 
@@ -1477,7 +1599,7 @@ class WatchdogEngine:
         except Exception as e:
             logger.error(f"状态保存失败: {e}")
 
-    def _load_state(self):
+    def _load_state(self, clear_pending: bool = False):
         try:
             if STATE_FILE.exists():
                 with open(STATE_FILE) as f:
@@ -1486,17 +1608,22 @@ class WatchdogEngine:
                 new_states = {}
                 for code, d in data.items():
                     new_states[code] = WatchState.from_dict(d)
-                # 2026-08-10：重启后清空所有 pending_buy_order_id——
-                # 重启时挂单可能已成交也可能已废，跨重启复查会把历史委托
-                # 误判成新成交写幽灵交割单（13:41/15:54 珍宝岛 5 笔幽灵单
-                # 全是我部署重启触发：重启→加载残留 pending→复查→写单）。
-                # 清空后 watch 票重新走 check_entry，若真持仓由对账兜底找回。
-                for st in new_states.values():
-                    if st.pending_buy_order_id:
-                        logger.warning(
-                            f"{st.code} 重启清空残留挂单复查(pending={st.pending_buy_order_id})")
-                        st.pending_buy_order_id = ""
-                        st.pending_buy_since = None
+                # 2026-08-10：进程启动（clear_pending=True）后清空所有
+                # pending_buy_order_id——重启时挂单可能已成交也可能已废，
+                # 跨重启复查会把历史委托误判成新成交写幽灵交割单（13:41/15:54
+                # 珍宝岛 5 笔幽灵单全是我部署重启触发）。
+                # ★ 2026-08-17 修复：只有真重启才清。盘中 state.json 变更
+                # 触发的 reload（surge_scanner 每 60s 写 state → _reload_state_
+                # if_changed → 本函数）若也清空，会把"已报未成交"的在途买单
+                # 复查放弃——委托随后成交无人确认 → 漏账 + 延迟入账
+                # （0817 立新能源 754483 / 0814 江海 528948 实测）。
+                if clear_pending:
+                    for st in new_states.values():
+                        if st.pending_buy_order_id:
+                            logger.warning(
+                                f"{st.code} 重启清空残留挂单复查(pending={st.pending_buy_order_id})")
+                            st.pending_buy_order_id = ""
+                            st.pending_buy_since = None
                 self._states.clear()
                 self._states.update(new_states)
                 logger.info(f"加载盯盘状态: {len(self._states)} 只")

@@ -149,20 +149,45 @@ def _model_score(feats: dict, scores: dict) -> float:
 # ═══════════════════════════════════════════════════════════════
 
 def _pan_realtime(code: str) -> dict:
-    """盘中盘口分析。"""
-    from scripts.jvquant_ws_client import _get_ws
+    """盘中盘口分析。
+
+    2026-08-17：ws_daemon 在跑时不建连（同 token 单连接互踢），读共享内存
+    L1 快照并转 flat 盘口；ws_daemon 不在才临时建连（无主连接可踢）。
+    """
+    from scripts.jvquant_ws_client import daemon_alive, daemon_get_market, daemon_get_vwap
 
     short = _short(code)
-    ws = _get_ws()
-    ws.subscribe_l10([short])
-    ws.subscribe_l2([short])
-    time.sleep(2.5)
+    if daemon_alive():
+        market = daemon_get_market(code)
+        vwap = daemon_get_vwap(code)
+        bid_ask_ratio = 0.0
+        if market:
+            try:
+                bp = [float(x or 0) for x in (market.get("bid_price") or [0] * 10)]
+                ap = [float(x or 0) for x in (market.get("ask_price") or [0] * 10)]
+                bq = [float(x or 0) for x in (market.get("bid_qty") or [0] * 10)]
+                aq = [float(x or 0) for x in (market.get("ask_qty") or [0] * 10)]
+                bid_ask_ratio = bp[0] / ap[0] if ap and ap[0] > 0 else 1.0
+                # 数组格式 → flat（下游 b1p/b1 访问；顺带修复原 b1p 恒 0 的旧 bug）
+                for i in range(10):
+                    market[f"b{i + 1}p"] = bp[i]
+                    market[f"s{i + 1}p"] = ap[i]
+                    market[f"b{i + 1}"] = bq[i]
+                    market[f"s{i + 1}"] = aq[i]
+            except Exception:
+                pass
+    else:
+        from scripts.jvquant_ws_client import _get_ws
+        ws = _get_ws()
+        ws.subscribe_l10([short])
+        ws.subscribe_l2([short])
+        time.sleep(2.5)
 
-    market = ws.get_market(code)
-    vwap = ws.get_vwap(code)
-    bid_ask_ratio = ws.get_bid_ask_ratio(code)
-    ws.unsubscribe_l10([short])
-    ws.unsubscribe_l2([short])
+        market = ws.get_market(code)
+        vwap = ws.get_vwap(code)
+        bid_ask_ratio = ws.get_bid_ask_ratio(code)
+        ws.unsubscribe_l10([short])
+        ws.unsubscribe_l2([short])
 
     if not market:
         return {"error": "无法获取盘口数据"}

@@ -509,12 +509,94 @@ class JvQuantWSClient:
 
 # ═══════════════════════════════════════════════════════════════
 # 单例 + 兼容接口（与 l2_daemon_client 相同签名）
+#
+# ★ 2026-08-17 重构：daemon_* 系列全部改读共享内存 /dev/shm/ws_snap.json，
+# 独立进程调用**不再建 WS 连接**——jvQuant 同 token 单连接，任何新连接都会
+# 踢掉 ws_daemon 主连接（互踢根因：pipeline_feishu/stock_analyzer/pan_analyzer
+# 调 _get_ws() 在各自进程建第二个连接 → 行情断 30s-1min+，watchdog 盲区）。
+# 订阅类（daemon_subscribe*）改写 ws_sub.json，由 ws_daemon 每 2s 增量消费。
+# _get_ws() 仅保留给 ws_daemon 进程内部/主动分析工具（无主连接时）使用。
 # ═══════════════════════════════════════════════════════════════
+
+import os as _os  # noqa: E402
+
+_SHM_DIR = Path("/dev/shm")
+WS_SNAP_FILE = _SHM_DIR / "ws_snap.json"
+WS_SUB_FILE = _SHM_DIR / "ws_sub.json"
+_SNAP_FRESH_SEC = 30.0  # 快照 mtime 超 30s 视为 ws_daemon 不在/断链
+
+
+def _short6(code: str) -> str:
+    return code.replace(".SH", "").replace(".SZ", "")
+
+
+def _snap_data() -> dict:
+    """读 ws_daemon 共享内存快照（仅新鲜时返回，否则 {}）。"""
+    try:
+        if WS_SNAP_FILE.exists() \
+                and (time.time() - WS_SNAP_FILE.stat().st_mtime) < _SNAP_FRESH_SEC:
+            return json.loads(WS_SNAP_FILE.read_text())
+    except Exception:
+        pass
+    return {}
+
+
+def _snap_alive() -> bool:
+    try:
+        return WS_SNAP_FILE.exists() \
+            and (time.time() - WS_SNAP_FILE.stat().st_mtime) < _SNAP_FRESH_SEC
+    except Exception:
+        return False
+
+
+def _load_sub() -> tuple[list[str], list[str]]:
+    try:
+        d = json.loads(WS_SUB_FILE.read_text())
+        return d.get("shorts", []), d.get("l2_shorts", [])
+    except Exception:
+        return [], []
+
+
+def _write_sub(shorts: list[str], l2_shorts: list[str]) -> None:
+    """原子写 ws_sub.json（多进程共写，tmp 带 pid 防并发覆盖——state.json 同款教训）。"""
+    try:
+        WS_SUB_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = WS_SUB_FILE.with_name(f"ws_sub.json.tmp.{_os.getpid()}")
+        tmp.write_text(json.dumps({"shorts": shorts, "l2_shorts": l2_shorts},
+                                  ensure_ascii=False))
+        tmp.rename(WS_SUB_FILE)
+    except Exception:
+        pass
+
+
+def _update_sub(add_l1: list[str] | None = None, add_l2: list[str] | None = None,
+                remove: list[str] | None = None) -> None:
+    """订阅变更（写 ws_sub.json，ws_daemon 增量消费）。"""
+    shorts, l2s = _load_sub()
+    rm = {_short6(c) for c in (remove or [])}
+    shorts = [s for s in shorts if s not in rm]
+    l2s = [s for s in l2s if s not in rm]
+    for c in (add_l1 or []):
+        s = _short6(c)
+        if s and s not in shorts:
+            shorts.append(s)
+    for c in (add_l2 or []):
+        s = _short6(c)
+        if s and s not in l2s:
+            l2s.append(s)
+    _write_sub(shorts, l2s)
+
 
 _ws_client: JvQuantWSClient | None = None
 
 
 def _get_ws() -> JvQuantWSClient:
+    """进程内 WS 连接（⚠️ 仅 ws_daemon 进程内部使用）。
+
+    独立进程（pipeline_feishu/stock_analyzer/pan_analyzer/脚本）调用会新建
+    第二个 WS 连接 → 踢掉 ws_daemon 主连接（同 token 单连接）。2026-08-17
+    起 daemon_* 系列已改读共享内存，禁止独立进程再走 _get_ws()。
+    """
     global _ws_client
     if _ws_client is None:
         _ws_client = JvQuantWSClient()
@@ -528,80 +610,64 @@ def _get_ws() -> JvQuantWSClient:
 # ── 兼容 l2_daemon_client 接口 ──
 
 def daemon_alive() -> bool:
-    """检查 WebSocket 是否连接（兼容旧接口）"""
-    try:
-        ws = _get_ws()
-        return ws.is_connected()
-    except Exception:
-        return False
+    """检查 ws_daemon 是否在跑（快照新鲜度，不再建 WS 连接）。"""
+    return _snap_alive()
 
 
 def daemon_subscribe(codes: list[str]) -> None:
-    """订阅 L1（兼容旧接口，成本最优）"""
-    ws = _get_ws()
-    shorts = [c.replace(".SH", "").replace(".SZ", "") for c in codes]
-    n = ws.subscribe_l1(shorts)
-    if n > 0:
-        print(f"[jvQuant] L1订阅 +{n}只 (累计{ws.subscribed_count}只/{ws.daily_cost:.1f}元)")
+    """订阅 L1（写 ws_sub.json，由 ws_daemon 增量订阅）。"""
+    _update_sub(add_l1=codes)
 
 
 def daemon_subscribe_l10(codes: list[str]) -> None:
-    """订阅 L10（深度盘口，高分股专用）"""
-    ws = _get_ws()
-    shorts = [c.replace(".SH", "").replace(".SZ", "") for c in codes]
-    n = ws.subscribe_l10(shorts)
-    if n > 0:
-        print(f"[jvQuant] L10订阅 +{n}只")
+    """订阅 L10（ws_daemon 仅 l1/l2 通道，L10 并入 L1——L1 快照含 10 档盘口）。"""
+    _update_sub(add_l1=codes)
 
 
 def daemon_subscribe_l2(codes: list[str]) -> None:
-    """订阅 L2（逐笔，推送确认专用）"""
-    ws = _get_ws()
-    shorts = [c.replace(".SH", "").replace(".SZ", "") for c in codes]
-    n = ws.subscribe_l2(shorts)
-    if n > 0:
-        print(f"[jvQuant] L2订阅 +{n}只")
+    """订阅 L2（写 ws_sub.json l2_shorts，ws_daemon 增量订阅）。"""
+    _update_sub(add_l2=codes)
 
 
 def daemon_unsubscribe(codes: list[str]) -> None:
-    """退订所有级别"""
-    ws = _get_ws()
-    shorts = [c.replace(".SH", "").replace(".SZ", "") for c in codes]
-    ws.unsubscribe_l1(shorts)
-    ws.unsubscribe_l10(shorts)
-    ws.unsubscribe_l2(shorts)
+    """退订所有级别（写 ws_sub.json 移除）。"""
+    _update_sub(remove=codes)
 
 
 def daemon_get_market(code: str) -> dict | None:
-    """获取盘口快照"""
-    return _get_ws().get_market(code)
+    """获取盘口快照（读共享内存，不建连）。"""
+    return _snap_data().get(_short6(code))
 
 
 def daemon_get_vwap(code: str) -> float | None:
-    """获取 VWAP"""
-    return _get_ws().get_vwap(code)
+    """获取 VWAP（读共享内存）。"""
+    v = _snap_data().get(f"{_short6(code)}_vwap")
+    return float(v) if v is not None else None
 
 
 def daemon_get_kline(code: str, n: int = 5) -> list[dict]:
-    """获取分钟K线"""
-    return _get_ws().get_kline(code, n)
+    """获取分钟K线——共享内存无 K 线（L2 逐笔在 ws_daemon 进程内存），返回空。"""
+    return []
 
 
 def daemon_is_ready(code: str) -> bool:
-    """数据是否就绪"""
-    return _get_ws().is_ready(code)
+    """数据是否就绪（快照含该 code 且新鲜）。"""
+    return _short6(code) in _snap_data()
 
 
 def daemon_stats() -> dict:
-    """获取统计信息"""
-    return _get_ws().stats()
+    """统计（读共享内存 + ws_sub.json，无计费数据返回 0 元）。"""
+    snap = _snap_data()
+    l1_count = len([k for k in snap if len(k) == 6 and not k.endswith("_vwap")])
+    shorts, l2s = _load_sub()
+    return {"l1_count": l1_count, "l10_count": 0, "l2_count": len(l2s),
+            "total_subscribed_today": len(shorts), "daily_cost": 0.0}
 
 
 def daemon_health() -> str:
-    """健康检查（兼容旧接口）"""
-    ws = _get_ws()
-    if ws.is_connected():
-        s = ws.stats()
+    """健康检查（兼容旧接口）。"""
+    if daemon_alive():
+        s = daemon_stats()
         return (f"OK|jvQuant WS|L1={s['l1_count']} L10={s['l10_count']} "
                 f"L2={s['l2_count']}|今日{s['total_subscribed_today']}只"
                 f"={s['daily_cost']}元")
@@ -616,17 +682,16 @@ def daemon_is_healthy() -> bool:
 # ── 扩展接口（非兼容，新增） ──
 
 def daemon_cmd(cmd: str) -> str:
-    """兼容旧 l2_daemon 命令接口
+    """兼容旧 l2_daemon 命令接口（全部走共享内存，不建连）
 
     支持的命令:
-      SUB <codes>    → subscribe_l1
-      UNSUB <codes>  → unsubscribe all levels
-      MARKET <code>  → get_market (返回 JSON)
-      VWAP <code>    → get_vwap (返回浮点数)
+      SUB <codes>    → 写 ws_sub.json（L1 订阅）
+      UNSUB <codes>  → 写 ws_sub.json（退订所有级别）
+      MARKET <code>  → daemon_get_market (返回 JSON)
+      VWAP <code>    → daemon_get_vwap (返回浮点数)
       HEALTH         → daemon_health()
       PING           → "PONG"
     """
-    ws = _get_ws()
     parts = cmd.strip().split()
     if not parts:
         return "ERR empty command"
@@ -634,27 +699,23 @@ def daemon_cmd(cmd: str) -> str:
     op = parts[0].upper()
     try:
         if op == "SUB":
-            codes = parts[1:]
-            ws.subscribe_l1(codes)
-            return f"OK subscribed {len(codes)}"
+            daemon_subscribe(parts[1:])
+            return f"OK subscribed {len(parts[1:])}"
 
         elif op == "UNSUB":
-            codes = parts[1:]
-            ws.unsubscribe_l1(codes)
-            ws.unsubscribe_l10(codes)
-            ws.unsubscribe_l2(codes)
-            return f"OK unsubscribed {len(codes)}"
+            daemon_unsubscribe(parts[1:])
+            return f"OK unsubscribed {len(parts[1:])}"
 
         elif op == "MARKET":
             code = parts[1]
-            mkt = ws.get_market(code)
+            mkt = daemon_get_market(code)
             if mkt:
                 return json.dumps(mkt, ensure_ascii=False)
             return "NULL"
 
         elif op == "VWAP":
             code = parts[1]
-            vwap = ws.get_vwap(code)
+            vwap = daemon_get_vwap(code)
             return str(vwap) if vwap else "NULL"
 
         elif op == "HEALTH":
@@ -664,18 +725,7 @@ def daemon_cmd(cmd: str) -> str:
             return "PONG"
 
         elif op == "NETFLOW":
-            # NETFLOW 基于 L2 逐笔数据计算大单净流向
-            code = parts[1]
-            short = code.replace(".SH", "").replace(".SZ", "")
-            c = ws._cache.get(short)
-            if c and c.l2_volume > 0:
-                # 简化：用 L2 金额 / L2 量 ≈ 均价，乘以 (买量-卖量) 估计净流向
-                buy_vol = sum(float(d.get("volume", 0))
-                              for d in c.l2_ticks if d.get("type", "") == "B")
-                sell_vol = sum(float(d.get("volume", 0))
-                               for d in c.l2_ticks if d.get("type", "") == "S")
-                net = (buy_vol - sell_vol) * c.vwap
-                return str(net)
+            # L2 逐笔在 ws_daemon 进程内存，共享内存无此数据
             return "NULL"
 
         else:
@@ -689,19 +739,17 @@ def daemon_cmd(cmd: str) -> str:
 
 def subscribe_tiered(candidates: list[dict], top_n_l1: int = 12,
                      top_n_l10: int = 5, top_n_l2: int = 2) -> dict:
-    """分层订阅：按评分/涨幅排序后，分批订阅不同级别
+    """分层订阅：按评分/涨幅排序后，分批写 ws_sub.json（ws_daemon 增量消费）。
 
     Args:
         candidates: [{code, pct_chg, ...}] 候选股列表
         top_n_l1: L1 订阅前 N 只
-        top_n_l10: L10 订阅前 N 只
+        top_n_l10: L10 订阅前 N 只（并入 L1——快照含 10 档盘口）
         top_n_l2: L2 订阅前 N 只
 
     Returns:
         {l1: [...], l10: [...], l2: [...]}
     """
-    ws = _get_ws()
-    # 按涨幅排序
     sorted_candidates = sorted(candidates,
                                key=lambda x: x.get("pct_chg", 0), reverse=True)
 
@@ -712,22 +760,14 @@ def subscribe_tiered(candidates: list[dict], top_n_l1: int = 12,
         if len(short) == 6:
             shorts.append(short)
 
-    result = {"l1": [], "l10": [], "l2": []}
-
     l1_codes = shorts[:top_n_l1]
-    n1 = ws.subscribe_l1(l1_codes)
-    result["l1"] = l1_codes[:n1]
-
     l10_codes = shorts[:top_n_l10]
-    n10 = ws.subscribe_l10(l10_codes)
-    result["l10"] = l10_codes[:n10]
-
     l2_codes = shorts[:top_n_l2]
-    n2 = ws.subscribe_l2(l2_codes)
-    result["l2"] = l2_codes[:n2]
+    _update_sub(add_l1=l1_codes + l10_codes, add_l2=l2_codes)
 
-    print(f"[jvQuant] 分层订阅: L1={len(result['l1'])} L10={len(result['l10'])} "
-          f"L2={len(result['l2'])} | 今日累计{ws.subscribed_count}只/{ws.daily_cost:.1f}元")
+    result = {"l1": l1_codes, "l10": l10_codes, "l2": l2_codes}
+    print(f"[jvQuant] 分层订阅(写ws_sub): L1={len(result['l1'])} "
+          f"L10={len(result['l10'])} L2={len(result['l2'])}")
     return result
 
 
