@@ -82,7 +82,7 @@ CONSECUTIVE_ENTRY_ROUNDS = int(os.getenv("CONSECUTIVE_ENTRY_ROUNDS", "3"))  # �
 MAX_WATCH = 20      # 手动盯盘上限（surge 通道不设上限，2026-07-26 用户拍板）
 # 买入股数（2026-08-11 用户拍板：全部买入 2 手=200 股，放大收益/亏损额度。
 # 之前固定 1 手 100 股，单票盈亏太小；放大到 2 手后单票波动 ×2。）
-BUY_VOL = int(os.getenv("WATCHDOG_BUY_VOL", "200"))
+BUY_VOL = int(os.getenv("WATCHDOG_BUY_VOL", "100"))  # 2026-08-18 用户拍板: 200→100 (1手), 等胜率回升稳定再改回
 ABNORMAL_COOLDOWN_SECONDS = 300  # 异常推送冷却：同一 level 5 分钟内不重复推送
 
 # 候选池来源：limit_up pipeline 产出的 analysis
@@ -886,11 +886,21 @@ class WatchdogEngine:
                     st.highest_since_entry = last
                 st.bars_held += 1
 
-                # ── 卖出确认器（2026-08-12 简化蓝图，替代 check_exit 多规则）──
-                # 最高点回撤 4% 第 1 轮即卖（2026-08-14 去钝化，原 2 轮）；
-                # 防插针（单轮下砸收回）/趋势恢复（反弹回最高点 98%）重置计数。
+                # ── 卖出确认器（2026-08-12 简化蓝图 + 2026-08-18 组合离场）──
+                # 高位出场（隔夜低开开盘卖）/固定止损（入场价-4%兜底）/
+                # 回撤 2%（最高点，原逻辑）/防插针/趋势恢复
+                _mk = _read_ws_snap(code)
+                _prev_close = 0.0
+                try:
+                    _prev_close = float((_mk or {}).get("pre_close", 0) or 0)
+                except (TypeError, ValueError):
+                    _prev_close = 0.0
+                _overnight = st.entry_at[:10] < now.strftime("%Y-%m-%d") \
+                    if st.entry_at and len(st.entry_at) >= 10 else False
                 _sell_ok, _sell_reason, st.pullback_count = check_sell_confirm(
-                    st.highest_since_entry, last, st.prev_last, st.pullback_count)
+                    st.highest_since_entry, last, st.prev_last, st.pullback_count,
+                    entry_price=st.entry_price, prev_close=_prev_close,
+                    is_overnight=_overnight, now=now)
                 exit_triggered, exit_reason = _sell_ok, _sell_reason
                 # 2026-08-10：撤单后强制重卖（即使确认器未触发，
                 # 也要按最新盘口追价重挂——否则挂单撤了就没人卖了）
@@ -1552,6 +1562,25 @@ class WatchdogEngine:
                 if str(_o.get("order_id", "")) == str(oid) \
                         and str(_o.get("code", "")) == _short(code):
                     if _o.get("status") == "已成":
+                        # 2026-08-18 幽灵单根治：写单前先验证 CTP 实际持仓。
+                        # 8/17 5 笔 + 8/18 4 笔珍宝岛"挂单成交"假单——check_order
+                        # 显示委托"已成"但 CTP 从未持仓（残留引擎/历史委托复查
+                        # 写假单）。成交必须由持仓佐证：CTP 无该票持仓 → 不落账。
+                        try:
+                            from scripts.jvquant_trade_client import check_hold
+                            _hl = (check_hold() or {}).get("hold_list") or []
+                            _held = any(
+                                str(h.get("code", "")) == _short(code) for h in _hl)
+                        except Exception:
+                            _held = False
+                        if not _held:
+                            logger.warning(
+                                f"{code} 委托{oid}显示已成但 CTP 无持仓，"
+                                f"疑似幽灵单，不落账并清 pending")
+                            st.pending_buy_order_id = ""
+                            st.pending_buy_since = None
+                            self._save_state()
+                            return True
                         # 确认成交：补置 entered + 推送 + 落账
                         last = float(st.prev_last or 0) or st.entry_price or 0
                         _push_feishu(

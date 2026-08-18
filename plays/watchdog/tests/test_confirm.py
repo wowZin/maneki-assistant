@@ -80,36 +80,81 @@ class TestBuyConfirmFSM:
 
 class TestSellConfirm:
     def test_pullback_one_round_sell(self):
-        # 2026-08-14 去钝化: 回撤 4% 第 1 轮就卖(原 2 轮)
-        ok, reason, cnt = cf.check_sell_confirm(10.0, 9.59, 9.90, 0)
+        # 2026-08-14 去钝化: 回撤第 1 轮就卖(原 2 轮)；2026-08-18 阈值 4%→2%
+        ok, reason, cnt = cf.check_sell_confirm(10.0, 9.79, 9.90, 0)
         assert ok, reason
         assert "回撤" in reason
 
-    def test_no_sell_within_4pct(self):
-        ok, reason, cnt = cf.check_sell_confirm(10.0, 9.65, 9.70, 0)
+    def test_no_sell_within_2pct(self):
+        # 回撤 1.5% < 2% → 不卖
+        ok, reason, cnt = cf.check_sell_confirm(10.0, 9.85, 9.90, 0)
         assert not ok and cnt == 0
 
     def test_pin_resets_count(self):
-        # 插针: 上一轮 9.50(深跌5%), 本轮收回 9.70(回到回撤线以上) → 洗盘重置
-        ok, reason, cnt = cf.check_sell_confirm(10.0, 9.70, 9.50, 1)
+        # 插针: 上一轮 9.50(深跌5%), 本轮收回 9.85(回到 2% 回撤线以上但未到 99% 恢复线) → 洗盘重置
+        ok, reason, cnt = cf.check_sell_confirm(10.0, 9.85, 9.50, 1)
         assert not ok and cnt == 0
         assert "插针" in reason
 
     def test_continuous_drop_sells_immediately(self):
-        # 2026-08-14: 回撤 4% 第 1 轮立即卖(持续下跌不误判插针)
+        # 回撤第 1 轮立即卖(持续下跌不误判插针)
         ok, reason, cnt = cf.check_sell_confirm(14.56, 13.43, 13.40, 0)
         assert ok, reason
         assert "回撤" in reason
 
     def test_recovery_resets_count(self):
-        # 反弹回最高 98% 以上 → 取消
-        ok, reason, cnt = cf.check_sell_confirm(10.0, 9.85, 9.50, 1)
+        # 反弹回最高 99% 以上 → 取消
+        ok, reason, cnt = cf.check_sell_confirm(10.0, 9.92, 9.50, 1)
         assert not ok and cnt == 0
         assert "恢复" in reason
 
     def test_no_data(self):
         ok, reason, cnt = cf.check_sell_confirm(0.0, 9.0, 9.0, 0)
         assert not ok
+
+    def test_overnight_gap_down_sells(self):
+        # 2026-08-18 高位出场：隔夜仓开盘低开(现价<昨收×0.995) → 主动卖
+        from datetime import datetime
+        ok, reason, cnt = cf.check_sell_confirm(
+            10.2, 9.80, 10.1, 0,
+            entry_price=10.0, prev_close=10.0, is_overnight=True,
+            now=datetime(2026, 8, 18, 9, 31, 0))
+        assert ok and "高位出场" in reason
+
+    def test_overnight_gap_up_waits(self):
+        # 高开(现价>昨收) → 不触发高位出场（让它跑）
+        from datetime import datetime
+        ok, reason, cnt = cf.check_sell_confirm(
+            10.2, 10.05, 10.0, 0,
+            entry_price=10.0, prev_close=9.90, is_overnight=True,
+            now=datetime(2026, 8, 18, 9, 31, 0))
+        assert not ok and "高位出场" not in reason
+
+    def test_high_exit_only_overnight_window(self):
+        # 非隔夜仓 / 窗口外(10:00) → 不触发高位出场（回撤未触发时也不卖）
+        from datetime import datetime
+        ok, reason, _ = cf.check_sell_confirm(
+            10.2, 10.05, 10.1, 0,
+            entry_price=10.0, prev_close=10.0, is_overnight=True,
+            now=datetime(2026, 8, 18, 10, 0, 0))
+        assert not ok and "高位出场" not in reason
+        ok2, _, _ = cf.check_sell_confirm(
+            10.2, 10.05, 10.1, 0,
+            entry_price=10.0, prev_close=10.0, is_overnight=False,
+            now=datetime(2026, 8, 18, 9, 31, 0))
+        assert not ok2 and "高位出场" not in reason
+
+    def test_fixed_stop_sells(self):
+        # 2026-08-18 固定止损：跌破入场价 -4% → 卖（尾部兜底）
+        ok, reason, cnt = cf.check_sell_confirm(
+            10.5, 9.55, 9.60, 0, entry_price=10.0)
+        assert ok and "固定止损" in reason
+
+    def test_fixed_stop_not_triggered_above_line(self):
+        # 未跌破入场价 -4% 且回撤未触发 → 不卖
+        ok, reason, cnt = cf.check_sell_confirm(
+            9.85, 9.70, 9.60, 0, entry_price=10.0)
+        assert not ok and "固定止损" not in reason
 
 
 class TestRiseCondition:

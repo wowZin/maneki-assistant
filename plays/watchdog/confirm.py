@@ -56,13 +56,24 @@ SHAPE_HIGH_DECAY_DROP = float(os.getenv("SHAPE_HIGH_DECAY_DROP", "-1.5"))
 STAND_ROUNDS = int(os.getenv("STAND_ROUNDS", "2"))
 
 # ── 卖出确认器参数 ──
-SELL_PULLBACK = 0.04  # 最高点回撤 4%
+# 2026-08-18 回撤 4%→2%（用户拍板，106 笔次日回测）：
+# 4% 把隔夜低开放大成 3-4% 实亏（0817/0818 早上 13 笔止损全 3%+，0818 单日 -1102）；
+# 2% 确认跌破才卖（防诱空：低开 -1% 不卖等反弹），平均 -0.98%→-0.76%，
+# 亏>3% 从 33 笔→0 笔（单笔最大亏损封顶 -2%）。
+SELL_PULLBACK = float(os.getenv("SELL_PULLBACK", "0.02"))
+# 2026-08-18 固定止损（8 月初尾部保护机制，0818 拍板恢复）：跌破入场价 4% 必卖。
+# 作用=亏损封顶（单笔最大 -4%），与"最高点回撤 2%"互补——高位横盘票回撤线触发慢，
+# 入场价基准保证"从买入算亏 4% 必卖"，构成小亏换大赚的尾部（8 月初 21 笔 -1091 元）。
+FIXED_STOP = float(os.getenv("FIXED_STOP", "0.04"))
 # 2026-08-14 去钝化（用户拍板）：回撤确认 2 轮→1 轮。原 2 轮=等 2 分钟确认，
 # 确认时已 -5~6%（天山 8/13 -7.4% 才卖，第一轮 -4% 就该跑）。
 # 防插针由 PIN_DROP 判定保留（单轮下砸>2% 且收回且回到回撤线以上 → 不卖）。
 SELL_ROUNDS = int(os.getenv("SELL_ROUNDS", "1"))
 PIN_DROP = 0.02       # 防插针：单轮下砸 >2%
-RECOVER_TOL = 0.98    # 趋势恢复：反弹 ≥ 最高 × 0.98 → 取消卖出
+# 2026-08-18 恢复线 0.98→0.99：SELL_PULLBACK 降到 0.02 后回撤线(0.98)与恢复线
+# 重合 → 插针分支被趋势恢复短路失效（last>0.98 恒先命中恢复）。0.99 让
+# "深砸后收回但未创新高"(0.98<last<0.99) 走插针重置，只有反弹回 99% 才算恢复。
+RECOVER_TOL = 0.99    # 趋势恢复：反弹 ≥ 最高 × 0.99 → 取消卖出
 
 
 def classify_intraday_shape(prices: list[float]) -> str:
@@ -161,18 +172,32 @@ def check_buy_confirm(price_hist: list[float], vol_hist: list[float],
 
 
 def check_sell_confirm(highest: float, last: float, prev_last: float,
-                       pullback_count: int) -> tuple[bool, str, int]:
+                       pullback_count: int, entry_price: float = 0.0,
+                       prev_close: float = 0.0, is_overnight: bool = False,
+                       now=None) -> tuple[bool, str, int]:
     """卖出确认器（每轮调用）。
 
-    趋势下跌确认：last <= highest × (1-SELL_PULLBACK) 连续 SELL_ROUNDS 轮 → 卖
-    防诱空洗盘：
-      - 插针：单轮下砸 >PIN_DROP 且本轮收回（last >= prev_last）→ 重置计数
-      - 趋势恢复：last >= highest × RECOVER_TOL → 重置计数
+    2026-08-18 组合离场（恢复 8 月初盈利机制，用户拍板，0818 回测 13 只隔夜仓
+    高位出场 9/13 优于实际止损 +~1200 元）：
+      1) 高位出场：隔夜仓开盘窗口(09:30-09:45)低开(现价<昨收×0.995) → 主动卖
+         （不等回撤确认——隔夜回吐开盘集中释放，等确认反而卖更低）
+      2) 固定止损：跌破入场价×(1-FIXED_STOP) → 卖（尾部兜底，单笔最大亏封顶）
+      3) 趋势恢复 / 插针 / 回撤止损（原逻辑）
+    新参数可选（默认不启用新机制，旧调用/测试兼容）。
+
     返回 (是否卖出, 原因, 新计数)
     """
     if highest <= 0 or last <= 0:
         return False, "无数据", pullback_count
-    # 趋势恢复：反弹回最高点 98% 以上 → 取消卖出
+    # 1) 高位出场：隔夜仓开盘低开即卖（09:30-09:45 窗口，昨收 0.5% 低开）
+    if is_overnight and prev_close > 0 and now is not None:
+        _hhmm = now.hour * 100 + now.minute
+        if 930 <= _hhmm < 945 and last < prev_close * 0.995:
+            return True, f"高位出场: 隔夜低开{(prev_close / last - 1) * 100:.1f}% 开盘卖", 0
+    # 2) 固定止损：跌破入场价 -FIXED_STOP → 尾部兜底
+    if entry_price > 0 and last <= entry_price * (1 - FIXED_STOP):
+        return True, f"固定止损: 入场{entry_price:.2f} 现价{last:.2f}", 0
+    # 趋势恢复：反弹回最高点 99% 以上 → 取消卖出
     if last >= highest * RECOVER_TOL:
         return False, "趋势恢复", 0
     # 插针：上一轮深跌(>2%) + 本轮收回 + 价格回到回撤线以上 → 洗盘，不计数

@@ -82,12 +82,39 @@ class TestCheckPendingBuy:
         order = {"code": "0", "list": [
             {"order_id": "1851882", "code": "603567", "status": "已成", "type": "证券买入"},
         ]}
+        hold = {"hold_list": [{"code": "603567", "name": "珍宝岛", "hold_earn": 0.0}]}
         with patch("scripts.jvquant_trade_client.get_trade_client") as mock_tc, \
+             patch("scripts.jvquant_trade_client.check_hold", return_value=hold), \
              patch.object(eng, "_save_state"):
             mock_tc.return_value.check_order.return_value = order
             eng._check_pending_buy("603567.SH", st)
         assert st.status == "entered"
         assert st.pending_buy_order_id == ""  # 复查完成清挂起
+
+    def test_pending_buy_ghost_no_hold_skips(self):
+        """2026-08-18 幽灵单根治：委托已成但 CTP 无持仓 → 不落账清 pending。
+
+        8/17 5笔 + 8/18 4笔珍宝岛"挂单成交"假单——check_order 显示已成但
+        CTP 从未持仓（孤儿引擎带 state 残留复查历史委托写假单）。
+        """
+        st = WatchState("603567.SH", "珍宝岛")
+        st.status = "watching"
+        st.pending_buy_order_id = "666666"
+        st.pending_buy_since = __import__("datetime").datetime.now()
+        st.prev_last = 6.67
+        eng = _engine_with({"603567.SH": st})
+        order = {"code": "0", "list": [
+            {"order_id": "666666", "code": "603567", "status": "已成", "type": "证券买入"},
+        ]}
+        hold = {"hold_list": []}  # CTP 无珍宝岛持仓
+        with patch("scripts.jvquant_trade_client.get_trade_client") as mock_tc, \
+             patch("scripts.jvquant_trade_client.check_hold", return_value=hold), \
+             patch.object(eng, "_save_state"):
+            mock_tc.return_value.check_order.return_value = order
+            eng._check_pending_buy("603567.SH", st)
+        assert st.status == "watching"  # 不置 entered
+        assert st.pending_buy_order_id == ""  # 清 pending 防反复复查
+        assert "666666" not in eng._confirmed_buy_orders
 
     def test_pending_buy_not_dealt_keeps_waiting(self):
         st = WatchState("603567.SH", "珍宝岛")
