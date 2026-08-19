@@ -83,6 +83,10 @@ MAX_WATCH = 20      # 手动盯盘上限（surge 通道不设上限，2026-07-26
 # 买入股数（2026-08-11 用户拍板：全部买入 2 手=200 股，放大收益/亏损额度。
 # 之前固定 1 手 100 股，单票盈亏太小；放大到 2 手后单票波动 ×2。）
 BUY_VOL = int(os.getenv("WATCHDOG_BUY_VOL", "100"))  # 2026-08-18 用户拍板: 200→100 (1手), 等胜率回升稳定再改回
+# 2026-08-19 卖出量独立于 BUY_VOL：BUY_VOL 改 100 后卖出也卖 100 → 0818 前
+# 200 股持仓只卖一半（09:30 实测 8 笔剩 100 股挂浮亏）。SELL_VOL 固定 200，
+# 100 股持仓走 -2 降档逻辑（L936-940）。
+SELL_VOL = int(os.getenv("WATCHDOG_SELL_VOL", "200"))
 ABNORMAL_COOLDOWN_SECONDS = 300  # 异常推送冷却：同一 level 5 分钟内不重复推送
 
 # 候选池来源：limit_up pipeline 产出的 analysis
@@ -595,22 +599,10 @@ class WatchdogEngine:
         st.entry_pushed_date = now.strftime("%Y%m%d")
         self._save_state()
         _surge_tag = "【surge】" if st.source == "surge" else ""
-        # 2026-08-11：大盘弱势闸门（复用 surge 的 _mkt_gate）——
-        # 大盘 < -0.5% 时暂停新买入（存量 watching 票也不买），只做离场。
-        try:
-            from plays.limit_up.surge_scanner import _mkt_gate as _wd_gate
-            _wd_state, _, _ = _wd_gate()
-            if _wd_state == "weak":
-                logger.warning(
-                    f"{code} 跳过买入: 大盘弱势({_wd_state})，只做离场")
-                st.status = "watching"
-                st.signal_type = ""
-                st.confirm_base = 0.0
-                st.confirm_count = 0
-                self._save_state()
-                return
-        except Exception as _ge:
-            logger.warning(f"{code} 大盘闸门检查失败: {_ge}")
+        # 2026-08-19 移除大盘弱势禁买（用户拍板）：0819 实测上证 -1.66% 但
+        # 主闸票 100% 上涨（结构性行情），弱势闸一刀切禁买误杀主闸机会。
+        # 现策略：弱势只关排雷池（surge 侧已做），主闸买入交给确认器把关
+        #（D 变体"触发轮仍在涨"拦截冲高回落，弱市自然少触发）。
         # 下单 + 飞书通知
         try:
             from scripts.jvquant_trade_client import buy
@@ -889,7 +881,7 @@ class WatchdogEngine:
                 # ── 卖出确认器（2026-08-12 简化蓝图 + 2026-08-18 组合离场）──
                 # 高位出场（隔夜低开开盘卖）/固定止损（入场价-4%兜底）/
                 # 回撤 2%（最高点，原逻辑）/防插针/趋势恢复
-                _mk = _read_ws_snap(code)
+                _mk = _read_ws_snap(_short(code))  # 短码键（L1281 _last_price 同款；全码查不到→prev_close=0 高位出场永不触发 0819 实测）
                 _prev_close = 0.0
                 try:
                     _prev_close = float((_mk or {}).get("pre_close", 0) or 0)
@@ -923,16 +915,18 @@ class WatchdogEngine:
                     #   - 失败/异常保留 entered,下轮重试(防仓位失管)
                     #   - 持仓不足(-2)解析可用股数,确为 0 才移除
                     _exit_ok = False
-                    _sell_vol = BUY_VOL  # 实际下单股数（降档后更新，交割单用它）
+                    _sell_vol = SELL_VOL  # 实际下单股数（降档后更新，交割单用它）
                     try:
                         from scripts.jvquant_trade_client import sale
                         short = _short(code)
-                        r = sale(short, st.name, vol=BUY_VOL)
+                        r = sale(short, st.name, vol=SELL_VOL)
                         # 2026-08-11：存量 1 手持仓（100股，BUY_VOL 改 200 前买入）
                         # 卖 200 股会返回 -2 持仓不足 → 降档 100 股重试，避免存量
                         # 持仓永远卖不出（离场信号触发但 sale 失败）。
                         # 2026-08-12：降档后 _sell_vol 同步 100——否则交割单记 200
                         # 股但实际成交 100 股，盈亏统计翻倍（13 笔卖出实测全错）。
+                        # 2026-08-19：SELL_VOL 固定 200 不随 BUY_VOL(100)——
+                        # 0818 前 200 股持仓必须一次卖清，100 股持仓走降档。
                         if str(r.get("code")) == "-2":
                             _sell_vol = 100
                             r = sale(short, st.name, vol=100)
@@ -1417,7 +1411,7 @@ class WatchdogEngine:
             try:
                 from scripts.jvquant_trade_client import sale, get_trade_client
                 short = _short(code)
-                r = sale(short, st.name, vol=BUY_VOL)
+                r = sale(short, st.name, vol=SELL_VOL)  # 2026-08-19 不随 BUY_VOL
                 if str(r.get("code")) == "-2":
                     r = sale(short, st.name, vol=100)
                 # 2026-08-13 熔断 V2：sale 返回 0 只是"委托已报"，必须查
