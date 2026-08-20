@@ -83,6 +83,13 @@ MAX_WATCH = 20      # 手动盯盘上限（surge 通道不设上限，2026-07-26
 # 买入股数（2026-08-11 用户拍板：全部买入 2 手=200 股，放大收益/亏损额度。
 # 之前固定 1 手 100 股，单票盈亏太小；放大到 2 手后单票波动 ×2。）
 BUY_VOL = int(os.getenv("WATCHDOG_BUY_VOL", "100"))  # 2026-08-18 用户拍板: 200→100 (1手), 等胜率回升稳定再改回
+# 2026-08-20 买入三重风控（0820 实测 52 笔买光资金/57 只持仓=次日开门止损潮根源）：
+# ①持仓上限（surge 通道此前不设限=07-26 拍板，但 52 笔证明必须限）
+# ②单日买入笔数上限（强市日确认器批量触发）
+# ③可用资金下限（资金买光仍继续买=裸奔）
+MAX_POSITIONS = int(os.getenv("WATCHDOG_MAX_POSITIONS", "20"))
+DAILY_BUY_LIMIT = int(os.getenv("WATCHDOG_DAILY_BUY_LIMIT", "15"))
+MIN_FREE_CASH = float(os.getenv("WATCHDOG_MIN_FREE_CASH", "5000"))
 # 2026-08-19 卖出量独立于 BUY_VOL：BUY_VOL 改 100 后卖出也卖 100 → 0818 前
 # 200 股持仓只卖一半（09:30 实测 8 笔剩 100 股挂浮亏）。SELL_VOL 固定 200，
 # 100 股持仓走 -2 降档逻辑（L936-940）。
@@ -337,6 +344,20 @@ class WatchdogEngine:
         # "自己上一轮委托已成交" vs "用户手动卖出"——古井贡酒 13:00 误报
         # 假出场+假交割单案例：手动卖出的已成委托被当成系统自己刚卖）
         self._sold_orders: set[str] = set()
+        # 2026-08-20 单日买入计数（风控）：启动时从交割单恢复当日已买笔数，
+        # 防止重启后归零导致继续爆量（0820 实测 52 笔）。
+        self._daily_buys: dict[str, int] = {}
+        try:
+            from pathlib import Path
+            _rep = Path(PROJECT_DIR) / "plays/trading/data/reports" / \
+                f"{datetime.now().strftime('%Y%m%d')}.json"
+            if _rep.exists():
+                import json as _json
+                _recs = _json.loads(_rep.read_text())
+                self._daily_buys[datetime.now().strftime("%Y%m%d")] = sum(
+                    1 for x in _recs if x.get("direction") == "买入")
+        except Exception:
+            pass
         self._snap_fail_by_code: dict[str, int] = {}  # code -> 无行情连续轮数（单票失效检测）
         # 2026-08-17 确认器拒绝原因分布（转化率诊断黑盒）：reason 类别 -> 次数
         self._confirm_reject_counts: dict[str, int] = {}
@@ -590,7 +611,51 @@ class WatchdogEngine:
         2026-08-12 提取：确认器 ready 与旧 30s 确认两条路径共用，
         避免两处 ~70 行重复（之前两处不同步会埋 bug）。
         大盘弱势闸拦下时回退 watching 并重置确认状态；委托未成交挂起复查。
+        2026-08-20 买入三重风控前置检查（0820 实测 52 笔买光资金 57 只持仓）。
         """
+        # ① 持仓上限：entered 数 >= MAX_POSITIONS 不再买入
+        try:
+            _entered = sum(1 for s in self._states.values()
+                           if s.status == "entered")
+            if _entered >= MAX_POSITIONS:
+                logger.warning(
+                    f"{code} 跳过买入: 持仓已达上限({_entered}/{MAX_POSITIONS})")
+                st.status = "watching"
+                st.signal_type = ""
+                st.confirm_base = 0.0
+                st.confirm_count = 0
+                self._save_state()
+                return
+            # ② 单日买入笔数上限
+            _today = now.strftime("%Y%m%d")
+            if self._daily_buys.get(_today, 0) >= DAILY_BUY_LIMIT:
+                logger.warning(
+                    f"{code} 跳过买入: 今日已买{self._daily_buys.get(_today,0)}笔"
+                    f"(上限{DAILY_BUY_LIMIT})")
+                st.status = "watching"
+                st.signal_type = ""
+                st.confirm_base = 0.0
+                st.confirm_count = 0
+                self._save_state()
+                return
+            # ③ 可用资金下限
+            try:
+                from scripts.jvquant_trade_client import check_hold
+                _avail = float((check_hold() or {}).get("usable") or 0)
+                if _avail < MIN_FREE_CASH:
+                    logger.warning(
+                        f"{code} 跳过买入: 可用资金不足({_avail:.0f}<"
+                        f"{MIN_FREE_CASH:.0f})")
+                    st.status = "watching"
+                    st.signal_type = ""
+                    st.confirm_base = 0.0
+                    st.confirm_count = 0
+                    self._save_state()
+                    return
+            except Exception:
+                pass  # 查资金失败不阻塞（继续原逻辑）
+        except Exception:
+            pass
         st.status = "entered"
         st.entry_price = last
         st.entry_at = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -636,6 +701,8 @@ class WatchdogEngine:
                 except Exception as _e:
                     logger.warning(f"{code} 查成交状态异常: {_e}")
                 if _deal_ok:
+                    _today_key = now.strftime("%Y%m%d")
+                    self._daily_buys[_today_key] = self._daily_buys.get(_today_key, 0) + 1
                     _push_feishu(
                         f"📈 {st.name}({code}) 入场{_surge_tag}\n"
                         f"入场价: {last:.2f}\n"
