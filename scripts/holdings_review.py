@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""20260814 批量持仓复盘（skill 版落盘）"""
+"""批量持仓复盘：读 watchdog state.json 的 entered 持仓，逐个调用 stock_analyzer.analyze()"""
 import json
 import sys
 import time

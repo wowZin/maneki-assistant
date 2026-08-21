@@ -445,3 +445,64 @@
 [ws_daemon] 收盘(1500), 休眠 18.4h 到 08-21 09:25
 2026-08-20 16:01:52 - websocket_client - ERROR - Connection to remote host was lost.
 2026-08-20 16:01:52 - websocket - ERROR - Connection to remote host was lost. - goodbye
+[jvQuant WS] 连接已断开，重新连接...
+[jvQuant WS] 已连接
+[ws_daemon] 重连后恢复 L1 订阅 53 只
+[ws_daemon] 重连后恢复 L2 订阅 53 只
+[ws_daemon] L1新增订阅 27 只
+[ws_daemon] L1新增订阅 10 只
+[ws_daemon] L1新增订阅 4 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 3 只
+[ws_daemon] L1新增订阅 6 只
+[ws_daemon] L1新增订阅 6 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 3 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 81 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 72 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 71 只
+[ws_daemon] L1新增订阅 4 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 76 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 77 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+2026-08-21 10:57:38 - websocket_client - ERROR - [Errno 104] Connection reset by peer
+2026-08-21 10:57:38 - websocket - ERROR - [Errno 104] Connection reset by peer - goodbye
+[jvQuant WS] 连接已断开，重新连接...
+[jvQuant WS] 已连接
+[ws_daemon] 重连后恢复 L1 订阅 79 只
+[ws_daemon] 重连后恢复 L2 订阅 79 只
+[ws_daemon] L1新增订阅 1 只
+2026-08-21 12:01:51 - websocket_client - ERROR - Connection to remote host was lost.
+2026-08-21 12:01:51 - websocket - ERROR - Connection to remote host was lost. - goodbye
+[jvQuant WS] 连接已断开，重新连接...
+[jvQuant WS] 已连接
+[ws_daemon] 重连后恢复 L1 订阅 80 只
+[ws_daemon] 重连后恢复 L2 订阅 80 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] 收盘(1500), 休眠 66.4h 到 08-24 09:25
+2026-08-21 16:01:51 - websocket_client - ERROR - Connection to remote host was lost.
+2026-08-21 16:01:51 - websocket - ERROR - Connection to remote host was lost. - goodbye

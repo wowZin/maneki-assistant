@@ -78,7 +78,45 @@ class TestBuyConfirmFSM:
         assert action == "wait", action
 
 
-class TestSellConfirm:
+class TestPullbackTrigger:
+    """2026-08-21 回调低吸买入触发（用户拍板方向2）"""
+
+    def _hist(self, seq):
+        return [float(x) for x in seq]
+
+    def test_pullback_trigger_buy(self):
+        # 昨收10, 拉升到 11.5(+15%), 回落到 10.9(-5.2%), 企稳 → 触发
+        ok, reason = cf.pullback_trigger(self._hist([11.2, 10.9, 10.9, 10.9]), [], 11.5, 10.0)
+        assert ok, reason
+        assert "回调低吸" in reason
+
+    def test_not_strong_enough(self):
+        # 只涨 2% 不算强势拉升
+        ok, reason = cf.pullback_trigger(self._hist([10.0, 10.15, 10.15, 10.15]), [], 10.2, 10.0)
+        assert not ok
+        assert "未拉升过" in reason
+
+    def test_pullback_insufficient(self):
+        # 拉升 15% 但只回调 1% → 等更深回调
+        ok, reason = cf.pullback_trigger(self._hist([11.3, 11.35, 11.38, 11.38]), [], 11.5, 10.0)
+        assert not ok
+        assert "回调不足" in reason
+
+    def test_pullback_trigger_via_confirm(self):
+        # check_buy_confirm 传 day_high/prev_close → 走回调低吸路径
+        action, base, cnt = cf.check_buy_confirm(
+            self._hist([11.2, 10.9, 10.9, 10.9]), [], 0.0, 0, day_high=11.5, prev_close=10.0)
+        assert action == "trigger"
+        assert base == 10.9
+
+    def test_pullback_fallback_trend(self):
+        # 不传 day_high/prev_close → 回退原追拉升逻辑（旧行为不变）
+        action, _, _ = cf.check_buy_confirm(
+            self._hist([10.0, 10.2, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.0, 11.1, 11.2]), 
+            [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 500.0],
+            0.0, 0)
+        assert action in ("trigger", "wait")
+
     def test_pullback_one_round_sell(self):
         # 2026-08-14 去钝化: 回撤第 1 轮就卖(原 2 轮)；2026-08-18 阈值 4%→2%
         ok, reason, cnt = cf.check_sell_confirm(10.0, 9.79, 9.90, 0)

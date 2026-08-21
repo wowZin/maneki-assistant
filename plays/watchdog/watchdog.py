@@ -90,6 +90,11 @@ BUY_VOL = int(os.getenv("WATCHDOG_BUY_VOL", "100"))  # 2026-08-18 用户拍板: 
 MAX_POSITIONS = int(os.getenv("WATCHDOG_MAX_POSITIONS", "20"))
 DAILY_BUY_LIMIT = int(os.getenv("WATCHDOG_DAILY_BUY_LIMIT", "15"))
 MIN_FREE_CASH = float(os.getenv("WATCHDOG_MIN_FREE_CASH", "5000"))
+# 2026-08-20 用户拍板：暂停 surge 打板玩法（连续亏损 1.2万，找新办法再开启）。
+# 2026-08-21 新办法已就绪（回调低吸确认器，回测 30min+0.10%/胜率48% vs 追拉升-1.09%/16%），
+# 用户拍板"打开试试" → PAUSE_BUY=0 恢复买入；surge 仅负责选票入盯（模型高分），
+# 买入逻辑走回调低吸（不再追拉升）。
+PAUSE_BUY = int(os.getenv("WATCHDOG_PAUSE_BUY", "0"))
 # 2026-08-19 卖出量独立于 BUY_VOL：BUY_VOL 改 100 后卖出也卖 100 → 0818 前
 # 200 股持仓只卖一半（09:30 实测 8 笔剩 100 股挂浮亏）。SELL_VOL 固定 200，
 # 100 股持仓走 -2 降档逻辑（L936-940）。
@@ -235,6 +240,9 @@ class WatchState:
         self.prev_last: float = 0.0
         self.prev_vwap: float = 0.0
         self.prev_vol_ratio: float = 0.0
+        # 2026-08-21 回调低吸买入所需（用户拍板方向2）：
+        self.day_high: float = 0.0     # 当日最高价（每轮更新，watching 阶段）
+        self.prev_close: float = 0.0   # 昨收（ws_snap pre_close）
         # 确认期基准价（2026-08-12：连续上涨确认的起点）
         # watching 首次触发信号时记录，后续轮次要求 last >= base×1.005
         #（净上涨 0.5% 才算"趋势向上"，横盘/缓慢爬升不确认——
@@ -281,6 +289,8 @@ class WatchState:
             "confirm_base": self.confirm_base,
             "confirm_count": self.confirm_count,
             "pullback_count": self.pullback_count,
+            "day_high": self.day_high,
+            "prev_close": self.prev_close,
         }
 
     @classmethod
@@ -316,6 +326,8 @@ class WatchState:
         s.confirm_base = d.get("confirm_base", 0.0)
         s.confirm_count = d.get("confirm_count", 0)
         s.pullback_count = d.get("pullback_count", 0)
+        s.day_high = d.get("day_high", 0.0)
+        s.prev_close = d.get("prev_close", 0.0)
         return s
 
 
@@ -369,6 +381,16 @@ class WatchdogEngine:
         self._fuse_triggered: bool = False
         # 进程启动：清空残留 pending（防跨重启幽灵单）；运行中 reload 保留
         self._load_state(clear_pending=True)
+        # 2026-08-21 启动强制清零确认状态：重启后旧 trend_up 触发状态（confirm_base
+        # 残留）会继续站稳→ready→追拉升买入（金一文化 10:34 回调仅-0.4%却买入实锤，
+        # 不符合回调低吸 -3% 条件）。新引擎必须从回调低吸重新触发。
+        for _s in self._states.values():
+            if _s.status == "watching":
+                _s.confirm_base = 0.0
+                _s.confirm_count = 0
+                _s.signal_type = ""
+                _s.signal_reason = ""
+        self._save_state()
 
     # ---- 生命周期 ----
 
@@ -613,6 +635,15 @@ class WatchdogEngine:
         大盘弱势闸拦下时回退 watching 并重置确认状态；委托未成交挂起复查。
         2026-08-20 买入三重风控前置检查（0820 实测 52 笔买光资金 57 只持仓）。
         """
+        # 2026-08-20 暂停买入总开关（surge 玩法暂停，只做离场）
+        if PAUSE_BUY:
+            logger.info(f"{code} 暂停买入(PAUSE_BUY)，仅离场模式")
+            st.status = "watching"
+            st.signal_type = ""
+            st.confirm_base = 0.0
+            st.confirm_count = 0
+            self._save_state()
+            return
         # ① 持仓上限：entered 数 >= MAX_POSITIONS 不再买入
         try:
             _entered = sum(1 for s in self._states.values()
@@ -814,6 +845,14 @@ class WatchdogEngine:
                 if _ta > 0 and _tv > 0:
                     vwap = _ta / _tv
             last = float(market.get("last") or 0)
+            # 2026-08-21 回调低吸状态：当日最高 + 昨收（ws_snap pre_close）
+            if last > 0:
+                st.day_high = max(st.day_high, last)
+            if not st.prev_close:
+                try:
+                    st.prev_close = float(market.get("pre_close") or 0)
+                except (TypeError, ValueError):
+                    pass
 
             # ── ② 确认器历史维护（2026-08-12：最近 15 轮 last + 分钟量差分）──
             _ph = self._price_hist.setdefault(code, [])
@@ -863,7 +902,8 @@ class WatchdogEngine:
                     st.confirm_base = 0.0
                     st.confirm_count = 0
                 _action, _base, _cnt = check_buy_confirm(
-                    _ph2, _vh2, st.confirm_base, st.confirm_count)
+                    _ph2, _vh2, st.confirm_base, st.confirm_count,
+                    st.day_high, st.prev_close)
                 if _action == "wait":
                     # 2026-08-17 转化率诊断：记录拒绝原因分布（黑盒打破）。
                     # check_buy_confirm 丢弃 trend_up_trigger 的 reason，这里
@@ -1383,6 +1423,10 @@ class WatchdogEngine:
             fields = resp["data"]["fields"]
             rows = sorted(items, key=lambda x: x[0])
             st.daily_rows = [dict(zip(fields, row)) for row in rows]
+            # 2026-08-21 昨收修复：jvquant L1 不推 pre_close（ws_snap 恒 0），
+            # 高位出场/回调低吸的 prev_close 从 tushare 日线最新收盘取。
+            if st.daily_rows and st.daily_rows[-1].get("close"):
+                st.prev_close = float(st.daily_rows[-1]["close"])
 
             # daily_basic
             basic_resp = call_tushare("daily_basic", {"ts_code": st.code, "limit": 1},

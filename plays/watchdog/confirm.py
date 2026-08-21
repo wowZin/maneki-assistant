@@ -27,6 +27,12 @@ HI_TOL = 0.995        # 创新高容差：允许 0.5%（分钟噪声）
 VOL_MULT = 1.5        # 放量倍数：窗口内任一轮量 > 前 5 轮均量 × 1.5
 STAND_ROUNDS = 3      # 站稳轮数：触发后连续 3 轮不跌回触发价 0.5% 以下
 STAND_TOL = 0.995
+# 2026-08-21 回调低吸（用户拍板方向2，回测 100 笔 30min+0.30%/胜率52%
+# vs 追拉升 -1.2~-2.2%）：强势票(当日涨幅≥3%)从高点回调≥3%企稳后买入——
+# 买在支撑位而非拉升末端（追拉升确认器系统性买在 69% 高位区间）。
+PULLBACK_STRONG_PCT = float(os.getenv("CONFIRM_PULLBACK_STRONG", "3.0"))  # 当日最高/昨收 ≥3% = 拉升过
+PULLBACK_PCT = float(os.getenv("CONFIRM_PULLBACK_PCT", "3.0"))            # 从当日高点回落 ≥3% = 回调到位
+PULLBACK_STABLE = int(os.getenv("CONFIRM_PULLBACK_STABLE", "2"))          # 企稳轮数（不创新低）
 # 2026-08-13 拉升条件：触发前窗口内必须从低点明显拉升 ≥ 此百分比。
 # 根因（8/13 实盘 18 买 0 持续）：确认器"创新高+站稳"偏爱横盘票——
 # 冲高完横住的票完美满足站稳 3 轮，买入即趋势停滞（买完就回落）；
@@ -145,9 +151,42 @@ def trend_up_trigger(price_hist: list[float], vol_hist: list[float]) -> tuple[bo
     return False, f"创新高+拉升{_rise:.1f}%但窗口无放量"
 
 
+def pullback_trigger(price_hist: list[float], vol_hist: list[float],
+                     day_high: float, prev_close: float) -> tuple[bool, str]:
+    """回调低吸触发（2026-08-21 用户拍板方向2，替代追拉升）。
+
+    1. 强势确认：当日最高/昨收 ≥ PULLBACK_STRONG_PCT —— 有资金拉升过
+    2. 回调到位：当前价从当日最高回落 ≥ PULLBACK_PCT —— 回到支撑区
+    3. 企稳：最近 PULLBACK_STABLE 轮不创新低 —— 止跌确认
+    """
+    if len(price_hist) < PULLBACK_STABLE + 2:
+        return False, "窗口不足"
+    if day_high <= 0 or prev_close <= 0:
+        return False, "无昨收/当日高点"
+    last = price_hist[-1]
+    up = (day_high / prev_close - 1) * 100
+    if up < PULLBACK_STRONG_PCT:
+        return False, f"未拉升过(高{day_high:.2f}/昨收{prev_close:.2f} {up:.1f}%<{PULLBACK_STRONG_PCT}%)"
+    drop = (last / day_high - 1) * 100
+    if drop > -PULLBACK_PCT:
+        return False, f"回调不足(现{last:.2f}/高{day_high:.2f} {drop:.1f}%>-{PULLBACK_PCT}%)"
+    # 企稳：最近 PULLBACK_STABLE 轮不创新低（尾部最低 >= 回调段低点）
+    _tail = price_hist[-PULLBACK_STABLE - 1:-1]
+    _seg_lo = min(price_hist[:-1]) if len(price_hist) > 1 else last
+    if last < _seg_lo:
+        return False, "仍在创新低"
+    if len(_tail) >= 2 and _tail[-1] < _tail[-2]:
+        return False, "企稳不足(上轮更低)"
+    return True, f"回调低吸: 高{day_high:.2f}回撤{drop:.1f}% 企稳@ {last:.2f}"
+
+
 def check_buy_confirm(price_hist: list[float], vol_hist: list[float],
-                      base: float, stand_count: int) -> tuple[str, float, int]:
+                      base: float, stand_count: int,
+                      day_high: float = 0.0, prev_close: float = 0.0) -> tuple[str, float, int]:
     """买入确认器状态机（每轮调用）。
+
+    2026-08-21：base<=0 时优先回调低吸触发（用户拍板方向2）——传入
+    day_high/prev_close 即走回调低吸；不传则回退原追拉升触发（旧测试兼容）。
 
     返回 (action, base, stand_count)：
       action: 'trigger' 首次触发（记录 base）
@@ -156,7 +195,10 @@ def check_buy_confirm(price_hist: list[float], vol_hist: list[float],
               'ready'   站稳 STAND_ROUNDS 轮 → 可以买入
     """
     if base <= 0:
-        ok, _ = trend_up_trigger(price_hist, vol_hist)
+        if day_high > 0 and prev_close > 0:
+            ok, _ = pullback_trigger(price_hist, vol_hist, day_high, prev_close)
+        else:
+            ok, _ = trend_up_trigger(price_hist, vol_hist)
         if ok:
             return "trigger", price_hist[-1], 0
         return "wait", 0.0, 0

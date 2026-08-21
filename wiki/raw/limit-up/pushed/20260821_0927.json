@@ -1,0 +1,50 @@
+[
+  {
+    "code": "000931.SZ",
+    "name": "中关村",
+    "model_score": 80.12000274658203,
+    "total_score": 80.12000274658203,
+    "score_mode": "model_score",
+    "pct_chg": 9.72,
+    "scores": {
+      "technical": 21.0,
+      "fundflow": 21.0,
+      "sentiment": 91.0,
+      "shortterm": 15.0,
+      "fundamental": 28.0
+    },
+    "fundamental": 28.0
+  },
+  {
+    "code": "000710.SZ",
+    "name": "贝瑞基因",
+    "model_score": 79.5199966430664,
+    "total_score": 79.5199966430664,
+    "score_mode": "model_score",
+    "pct_chg": 8.54,
+    "scores": {
+      "technical": 31.0,
+      "fundflow": 26.0,
+      "sentiment": 70.0,
+      "shortterm": 15.0,
+      "fundamental": 28.0
+    },
+    "fundamental": 28.0
+  },
+  {
+    "code": "001277.SZ",
+    "name": "速达股份",
+    "model_score": 79.01000213623047,
+    "total_score": 79.01000213623047,
+    "score_mode": "model_score",
+    "pct_chg": 4.96,
+    "scores": {
+      "technical": 56.0,
+      "fundflow": 40.0,
+      "sentiment": 86.0,
+      "shortterm": 20.0,
+      "fundamental": 26.0
+    },
+    "fundamental": 26.0
+  }
+]
