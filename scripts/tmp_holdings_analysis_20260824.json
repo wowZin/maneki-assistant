@@ -1,0 +1,274 @@
+[
+ {
+  "code": "002973.SZ",
+  "name": "侨银股份",
+  "entry_price": 10.84,
+  "model_score": 72.42,
+  "scores": {
+   "technical": 65,
+   "fundamental": 31.0,
+   "shortterm": 17.0,
+   "fundflow": 17.0,
+   "sentiment": 68
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 12.04,
+   "pct_chg": 1.6,
+   "trend_3d": 0.45,
+   "net_order": 0,
+   "near_ratio": 1.0,
+   "signals": [
+    "尾盘拉升+2.0%"
+   ],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "603123.SH",
+  "name": "翠微股份",
+  "entry_price": 9.62,
+  "model_score": 13.05,
+  "scores": {
+   "technical": 0.0,
+   "fundamental": 72.2,
+   "shortterm": 14.0,
+   "fundflow": 37.0,
+   "sentiment": 77
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 9.67,
+   "pct_chg": -1.93,
+   "trend_3d": -1.93,
+   "net_order": 0,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "603269.SH",
+  "name": "海鸥股份",
+  "entry_price": 18.03,
+  "model_score": 21.61,
+  "scores": {
+   "technical": 66.11999999999999,
+   "fundamental": 75.3,
+   "shortterm": 36.0,
+   "fundflow": 30.0,
+   "sentiment": 69
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 15.96,
+   "pct_chg": 2.77,
+   "trend_3d": 4.36,
+   "net_order": 0,
+   "near_ratio": 1.0,
+   "signals": [
+    "3日涨+4.4%过热"
+   ],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "000712.SZ",
+  "name": "锦龙股份",
+  "entry_price": 9.14,
+  "model_score": 37.69,
+  "scores": {
+   "technical": 0,
+   "fundamental": 51.3,
+   "shortterm": 32.0,
+   "fundflow": 30.0,
+   "sentiment": 78
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 9.23,
+   "pct_chg": -1.6,
+   "trend_3d": 0.61,
+   "net_order": 0,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "001257.SZ",
+  "name": "盛龙股份",
+  "entry_price": 26.2,
+  "model_score": 10.99,
+  "scores": {
+   "technical": 84,
+   "fundamental": 53.5,
+   "fundflow": 46.0,
+   "shortterm": 34.0,
+   "sentiment": 80
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 25.48,
+   "pct_chg": -5.1,
+   "trend_3d": -2.52,
+   "net_order": 0,
+   "near_ratio": 1.0,
+   "signals": [
+    "20260824龙虎榜净买2001万，今日主力继续买入"
+   ],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002536.SZ",
+  "name": "飞龙股份",
+  "entry_price": 48.56,
+  "model_score": 6.26,
+  "scores": {
+   "fundamental": 80.0,
+   "technical": 83.6,
+   "shortterm": 43.0,
+   "fundflow": 35.0,
+   "sentiment": 88
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 39.72,
+   "pct_chg": 0.51,
+   "trend_3d": 1.86,
+   "net_order": 0,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "603065.SH",
+  "name": "宿迁联盛",
+  "entry_price": 18.2,
+  "model_score": 34.89,
+  "scores": {
+   "fundamental": 73.8,
+   "technical": 0.0,
+   "shortterm": 47.0,
+   "fundflow": 42.0,
+   "sentiment": 84
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 17.01,
+   "pct_chg": -4.17,
+   "trend_3d": -3.36,
+   "net_order": 0,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "603399.SH",
+  "name": "永杉锂业",
+  "entry_price": 15.38,
+  "model_score": 19.87,
+  "scores": {
+   "technical": 0.0,
+   "fundamental": 77.8,
+   "shortterm": 33.0,
+   "fundflow": 29.0,
+   "sentiment": 70
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 15.72,
+   "pct_chg": -4.84,
+   "trend_3d": 1.11,
+   "net_order": 0,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "000695.SZ",
+  "name": "滨海能源",
+  "entry_price": 14.08,
+  "model_score": 18.73,
+  "scores": {
+   "technical": 0.0,
+   "shortterm": 35.0,
+   "fundamental": 56.5,
+   "fundflow": 20.0,
+   "sentiment": 68
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 12.82,
+   "pct_chg": 0.71,
+   "trend_3d": 4.25,
+   "net_order": 22400,
+   "near_ratio": 1.0,
+   "signals": [
+    "3日涨+4.3%过热"
+   ],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "002192.SZ",
+  "name": "融捷股份",
+  "entry_price": 77.45,
+  "model_score": 9.02,
+  "scores": {
+   "technical": 89.3,
+   "fundamental": 84.8,
+   "shortterm": 35.0,
+   "fundflow": 45.0,
+   "sentiment": 86
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 69.05,
+   "pct_chg": -1.69,
+   "trend_3d": 0.35,
+   "net_order": 19900,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ },
+ {
+  "code": "603958.SH",
+  "name": "哈森股份",
+  "entry_price": 21.27,
+  "model_score": 51.65,
+  "scores": {
+   "fundamental": 59.0,
+   "technical": 0.0,
+   "fundflow": 0.0,
+   "shortterm": 52.5,
+   "sentiment": 89
+  },
+  "pan": {
+   "mode": "🔵 盘后历史",
+   "last": 14.67,
+   "pct_chg": -1.48,
+   "trend_3d": -0.44,
+   "net_order": 280200,
+   "near_ratio": 1.0,
+   "signals": [],
+   "verdict": "✅ 均衡",
+   "advice": "无明显异常"
+  }
+ }
+]

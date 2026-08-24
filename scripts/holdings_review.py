@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
-"""批量持仓复盘：读 watchdog state.json 的 entered 持仓，逐个调用 stock_analyzer.analyze()"""
+"""批量持仓复盘：读 watchdog state.json 的 entered 持仓，逐个调用 stock_analyzer.analyze()
+
+用法（cron 安全：write_file 落盘 + terminal 运行，禁止 python3 -c）：
+    cd /root/maneki-agent && python3 scripts/holdings_review.py
+
+输出：每只持仓一行 — code name model分 当日pct verdict 信号摘要
+结果摘要同时写 scripts/tmp_holdings_analysis_YYYYMMDD.json 供后续格式化。
+
+注意：
+- 首个 analyze() 会加载 concept_cache（约 200s），之后每只 ~3-4s；22 只 ≈ 2 分钟
+- analyze 每次拉 tushare daily + stk_factor_pro，勿在盘中高频调用
+- 若 technical.py 又报 ImportError（_get_realtime_fund_cache 类），先修 plays/limit_up/strategies/technical.py
+  （模块级 import 改函数内延迟 import + try/except 降级，见 SKILL.md 2026-08-11 根治记录）
+"""
 import json
 import sys
 import time
@@ -9,6 +22,7 @@ from pathlib import Path
 PROJECT_DIR = Path('/root/maneki-agent')
 sys.path.insert(0, str(PROJECT_DIR))
 
+# 加载持仓
 state_file = PROJECT_DIR / 'plays' / 'watchdog' / 'data' / 'state.json'
 with open(state_file) as fp:
     state = json.load(fp)
