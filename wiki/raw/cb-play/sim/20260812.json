@@ -1,0 +1,14 @@
+[
+  {
+    "date": "20260812",
+    "stock_code": "600481.SH",
+    "stock_name": "双良节能",
+    "cb_code": "110095.SH",
+    "model_score": 7.94,
+    "auc_pct": 3.19,
+    "buy_price": 122.906,
+    "sell_price": 120.664,
+    "ret_pct": -1.824,
+    "signal": "auction"
+  }
+]

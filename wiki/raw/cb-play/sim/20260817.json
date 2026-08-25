@@ -1,0 +1,38 @@
+[
+  {
+    "date": "20260817",
+    "stock_code": "600362.SH",
+    "stock_name": "江西铜业",
+    "cb_code": "132024.SH",
+    "model_score": 13.44,
+    "auc_pct": 3.45,
+    "buy_price": 136.611,
+    "sell_price": 136.542,
+    "ret_pct": -0.051,
+    "signal": "auction"
+  },
+  {
+    "date": "20260817",
+    "stock_code": "601609.SH",
+    "stock_name": "金田股份",
+    "cb_code": "113046.SH",
+    "model_score": 11.95,
+    "auc_pct": 3.11,
+    "buy_price": 131.0,
+    "sell_price": 134.644,
+    "ret_pct": 2.782,
+    "signal": "auction"
+  },
+  {
+    "date": "20260817",
+    "stock_code": "603466.SH",
+    "stock_name": "风语筑",
+    "cb_code": "113643.SH",
+    "model_score": 53.42,
+    "auc_pct": 1.99,
+    "buy_price": 147.899,
+    "sell_price": 147.434,
+    "ret_pct": -0.314,
+    "signal": "model"
+  }
+]

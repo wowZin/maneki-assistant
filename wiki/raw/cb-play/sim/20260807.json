@@ -1,0 +1,38 @@
+[
+  {
+    "date": "20260807",
+    "stock_code": "600438.SH",
+    "stock_name": "通威股份",
+    "cb_code": "110085.SH",
+    "model_score": 24.11,
+    "auc_pct": 4.96,
+    "buy_price": 118.099,
+    "sell_price": 118.15,
+    "ret_pct": 0.043,
+    "signal": "auction"
+  },
+  {
+    "date": "20260807",
+    "stock_code": "605068.SH",
+    "stock_name": "明新旭腾",
+    "cb_code": "111004.SH",
+    "model_score": 45.43,
+    "auc_pct": 2.46,
+    "buy_price": 136.1,
+    "sell_price": 134.17,
+    "ret_pct": -1.418,
+    "signal": "model"
+  },
+  {
+    "date": "20260807",
+    "stock_code": "605488.SH",
+    "stock_name": "福莱新材",
+    "cb_code": "111012.SH",
+    "model_score": 46.28,
+    "auc_pct": 2.48,
+    "buy_price": 396.995,
+    "sell_price": 379.153,
+    "ret_pct": -4.494,
+    "signal": "model"
+  }
+]

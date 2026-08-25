@@ -1,0 +1,14 @@
+[
+  {
+    "date": "20260806",
+    "stock_code": "603176.SH",
+    "stock_name": "汇通集团",
+    "cb_code": "113665.SH",
+    "model_score": 43.66,
+    "auc_pct": -0.22,
+    "buy_price": 127.002,
+    "sell_price": 126.837,
+    "ret_pct": -0.13,
+    "signal": "model"
+  }
+]

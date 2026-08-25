@@ -1,0 +1,14 @@
+[
+  {
+    "date": "20260813",
+    "stock_code": "603220.SH",
+    "stock_name": "中贝通信",
+    "cb_code": "113678.SH",
+    "model_score": 15.72,
+    "auc_pct": 3.0,
+    "buy_price": 151.944,
+    "sell_price": 148.348,
+    "ret_pct": -2.367,
+    "signal": "auction"
+  }
+]

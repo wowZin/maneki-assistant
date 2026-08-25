@@ -1,0 +1,38 @@
+[
+  {
+    "date": "20260821",
+    "stock_code": "001288.SZ",
+    "stock_name": "运机集团",
+    "cb_code": "127092.SZ",
+    "model_score": 42.95,
+    "auc_pct": 0.0,
+    "buy_price": 272.0,
+    "sell_price": 281.501,
+    "ret_pct": 3.493,
+    "signal": "model"
+  },
+  {
+    "date": "20260821",
+    "stock_code": "603801.SH",
+    "stock_name": "志邦家居",
+    "cb_code": "113693.SH",
+    "model_score": 71.44,
+    "auc_pct": 5.81,
+    "buy_price": 125.95,
+    "sell_price": 123.92,
+    "ret_pct": -1.612,
+    "signal": "model"
+  },
+  {
+    "date": "20260821",
+    "stock_code": "605068.SH",
+    "stock_name": "明新旭腾",
+    "cb_code": "111004.SH",
+    "model_score": 50.07,
+    "auc_pct": 0.41,
+    "buy_price": 126.807,
+    "sell_price": 126.901,
+    "ret_pct": 0.074,
+    "signal": "model"
+  }
+]

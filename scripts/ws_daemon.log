@@ -545,3 +545,66 @@
 [ws_daemon] 收盘(1500), 休眠 18.4h 到 08-25 09:25
 2026-08-24 16:01:51 - websocket_client - ERROR - Connection to remote host was lost.
 2026-08-24 16:01:51 - websocket - ERROR - Connection to remote host was lost. - goodbye
+[jvQuant WS] 连接已断开，重新连接...
+[jvQuant WS] 已连接
+[ws_daemon] 重连后恢复 L1 订阅 11 只
+[ws_daemon] 重连后恢复 L2 订阅 11 只
+[ws_daemon] L1新增订阅 43 只
+[ws_daemon] L1新增订阅 12 只
+[ws_daemon] L1新增订阅 8 只
+[ws_daemon] L1新增订阅 5 只
+[ws_daemon] L1新增订阅 4 只
+[ws_daemon] L1新增订阅 3 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 3 只
+[ws_daemon] L1新增订阅 3 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 3 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 6 只
+[ws_daemon] L1新增订阅 9 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 7 只
+[ws_daemon] L1新增订阅 6 只
+[ws_daemon] L1新增订阅 6 只
+[ws_daemon] L1新增订阅 7 只
+[ws_daemon] L1新增订阅 3 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 3 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+2026-08-25 11:27:15 - websocket_client - ERROR - Connection to remote host was lost.
+2026-08-25 11:27:15 - websocket - ERROR - Connection to remote host was lost. - goodbye
+[jvQuant WS] 连接已断开，重新连接...
+2026-08-25 11:27:42 - websocket_client - ERROR - Handshake status 502 Bad Gateway -+-+- {'server': 'nginx/1.20.1', 'date': 'Tue, 25 Aug 2026 03:27:42 GMT', 'content-type': 'text/html', 'content-length': '157', 'connection': 'keep-alive'} -+-+- b'<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx/1.20.1</center>\r\n</body>\r\n</html>\r\n'
+2026-08-25 11:27:42 - websocket - ERROR - Handshake status 502 Bad Gateway -+-+- {'server': 'nginx/1.20.1', 'date': 'Tue, 25 Aug 2026 03:27:42 GMT', 'content-type': 'text/html', 'content-length': '157', 'connection': 'keep-alive'} -+-+- b'<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx/1.20.1</center>\r\n</body>\r\n</html>\r\n' - goodbye
+[ws_daemon] 启动, 初始订阅 L1=154 L2=154
+[jvQuant WS] 已连接
+[ws_daemon] WS 已连接, L1=154 L2=154 分批订阅完成
+[ws_daemon] 启动, 初始订阅 L1=154 L2=154
+[jvQuant WS] 已连接
+[ws_daemon] WS 已连接, L1=154 L2=154 分批订阅完成
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] 收盘(1500), 休眠 18.4h 到 08-26 09:25
+2026-08-25 16:01:51 - websocket_client - ERROR - Connection to remote host was lost.
+2026-08-25 16:01:51 - websocket - ERROR - Connection to remote host was lost. - goodbye

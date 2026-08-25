@@ -1,0 +1,14 @@
+[
+  {
+    "date": "20260824",
+    "stock_code": "603730.SH",
+    "stock_name": "岱美股份",
+    "cb_code": "113673.SH",
+    "model_score": 19.23,
+    "auc_pct": 5.79,
+    "buy_price": 184.216,
+    "sell_price": 183.064,
+    "ret_pct": -0.625,
+    "signal": "auction"
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "date": "20260805",
+    "stock_code": "603596.SH",
+    "stock_name": "伯特利",
+    "cb_code": "113696.SH",
+    "model_score": 48.96,
+    "auc_pct": 4.46,
+    "buy_price": 139.2,
+    "sell_price": 138.39,
+    "ret_pct": -0.582,
+    "signal": "model"
+  },
+  {
+    "date": "20260805",
+    "stock_code": "603730.SH",
+    "stock_name": "岱美股份",
+    "cb_code": "113673.SH",
+    "model_score": 37.14,
+    "auc_pct": 5.88,
+    "buy_price": 204.148,
+    "sell_price": 206.464,
+    "ret_pct": 1.134,
+    "signal": "auction"
+  },
+  {
+    "date": "20260805",
+    "stock_code": "605177.SH",
+    "stock_name": "东亚药业",
+    "cb_code": "111015.SH",
+    "model_score": 40.69,
+    "auc_pct": 2.11,
+    "buy_price": 129.927,
+    "sell_price": 129.909,
+    "ret_pct": -0.014,
+    "signal": "model"
+  }
+]

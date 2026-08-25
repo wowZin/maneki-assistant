@@ -22,6 +22,8 @@ from pathlib import Path
 SHM = Path("/dev/shm")
 SUB_FILE = SHM / "ws_sub.json"
 SNAP_FILE = SHM / "ws_snap.json"
+# L2 大单落盘目录（验证「主力大单 vs 拉升真假」的历史样本）
+L2_BIGORDER_DIR = Path(__file__).resolve().parent.parent / "plays" / "limit_up" / "data" / "l2_bigorder"
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from scripts.jvquant_ws_client import JvQuantWSClient
@@ -77,6 +79,45 @@ def _write_snap(shorts: list[str], ws_client):
     return len(snap)
 
 
+def _write_l2_bigorder(shorts: list[str], ws_client) -> int:
+    """把每只订阅票的 L2 大单字段落盘（60s 一轮，积累历史样本）。
+
+    输出：plays/limit_up/data/l2_bigorder/{date}.jsonl
+    每行：{"ts","code","big_buy_amount","big_sell_amount","big_net_amount",
+           "big_order_count","super_buy_amount","super_sell_amount",
+           "super_net_amount","super_order_count"}
+    """
+    try:
+        L2_BIGORDER_DIR.mkdir(parents=True, exist_ok=True)
+        _date = datetime.now().strftime("%Y%m%d")
+        _ts = datetime.now().strftime("%H:%M:%S")
+        out_file = L2_BIGORDER_DIR / f"{_date}.jsonl"
+        lines = []
+        for short in shorts[:400]:
+            mkt = ws_client.get_market(short)
+            if not mkt:
+                continue
+            rec = {
+                "ts": _ts,
+                "code": short,
+                "big_buy_amount": mkt.get("big_buy_amount"),
+                "big_sell_amount": mkt.get("big_sell_amount"),
+                "big_net_amount": mkt.get("big_net_amount"),
+                "big_order_count": mkt.get("big_order_count"),
+                "super_buy_amount": mkt.get("super_buy_amount"),
+                "super_sell_amount": mkt.get("super_sell_amount"),
+                "super_net_amount": mkt.get("super_net_amount"),
+                "super_order_count": mkt.get("super_order_count"),
+            }
+            lines.append(json.dumps(rec, ensure_ascii=False))
+        if lines:
+            with open(out_file, "a") as f:
+                f.write("\n".join(lines) + "\n")
+        return len(lines)
+    except Exception:
+        return 0
+
+
 def main():
     global _running
     signal.signal(signal.SIGINT, _signal_handler)
@@ -106,6 +147,8 @@ def main():
 
     snap_interval = 1.0  # 快照刷新间隔(秒)
     last_snap = 0.0
+    last_l2_bigorder = 0.0  # L2 大单落盘时间戳
+    l2_bigorder_interval = 60.0  # L2 大单落盘间隔(秒)
     last_sub_check = 0.0
     _retry_l1: set = set()  # L1 订阅失败重试集
     _retry_l2: set = set()  # L2 订阅失败重试集
@@ -227,6 +270,11 @@ def main():
         if now - last_snap >= snap_interval and shorts:
             n = _write_snap(shorts, ws)
             last_snap = now
+
+        # L2 大单落盘（60s 一轮，积累历史样本）
+        if now - last_l2_bigorder >= l2_bigorder_interval:
+            _write_l2_bigorder(shorts, ws)
+            last_l2_bigorder = now
 
         time.sleep(0.1)
 

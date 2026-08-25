@@ -1,0 +1,26 @@
+[
+  {
+    "date": "20260730",
+    "stock_code": "603809.SH",
+    "stock_name": "豪能股份",
+    "cb_code": "113705.SH",
+    "model_score": 10.84,
+    "auc_pct": 3.93,
+    "buy_price": 152.998,
+    "sell_price": 151.19,
+    "ret_pct": -1.182,
+    "signal": "auction"
+  },
+  {
+    "date": "20260730",
+    "stock_code": "605068.SH",
+    "stock_name": "明新旭腾",
+    "cb_code": "111004.SH",
+    "model_score": 37.34,
+    "auc_pct": 9.99,
+    "buy_price": 133.0,
+    "sell_price": 134.036,
+    "ret_pct": 0.779,
+    "signal": "auction"
+  }
+]

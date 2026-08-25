@@ -1,0 +1,14 @@
+[
+  {
+    "date": "20260803",
+    "stock_code": "605488.SH",
+    "stock_name": "福莱新材",
+    "cb_code": "111012.SH",
+    "model_score": 46.18,
+    "auc_pct": 4.73,
+    "buy_price": 339.267,
+    "sell_price": 376.415,
+    "ret_pct": 10.949,
+    "signal": "model"
+  }
+]

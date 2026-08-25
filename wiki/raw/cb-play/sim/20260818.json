@@ -1,0 +1,14 @@
+[
+  {
+    "date": "20260818",
+    "stock_code": "000902.SZ",
+    "stock_name": "新洋丰",
+    "cb_code": "127031.SZ",
+    "model_score": 14.15,
+    "auc_pct": 4.98,
+    "buy_price": 123.0,
+    "sell_price": 122.224,
+    "ret_pct": -0.631,
+    "signal": "auction"
+  }
+]

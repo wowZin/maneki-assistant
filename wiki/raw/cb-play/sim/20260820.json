@@ -1,0 +1,62 @@
+[
+  {
+    "date": "20260820",
+    "stock_code": "603801.SH",
+    "stock_name": "志邦家居",
+    "cb_code": "113693.SH",
+    "model_score": 47.65,
+    "auc_pct": 4.41,
+    "buy_price": 123.883,
+    "sell_price": 125.033,
+    "ret_pct": 0.928,
+    "signal": "model"
+  },
+  {
+    "date": "20260820",
+    "stock_code": "603806.SH",
+    "stock_name": "福斯特",
+    "cb_code": "113661.SH",
+    "model_score": 13.2,
+    "auc_pct": 4.49,
+    "buy_price": 139.85,
+    "sell_price": 138.762,
+    "ret_pct": -0.778,
+    "signal": "auction"
+  },
+  {
+    "date": "20260820",
+    "stock_code": "603979.SH",
+    "stock_name": "金诚信",
+    "cb_code": "113699.SH",
+    "model_score": 9.69,
+    "auc_pct": 3.17,
+    "buy_price": 188.028,
+    "sell_price": 188.997,
+    "ret_pct": 0.515,
+    "signal": "auction"
+  },
+  {
+    "date": "20260820",
+    "stock_code": "605068.SH",
+    "stock_name": "明新旭腾",
+    "cb_code": "111004.SH",
+    "model_score": 43.76,
+    "auc_pct": 0.81,
+    "buy_price": 127.444,
+    "sell_price": 127.121,
+    "ret_pct": -0.253,
+    "signal": "model"
+  },
+  {
+    "date": "20260820",
+    "stock_code": "605116.SH",
+    "stock_name": "奥锐特",
+    "cb_code": "111021.SH",
+    "model_score": 26.84,
+    "auc_pct": 5.65,
+    "buy_price": 143.0,
+    "sell_price": 139.906,
+    "ret_pct": -2.164,
+    "signal": "auction"
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "date": "20260811",
+    "stock_code": "603730.SH",
+    "stock_name": "岱美股份",
+    "cb_code": "113673.SH",
+    "model_score": 43.37,
+    "auc_pct": -0.1,
+    "buy_price": 192.5,
+    "sell_price": 194.896,
+    "ret_pct": 1.245,
+    "signal": "model"
+  },
+  {
+    "date": "20260811",
+    "stock_code": "605068.SH",
+    "stock_name": "明新旭腾",
+    "cb_code": "111004.SH",
+    "model_score": 45.36,
+    "auc_pct": 0.95,
+    "buy_price": 136.19,
+    "sell_price": 132.3,
+    "ret_pct": -2.856,
+    "signal": "model"
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "date": "20260819",
+    "stock_code": "001301.SZ",
+    "stock_name": "尚太科技",
+    "cb_code": "127112.SZ",
+    "model_score": 16.18,
+    "auc_pct": 5.79,
+    "buy_price": 155.29,
+    "sell_price": 160.022,
+    "ret_pct": 3.047,
+    "signal": "auction"
+  },
+  {
+    "date": "20260819",
+    "stock_code": "603801.SH",
+    "stock_name": "志邦家居",
+    "cb_code": "113693.SH",
+    "model_score": 2.89,
+    "auc_pct": 3.02,
+    "buy_price": 122.507,
+    "sell_price": 123.279,
+    "ret_pct": 0.63,
+    "signal": "auction"
+  }
+]

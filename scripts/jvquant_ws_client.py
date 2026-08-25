@@ -54,6 +54,10 @@ _ENV = _load_env()
 TOKEN = _ENV.get("JVQUANT_TOKEN", "")
 BUDGET_ALERT = float(_ENV.get("JVQUANT_BUDGET_ALERT", "50"))  # 报警阈值（元）
 COST_PER_STOCK = float(_ENV.get("JVQUANT_COST_PER_STOCK", "0.3"))  # 单只订阅成本
+# L2 逐笔大单阈值（元）：单笔成交金额达此阈值计入大单统计。
+# 口径参考 tushare moneyflow：大单 20万~100万，超大单 ≥100万。
+BIG_ORDER_AMOUNT = float(_ENV.get("JVQUANT_BIG_ORDER_AMOUNT", "200000"))      # 大单 ≥20万
+SUPER_ORDER_AMOUNT = float(_ENV.get("JVQUANT_SUPER_ORDER_AMOUNT", "1000000"))  # 超大单 ≥100万
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -71,6 +75,16 @@ class StockDataCache:
         self.l2_volume: float = 0
         self.vwap: float = 0
         self.last_update: float = 0
+        # 大单统计（L2 逐笔提取，识别主力动向）
+        self.big_buy_amount: float = 0.0     # 大单主动买入金额（元）
+        self.big_sell_amount: float = 0.0    # 大单主动卖出金额（元）
+        self.big_buy_volume: float = 0.0     # 大单主动买入量（股）
+        self.big_sell_volume: float = 0.0    # 大单主动卖出量（股）
+        self.big_order_count: int = 0        # 大单笔数
+        self.super_buy_amount: float = 0.0   # 超大单主动买入金额（元）
+        self.super_sell_amount: float = 0.0  # 超大单主动卖出金额（元）
+        self.super_order_count: int = 0      # 超大单笔数
+        self.last_deal_id: str = ""          # 上一笔 deal_id（连续同向判断）
         # 分钟K线聚合
         self.kline_bars: list[dict] = []  # [{time, open, high, low, close, volume}]
         self._current_bar: dict | None = None
@@ -85,11 +99,12 @@ class StockDataCache:
         self.last_update = time.time()
 
     def add_tick(self, deal) -> None:
-        """添加逐笔成交，同时更新分钟K线"""
+        """添加逐笔成交，同时更新分钟K线 + 大单统计"""
         d = deal.get_map() if hasattr(deal, 'get_map') else {}
         price = float(d.get("price", 0))
         volume = float(d.get("volume", 0))
         tick_time = str(d.get("time", ""))
+        deal_id = str(d.get("deal_id", ""))
 
         self.l2_ticks.append(d)
         if len(self.l2_ticks) > 200:
@@ -99,6 +114,26 @@ class StockDataCache:
         self.l2_volume += volume
         if self.l2_volume > 0:
             self.vwap = self.l2_amount / self.l2_volume
+
+        # 大单统计：单笔成交金额达阈值 → 按主动买卖方向计入
+        if price > 0 and volume > 0:
+            _amt = price * volume
+            if _amt >= BIG_ORDER_AMOUNT:
+                _side = self._tick_side(price)
+                if _side == "buy":
+                    self.big_buy_amount += _amt
+                    self.big_buy_volume += volume
+                elif _side == "sell":
+                    self.big_sell_amount += _amt
+                    self.big_sell_volume += volume
+                self.big_order_count += 1
+                if _amt >= SUPER_ORDER_AMOUNT:
+                    if _side == "buy":
+                        self.super_buy_amount += _amt
+                    elif _side == "sell":
+                        self.super_sell_amount += _amt
+                    self.super_order_count += 1
+        self.last_deal_id = deal_id
 
         # 分钟K线聚合
         if tick_time and len(tick_time) >= 5:
@@ -123,6 +158,28 @@ class StockDataCache:
             self.kline_bars.append(self._current_bar)
             if len(self.kline_bars) > 240:
                 self.kline_bars = self.kline_bars[-240:]
+
+    def _tick_side(self, price: float) -> str:
+        """用盘口（卖一/买一价）判断逐笔成交的主动方向。
+
+        AbLv2 无买卖方向字段，按成交价 vs 盘口推断：
+          成交价 >= 卖一价 → 主动买（外盘，买方主动吃卖单）
+          成交价 <= 买一价 → 主动卖（内盘，卖方主动吃买单）
+          两者之间      → 中性（不计数）
+        """
+        src = self.l10 if self.l10 else self.l1
+        if not src:
+            return "neutral"
+        try:
+            s1p = float(src.get("s1p", 0) or 0)
+            b1p = float(src.get("b1p", 0) or 0)
+        except (TypeError, ValueError):
+            return "neutral"
+        if s1p > 0 and price >= s1p:
+            return "buy"
+        if b1p > 0 and price <= b1p:
+            return "sell"
+        return "neutral"
 
     def get_market_snapshot(self) -> dict:
         """返回与 l2api market 兼容的数据结构"""
@@ -154,6 +211,17 @@ class StockDataCache:
             "trade_volume": str(src.get("volume", 0)),
             "trade_amount": str(src.get("amount", 0)),
             "time": src.get("time", ""),
+            # L2 逐笔大单统计（识别主力动向）
+            "big_buy_amount": str(round(self.big_buy_amount, 2)),
+            "big_sell_amount": str(round(self.big_sell_amount, 2)),
+            "big_net_amount": str(round(self.big_buy_amount - self.big_sell_amount, 2)),
+            "big_buy_volume": str(int(self.big_buy_volume)),
+            "big_sell_volume": str(int(self.big_sell_volume)),
+            "big_order_count": str(self.big_order_count),
+            "super_buy_amount": str(round(self.super_buy_amount, 2)),
+            "super_sell_amount": str(round(self.super_sell_amount, 2)),
+            "super_net_amount": str(round(self.super_buy_amount - self.super_sell_amount, 2)),
+            "super_order_count": str(self.super_order_count),
         }
 
     def is_ready(self) -> bool:

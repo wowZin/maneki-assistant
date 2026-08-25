@@ -1,0 +1,62 @@
+[
+  {
+    "date": "20260810",
+    "stock_code": "002626.SZ",
+    "stock_name": "金达威",
+    "cb_code": "127111.SZ",
+    "model_score": 21.98,
+    "auc_pct": 8.09,
+    "buy_price": 132.3,
+    "sell_price": 141.3,
+    "ret_pct": 6.803,
+    "signal": "auction"
+  },
+  {
+    "date": "20260810",
+    "stock_code": "603176.SH",
+    "stock_name": "汇通集团",
+    "cb_code": "113665.SH",
+    "model_score": 40.99,
+    "auc_pct": 1.1,
+    "buy_price": 126.177,
+    "sell_price": 126.651,
+    "ret_pct": 0.376,
+    "signal": "model"
+  },
+  {
+    "date": "20260810",
+    "stock_code": "603306.SH",
+    "stock_name": "华懋科技",
+    "cb_code": "113677.SH",
+    "model_score": 22.19,
+    "auc_pct": 6.74,
+    "buy_price": 335.0,
+    "sell_price": 331.952,
+    "ret_pct": -0.91,
+    "signal": "auction"
+  },
+  {
+    "date": "20260810",
+    "stock_code": "603878.SH",
+    "stock_name": "武进不锈",
+    "cb_code": "113671.SH",
+    "model_score": 27.18,
+    "auc_pct": 3.24,
+    "buy_price": 130.86,
+    "sell_price": 131.706,
+    "ret_pct": 0.646,
+    "signal": "auction"
+  },
+  {
+    "date": "20260810",
+    "stock_code": "605488.SH",
+    "stock_name": "福莱新材",
+    "cb_code": "111012.SH",
+    "model_score": 40.33,
+    "auc_pct": 1.0,
+    "buy_price": 383.0,
+    "sell_price": 377.855,
+    "ret_pct": -1.343,
+    "signal": "model"
+  }
+]
