@@ -608,3 +608,57 @@
 [ws_daemon] 收盘(1500), 休眠 18.4h 到 08-26 09:25
 2026-08-25 16:01:51 - websocket_client - ERROR - Connection to remote host was lost.
 2026-08-25 16:01:51 - websocket - ERROR - Connection to remote host was lost. - goodbye
+[jvQuant WS] 连接已断开，重新连接...
+[jvQuant WS] 已连接
+[ws_daemon] 重连后恢复 L1 订阅 10 只
+[ws_daemon] 重连后恢复 L2 订阅 10 只
+[ws_daemon] L1新增订阅 30 只
+[ws_daemon] L1新增订阅 41 只
+[ws_daemon] L1新增订阅 15 只
+[ws_daemon] L1新增订阅 14 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 4 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 7 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 4 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 3 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 4 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 2 只
+2026-08-26 12:01:52 - websocket_client - ERROR - Connection to remote host was lost.
+2026-08-26 12:01:52 - websocket - ERROR - Connection to remote host was lost. - goodbye
+[jvQuant WS] 连接已断开，重新连接...
+[jvQuant WS] 已连接
+[ws_daemon] 重连后恢复 L1 订阅 130 只
+[ws_daemon] 重连后恢复 L2 订阅 130 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] L1新增订阅 4 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 2 只
+[ws_daemon] 已停止
+[ws_daemon] 启动, 初始订阅 L1=135 L2=135
+[jvQuant WS] 已连接
+[ws_daemon] WS 已连接, L1=135 L2=135 分批订阅完成
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] L1新增订阅 1 只
+[ws_daemon] 收盘(1500), 休眠 18.4h 到 08-27 09:25
+2026-08-26 16:01:52 - websocket_client - ERROR - Connection to remote host was lost.
+2026-08-26 16:01:52 - websocket - ERROR - Connection to remote host was lost. - goodbye

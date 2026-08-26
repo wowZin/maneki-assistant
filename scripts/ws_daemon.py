@@ -100,6 +100,13 @@ def _write_l2_bigorder(shorts: list[str], ws_client) -> int:
             rec = {
                 "ts": _ts,
                 "code": short,
+                # 2026-08-26 影子模式：加价格字段，供「主力吸筹信号」离线回测
+                # 把触发价/当日高点与 big_net/super_net 落盘到同一文件，无需跨文件 join
+                "last": mkt.get("last"),
+                "high": mkt.get("high"),
+                "low": mkt.get("low"),
+                "trade_amount": mkt.get("trade_amount"),
+                "trade_volume": mkt.get("trade_volume"),
                 "big_buy_amount": mkt.get("big_buy_amount"),
                 "big_sell_amount": mkt.get("big_sell_amount"),
                 "big_net_amount": mkt.get("big_net_amount"),
