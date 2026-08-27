@@ -50,14 +50,16 @@ def fund_accumulate_trigger(hist: list[dict], p: dict) -> bool:
     """
     if len(hist) < p["N"] + 1:
         return False
-    win = hist[-p["N"]:]
-    # 1. 主力持续净流入
+    win = hist[-(p["N"] + 1):]
+    # 1. 主力持续净流入（差分：累计值相邻相减=本轮增量，2026-08-27 修正累计值直加 bug）
     total = 0.0
     pos_rounds = 0
-    for r in win:
-        net = float(r.get("super_net_amount") or 0) + float(r.get("big_net_amount") or 0)
-        total += net
-        if net > 0:
+    for i in range(1, len(win)):
+        net_prev = float(win[i - 1].get("super_net_amount") or 0) + float(win[i - 1].get("big_net_amount") or 0)
+        net_cur = float(win[i].get("super_net_amount") or 0) + float(win[i].get("big_net_amount") or 0)
+        delta = net_cur - net_prev
+        total += delta
+        if delta > 0:
             pos_rounds += 1
     if total <= 0 or pos_rounds < p["K"]:
         return False
@@ -123,7 +125,7 @@ def main():
         if not by_code:
             print(f"[skip] {d} 无数据")
             continue
-        has_price = any("last" in r for r in next(iter(by_code.values())))
+        has_price = any(r.get("last") for rows in by_code.values() for r in rows)
         if not has_price:
             print(f"[skip] {d} 无价格字段（ws_daemon 未重启，影子字段未生效）")
             continue

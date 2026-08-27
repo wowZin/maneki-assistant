@@ -36,7 +36,8 @@ sys.path.insert(0, str(PROJECT_DIR))
 from plays.watchdog.indicators import price_features, realtime_row, sma, atr
 from plays.watchdog.signals import check_entry, check_abnormal, compute_factor_scores
 from plays.watchdog.confirm import (STAND_TOL, check_buy_confirm,
-                                     check_sell_confirm, trend_up_trigger)
+                                     check_sell_confirm, trend_up_trigger,
+                                     fund_accumulate_confirm, FA_N)
 from scripts.tu_share import call_tushare  # noqa: E402
 
 # WS 数据通过 ws_daemon 共享内存读取
@@ -346,6 +347,11 @@ class WatchdogEngine:
         self._price_hist: dict[str, list[float]] = {}
         self._vol_hist: dict[str, list[float]] = {}
         self._prev_tv: dict[str, float] = {}
+        # 2026-08-27 主力吸筹影子信号：每只票 big_net+super_net 当日累计值序列
+        self._bignet_hist: dict[str, list[float]] = {}
+        # 2026-08-27 用户拍板"直接换不用等"：主力吸筹替代追拉升。
+        # 1=fund_accumulate 触发即正式下单；0=回退到下方追拉升确认器。
+        self._use_fund_accumulate = int(os.getenv("CONFIRM_USE_FUND_ACCUMULATE", "1")) == 1
         self._scan_count = 0
         self._subscribed: set[str] = set()
         self._snap_fail_count = 0
@@ -442,7 +448,7 @@ class WatchdogEngine:
         codes = [_norm(c) for c in codes]
         msgs = []
         with self._lock:
-            current = sum(1 for st in self._states.values() if st.source != "surge")
+            current = sum(1 for st in self._states.values() if st.source not in ("surge", "panel"))
             for code in codes:
                 if code in self._states:
                     msgs.append(f"{code} 已在盯盘中")
@@ -598,7 +604,7 @@ class WatchdogEngine:
         """
         with self._lock:
             doomed = [c for c, st in self._states.items()
-                      if st.source == "surge" and st.status != "entered"]
+                      if st.source in ("surge", "panel") and st.status != "entered"]
         if doomed:
             logger.info(f"盘后汰换 surge 零信号 {len(doomed)} 只: {doomed}")
             self.remove(doomed)
@@ -694,7 +700,7 @@ class WatchdogEngine:
         st.bars_held = 0
         st.entry_pushed_date = now.strftime("%Y%m%d")
         self._save_state()
-        _surge_tag = "【surge】" if st.source == "surge" else ""
+        _surge_tag = "【盯盘】" if st.source in ("surge", "panel") else ""
         # 2026-08-19 移除大盘弱势禁买（用户拍板）：0819 实测上证 -1.66% 但
         # 主闸票 100% 上涨（结构性行情），弱势闸一刀切禁买误杀主闸机会。
         # 现策略：弱势只关排雷池（surge 侧已做），主闸买入交给确认器把关
@@ -872,6 +878,13 @@ class WatchdogEngine:
             _vh.append(_dv)
             if len(_vh) > 15:
                 self._vol_hist[code] = _vh[-15:]
+            # 2026-08-27 主力吸筹：维护 big_net+super_net 当日累计值序列
+            #（差分后得每轮 60s 增量，供 fund_accumulate_confirm）
+            _bn = float(market.get("big_net_amount") or 0) + float(market.get("super_net_amount") or 0)
+            _bh = self._bignet_hist.setdefault(code, [])
+            _bh.append(_bn)
+            if len(_bh) > FA_N + 2:
+                self._bignet_hist[code] = _bh[-(FA_N + 2):]
 
             # prev_last 快照：确认器(卖出)用 st.prev_last，异常检测用旧值——
             # 2026-08-14 重构后先保存旧值再更新（确认器提前不再依赖慢操作）
@@ -889,6 +902,27 @@ class WatchdogEngine:
                     # 未成交仍在挂起：本轮不触发新买入，等下一轮复查
                     time.sleep(0.1)
                     continue
+                # ── 2026-08-27 主力吸筹买入（正式切换，替代追拉升）──
+                # 用户拍板"直接换不用等"：fund_accumulate 触发即下单。
+                # CONFIRM_USE_FUND_ACCUMULATE=0 时回退到下方追拉升确认器。
+                if self._use_fund_accumulate:
+                    try:
+                        _bb = float(market.get("big_buy_amount") or 0)
+                        _bs = float(market.get("big_sell_amount") or 0)
+                        _fa_ok, _fa_rs = fund_accumulate_confirm(
+                            self._bignet_hist.get(code, []),
+                            last, st.day_high, st.prev_close, _bb, _bs)
+                        if _fa_ok:
+                            st.confirm_base = 0.0
+                            st.confirm_count = 0
+                            st.signal_type = "fund_accumulate"
+                            st.signal_reason = f"主力吸筹: {_fa_rs}"
+                            st.signal_at = now.strftime("%H:%M:%S")
+                            logger.info(f"{code} 主力吸筹触发买入: {_fa_rs}")
+                            self._execute_buy(code, st, last, vwap, now)
+                    except Exception as _e:
+                        logger.error(f"{code} 主力吸筹判定异常: {_e}")
+                    continue  # 用 fund_accumulate 时跳过下方追拉升确认器
                 # ── 买入确认器（2026-08-12 简化蓝图，替代 check_entry/3轮确认/净上涨门禁）──
                 # 创新高+窗口放量触发 → 站稳 2 轮 → ready 买入；
                 # 防诱多由站稳天然覆盖（冲高回落=站不稳=重置）。
@@ -1014,7 +1048,7 @@ class WatchdogEngine:
                         self._save_state()
                         continue
                     pnl_pct = (last / st.entry_price - 1) * 100
-                    _surge_tag = "【surge】" if st.source == "surge" else ""
+                    _surge_tag = "【盯盘】" if st.source in ("surge", "panel") else ""
                     is_profit = "止盈" in exit_reason
                     # 下单卖出 + 飞书通知
                     # 安全规则(2026-07-31):
@@ -1286,8 +1320,8 @@ class WatchdogEngine:
                     # 诱空不移出盯盘,不推送
                     st.last_abnormal_level = level
                     st.last_abnormal_pushed_at = time.time()
-                elif st.source == "surge":
-                    # surge 票保持静默（只发入场信号）
+                elif st.source in ("surge", "panel"):
+                    # surge/panel 票保持静默（只发入场信号）
                     st.last_abnormal_level = level
                     st.last_abnormal_pushed_at = time.time()
                     # 2026-08-13 修复：critical 只移除未持仓的 watching/alerted 票；

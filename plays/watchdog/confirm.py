@@ -257,3 +257,50 @@ def check_sell_confirm(highest: float, last: float, prev_last: float,
             return True, f"回撤{SELL_PULLBACK*100:.0f}%连续{new_count}轮", new_count
         return False, f"回撤{SELL_PULLBACK*100:.0f}%第{new_count}轮", new_count
     return False, "回撤不足", 0
+
+
+# ── 主力吸筹买入确认器（2026-08-27，替代追拉升 trend_up）──
+# 依据 docs/entry-redesign.md：跟主力大单资金流，不追价格。
+# ★ 关键语义：jvquant L2 的 big_net_amount/super_net_amount 是「当日累计」
+#   大单净流入（实测 20260825 600156 -486k→-972k→-1701k→-2673k 单调累积），
+#   判断「近 N 轮持续吸筹」必须用差分（本轮累计 − 上轮累计 = 本轮增量）。
+#   旧回测脚本 fund_accumulate_trigger 把累计值直接相加是错的，已同步修正。
+FA_N = int(os.getenv("CONFIRM_FA_N", "5"))            # 近 N 轮吸筹窗口
+FA_K = int(os.getenv("CONFIRM_FA_K", "3"))            # ≥K 轮增量为正（防单笔脉冲）
+FA_TOP_TOL = float(os.getenv("CONFIRM_FA_TOP_TOL", "0.02"))   # 不追顶：现价 ≤ 高点×(1-tol)
+FA_MAX_PCT = float(os.getenv("CONFIRM_FA_MAX_PCT", "5.0"))    # 当日涨幅上限
+
+
+def fund_accumulate_confirm(bignet_hist: list[float], last: float, day_high: float,
+                            prev_close: float, big_buy: float,
+                            big_sell: float) -> tuple[bool, str]:
+    """主力吸筹确认：近 N 轮大单净流入(差分)持续 + 不追顶 + 主动买占优。
+
+    bignet_hist: 近 N+1 轮 (big_net_amount + super_net_amount) 的「当日累计」值
+                 列表，末尾为最新；差分后得到每轮 60s 增量。
+    返回 (是否触发, 原因)。
+    """
+    if len(bignet_hist) < FA_N + 1:
+        return False, f"窗口不足({len(bignet_hist)}<{FA_N + 1})"
+    # 1. 主力持续净流入：近 N 轮增量总和 > 0 且 ≥ K 轮增量为正
+    win = bignet_hist[-(FA_N + 1):]
+    total = 0.0
+    pos_rounds = 0
+    for i in range(1, len(win)):
+        delta = win[i] - win[i - 1]
+        total += delta
+        if delta > 0:
+            pos_rounds += 1
+    if total <= 0 or pos_rounds < FA_K:
+        return False, f"吸筹不足(近{FA_N}轮净{total:.0f}/正{pos_rounds}轮)"
+    # 2. 不追顶 + 涨幅上限
+    if last <= 0 or day_high <= 0:
+        return False, "无价"
+    if last > day_high * (1 - FA_TOP_TOL):
+        return False, f"追顶(现{last:.2f}/高{day_high:.2f})"
+    if prev_close > 0 and (last / prev_close - 1) * 100 > FA_MAX_PCT:
+        return False, f"涨幅超{FA_MAX_PCT}%"
+    # 3. 主动买占优
+    if big_buy <= big_sell:
+        return False, f"主动卖占优(买{big_buy:.0f}≤卖{big_sell:.0f})"
+    return True, f"主力吸筹: 近{FA_N}轮净{total:.0f}/正{pos_rounds}轮 买{big_buy:.0f}>卖{big_sell:.0f}"

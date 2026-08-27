@@ -1,0 +1,62 @@
+[
+  {
+    "code": "002437.SZ",
+    "name": "誉衡药业",
+    "direction": "买入",
+    "price": 4.4,
+    "shares": 100,
+    "amount": 440.0,
+    "time": "2026-08-27 11:19:05",
+    "reason": "信号: trend_up",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  },
+  {
+    "code": "002165.SZ",
+    "name": "红宝丽",
+    "direction": "买入",
+    "price": 7.75,
+    "shares": 100,
+    "amount": 775.0,
+    "time": "2026-08-27 11:21:20",
+    "reason": "信号: trend_up",
+    "pnl": 0.0,
+    "pnl_pct": 0.0
+  },
+  {
+    "code": "002716.SZ",
+    "name": "湖南白银",
+    "direction": "卖出",
+    "price": 11.61,
+    "shares": 100,
+    "amount": 1161.0,
+    "time": "2026-08-27 13:02:31",
+    "reason": "回撤2%连续2轮",
+    "pnl": -4.0,
+    "pnl_pct": -0.34
+  },
+  {
+    "code": "000931.SZ",
+    "name": "中 关 村",
+    "direction": "卖出",
+    "price": 5.73,
+    "shares": 100,
+    "amount": 573.0,
+    "time": "2026-08-27 13:46:34",
+    "reason": "回撤2%连续1轮",
+    "pnl": 22.0,
+    "pnl_pct": 3.99
+  },
+  {
+    "code": "000925.SZ",
+    "name": "众合科技",
+    "direction": "卖出",
+    "price": 8.42,
+    "shares": 100,
+    "amount": 842.0,
+    "time": "2026-08-27 14:25:23",
+    "reason": "回撤2%连续1轮",
+    "pnl": -17.0,
+    "pnl_pct": -1.98
+  }
+]

@@ -84,6 +84,122 @@ def _notify_text(text: str):
         log.warning(f"飞书通知失败: {e}")
 
 
+# ── 板块固定盯盘池（2026-08-27 用户拍板：surge 废弃，选股收进面板 need_watch）──
+SECTOR_POOL_K = int(os.getenv("SURGE_SECTOR_K", "5"))   # 涨停板块 top K
+SECTOR_POOL_N = int(os.getenv("SURGE_SECTOR_N", "10"))  # 每板块净流入 top N
+SECTOR_WATCH_SCORE = float(os.getenv("SURGE_PANEL_SCORE", "20"))  # 主闸 model_score 阈值
+_PANEL_DIR = PROJECT_DIR / "wiki" / "raw" / "limit-up" / "panel"
+WATCHDOG_STATE = PROJECT_DIR / "plays" / "watchdog" / "data" / "state.json"
+
+
+def build_sector_pool(td: str) -> dict[str, str]:
+    """T-1 涨停集中板块 top{K} × 资金净流入 top{N} → 固定盯盘池。
+
+    依据（2026-08-27 回测）：次日胜率 45% 持平涨停基因池、盯盘量降 40 倍；
+    板块涨幅>0 + 个股净流入>0 双底线（回测验证 +2.8pt 胜率）。
+    返回 {full_code: name}，缓存 data/pool/sector_pool_{td}.json。
+    """
+    import pandas as pd
+    from scripts.tu_share import call_tushare
+
+    cache = PLAY_DIR / "data" / "pool" / f"sector_pool_{td}.json"
+    if cache.exists():
+        try:
+            return json.loads(cache.read_text())
+        except Exception:
+            pass
+
+    # T-1：最近一个有 limit_cpt_list 数据的交易日
+    prev, items = None, []
+    for back in range(1, 8):
+        cand = (datetime.strptime(td, "%Y%m%d") - timedelta(days=back)).strftime("%Y%m%d")
+        r = call_tushare("limit_cpt_list", {"trade_date": cand}, timeout=30)
+        if r and r.get("data") and r["data"]["items"]:
+            prev, fi = cand, r["data"]["fields"]
+            items = [dict(zip(fi, it)) for it in r["data"]["items"]]
+            break
+    if not prev:
+        log.warning("板块池: 近7日无 limit_cpt_list 数据，跳过")
+        return {}
+
+    # 涨停板块 top K（涨幅>0 底线，items 已按 rank 排序）
+    topK = [t for t in items if float(t.get("pct_chg") or 0) > 0][:SECTOR_POOL_K]
+
+    # 板块成分正向映射 cpt_code → [6位 stock_code]
+    cm = pd.read_parquet(_PANEL_DIR / "concept" / "concept_members.parquet")
+    cm["stock_code"] = cm["stock_code"].astype(str)
+    cpt_to_stocks = {cpt: g["stock_code"].tolist() for cpt, g in cm.groupby("cpt_code")}
+
+    # 个股资金流 T-1（读面板 net_mf_ratio=净流入/成交额占比；moneyflow 目录 8月后停更）
+    # ★ 用占比不用金额：net_mf_amount 天然偏向大蓝筹（金额大），net_mf_ratio 反映
+    #   主力买入强度（相对成交），能选到小票（用户铁律：小票涨停多，禁市值过滤）。
+    try:
+        _pf = pd.read_parquet(_PANEL_DIR / f"{prev}.parquet",
+                              columns=["code", "name", "net_mf_ratio"])
+    except Exception as _e:
+        log.warning(f"板块池: 面板 {prev} 缺失({_e})，跳过")
+        return {}
+    _pf["code6"] = _pf["code"].astype(str).str.split(".").str[0]
+    names = {str(r["code6"]): str(r.get("name") or "") for _, r in _pf.iterrows()}
+    mf = _pf[["code6", "net_mf_ratio"]].rename(columns={"code6": "stock_code"})
+
+    picks = {}
+    for t in topK:
+        stocks = [s for s in cpt_to_stocks.get(t["ts_code"], []) if s.startswith(("00", "60"))]
+        sub = mf[mf["stock_code"].isin(stocks)]
+        sub = sub[sub["net_mf_ratio"] > 0]
+        for code6 in sub.nlargest(SECTOR_POOL_N, "net_mf_ratio")["stock_code"].tolist():
+            full = f"{code6}.SH" if code6.startswith(("6", "9")) else f"{code6}.SZ"
+            picks[full] = names.get(code6, "")
+
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_text(json.dumps(picks, ensure_ascii=False))
+    log.info(f"板块池(T-1={prev}): {len(picks)} 只 = "
+             f"top{SECTOR_POOL_K}涨停板块×top{SECTOR_POOL_N}净流入")
+    return picks
+
+
+def _write_watch_state(entries: list[dict]) -> int:
+    """把 need_watch 票写入 watchdog state.json（source="panel"，原子写+回读重试）。
+
+    与 surge 旧 _wd_add 同协议：dim_scores/daily_basic 必带（面板值），
+    否则 watchdog realtime_row 维度分=0、模型分被压低、入场闸够不到。
+    """
+    if not entries:
+        return 0
+    added = []
+    for attempt in range(3):
+        try:
+            states = json.loads(WATCHDOG_STATE.read_text()) if WATCHDOG_STATE.exists() else {}
+            for e in entries:
+                if e["code"] in states or e["code"] in added:
+                    continue
+                states[e["code"]] = {
+                    "code": e["code"], "name": e.get("name", ""),
+                    "added_at": datetime.now().isoformat(),
+                    "status": "watching", "source": "panel",
+                    "entry_pushed_date": "", "entry_price": 0, "entry_at": "",
+                    "highest_since_entry": 0, "bars_held": 0,
+                    "signal_type": "", "signal_reason": "", "signal_at": "",
+                    "last_alert_at": "", "last_abnormal_level": "",
+                    "last_abnormal_pushed_at": 0, "netflow_history": [],
+                    "daily_basic": e.get("daily_basic", {}),
+                    "dim_scores": e.get("dim_scores", {}),
+                    "last_daily_update": "",
+                }
+                added.append(e["code"])
+            _tmp = WATCHDOG_STATE.with_name(f"state.json.tmp.{os.getpid()}")
+            _tmp.write_text(json.dumps(states, ensure_ascii=False, indent=2))
+            _tmp.rename(WATCHDOG_STATE)
+            back = json.loads(WATCHDOG_STATE.read_text())
+            if all(c in back for c in added):
+                return len(added)
+        except Exception as ex:
+            log.warning(f"写 watchdog state 失败(attempt {attempt+1}): {ex}")
+            time.sleep(1)
+    return len(added)
+
+
 def _refresh_panel_auction(today: str) -> bool:
     """① 竞价刷新面板：stk_auction 按日期全量（禁逐股），持续重试至当日数据就绪。
 
@@ -236,9 +352,38 @@ def morning_pass(today: str) -> list[dict]:
              f"max={_scores.max():.1f} mean={_scores.mean():.1f} "
              f"≥{PUSH_THRESHOLD:.0f}={int((_scores >= PUSH_THRESHOLD).sum())}只")
 
-    # model_score 全量写回面板（面板 = T-1 特征 + 当日竞价 + 早盘模型分，终态）
+    # ── need_watch 列（2026-08-27 用户拍板：主闸≥20 ∪ 板块池，surge 废弃）──
+    try:
+        _sector = build_sector_pool(today)
+        pit_df["need_watch"] = (pit_df["model_score"] >= SECTOR_WATCH_SCORE) | \
+                               pit_df["code"].isin(set(_sector.keys()))
+    except Exception as _e:
+        log.warning(f"板块池计算失败，need_watch 退化为仅主闸: {_e}")
+        pit_df["need_watch"] = pit_df["model_score"] >= SECTOR_WATCH_SCORE
+    log.info(f"need_watch: {int(pit_df['need_watch'].sum())} 只（主闸≥{SECTOR_WATCH_SCORE:.0f} ∪ 板块池）")
+
+    # model_score 全量写回面板（面板 = T-1 特征 + 当日竞价 + 早盘模型分 + need_watch，终态）
     pit_df.to_parquet(panel_file, index=False)
     log.info("model_score 已全量写回面板")
+
+    # ── 把 need_watch 票写 watchdog state.json（source="panel"）──
+    _watch = pit_df[pit_df["need_watch"] & pit_df["code"].str[:2].isin(["00", "60"])]
+    _entries = []
+    for _, r in _watch.iterrows():
+        _entries.append({
+            "code": r["code"],
+            "name": r.get("name") or "",
+            "dim_scores": {"technical": float(r.get("technical", 0) or 0),
+                            "fundflow": float(r.get("fundflow", 0) or 0),
+                            "sentiment": float(r.get("sentiment", 0) or 0),
+                            "shortterm": float(r.get("shortterm", 0) or 0),
+                            "fundamental": float(r.get("fundamental", 0) or 0)},
+            "daily_basic": {"circ_mv": float(r.get("circ_mv", 0) or 0),
+                            "pe": float(r.get("pe", 0) or 0),
+                            "pb": float(r.get("pb", 0) or 0)},
+        })
+    _n_added = _write_watch_state(_entries)
+    log.info(f"watchdog 盯盘池已写: {_n_added} 只（source=panel）")
 
     # 名称来源：面板 name 列优先 + analysis 旧记录兜底
     # （pool_builder 已于 2026-07-30 删除，pool_*.json 不再生产）
