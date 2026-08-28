@@ -293,11 +293,11 @@ def fund_accumulate_confirm(bignet_hist: list[float], last: float, day_high: flo
             pos_rounds += 1
     if total <= 0 or pos_rounds < FA_K:
         return False, f"吸筹不足(近{FA_N}轮净{total:.0f}/正{pos_rounds}轮)"
-    # 2. 不追顶 + 涨幅上限
-    if last <= 0 or day_high <= 0:
+    # 2. 涨幅上限（"不追顶"已移除 2026-08-28：day_high 维护有 bug 恒 0 导致
+    #    所有票被"无价/追顶"误杀；且与涨幅上限功能重叠——吸筹票正在涨时
+    #    现价=高点，被"不追顶≤0.98"系统性误杀，与"吸筹"自相矛盾）
+    if last <= 0:
         return False, "无价"
-    if last > day_high * (1 - FA_TOP_TOL):
-        return False, f"追顶(现{last:.2f}/高{day_high:.2f})"
     if prev_close > 0 and (last / prev_close - 1) * 100 > FA_MAX_PCT:
         return False, f"涨幅超{FA_MAX_PCT}%"
     # 3. 主动买占优

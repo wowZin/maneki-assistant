@@ -25,11 +25,11 @@ ok, reason = fund_accumulate_confirm(h, last=10.0, day_high=10.5,
                                      prev_close=9.8, big_buy=200.0, big_sell=50.0)
 assert not ok, f"case3 单笔脉冲不应触发，实际: {reason}"
 
-# 4) 追顶（last 贴近高点）→ 不触发
+# 4) 现价=当日高点（原"追顶"场景）→ 现在触发（"不追顶"已移除，2026-08-28）
 h = [0.0, 100.0, 200.0, 300.0, 400.0, 500.0]
-ok, reason = fund_accumulate_confirm(h, last=10.5, day_high=10.5,
+ok, reason = fund_accumulate_confirm(h, last=10.0, day_high=10.0,
                                      prev_close=9.8, big_buy=200.0, big_sell=50.0)
-assert not ok, f"case4 追顶不应触发，实际: {reason}"
+assert ok, f"case4 现价=高点应触发（不追顶已移除），实际: {reason}"
 
 # 5) 主动卖占优 → 不触发
 h = [0.0, 100.0, 200.0, 300.0, 400.0, 500.0]

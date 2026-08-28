@@ -1619,6 +1619,7 @@ class WatchdogEngine:
             now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             today = datetime.now().strftime("%Y%m%d")
             with self._lock:
+                changed = False
                 for h in hl:
                     vol = int(h.get("hold_vol", 0) or 0)
                     if vol <= 0:
@@ -1637,6 +1638,7 @@ class WatchdogEngine:
                         self._states[code] = st
                     # 置 entered，从当前价/持仓信息恢复入场基准
                     st.status = "entered"
+                    changed = True
                     st.source = "reconcile"
                     st.entry_at = st.entry_at or now_str
                     st.entry_pushed_date = today
@@ -1652,7 +1654,8 @@ class WatchdogEngine:
                     logger.warning(
                         f"[对账] {code} {name} CTP持仓{vol}股不在entered盯盘，"
                         f"自动加回盯盘 (entry={st.entry_price:.2f})")
-                self._save_state()
+                if changed:
+                    self._save_state()
             # 新加入的票订阅 WS
             with self._lock:
                 codes = [c for c, s in self._states.items() if s.status == "entered"]
